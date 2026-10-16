@@ -81,6 +81,14 @@ export async function logOut() {
   await signOut({ redirectTo: "/" });
 }
 
+/** Which profile picture to show: google, discord, or initials. */
+export async function setAvatar(formData) {
+  const user = await requireUser();
+  await store.setAvatarSource(user.id, String(formData.get("avatar") || ""));
+  revalidatePath("/", "layout");
+  redirect("/app/account?saved=avatar");
+}
+
 /** Connect another sign-in method (Google or Discord) to the signed-in account. */
 export async function connectProvider(provider) {
   const user = await requireUser();

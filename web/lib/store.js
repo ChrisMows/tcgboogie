@@ -42,6 +42,38 @@ export async function linkedProviders(userId) {
   return [...new Set(list)];
 }
 
+/**
+ * For members who connected Discord before pictures were saved: fetch their Discord avatar once with the access
+ * Discord granted at connect time. Returns the URL (or null) and stores it.
+ */
+export async function backfillDiscordImage(userId) {
+  const tried = (g.__tcgDiscordBackfill ||= new Set()); // one attempt per member per server start
+  if (tried.has(userId)) return null;
+  tried.add(userId);
+  const [acct] = await db.select({ token: accounts.access_token }).from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.provider, "discord"))).limit(1);
+  if (!acct?.token) return null;
+  try {
+    const r = await fetch("https://discord.com/api/users/@me", { headers: { Authorization: `Bearer ${acct.token}` }, cache: "no-store" });
+    if (!r.ok) return null;
+    const p = await r.json();
+    if (!/^\d+$/.test(String(p.id || ""))) return null;
+    const url = p.avatar && /^(a_)?[a-f0-9]+$/.test(p.avatar)
+      ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${p.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
+      : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(p.id) >> 22n) % 6n)}.png`;
+    await db.update(users).set({ discordImage: url }).where(eq(users.id, userId));
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+export async function setAvatarSource(userId, source) {
+  const clean = ["google", "discord", "initials"].includes(source) ? source : null;
+  if (isDemo(userId)) return void (demo().prefs.avatarSource = clean);
+  await db.update(users).set({ avatarSource: clean }).where(eq(users.id, userId));
+}
+
 /** Remove one connected sign-in method (e.g. Discord) from an account. */
 export async function unlinkProvider(userId, provider) {
   await db.delete(accounts).where(and(eq(accounts.userId, userId), eq(accounts.provider, provider)));

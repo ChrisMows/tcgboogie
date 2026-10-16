@@ -6,7 +6,11 @@ export const users = pgTable("user", {
   name: text("name"),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
-  image: text("image"),
+  image: text("image"), // set by Auth.js from the first sign-in
+  // Profile pictures from each connected sign-in, and which one to show (google / discord / initials).
+  googleImage: text("google_image"),
+  discordImage: text("discord_image"),
+  avatarSource: text("avatar_source"),
   // Plan: "free" or "premium". Set by billing (Stripe) later; the Discord bot reads it to grant the role.
   tier: text("tier").notNull().default("free"),
   // Alert delivery preferences

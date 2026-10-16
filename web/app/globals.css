@@ -45,6 +45,29 @@ nav.main a { color: #a1a8b3; font-size: 12px; }
 nav.main a:hover { color: var(--text); text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 24px; font-size: 12px; }
 .login-link { color: var(--text); }
+.user-menu { position: relative; }
+.avatar-btn { width: 48px; height: 48px; border-radius: 50%; padding: 0; border: 2px solid var(--accent); background: var(--panel-3); overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; transition: transform 0.2s, box-shadow 0.2s; }
+.avatar-btn:hover, .avatar-btn[aria-expanded="true"] { transform: translateY(-2px); box-shadow: 0 0 0 4px rgba(211, 255, 102, 0.18); }
+.avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-btn span { font: 700 17px var(--font-head), sans-serif; color: var(--accent); }
+.avatar-btn.sm { width: 40px; height: 40px; cursor: default; }
+.avatar-btn.sm:hover { transform: none; box-shadow: none; }
+.avatar-btn.sm span { font-size: 14px; }
+.avatar-btn.lg { width: 72px; height: 72px; cursor: default; }
+.avatar-btn.lg:hover { transform: none; box-shadow: none; }
+.user-dropdown { position: absolute; right: 0; top: calc(100% + 10px); width: 270px; background: #151a22; border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 50px #000c; padding: 6px; z-index: 50; display: flex; flex-direction: column; }
+.ud-head { display: flex; gap: 12px; align-items: center; padding: 10px 10px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.ud-who { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+.ud-who b, .ud-who .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ud-plan { font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.user-dropdown a, .ud-signout { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 8px; color: var(--text); font: inherit; font-size: 14px; background: none; border: 0; cursor: pointer; }
+.user-dropdown a:hover, .ud-signout:hover { background: var(--panel-3); text-decoration: none; }
+.ud-signout { color: var(--muted); border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.avatar-choice { display: flex; gap: 12px; flex-wrap: wrap; }
+.avatar-choice label { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 12px; cursor: pointer; min-width: 110px; font-size: 14px; }
+.avatar-choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.avatar-choice label.disabled { opacity: 0.5; cursor: not-allowed; }
+.avatar-choice input { position: absolute; opacity: 0; pointer-events: none; }
 footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 32px 0; margin-top: 40px; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 20px 24px; justify-content: space-between; align-items: center; }
 footer .brand { font-size: 21px; }
@@ -408,6 +431,8 @@ td.num { text-align: right; font-weight: 600; }
   header .brand .mark { width: 24px; height: 28px; }
   .header-actions { gap: 14px; }
   header .btn { padding: 12px 14px; font-size: 11px; gap: 10px; }
+  .avatar-btn { width: 42px; height: 42px; }
+  .user-dropdown { width: min(270px, calc(100vw - 32px)); }
   footer nav { gap: 22px; }
 }
 @media (max-width: 380px) {

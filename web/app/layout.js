@@ -2,7 +2,9 @@ import Link from "next/link";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { demoMode, getCurrentUser } from "@/lib/session";
-import { setAdminView, setDemoTier } from "@/app/app/actions";
+import { logOut, setAdminView, setDemoTier } from "@/app/app/actions";
+import UserMenu from "@/components/UserMenu";
+import { avatarFor, initials } from "@/lib/avatar";
 
 const body = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const head = Space_Grotesk({ subsets: ["latin"], variable: "--font-head", display: "swap" });
@@ -66,6 +68,7 @@ export default async function RootLayout({ children }) {
           <div className="wrap">
             <Brand />
             <nav className="main" aria-label="Main">
+              {user && <Link href="/app">Dashboard</Link>}
               <Link href="/#deals">Explore deals</Link>
               <Link href="/how-it-works">How it works</Link>
               <Link href="/pricing">Pricing</Link>
@@ -73,7 +76,8 @@ export default async function RootLayout({ children }) {
             </nav>
             <div className="header-actions">
               {user ? (
-                <Link href="/app" className="btn primary">Dashboard ↗</Link>
+                <UserMenu name={user.name} email={user.email} avatarUrl={avatarFor(user).url} initials={initials(user)}
+                  planLabel={user.plan.label} isAdmin={Boolean(user.isAdmin)} onLogOut={logOut} />
               ) : (
                 <>
                   <Link href="/login" className="login-link">Log in</Link>

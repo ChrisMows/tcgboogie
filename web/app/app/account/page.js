@@ -1,6 +1,7 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
-import { connectProvider, deleteAccount, disconnectProvider, savePreferences } from "../actions";
+import { connectProvider, deleteAccount, disconnectProvider, savePreferences, setAvatar } from "../actions";
+import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 
 export const metadata = { title: "Account" };
 
@@ -11,6 +12,8 @@ export default async function Account({ searchParams }) {
   const user = await requireUser();
   const params = await searchParams;
   const premium = user.tier === "premium";
+  const pictures = avatarOptions(user);
+  const current = avatarFor(user);
 
   return (
     <>
@@ -20,7 +23,34 @@ export default async function Account({ searchParams }) {
           <p>Your profile, sign-in methods and how alerts reach you.</p>
         </div>
       </div>
-      {params?.saved && <div className="notice good">Saved.</div>}
+      {params?.saved && <div className="notice good">{params.saved === "avatar" ? "Profile picture updated." : "Saved."}</div>}
+
+      <div className="panel" id="picture">
+        <h2>Profile picture</h2>
+        <form action={setAvatar}>
+          <div className="avatar-choice" role="radiogroup" aria-label="Profile picture">
+            {Object.entries(AVATAR_SOURCES).map(([key, label]) => {
+              const url = key === "initials" ? null : pictures[key];
+              const usable = key === "initials" || Boolean(url);
+              return (
+                <label key={key} className={usable ? "" : "disabled"}>
+                  <input type="radio" name="avatar" value={key} defaultChecked={current.source === key} disabled={!usable} />
+                  <span className="avatar-btn lg" aria-hidden="true">
+                    {url
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={url} alt="" referrerPolicy="no-referrer" />
+                      : <span>{key === "initials" ? initials(user) : "?"}</span>}
+                  </span>
+                  {label}
+                  {!usable && <span className="hint" style={{ margin: 0 }}>{user.providers.includes(key) ? "Sign in with it once" : "Not connected"}</span>}
+                </label>
+              );
+            })}
+          </div>
+          <button className="btn sm primary" style={{ marginTop: 14 }}>Use this picture</button>
+          <p className="hint" style={{ marginBottom: 0 }}>Pictures come from your connected accounts and update each time you sign in with them.</p>
+        </form>
+      </div>
 
       <form action={savePreferences}>
         <div className="panel">
@@ -38,7 +68,7 @@ export default async function Account({ searchParams }) {
           </div>
         </div>
 
-        <div className="panel">
+        <div className="panel" id="alerts">
           <h2>Alerts</h2>
           {!premium && <div className="notice">Instant alerts are a Premium feature. These settings switch on when you upgrade.</div>}
           <label className="check">

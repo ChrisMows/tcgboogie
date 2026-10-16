@@ -28,7 +28,27 @@ if (emailConfigured()) {
     },
   });
 }
-export const enabledProviders = providers.map((p) => (typeof p === "function" ? p({}).id : p.id));
+/** A provider's profile picture URL from its sign-in profile, or null. */
+function providerImage(provider, profile) {
+  if (!profile) return null;
+  if (provider === "google") return typeof profile.picture === "string" ? profile.picture : null;
+  if (provider === "discord" && /^\d+$/.test(String(profile.id || ""))) {
+    if (profile.avatar && /^(a_)?[a-f0-9]+$/.test(profile.avatar)) {
+      return `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${profile.avatar.startsWith("a_") ? "gif" : "png"}?size=128`;
+    }
+    return `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(profile.id) >> 22n) % 6n)}.png`;
+  }
+  return null;
+}
+
+async function saveProviderImage(userId, provider, profile) {
+  const url = providerImage(provider, profile);
+  if (!db || !userId || !url) return;
+  const col = provider === "google" ? { googleImage: url } : provider === "discord" ? { discordImage: url } : null;
+  if (col) await db.update(schema.users).set(col).where(eq(schema.users.id, userId)).catch(() => {});
+}
+
+export const enabledProviders =providers.map((p) => (typeof p === "function" ? p({}).id : p.id));
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: db
@@ -43,6 +63,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: db ? "database" : "jwt", maxAge: 30 * 24 * 60 * 60 },
   trustHost: true,
   pages: { signIn: "/login", verifyRequest: "/login/check-email", error: "/login" },
+  events: {
+    // Keep each provider's profile picture, so members can choose which one we show.
+    async signIn({ user, account, profile }) {
+      await saveProviderImage(user?.id, account?.provider, profile);
+    },
+    async linkAccount({ user, account, profile }) {
+      await saveProviderImage(user?.id, account?.provider, profile);
+    },
+  },
   callbacks: {
     async signIn({ user, account, profile }) {
       // A signed-in member connecting another sign-in method (e.g. Discord from the Account page): always allowed;
