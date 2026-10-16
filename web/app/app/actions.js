@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import { validateFilters } from "@/lib/filters";
+import { setLinkIntent } from "@/lib/link-intent";
 import { demoMode, requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -89,6 +90,7 @@ export async function connectProvider(provider) {
     redirect(`/app/account?linked=${provider}`);
   }
   if (!enabledProviders.includes(provider) || provider === "email") redirect("/app/account?link=unavailable");
+  await setLinkIntent(user.id);
   await signIn(provider, { redirectTo: `/app/account?linked=${provider}` });
 }
 

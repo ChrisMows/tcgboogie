@@ -26,7 +26,8 @@ const DiscordIcon = () => (
 
 export default async function Login({ searchParams }) {
   const params = await searchParams;
-  if (await getCurrentUser()) redirect("/app");
+  // Signed in already: a failed "Connect Discord" lands here with an error, so show it on the Account page.
+  if (await getCurrentUser()) redirect(params?.error ? `/app/account?link=failed&reason=${encodeURIComponent(params.error)}` : "/app");
   const signup = params?.mode === "signup";
   const open = demoMode || authEnabled;
   const has = (p) => demoMode || enabledProviders.includes(p);

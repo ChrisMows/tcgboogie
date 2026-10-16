@@ -67,6 +67,13 @@ export default async function Account({ searchParams }) {
         {params?.unlinked && <div className="notice good">{PROVIDER_LABELS[params.unlinked] || "Account"} disconnected.</div>}
         {params?.link === "last" && <div className="notice warn">That&apos;s your only way to sign in, so it can&apos;t be disconnected. Connect another method first.</div>}
         {params?.link === "unavailable" && <div className="notice warn">That connection isn&apos;t available yet.</div>}
+        {params?.link === "failed" && (
+          <div className="notice bad">
+            {params.reason === "OAuthAccountNotLinked"
+              ? "That Discord account is already connected to a different TCG Boogie account. Sign in with it and disconnect it there first."
+              : "Connecting didn't work. Please try again in a minute, and contact support@tcgboogie.com if it keeps happening."}
+          </div>
+        )}
         <ul className="checklist">
           {METHODS.filter((p) => p !== "email" || user.providers.includes("email")).map((p) => {
             const connected = user.providers.includes(p);

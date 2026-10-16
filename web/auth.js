@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { mayJoin } from "@/lib/access";
+import { readLinkIntent } from "@/lib/link-intent";
 import { db, schema } from "@/lib/db";
 import { emailConfigured, sendLoginEmail } from "@/lib/mail";
 
@@ -12,7 +13,8 @@ export const authEnabled = Boolean(db && process.env.AUTH_SECRET);
 
 const providers = [];
 if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) providers.push(Google);
-if (process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET) providers.push(Discord);
+// Discord now returns an "iss" (issuer) value on sign-in (RFC 9207); tell Auth.js what to expect, or every login fails.
+if (process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET) providers.push(Discord({ issuer: "https://discord.com" }));
 if (emailConfigured()) {
   // Passwordless email: we send a one-time sign-in link through our own mailbox.
   providers.push({
@@ -45,10 +47,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       // A signed-in member connecting another sign-in method (e.g. Discord from the Account page): always allowed;
       // Auth.js links it to their existing account.
-      if (account?.type === "oauth" || account?.type === "oidc") {
-        const current = await auth();
-        if (current?.user?.id) return true;
-      }
+      if (await readLinkIntent()) return true;
+      try {
+        if ((await auth())?.user?.id) return true;
+      } catch { /* no session readable here; fall through to the normal checks */ }
       // The provider must have verified the address, or anyone could claim someone else's email.
       if (account?.provider === "google" && profile?.email_verified !== true) return "/login?error=unverified";
       if (account?.provider === "discord" && profile?.verified !== true) return "/login?error=unverified";
