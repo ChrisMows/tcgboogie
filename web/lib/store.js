@@ -42,29 +42,71 @@ export async function linkedProviders(userId) {
   return [...new Set(list)];
 }
 
+// ---------- profile pictures ----------
+const discordAvatarUrl = (p) => (p.avatar && /^(a_)?[a-f0-9]+$/.test(p.avatar)
+  ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${p.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
+  : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(p.id) >> 22n) % 6n)}.png`);
+
+/** Swap an expired Discord access token for a new one with the refresh token Discord gave us, and store it. */
+async function renewDiscordToken(userId, refreshToken) {
+  if (!refreshToken || !process.env.AUTH_DISCORD_ID || !process.env.AUTH_DISCORD_SECRET) return null;
+  const r = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token", refresh_token: refreshToken,
+      client_id: process.env.AUTH_DISCORD_ID, client_secret: process.env.AUTH_DISCORD_SECRET,
+    }),
+    cache: "no-store",
+  });
+  if (!r.ok) return null;
+  const t = await r.json();
+  if (!t.access_token) return null;
+  await db.update(accounts).set({
+    access_token: t.access_token, refresh_token: t.refresh_token || refreshToken,
+    expires_at: Math.floor(Date.now() / 1000) + Number(t.expires_in || 604800),
+  }).where(and(eq(accounts.userId, userId), eq(accounts.provider, "discord")));
+  return t.access_token;
+}
+
+const DAY = 24 * 3600 * 1000;
+const checking = g.__tcgAvatarChecks ?? (g.__tcgAvatarChecks = new Set());
+
 /**
- * For members who connected Discord before pictures were saved: fetch their Discord avatar once with the access
- * Discord granted at connect time. Returns the URL (or null) and stores it.
+ * Pick up a member's current Discord picture (they may have changed it on Discord). Runs at most once a day per
+ * member, or right away with { force: true } (e.g. when the saved picture stopped loading). Returns the URL or null.
  */
-export async function backfillDiscordImage(userId) {
-  const tried = (g.__tcgDiscordBackfill ||= new Set()); // one attempt per member per server start
-  if (tried.has(userId)) return null;
-  tried.add(userId);
-  const [acct] = await db.select({ token: accounts.access_token }).from(accounts)
-    .where(and(eq(accounts.userId, userId), eq(accounts.provider, "discord"))).limit(1);
-  if (!acct?.token) return null;
+export async function refreshDiscordImage(userId, { force = false } = {}) {
+  if (checking.has(userId)) return null;
+  checking.add(userId);
   try {
-    const r = await fetch("https://discord.com/api/users/@me", { headers: { Authorization: `Bearer ${acct.token}` }, cache: "no-store" });
+    const [row] = await db.select({ at: users.avatarCheckedAt }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!force && row?.at && Date.now() - row.at.getTime() < DAY) return null;
+    await db.update(users).set({ avatarCheckedAt: new Date() }).where(eq(users.id, userId));
+    const [acct] = await db.select().from(accounts).where(and(eq(accounts.userId, userId), eq(accounts.provider, "discord"))).limit(1);
+    if (!acct) return null;
+    let token = acct.access_token;
+    if ((!token || (acct.expires_at && acct.expires_at * 1000 < Date.now() + 60000)) && acct.refresh_token) {
+      token = await renewDiscordToken(userId, acct.refresh_token);
+    }
+    if (!token) return null;
+    const me = (t) => fetch("https://discord.com/api/users/@me", { headers: { Authorization: `Bearer ${t}` }, cache: "no-store" });
+    let r = await me(token);
+    if (r.status === 401 && acct.refresh_token) {
+      token = await renewDiscordToken(userId, acct.refresh_token);
+      if (!token) return null;
+      r = await me(token);
+    }
     if (!r.ok) return null;
     const p = await r.json();
     if (!/^\d+$/.test(String(p.id || ""))) return null;
-    const url = p.avatar && /^(a_)?[a-f0-9]+$/.test(p.avatar)
-      ? `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${p.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
-      : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(p.id) >> 22n) % 6n)}.png`;
+    const url = discordAvatarUrl(p);
     await db.update(users).set({ discordImage: url }).where(eq(users.id, userId));
     return url;
   } catch {
     return null;
+  } finally {
+    checking.delete(userId);
   }
 }
 

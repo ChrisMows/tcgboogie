@@ -11,6 +11,7 @@ export const users = pgTable("user", {
   googleImage: text("google_image"),
   discordImage: text("discord_image"),
   avatarSource: text("avatar_source"),
+  avatarCheckedAt: timestamp("avatar_checked_at", { mode: "date" }), // last automatic Discord picture check
   // Plan: "free" or "premium". Set by billing (Stripe) later; the Discord bot reads it to grant the role.
   tier: text("tier").notNull().default("free"),
   // Alert delivery preferences

@@ -89,6 +89,31 @@ export async function setAvatar(formData) {
   redirect("/app/account?saved=avatar");
 }
 
+/** "Refresh" next to a picture: Discord is fetched directly; Google needs a quick pass through Google's sign-in. */
+export async function refreshPicture(provider) {
+  const user = await requireUser();
+  if (user.demo || !user.providers.includes(provider)) redirect("/app/account#picture");
+  if (provider === "discord") {
+    const url = await store.refreshDiscordImage(user.id, { force: true });
+    revalidatePath("/", "layout");
+    redirect(`/app/account?refreshed=${url ? "discord" : "failed"}#picture`);
+  }
+  if (provider === "google") {
+    await setLinkIntent(user.id);
+    await signIn("google", { redirectTo: "/app/account?refreshed=google#picture" });
+  }
+  redirect("/app/account#picture");
+}
+
+/** Called by the header when the saved picture fails to load: fetch a fresh one if we can. */
+export async function repairPicture() {
+  const user = await requireUser();
+  if (user.demo || !user.providers.includes("discord")) return { url: null };
+  const url = await store.refreshDiscordImage(user.id, { force: true });
+  if (url) revalidatePath("/", "layout");
+  return { url };
+}
+
 /** Connect another sign-in method (Google or Discord) to the signed-in account. */
 export async function connectProvider(provider) {
   const user = await requireUser();

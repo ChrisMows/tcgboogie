@@ -12,7 +12,7 @@ const EXAMPLES = [
 export default async function Home({ searchParams }) {
   const deleted = (await searchParams)?.deleted;
   const cards = Object.fromEntries(
-    EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card, illustrative`} />]),
+    EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
   );
 
   return (
@@ -39,14 +39,14 @@ export default async function Home({ searchParams }) {
 
           <div className="stage" aria-label="Collectible cards with an illustrative deal alert">
             <div className="orbit" />
-            <CardArt name="charizard" className="tcg left" alt="Illustrative fire-type card" />
-            <CardArt name="arceus" className="tcg right" alt="Illustrative card" />
+            <CardArt name="charizard" className="tcg left" alt="Charizard ex card" />
+            <CardArt name="card-back" className="tcg right" alt="Trading card back" />
             <div className="slab">
               <div className="slab-label">
                 <span>2021 EVOLVING SKIES<br />UMBREON VMAX · #215<br />ILLUSTRATIVE GRADED CARD</span>
                 <b>10</b>
               </div>
-              <CardArt name="umbreon" alt="Illustrative graded card" />
+              <CardArt name="umbreon" alt="Umbreon VMAX alternate art card in a graded slab" />
             </div>
             <div className="float alert">
               <small>♧ &nbsp; IT&apos;S TIME TO BOOGIE</small>
@@ -84,7 +84,7 @@ export default async function Home({ searchParams }) {
           <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>
         </div>
         <DealTabs deals={EXAMPLES} cards={cards} />
-        <p className="note">Illustrative listings and prices, not live offers. Card art shown is a placeholder illustration.</p>
+        <p className="note">Illustrative listings and prices, not live offers.</p>
       </section>
 
       <section className="content workflow" id="how">

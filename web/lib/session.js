@@ -34,7 +34,13 @@ export async function getCurrentUser() {
   const row = await store.getUser(session.user.id);
   if (!row) return null;
   const providers = await store.linkedProviders(row.id);
-  if (providers.includes("discord") && !row.discordImage) row.discordImage = await store.backfillDiscordImage(row.id);
+  // Discord pictures: fetch now if we've never had one, otherwise re-check in the background at most once a day.
+  if (providers.includes("discord")) {
+    if (!row.discordImage) row.discordImage = (await store.refreshDiscordImage(row.id)) || null;
+    else if (!row.avatarCheckedAt || Date.now() - new Date(row.avatarCheckedAt).getTime() > 24 * 3600 * 1000) {
+      void store.refreshDiscordImage(row.id);
+    }
+  }
   // Admins get Premium, and can preview the site as a Free member (admin bar at the top).
   const isAdmin = isAdminEmail(row.email);
   const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : row.tier;

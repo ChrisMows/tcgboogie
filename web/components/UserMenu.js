@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { repairPicture } from "@/app/app/actions";
 
 const ITEMS = [
   ["/app", "My dashboard"],
@@ -30,9 +31,22 @@ export default function UserMenu({ name, email, avatarUrl, initials, planLabel, 
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
   }, [open]);
 
-  const face = avatarUrl && !broken
+  // If the saved picture stops loading (e.g. it was changed on Discord), try once to fetch the current one.
+  const [url, setUrl] = useState(avatarUrl);
+  useEffect(() => { setUrl(avatarUrl); setBroken(false); }, [avatarUrl]);
+  async function onImgError() {
+    setBroken(true);
+    try {
+      if (sessionStorage.getItem("tcg-avatar-repair") === avatarUrl) return;
+      sessionStorage.setItem("tcg-avatar-repair", avatarUrl || "");
+    } catch { /* storage unavailable: still try once per page */ }
+    const r = await repairPicture().catch(() => null);
+    if (r?.url && r.url !== avatarUrl) { setUrl(r.url); setBroken(false); }
+  }
+
+  const face = url && !broken
     // eslint-disable-next-line @next/next/no-img-element
-    ? <img src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+    ? <img src={url} alt="" referrerPolicy="no-referrer" onError={onImgError} />
     : <span>{initials}</span>;
 
   return (

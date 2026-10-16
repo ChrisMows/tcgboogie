@@ -13,7 +13,7 @@ function realImage(name) {
   if (!(name in cache)) {
     // cwd is web/ in production, but the repo root when the local preview runs `next dev web`.
     const dirs = [path.join(process.cwd(), "public"), path.join(process.cwd(), "web", "public")];
-    const file = ["png", "webp", "jpg"].find((ext) =>
+    const file = ["webp", "png", "jpg"].find((ext) =>
       dirs.some((d) => fs.existsSync(path.join(d, "assets", `${name}.${ext}`))),
     );
     cache[name] = file ? `/assets/${name}.${file}` : null;

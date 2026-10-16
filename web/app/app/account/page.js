@@ -1,6 +1,6 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
-import { connectProvider, deleteAccount, disconnectProvider, savePreferences, setAvatar } from "../actions";
+import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, savePreferences, setAvatar } from "../actions";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 
 export const metadata = { title: "Account" };
@@ -24,6 +24,13 @@ export default async function Account({ searchParams }) {
         </div>
       </div>
       {params?.saved && <div className="notice good">{params.saved === "avatar" ? "Profile picture updated." : "Saved."}</div>}
+      {params?.refreshed && (
+        <div className={`notice ${params.refreshed === "failed" ? "warn" : "good"}`}>
+          {params.refreshed === "failed"
+            ? "We couldn't reach Discord just now. Try again in a minute, or disconnect and reconnect Discord."
+            : `Picture refreshed from ${params.refreshed === "google" ? "Google" : "Discord"}.`}
+        </div>
+      )}
 
       <div className="panel" id="picture">
         <h2>Profile picture</h2>
@@ -48,8 +55,19 @@ export default async function Account({ searchParams }) {
             })}
           </div>
           <button className="btn sm primary" style={{ marginTop: 14 }}>Use this picture</button>
-          <p className="hint" style={{ marginBottom: 0 }}>Pictures come from your connected accounts and update each time you sign in with them.</p>
         </form>
+        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap", justifyContent: "flex-start" }}>
+          {user.providers.includes("google") && (
+            <form action={refreshPicture.bind(null, "google")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Google</button></form>
+          )}
+          {user.providers.includes("discord") && (
+            <form action={refreshPicture.bind(null, "discord")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Discord</button></form>
+          )}
+        </div>
+        <p className="hint" style={{ marginBottom: 0 }}>
+          Changed your picture on Google or Discord? Discord pictures update on their own about once a day, and Google
+          pictures each time you sign in with Google. Use Refresh to pick up a change right away.
+        </p>
       </div>
 
       <form action={savePreferences}>
