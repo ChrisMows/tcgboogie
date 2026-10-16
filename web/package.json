@@ -12,8 +12,16 @@
     "node": ">=20.9"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "1.11.3",
+    "drizzle-orm": "0.45.4",
     "next": "16.4.2",
+    "next-auth": "5.0.0-beta.32",
+    "nodemailer": "10.1.2",
+    "pg": "8.23.1",
     "react": "19.2.9",
     "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11"
   }
 }
