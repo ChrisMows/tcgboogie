@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth, authEnabled } from "@/auth";
+import { isAdminEmail } from "@/lib/access";
 import { planFor } from "@/lib/plans";
 import * as store from "@/lib/store";
 
@@ -33,7 +34,10 @@ export async function getCurrentUser() {
   const row = await store.getUser(session.user.id);
   if (!row) return null;
   const providers = await store.linkedProviders(row.id);
-  return { ...row, plan: planFor(row.tier), providers, discordConnected: providers.includes("discord"), demo: false };
+  // Admins get Premium, and can preview the site as a Free member (admin bar at the top).
+  const isAdmin = isAdminEmail(row.email);
+  const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : row.tier;
+  return { ...row, tier, plan: planFor(tier), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
 }
 
 /** Use in member pages: returns the user or sends them to the login page. */

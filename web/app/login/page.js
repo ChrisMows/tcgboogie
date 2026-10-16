@@ -11,6 +11,10 @@ const ERRORS = {
   unavailable: "That sign-in option isn't available yet.",
   OAuthAccountNotLinked: "That email is already used with a different sign-in method. Sign in with that one first, then connect this one from your account page.",
   Verification: "That sign-in link has expired or was already used. Request a new one.",
+  invite: "TCG Boogie is invite-only while we finish testing. Join our Discord to get on the list.",
+  AccessDenied: "TCG Boogie is invite-only while we finish testing. Join our Discord to get on the list.",
+  unverified: "Your Google account's email address isn't verified yet. Verify it with Google, then try again.",
+  noemail: "We couldn't get an email address from that sign-in. Try another option.",
 };
 
 const GoogleIcon = () => (

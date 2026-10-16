@@ -80,6 +80,14 @@ export async function logOut() {
   await signOut({ redirectTo: "/" });
 }
 
+/** Admins: preview the site as a Free or Premium member. */
+export async function setAdminView(tier) {
+  const user = await requireUser();
+  if (!user.isAdmin) return;
+  (await cookies()).set("admin_view", tier === "free" ? "free" : "premium", { path: "/", sameSite: "lax", httpOnly: true, secure: true });
+  revalidatePath("/", "layout");
+}
+
 /** Demo only: switch the preview between Free and Premium to see how each plan looks. */
 export async function setDemoTier(tier) {
   if (!demoMode) return;

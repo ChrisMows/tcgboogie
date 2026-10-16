@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { demoMode, getCurrentUser } from "@/lib/session";
-import { setDemoTier } from "@/app/app/actions";
+import { setAdminView, setDemoTier } from "@/app/app/actions";
 
 const body = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const head = Space_Grotesk({ subsets: ["latin"], variable: "--font-head", display: "swap" });
@@ -44,6 +44,20 @@ export default async function RootLayout({ children }) {
               </form>
               <form action={setDemoTier.bind(null, "premium")}>
                 <button className={`btn sm ${user?.tier === "premium" ? "primary" : ""}`}>Premium</button>
+              </form>
+            </div>
+          </div>
+        )}
+        {user?.isAdmin && (
+          <div className="demo-bar">
+            <div className="wrap">
+              <b>Admin</b>
+              <span className="muted">Preview the site as:</span>
+              <form action={setAdminView.bind(null, "free")}>
+                <button className={`btn sm ${user.tier === "free" ? "primary" : ""}`}>Free member</button>
+              </form>
+              <form action={setAdminView.bind(null, "premium")}>
+                <button className={`btn sm ${user.tier === "premium" ? "primary" : ""}`}>Premium member</button>
               </form>
             </div>
           </div>

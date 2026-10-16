@@ -13,7 +13,9 @@ export default async function Billing() {
       <div className="page-head">
         <div>
           <h1>Plan and billing</h1>
-          <p>You're on the <b>{user.plan.label}</b> plan.</p>
+          <p>{user.isAdmin
+            ? <>Admin account: Premium is included. You&apos;re previewing the site as a <b>{user.plan.label}</b> member (switch in the admin bar).</>
+            : <>You&apos;re on the <b>{user.plan.label}</b> plan.</>}</p>
         </div>
       </div>
       <div className="plans" style={{ margin: 0, maxWidth: "none" }}>

@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { eq } from "drizzle-orm";
+import { mayJoin } from "@/lib/access";
 import { db, schema } from "@/lib/db";
 import { emailConfigured, sendLoginEmail } from "@/lib/mail";
 
@@ -40,6 +42,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   pages: { signIn: "/login", verifyRequest: "/login/check-email", error: "/login" },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Google must have verified the address, or anyone could claim someone else's email.
+      if (account?.provider === "google" && profile?.email_verified !== true) return "/login?error=unverified";
+      const email = String(user?.email || profile?.email || "").toLowerCase();
+      if (!email) return "/login?error=noemail";
+      if (mayJoin(email)) return true;
+      // While sign-up is invite-only, people who already have an account can still sign in.
+      const [existing] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
+      return existing ? true : "/login?error=invite";
+    },
     session({ session, user }) {
       if (user) {
         session.user.id = user.id;
