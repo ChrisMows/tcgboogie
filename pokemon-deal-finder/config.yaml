@@ -1,0 +1,171 @@
+# Pokémon Graded Deal Finder - settings
+# The finder re-reads this file on every check, so edits take effect within a minute.
+#
+# How filtering works: the bot scans eBay ONCE per check, as wide as the loosest active filter profile needs
+# (never wider than scan_limits). Each member's profiles then narrow that down to their own alerts.
+# Members edit their profiles in Discord with /profile; their plan sets the limits below.
+
+# Starting values for a new filter profile (members change them with /profile set).
+profile_defaults:
+  min_discount_pct: 30        # price + shipping at least this % below market value
+  max_minutes_left: 10        # auction ends within this many minutes
+  min_market_value: 30        # card worth at least this
+  min_grade: 7
+  graders: [PSA, BGS, CGC, SGC, TAG]
+  languages: [english, japanese]
+  card_types: [graded, raw]   # graded slabs, raw (ungraded) cards, or both
+  min_raw_condition: LP       # raw cards: NM, LP, MP, HP or DMG (LP = Lightly Played or better)
+
+# TCGplayer "Compare" links on raw-card alerts. Paste your Impact affiliate link prefix here to earn commission,
+# e.g. https://tcgplayer.pxf.io/c/XXXXXXX/XXXXXX/XXXXX?u=  (the card's TCGplayer page is added after it)
+tcgplayer:
+  affiliate_prefix: ""
+
+# Hard limits on what any profile can ask for. These cap eBay calls and price-lookup credits.
+scan_limits:
+  min_discount_pct: 10
+  max_minutes_left: 60
+  min_market_value: 10
+
+# Plans. A member's Discord role picks the plan (highest rank wins). "owner" is you.
+plans:
+  owner:
+    label: Owner
+    rank: 99
+    max_profiles: 50
+    alert_delay_seconds: 0
+    min_discount_floor: 10    # lowest "% below market" a profile on this plan may use
+    max_window_minutes: 60    # longest "minutes left" a profile on this plan may use
+    min_value_floor: 10       # lowest "minimum card value" a profile on this plan may use
+    features: [japanese]
+  premium:
+    label: Premium
+    role: Premium             # Discord role name the website gives paying Premium members
+    rank: 2
+    max_profiles: 15
+    alert_delay_seconds: 0
+    min_discount_floor: 15
+    max_window_minutes: 60
+    min_value_floor: 10
+    features: [japanese]
+  standard:
+    label: Standard
+    role: Standard
+    rank: 1
+    max_profiles: 2
+    alert_delay_seconds: 120  # Standard alerts arrive 2 minutes after Premium
+    min_discount_floor: 35
+    max_window_minutes: 10
+    min_value_floor: 30
+    features: []
+
+membership:
+  roles_enabled: false        # true once the website assigns plan roles (also turn on "Server Members Intent")
+  upgrade_url: ""             # link shown on Upgrade / Manage subscription buttons
+
+delivery:
+  category_name: Deal Alerts  # member channels are created in categories with this name (50 per category)
+  max_channels: 450           # after this many server channels, new members get private threads instead
+  thread_parent: member-alerts  # channel that holds members' private threads
+
+deal:
+  comp_lookback_days: 30      # only sold comps from the last N days count toward market value
+  min_comps: 3                # skip the card if fewer sold comps than this (after outliers removed)
+  max_comp_spread: 0.35       # skip if comps vary too much (coefficient of variation; 0.35 = 35%)
+  comp_refresh_days: 15       # dashboard marks a watchlist card "refresh due" after this many days
+
+poll:
+  interval_seconds: 75        # how often to check eBay (75s keeps us well under 5,000 calls/day)
+  search_window_minutes: 12   # look a little past max_minutes_left so nothing slips between checks
+  max_pages: 2                # max search pages (200 listings each) per check. Results are soonest-ending first, so
+                              # at peak times a listing just shows up a few minutes later; this keeps eBay calls in budget
+  daily_call_budget: 4800     # eBay's default Browse API limit is 5,000/day; finder slows down near this
+
+ebay:
+  marketplace_id: EBAY_US
+  category_id: "183454"       # eBay "CCG Individual Cards"
+  aspect_filter: "categoryId:183454,Game:{Pokémon TCG}"
+  buyer_zip: "10001"          # used so eBay can calculate shipping to you; set to your ZIP
+  affiliate_campaign_id: ""   # eBay Partner Network campaign ID; when set, listing links carry your affiliate tracking
+  affiliate_disclosure: "Ad · eBay links may earn us a commission"
+
+graders_allowed: [PSA, BGS, BVG, CGC, CSG, SGC, TAG, ACE]
+
+# Automatic mode: value ANY graded listing via PokemonPriceTracker (needs PPT_API_KEY in .env).
+# Your watchlist still works alongside it and takes priority for cards on it.
+auto:
+  enabled: true
+  max_disagreement: 0.4       # skip if our 30-day value and the service's own estimate differ by more than 40%
+  credit_reserve: 20          # stop new lookups when fewer daily credits than this remain
+  max_lookups_per_check: 40   # cap on uncached service calls per eBay check
+  search_limit: 5             # cards returned per card-number lookup (each costs 1 credit)
+  catalog_cache_days: 30      # how long a card-number lookup is reused
+  price_cache_hours: 6        # how long a card's price data is reused
+
+red_flags:
+  min_seller_feedback_score: 50
+  min_seller_feedback_pct: 98.0
+  max_shipping: 25.00         # flag unusually high shipping
+  # A GRADED-search listing whose title contains any of these is excluded (they describe raw cards).
+  # Raw-card listings may use these words normally.
+  graded_only_exclude_keywords:
+    - pre-graded
+    - pregraded
+    - pre graded
+    - gem mint quality
+    - mint quality
+    - ready to grade
+    - psa ready
+    - grade ready
+    - candidate
+    - potential 10
+    - not graded
+    - ungraded
+    - raw
+  # A listing whose TITLE contains any of these is excluded outright (graded or raw).
+  exclude_title_keywords:
+    - proxy
+    - custom
+    - reprint
+    - replica
+    - fake
+    - orica
+    - fan art
+    - lot
+    - bundle
+    - you pick
+    - pick your
+    - choose your
+    - cracked
+    - crack
+    - broken slab
+    - damaged slab
+    - case damage
+    - slab damage
+    - label only
+    - empty slab
+    - no card
+    - sticker
+    - digital
+    - code card
+    - mystery
+    - repack
+    - bulk
+    - binder
+  # If the DESCRIPTION contains any of these, the alert is still sent but flagged.
+  flag_description_keywords:
+    - pre-graded
+    - not graded
+    - ungraded
+    - proxy
+    - replica
+    - reprint
+    - custom
+    - crack
+    - damaged
+    - scratch
+    - as is
+    - no returns
+    - stock photo
+    - stock image
+    - not the actual

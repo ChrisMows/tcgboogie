@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ card.name }}{% endblock %}
+{% block body %}
+<div class="row" style="justify-content: space-between">
+  <div><h1>{{ label }}</h1><p class="sub">{{ card.notes }}</p></div>
+  <div class="row">
+    <a class="btn" href="{{ sold_url }}" target="_blank" rel="noopener">Open eBay sold search ↗</a>
+    <a class="btn" href="{{ url_for('card_edit', card_id=card.id) }}">Edit card</a>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat"><b>{{ st.mv.value|money }}</b><span>market value (price + ship)</span></div>
+  <div class="stat"><b>{{ st.mv.comps_used if st.mv.ok else st.mv.comps_in_window }}</b><span>comps in last {{ cfg.deal.comp_lookback_days }} days</span></div>
+  <div class="stat"><b>{{ (cfg.deal.min_discount_pct) |int }}%</b><span>alert at or below {{ (st.mv.value * (1 - cfg.deal.min_discount_pct/100))|money if st.mv.ok else '-' }}</span></div>
+  <div class="stat"><b>{{ ('%.0f%%'|format(st.mv.spread*100)) if st.mv.spread is not none else '-' }}</b><span>spread (limit {{ (cfg.deal.max_comp_spread*100)|int }}%)</span></div>
+</div>
+<div class="panel" style="margin-bottom:16px">
+  {% if st.mv.ok %}<span class="pill good">ready</span>{% else %}<span class="pill bad">not trusted</span>{% endif %}
+  <span class="muted">{{ st.mv.reason }}{% if st.mv.outliers_dropped %} · outliers ignored: {% for o in st.mv.outliers_dropped %}{{ o|money }} {% endfor %}{% endif %}</span>
+  {% if st.refresh_due %}<span class="pill warn">refresh due</span>{% endif %}
+</div>
+
+<h2>Add sold comps</h2>
+<form method="post" class="panel">
+  <label>One sale per line: <code>date, price, shipping, note (optional)</code></label>
+  <textarea name="comps" placeholder="2026-10-02, 455.00, 4.99, auction
+10/05/2026, 470, 0
+Oct 9, 512.50, 5.25, BIN"></textarea>
+  <div class="hint">Only enter <b>actual sold</b> prices for this exact card, grader and grade. Skip lots, damaged slabs and best-offer sales where the real price is hidden (130point.com shows those). Dates like 2026-10-02, 10/02/2026 or Oct 2 all work.</div>
+  <div class="row" style="margin-top:10px"><button class="btn primary">Add comps</button></div>
+</form>
+
+<h2>Comps ({{ comps|length }})</h2>
+{% if comps %}
+<div class="tablewrap"><table>
+  <tr><th>Sold</th><th class="num">Price</th><th class="num">Ship</th><th class="num">Total</th><th>Note</th><th>In window</th><th></th></tr>
+  {% for c in comps %}
+  <tr class="{{ 'excluded' if c.excluded }}">
+    <td>{{ c.sold_date }}</td><td class="num">{{ c.price|money }}</td><td class="num">{{ c.shipping|money }}</td>
+    <td class="num">{{ (c.price + c.shipping)|money }}</td><td class="small">{{ c.note }}</td>
+    <td class="small">{% if c.sold_date >= cutoff %}<span class="pill good">yes</span>{% else %}<span class="pill">too old</span>{% endif %}</td>
+    <td class="num">
+      <form class="inline" method="post" action="{{ url_for('comp_toggle', comp_id=c.id) }}"><button class="btn sm">{{ 'Include' if c.excluded else 'Exclude' }}</button></form>
+      <form class="inline" method="post" action="{{ url_for('comp_delete', comp_id=c.id) }}"><button class="btn sm danger">Delete</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% else %}<div class="panel muted">No comps yet.</div>{% endif %}
+{% endblock %}

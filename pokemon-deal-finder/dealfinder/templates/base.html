@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Deal Finder{% endblock %} · Pokémon Deal Finder</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d1117; --panel: #161b22; --panel-2: #1c2330; --border: #2a3240;
+    --text: #e6edf3; --muted: #8b949e; --accent: #f5c518; --accent-ink: #1a1400;
+    --good: #3fb950; --warn: #d29922; --bad: #f85149; --link: #79c0ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+  header { background: var(--panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+  .bar { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .brand { font-weight: 700; color: var(--accent); letter-spacing: .2px; }
+  nav a { color: var(--muted); padding: 6px 2px; } nav a.on, nav a:hover { color: var(--text); text-decoration: none; }
+  nav { display: flex; gap: 16px; flex-wrap: wrap; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 24px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 20px; } .stat span { color: var(--muted); font-size: 12px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; background: var(--panel-2); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); } .small { font-size: 12px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); white-space: nowrap; }
+  .pill.good { color: var(--good); border-color: #23863655; background: #2386361a; }
+  .pill.warn { color: var(--warn); border-color: #9e6a0355; background: #9e6a031a; }
+  .pill.bad { color: var(--bad); border-color: #da363355; background: #da36331a; }
+  .btn { display: inline-block; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+         border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer; }
+  .btn:hover { border-color: var(--muted); text-decoration: none; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.danger { color: var(--bad); } .btn.sm { padding: 3px 8px; font-size: 12px; }
+  form.inline { display: inline; }
+  label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font: inherit; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #f5c51855; border-color: var(--accent); }
+  textarea { min-height: 140px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 16px; } .checks label { display: flex; gap: 6px; align-items: center; color: var(--text); font-size: 14px; margin: 0; }
+  .flash { background: #1f2a1f; border: 1px solid #2f4f2f; color: #b7e4b7; padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .excluded td { opacity: .45; text-decoration: line-through; }
+  .excluded td:last-child { text-decoration: none; opacity: 1; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <span class="brand">⚡ Pokémon Deal Finder</span>
+  <nav>
+    <a href="{{ url_for('alerts_page') }}" class="{{ 'on' if request.endpoint == 'alerts_page' }}">Alerts</a>
+    <a href="{{ url_for('watchlist_page') }}" class="{{ 'on' if request.endpoint in ('watchlist_page','card_page','card_edit') }}">Watchlist</a>
+    <a href="{{ url_for('candidates_page') }}" class="{{ 'on' if request.endpoint == 'candidates_page' }}">Near misses</a>
+    <a href="{{ url_for('settings_page') }}" class="{{ 'on' if request.endpoint == 'settings_page' }}">Settings</a>
+  </nav>
+</div></header>
+<main>
+  {% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

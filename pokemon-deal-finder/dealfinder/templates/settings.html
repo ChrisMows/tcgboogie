@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block body %}
+<h1>Settings</h1>
+<p class="sub">Saved to <code>config.yaml</code>. The running finder picks changes up on its next check, no restart needed.</p>
+{% set labels = {
+  'min_discount_pct': ('Minimum % below market', '30 = alert when price + shipping is at least 30% under market value'),
+  'max_minutes_left': ('Max minutes left', 'Only auctions ending within this many minutes'),
+  'comp_lookback_days': ('Comp lookback (days)', 'Sold comps older than this are ignored'),
+  'min_comps': ('Minimum comps', 'Skip a card with fewer sold comps than this'),
+  'max_comp_spread': ('Max comp spread', '0.35 = skip if comps vary more than 35%'),
+  'comp_refresh_days': ('Refresh reminder (days)', 'Mark a card "refresh due" when its newest comp is this old'),
+  'interval_seconds': ('Check every (seconds)', '75 keeps eBay usage around 1,200-2,500 calls/day'),
+  'min_seller_feedback_score': ('Flag sellers with feedback under', ''),
+  'min_seller_feedback_pct': ('Flag sellers with positive % under', ''),
+  'max_shipping': ('Flag shipping over ($)', ''),
+  'buyer_zip': ('Your ZIP code', 'Lets eBay calculate shipping to you'),
+  'enabled': ('Automatic mode', 'on = value every graded listing via PokemonPriceTracker; off = watchlist only'),
+  'min_market_value': ('Auto: minimum card value ($)', 'Ignore cards worth less than this'),
+  'min_grade': ('Auto: lowest grade', 'Ignore grades below this'),
+} %}
+<form method="post" class="panel">
+  <div class="grid">
+  {% for f in fields %}
+    <div><label>{{ labels[f.key][0] }}</label>
+      <input type="text" name="{{ f.section }}.{{ f.key }}" value="{{ f.value }}">
+      {% if labels[f.key][1] %}<div class="hint">{{ labels[f.key][1] }}</div>{% endif %}</div>
+  {% endfor %}
+  </div>
+  <div class="row" style="margin-top:16px"><button class="btn primary">Save settings</button></div>
+</form>
+
+<h2>Connections</h2>
+<div class="panel">
+  <p>eBay API keys: {% if ebay_set %}<span class="pill good">set</span>{% else %}<span class="pill bad">missing</span> <span class="muted">add EBAY_CLIENT_ID / EBAY_CLIENT_SECRET to .env</span>{% endif %}</p>
+  <p>Discord webhook: {% if webhook_set %}<span class="pill good">set</span>{% else %}<span class="pill bad">missing</span> <span class="muted">add DISCORD_WEBHOOK_URL to .env</span>{% endif %}</p>
+  <form method="post" action="{{ url_for('test_alert') }}"><button class="btn">Send test alert to Discord</button></form>
+  <p class="hint">Title keyword exclusions, description red-flag words and allowed graders are edited directly in config.yaml.</p>
+</div>
+{% endblock %}

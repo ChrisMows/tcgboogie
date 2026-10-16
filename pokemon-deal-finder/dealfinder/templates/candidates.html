@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Near misses{% endblock %}
+{% block body %}
+<h1>Near misses</h1>
+<p class="sub">Ending auctions that matched a watchlist card's name but didn't alert, and why. Use this to tune matching and thresholds.</p>
+{% if not rows %}
+  <div class="panel muted">Nothing yet. This fills in once the finder is running.</div>
+{% else %}
+<div class="tablewrap"><table>
+  <tr><th>Seen</th><th>Listing</th><th>Watchlist card</th><th class="num">Price + ship</th><th class="num">Market</th>
+      <th class="num">Below</th><th class="num">Left</th><th>Result</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td class="small">{{ r.last_seen|when }}</td>
+    <td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a></td>
+    <td class="small">{{ r.card_label or '' }}</td>
+    <td class="num">{{ r.total|money }}</td>
+    <td class="num">{{ r.market_value|money }}</td>
+    <td class="num">{{ ('%.0f%%'|format(r.discount_pct)) if r.discount_pct is not none else '-' }}</td>
+    <td class="num">{{ ('%.1fm'|format(r.minutes_left)) if r.minutes_left is not none else '' }}</td>
+    <td class="small"><span class="pill {{ 'good' if r.status == 'alerted' else '' }}">{{ r.status }}</span> {{ r.reason }}</td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

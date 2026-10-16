@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit card' if card.id else 'Add card' }}{% endblock %}
+{% block body %}
+<h1>{{ 'Edit card' if card.id else 'Add card' }}</h1>
+<p class="sub">One entry per card + grader + grade. A PSA 9 and a PSA 10 of the same card are two entries.</p>
+<form method="post" class="panel">
+  <div class="grid">
+    <div><label>Pokémon / card name *</label><input type="text" name="name" value="{{ card.name or '' }}" placeholder="Charizard">
+      <div class="hint">Every word must appear in the listing, e.g. "Umbreon VMAX".</div></div>
+    <div><label>Set *</label><input type="text" name="set_name" value="{{ card.set_name or '' }}" placeholder="Base Set"></div>
+    <div><label>Other set spellings</label><input type="text" name="set_aliases" value="{{ card.set_aliases or '' }}" placeholder="base, 1999 base">
+      <div class="hint">Comma separated. Any one must appear in the title or eBay's "Set" field.</div></div>
+    <div><label>Card number *</label><input type="text" name="card_number" value="{{ card.card_number or '' }}" placeholder="4/102 or SWSH050">
+      <div class="hint">Leading zeros don't matter (004/102 = 4/102).</div></div>
+    <div><label>Grader *</label><select name="grader">
+      {% for g in graders %}<option {{ 'selected' if card.grader == g }}>{{ g }}</option>{% endfor %}</select></div>
+    <div><label>Grade *</label><input type="text" name="grade" value="{{ card.grade or '' }}" placeholder="10, 9.5, 10 Pristine, 10 Black Label"></div>
+    <div><label>Language</label><select name="language">
+      {% for l in languages %}<option value="{{ l }}" {{ 'selected' if card.language == l }}>{{ l.title() }}</option>{% endfor %}</select></div>
+    <div><label>Exclude listings containing</label><input type="text" name="exclude_terms" value="{{ card.exclude_terms or '' }}" placeholder="e.g. base set 2, celebrations">
+      <div class="hint">Comma separated, for look-alike cards.</div></div>
+  </div>
+  <h2>Variant <span class="muted small">(must match exactly; leave all unchecked for the standard version)</span></h2>
+  {% set chosen = (card.variants or '').split(', ') %}
+  <div class="checks">
+    {% for v in variants %}<label><input type="checkbox" name="variants" value="{{ v }}" {{ 'checked' if v in chosen }}> {{ v[:1]|upper }}{{ v[1:] }}</label>{% endfor %}
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <div><label>Notes</label><input type="text" name="notes" value="{{ card.notes or '' }}"></div>
+    <div class="checks" style="align-items:end"><label><input type="checkbox" name="active" {{ 'checked' if card.active }}> Watching (uncheck to pause)</label></div>
+  </div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn primary">Save</button>
+    <a class="btn" href="{{ url_for('card_page', card_id=card.id) if card.id else url_for('watchlist_page') }}">Cancel</a>
+  </div>
+</form>
+{% if card.id %}
+<form method="post" action="{{ url_for('card_delete', card_id=card.id) }}" style="margin-top:14px" onsubmit="return confirm('Delete this card and all its comps?')">
+  <button class="btn danger">Delete card</button>
+</form>
+{% endif %}
+{% endblock %}

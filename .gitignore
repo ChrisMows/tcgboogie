@@ -1,0 +1,22 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# Bot runtime data
+pokemon-deal-finder/data/
+pokemon-deal-finder/logs/
+__pycache__/
+*.pyc
+
+# Website build output and dependencies
+node_modules/
+web/.next/
+web/out/
+
+# Editor / OS / local tooling
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

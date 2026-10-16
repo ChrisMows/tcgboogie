@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Watchlist{% endblock %}
+{% block body %}
+<div class="row" style="justify-content: space-between">
+  <div><h1>Watchlist</h1>
+  <p class="sub">The finder only looks for these exact cards. Market value comes from the sold comps you enter (last {{ cfg.deal.comp_lookback_days }} days, at least {{ cfg.deal.min_comps }}).</p></div>
+  <a class="btn primary" href="{{ url_for('card_edit') }}">+ Add card</a>
+</div>
+{% if not rows %}
+  <div class="panel muted">No cards yet. Add one, then paste in its recent sold prices.</div>
+{% else %}
+<div class="tablewrap"><table>
+  <tr><th>Card</th><th class="num">Market value</th><th class="num">Comps used</th><th>Last sale entered</th><th>Status</th><th></th></tr>
+  {% for r in rows %}
+  <tr>
+    <td><a href="{{ url_for('card_page', card_id=r.id) }}">{{ r.label }}</a>{% if not r.active %} <span class="pill">paused</span>{% endif %}</td>
+    <td class="num">{{ r.mv.value|money }}</td>
+    <td class="num">{{ r.mv.comps_used if r.mv.ok else r.mv.comps_in_window }} <span class="muted small">/ {{ r.comp_count }} total</span></td>
+    <td class="small">{{ r.latest or '—' }}</td>
+    <td class="small">
+      {% if r.mv.ok %}<span class="pill good">ready</span>{% else %}<span class="pill bad">not trusted</span> <span class="muted">{{ r.mv.reason }}</span>{% endif %}
+      {% if r.refresh_due %}<span class="pill warn">refresh due</span>{% endif %}
+    </td>
+    <td><a class="btn sm" href="{{ r.sold_url }}" target="_blank" rel="noopener">eBay sold ↗</a></td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

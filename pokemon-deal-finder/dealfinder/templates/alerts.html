@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block body %}
+<h1>Alerts sent</h1>
+<p class="sub">Every alert, why it qualified, and your notes on how it turned out.</p>
+<div class="stats">
+  <div class="stat"><b>{{ alerts|length }}</b><span>alerts logged</span></div>
+  <div class="stat"><b>{{ cards }}</b><span>active watchlist cards</span></div>
+  <div class="stat"><b>{{ calls }}</b><span>eBay API calls today (of {{ cfg.poll.daily_call_budget }})</span></div>
+  <div class="stat"><b>{{ cfg.deal.min_discount_pct|int }}% · {{ cfg.deal.max_minutes_left|int }}m · {{ cfg.deal.comp_lookback_days }}d</b><span>discount · window · lookback</span></div>
+</div>
+{% if not alerts %}
+  <div class="panel muted">No alerts yet. Add cards and sold comps on the <a href="{{ url_for('watchlist_page') }}">Watchlist</a>, then start the finder.</div>
+{% else %}
+<div class="tablewrap"><table>
+  <tr><th>Sent</th><th>Card</th><th class="num">Price + ship</th><th class="num">Market</th><th class="num">Below</th>
+      <th class="num">Comps</th><th class="num">Left</th><th>Seller</th><th>Flags</th><th>Outcome</th></tr>
+  {% for a in alerts %}
+  <tr>
+    <td class="small">{{ a.alerted_at|when }}{% if not a.delivered %}<br><span class="pill bad">not delivered</span>{% endif %}</td>
+    <td><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.card_label }}</a>
+        <div class="small muted">{{ a.title }}</div></td>
+    <td class="num">{{ a.total|money }}<div class="small muted">{{ a.price|money }} + {{ a.shipping|money }}</div></td>
+    <td class="num">{{ a.market_value|money }}</td>
+    <td class="num"><span class="pill good">{{ a.discount_pct|round|int }}%</span></td>
+    <td class="num">{{ a.comps_used }}</td>
+    <td class="num">{{ '%.1f'|format(a.minutes_left) }}m</td>
+    <td class="small">{{ a.feedback_score }}<br><span class="muted">{{ a.feedback_pct }}% positive</span></td>
+    <td class="small">{% for f in a.flags %}<span class="pill warn">{{ f }}</span> {% else %}<span class="muted">none</span>{% endfor %}</td>
+    <td>
+      <form class="inline" method="post" action="{{ url_for('alert_outcome', item_id=a.item_id) }}">
+        <select name="outcome" onchange="this.form.submit()">
+          {% for o in ['', 'real deal', 'won', 'ended above market', 'wrong card match', 'red flag / fake', 'false positive'] %}
+          <option value="{{ o }}" {{ 'selected' if a.outcome == o }}>{{ o or '—' }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}
