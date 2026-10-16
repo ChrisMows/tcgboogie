@@ -4,7 +4,7 @@ import CardThumb from "@/components/CardThumb";
 import CollectionAlerts from "@/components/CollectionAlerts";
 import CollectionView from "@/components/CollectionView";
 import ValueChart from "@/components/ValueChart";
-import { listSets } from "@/lib/catalog";
+import { catalogLive, listSets } from "@/lib/catalog";
 import { chartSeries, itemLabel, money, ownedCounts, pct, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
@@ -59,7 +59,7 @@ export default async function CollectionPage({ searchParams }) {
       {adding && (
         <div className="panel">
           <h2>Add cards</h2>
-          <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo} autoFocus />
+          <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus />
           <p className="hint" style={{ marginBottom: 0 }}>
             Adding a lot from one set? <Link href="/app/collection/sets">Open the set</Link> and tap every card you own. It&apos;s much faster.
           </p>

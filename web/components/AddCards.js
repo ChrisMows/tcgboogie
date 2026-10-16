@@ -71,7 +71,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         {searching && <span className="small muted">Searching…</span>}
         {onClose && <button type="button" className="btn ghost sm" onClick={onClose}>Done</button>}
       </div>
-      {isDemo && !q && <div className="hint">Demo catalog: try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
+      {isDemo && !q && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
       {error && <div className="hint">{error}</div>}
 
       {picked ? (

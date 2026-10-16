@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getProduct, searchProducts } from "@/lib/catalog";
+import { catalogLive, getProduct, searchProducts } from "@/lib/catalog";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
@@ -28,7 +28,13 @@ export async function searchCatalog(query) {
       return p ? { ok: true, results: [slim(p)] } : { ok: false, error: "We couldn't find that TCGplayer product." };
     }
     const results = (await searchProducts(query)).map(slim);
-    return results.length ? { ok: true, results } : { ok: false, error: "No matches. Try fewer words, or the card number like 199/165." };
+    if (results.length) return { ok: true, results };
+    return {
+      ok: false,
+      error: catalogLive()
+        ? "No matches. Try fewer words, or the card number like 199/165."
+        : "No match in the preview catalog. Until the price service is connected it only has a few sample cards: try Charizard, Umbreon, Blastoise, Mew, “151”, “Base Set”, or Elite Trainer Box.",
+    };
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
   }
