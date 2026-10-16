@@ -59,15 +59,24 @@ function TagInput({ id, label, hint, values, onChange, suggestions, placeholder 
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 
-export default function FilterEditor({ profiles: initial, plan, sampleDeals, isDemo }) {
+export default function FilterEditor({ profiles: initial, plan, sampleDeals, isDemo, prefill }) {
   const router = useRouter();
   const [profiles, setProfiles] = useState(initial);
   const [selectedId, setSelectedId] = useState(initial[0]?.id);
   const selected = profiles.find((p) => p.id === selectedId) || profiles[0];
-  const [draft, setDraft] = useState(() => clampToPlan(selected.filters, plan));
+  // Arriving from a card page ("Get deal alerts for this card"): add that Pokémon and set to the draft.
+  const [draft, setDraft] = useState(() => {
+    const f = clampToPlan(selected.filters, plan);
+    if (!prefill) return f;
+    const add = (list, v) => (v && !list.includes(v) ? [...list, v] : list);
+    return { ...f, pokemon: add(f.pokemon, prefill.pokemon), sets: add(f.sets, prefill.set) };
+  });
   const [name, setName] = useState(selected.name);
   const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState(prefill ? {
+    kind: "warn",
+    text: `Added ${[prefill.pokemon, prefill.set].filter(Boolean).join(" from ")} to “${selected.name}”. Check the settings below, then save to start getting deals on it.`,
+  } : null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => setProfiles(initial), [initial]);

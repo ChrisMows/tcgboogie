@@ -5,9 +5,12 @@ import * as store from "@/lib/store";
 
 export const metadata = { title: "Filters" };
 
-export default async function FiltersPage() {
+export default async function FiltersPage({ searchParams }) {
   const user = await requireUser();
   const profiles = await store.ensureStarterProfile(user);
+  const sp = await searchParams;
+  const clean = (v) => String(v || "").trim().slice(0, 60) || null;
+  const prefill = sp?.pokemon || sp?.set ? { pokemon: clean(sp.pokemon), set: clean(sp.set) } : null;
   return (
     <>
       <div className="page-head">
@@ -21,6 +24,7 @@ export default async function FiltersPage() {
         plan={user.plan}
         sampleDeals={SAMPLE_DEALS}
         isDemo={user.demo}
+        prefill={prefill}
       />
     </>
   );

@@ -1,5 +1,6 @@
 import WatchManager from "@/components/WatchManager";
 import { getProduct } from "@/lib/catalog";
+import { ownedCounts } from "@/lib/collection";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -31,6 +32,7 @@ export default async function WatchesPage() {
         products={products}
         plan={user.plan}
         isDemo={user.demo}
+        owned={ownedCounts(await store.listItems(user.id))}
       />
     </>
   );

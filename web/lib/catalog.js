@@ -1,58 +1,120 @@
 import "server-only";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
 
-// TCGplayer card and sealed product prices, via the PokemonPriceTracker API (prices update about once a day).
+// TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
+// Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
+// so a card costs one lookup a day no matter how many people own or watch it.
 // Without PPT_API_KEY (local demo) a small sample catalog is used instead.
 
 const PPT = "https://www.pokemonpricetracker.com/api/v2";
+const HOUR = 3600 * 1000;
 const img = (id) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_in_200x200.jpg`;
+const r2 = (v) => Math.round(v * 100) / 100;
 const today = new Date();
-const series = (base, wobble, days = 30) =>
-  Array.from({ length: days }, (_, i) => {
-    const d = new Date(today.getTime() - (days - 1 - i) * 86400000);
-    const v = base * (1 + Math.sin(i / 4) * wobble + (days - i) * 0.002);
-    return { date: d.toISOString().slice(0, 10), price: Math.round(v * 100) / 100 };
-  });
+// A believable sample price history that ends exactly at today's price.
+const series = (base, wobble, days = 90, seed = 1) => {
+  const raw = Array.from({ length: days }, (_, i) => 1 + Math.sin(i / 5 + seed) * wobble + (days - i) * 0.0012 * (seed % 2 ? 1 : -1));
+  const k = base / raw[days - 1];
+  return raw.map((v, i) => ({ date: new Date(today.getTime() - (days - 1 - i) * 86400000).toISOString().slice(0, 10), price: r2(v * k) }));
+};
 const conds = (nm, low) => ({
   "Near Mint": { market: nm, low },
-  "Lightly Played": { market: Math.round(nm * 0.92 * 100) / 100, low: Math.round(low * 0.92 * 100) / 100 },
-  "Moderately Played": { market: Math.round(nm * 0.78 * 100) / 100, low: Math.round(low * 0.78 * 100) / 100 },
+  "Lightly Played": { market: r2(nm * 0.88), low: r2(low * 0.88) },
+  "Moderately Played": { market: r2(nm * 0.72), low: r2(low * 0.72) },
+  "Heavily Played": { market: r2(nm * 0.55), low: r2(low * 0.55) },
 });
+// Sample slab values as multiples of the raw Near Mint price.
+const GRADE_MULT = { psa10: 3.4, psa9: 1.45, psa8: 1.08, psa7: 0.9, bgs10: 5, bgs9_5: 2.3, bgs9: 1.3, cgc10: 2.4, cgc9_5: 1.6, cgc9: 1.15, sgc10: 2.1, sgc9: 1.2, tag10: 2.2, tag9: 1.15 };
+const sampleGraded = (nm) =>
+  nm < 3 ? {} : Object.fromEntries(Object.entries(GRADE_MULT).map(([k, m]) => [k, { price: r2(Math.max(nm * m, 12)), sales: Math.round(4 + (nm % 17)) }]));
 
-const SAMPLE = [
-  { id: "246723", type: "card", name: "Umbreon VMAX (Alternate Art Secret)", setName: "Evolving Skies", number: "215/203",
-    image: img("246723"), prices: { Holofoil: conds(2264.7, 1499.99) }, history: series(2264.7, 0.04) },
-  { id: "517045", type: "card", name: "Charizard ex", setName: "Scarlet & Violet 151", number: "199/165",
-    image: img("517045"), prices: { Holofoil: conds(325, 247.99) }, history: series(325, 0.05) },
-  { id: "42382", type: "card", name: "Charizard", setName: "Base Set", number: "004/102",
-    image: img("42382"), prices: { Holofoil: conds(489.99, 410) }, history: series(489.99, 0.03) },
-  { id: "517035", type: "card", name: "Psyduck", setName: "Scarlet & Violet 151", number: "175/165",
-    image: img("517035"), prices: { Holofoil: conds(57.93, 40) }, history: series(57.93, 0.06) },
-  { id: "84186", type: "card", name: "Charizard", setName: "Skyridge", number: "146/144",
-    image: img("84186"), prices: { Holofoil: conds(1850, 1600) }, history: series(1850, 0.02) },
-  { id: "demo-151-bundle", type: "sealed", name: "Scarlet & Violet 151 Booster Bundle", setName: "Scarlet & Violet 151",
-    number: null, image: null, prices: { market: 61.5, low: 54.99 }, history: series(61.5, 0.05) },
-  { id: "demo-evs-etb", type: "sealed", name: "Evolving Skies Elite Trainer Box", setName: "Evolving Skies",
-    number: null, image: null, prices: { market: 189.99, low: 172.5 }, history: series(189.99, 0.04) },
+// ---------- sample catalog (demo only) ----------
+const SAMPLE_SETS = [
+  { id: "base-set", name: "Base Set", series: "Original", releaseDate: "1999-01-09", printedTotal: 102 },
+  { id: "sv-151", name: "Scarlet & Violet 151", series: "Scarlet & Violet", releaseDate: "2023-09-22", printedTotal: 165 },
+  { id: "evolving-skies", name: "Evolving Skies", series: "Sword & Shield", releaseDate: "2021-08-27", printedTotal: 203 },
 ];
+const sampleCards = {
+  "Base Set": [
+    ["1", "Alakazam", 95], ["2", "Blastoise", 210], ["3", "Chansey", 70], ["4", "Charizard", 489.99, "42382"], ["5", "Clefairy", 60],
+    ["6", "Gyarados", 75], ["7", "Hitmonchan", 55], ["8", "Machamp", 25], ["9", "Magneton", 50], ["10", "Mewtwo", 85],
+    ["11", "Nidoking", 65], ["12", "Ninetales", 70], ["13", "Poliwrath", 45], ["14", "Raichu", 80], ["15", "Venusaur", 180], ["16", "Zapdos", 70],
+  ],
+  "Scarlet & Violet 151": [
+    ["1", "Bulbasaur", 0.35, null, "Normal"], ["2", "Ivysaur", 0.3, null, "Normal"], ["3", "Venusaur ex", 2.5], ["4", "Charmander", 0.5, null, "Normal"],
+    ["5", "Charmeleon", 0.4, null, "Normal"], ["6", "Charizard ex", 6.5], ["7", "Squirtle", 0.45, null, "Normal"], ["8", "Wartortle", 0.3, null, "Normal"],
+    ["9", "Blastoise ex", 2.8], ["166", "Bulbasaur", 18], ["167", "Ivysaur", 14], ["168", "Charmander", 32], ["169", "Charmeleon", 16],
+    ["170", "Squirtle", 25], ["171", "Wartortle", 13], ["175", "Psyduck", 57.93, "517035"], ["198", "Venusaur ex", 62], ["199", "Charizard ex", 325, "517045"],
+    ["200", "Blastoise ex", 78], ["201", "Alakazam ex", 41], ["202", "Zapdos ex", 38], ["205", "Mew ex", 34],
+  ],
+  "Evolving Skies": [
+    ["205", "Leafeon VMAX (Alternate Art Secret)", 210], ["209", "Glaceon VMAX (Alternate Art Secret)", 310],
+    ["212", "Sylveon VMAX (Alternate Art Secret)", 265], ["215", "Umbreon VMAX (Alternate Art Secret)", 2264.7, "246723"],
+    ["218", "Rayquaza VMAX (Alternate Art Secret)", 520],
+  ],
+};
+const SAMPLE = [];
+for (const set of SAMPLE_SETS) {
+  sampleCards[set.name].forEach(([num, name, nm, realId, printing = "Holofoil"], i) => {
+    const id = realId || `demo-${set.id}-${num}`;
+    SAMPLE.push({
+      id, type: "card", name, setName: set.name, setId: set.id,
+      number: `${num.padStart(3, "0")}/${String(set.printedTotal).padStart(3, "0")}`,
+      image: realId ? img(realId) : null, prices: { [printing]: conds(nm, r2(nm * 0.82)) },
+      graded: sampleGraded(nm), history: series(nm, 0.05, 90, i + 1), rarity: nm > 20 ? "Rare" : "Common",
+    });
+  });
+}
+SAMPLE.push(
+  { id: "84186", type: "card", name: "Charizard", setName: "Skyridge", setId: "skyridge", number: "146/144", image: img("84186"),
+    prices: { Holofoil: conds(1850, 1600) }, graded: sampleGraded(1850), history: series(1850, 0.02, 90, 3) },
+  { id: "demo-151-bundle", type: "sealed", name: "Scarlet & Violet 151 Booster Bundle", setName: "Scarlet & Violet 151", setId: "sv-151",
+    number: null, image: null, prices: { market: 61.5, low: 54.99 }, graded: {}, history: series(61.5, 0.05, 90, 4) },
+  { id: "demo-evs-etb", type: "sealed", name: "Evolving Skies Elite Trainer Box", setName: "Evolving Skies", setId: "evolving-skies",
+    number: null, image: null, prices: { market: 189.99, low: 172.5 }, graded: {}, history: series(189.99, 0.04, 90, 5) },
+);
 for (const p of SAMPLE) {
-  p.tcgplayerUrl = p.type === "card"
+  p.tcgplayerUrl = /^\d+$/.test(p.id)
     ? `https://www.tcgplayer.com/product/${p.id}`
-    : `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(p.name)}`;
+    : `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(`${p.name} ${p.setName}`)}`;
 }
 
 export const catalogLive = () => Boolean(process.env.PPT_API_KEY);
 
-const cache = globalThis.__tcgCatalog ?? (globalThis.__tcgCatalog = new Map());
-async function ppt(path, params) {
-  const url = `${PPT}${path}?${new URLSearchParams(params)}`;
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.at < 6 * 3600 * 1000) return hit.data;
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`Price service error ${r.status}`);
-  const data = await r.json();
-  cache.set(url, { at: Date.now(), data });
+// ---------- cache: memory first, then the shared database table ----------
+const mem = globalThis.__tcgCatalog ?? (globalThis.__tcgCatalog = new Map());
+const MISS = Symbol("miss");
+// cachedOnly: return MISS instead of calling the API (no credits spent).
+async function cached(key, maxAgeMs, fetcher, cachedOnly = false) {
+  const hit = mem.get(key);
+  if (hit && Date.now() - hit.at < maxAgeMs) return hit.data;
+  if (cachedOnly && !db) return MISS;
+  if (db) {
+    const [row] = await db.select().from(schema.catalogCache).where(eq(schema.catalogCache.key, key)).limit(1);
+    if (row && Date.now() - row.fetchedAt.getTime() < maxAgeMs) {
+      mem.set(key, { at: row.fetchedAt.getTime(), data: row.data });
+      return row.data;
+    }
+  }
+  if (cachedOnly) return MISS;
+  const data = await fetcher();
+  mem.set(key, { at: Date.now(), data });
+  if (db) {
+    await db.insert(schema.catalogCache).values({ key, data, fetchedAt: new Date() })
+      .onConflictDoUpdate({ target: schema.catalogCache.key, set: { data, fetchedAt: new Date() } });
+  }
   return data;
+}
+
+async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
+  const url = `${PPT}${path}?${new URLSearchParams(params)}`;
+  return cached(url, maxAgeMs, async () => {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Price service error ${r.status}`);
+    return r.json();
+  }, cachedOnly);
 }
 
 function fromCard(c) {
@@ -66,29 +128,43 @@ function fromCard(c) {
       };
     }
   }
+  const graded = {};
+  for (const [key, g] of Object.entries(c.ebay?.salesByGrade || {})) {
+    if (c.ebay?.smartPriceOutlierByGrade?.[key]) continue; // flagged as unreliable by the service
+    const price = g?.smartMarketPrice?.price ?? g?.averagePrice ?? g?.medianPrice ?? null;
+    if (price) graded[key] = { price: r2(price), sales: g?.count ?? g?.totalSales ?? null };
+  }
   const primary = c.prices?.primaryPrinting || Object.keys(prices)[0];
   const hist = c.priceHistory?.variants?.[primary]?.["Near Mint"]?.history || [];
   return {
-    id: String(c.tcgPlayerId), type: "card", name: c.name, setName: c.setName, number: c.cardNumber,
-    image: c.imageCdnUrl200 || c.imageCdnUrl || null, tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
-    prices, history: hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market })),
+    id: String(c.tcgPlayerId), type: "card", name: c.name, setName: c.setName, setId: c.setId ? String(c.setId) : null,
+    number: c.cardNumber, rarity: c.rarity || null,
+    image: c.imageCdnUrl400 || c.imageCdnUrl200 || c.imageCdnUrl || null,
+    tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
+    prices, graded, history: hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market })),
   };
 }
 
 function fromSealed(s) {
   return {
-    id: String(s.tcgPlayerId), type: "sealed", name: s.name, setName: s.setName, number: null,
-    image: s.imageCdnUrl200 || s.imageCdnUrl || null, tcgplayerUrl: s.tcgPlayerUrl || `https://www.tcgplayer.com/product/${s.tcgPlayerId}`,
-    prices: { market: s.prices?.market ?? s.marketPrice ?? null, low: s.prices?.low ?? s.lowPrice ?? null }, history: [],
+    id: String(s.tcgPlayerId), type: "sealed", name: s.name, setName: s.setName, setId: s.setId ? String(s.setId) : null, number: null,
+    image: s.imageCdnUrl400 || s.imageCdnUrl200 || s.imageCdnUrl || null,
+    tcgplayerUrl: s.tcgPlayerUrl || `https://www.tcgplayer.com/product/${s.tcgPlayerId}`,
+    prices: { market: s.prices?.market ?? s.marketPrice ?? null, low: s.prices?.low ?? s.lowPrice ?? null }, graded: {}, history: [],
   };
 }
 
-/** Look up one TCGplayer product (card or sealed) by its TCGplayer product ID. */
-export async function getProduct(id) {
+/**
+ * One TCGplayer product (card or sealed) by TCGplayer product ID, with prices, slab values and 90 days of history.
+ * With { cachedOnly: true } it returns undefined instead of spending API credits when the product isn't cached.
+ */
+export async function getProduct(id, { cachedOnly = false } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
-  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { includeHistory: "true", days: "30" });
+  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { includeHistory: "true", includeEbay: "true", days: "90" }, 12 * HOUR, cachedOnly);
+  if (card === MISS) return undefined;
   if (card?.data) return fromCard(Array.isArray(card.data) ? card.data[0] : card.data);
-  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" });
+  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
+  if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
   return s ? fromSealed(s) : null;
 }
@@ -99,16 +175,31 @@ export async function searchProducts(q) {
   if (term.length < 2) return [];
   if (!catalogLive()) {
     const words = term.toLowerCase().split(/\s+/);
-    return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w))).slice(0, 8);
+    return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w))).slice(0, 10);
   }
   const [cards, sealed] = await Promise.all([
-    ppt("/cards", { search: term, limit: "6" }),
-    ppt("/sealed-products", { search: term, limit: "3" }).catch(() => null),
+    ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
+    ppt("/sealed-products", { search: term, limit: "3" }, 7 * 24 * HOUR).catch(() => null),
   ]);
-  return [
-    ...(cards?.data || []).map(fromCard),
-    ...(sealed?.data || []).map(fromSealed),
-  ];
+  return [...(cards?.data || []).map(fromCard), ...(sealed?.data || []).map(fromSealed)];
+}
+
+/** Every English set, newest first. The list rarely changes, so it's cached for a week. */
+export async function listSets() {
+  if (!catalogLive()) return SAMPLE_SETS.map((s) => ({ ...s, total: sampleCards[s.name].length }));
+  const j = await ppt("/sets", { sortBy: "releaseDate", sortOrder: "desc", limit: "500" }, 7 * 24 * HOUR);
+  return (j?.data || []).map((s) => ({
+    id: String(s.id ?? s.tcgPlayerId ?? s.name), name: s.name, series: s.series || null, releaseDate: s.releaseDate || null,
+    printedTotal: s.printedTotal ?? s.cardCount ?? null, total: s.totalCards ?? s.cardCount ?? null,
+    image: s.imageCdnUrl || s.logoUrl || s.image || null,
+  }));
+}
+
+/** Every card in a set, with prices (no history). Costs one credit per card, so it's cached for 3 days and shared. */
+export async function getSetCards(setName) {
+  if (!catalogLive()) return SAMPLE.filter((p) => p.type === "card" && p.setName === setName);
+  const j = await ppt("/cards", { set: setName, fetchAllInSet: "true" }, 3 * 24 * HOUR);
+  return (j?.data || []).map(fromCard);
 }
 
 export const sampleIds = () => SAMPLE.map((p) => p.id);

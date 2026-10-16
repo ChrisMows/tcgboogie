@@ -106,7 +106,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   );
 }
 
-export default function WatchManager({ watches, products, plan, isDemo }) {
+export default function WatchManager({ watches, products, plan, isDemo, owned = {} }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -232,10 +232,11 @@ export default function WatchManager({ watches, products, plan, isDemo }) {
             return (
               <div className="panel" key={w.id} style={{ marginBottom: 0 }}>
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-                  <ProductThumb product={{ ...w, type: w.productType }} />
+                  <Link href={`/app/cards/${w.productId}`} aria-label={`Open ${w.name}`}><ProductThumb product={{ ...w, type: w.productType }} /></Link>
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                      <b style={{ flex: "none" }}>{w.name}</b>
+                      <Link href={`/app/cards/${w.productId}`} style={{ flex: "none", color: "var(--text)", fontWeight: 700 }}>{w.name}</Link>
+                      {owned[w.productId] ? <Link href={`/app/cards/${w.productId}`} className="badge accent" style={{ flex: "none" }}>You own {owned[w.productId]}</Link> : null}
                       {w.status === "triggered" ? <span className="badge good" style={{ flex: "none" }}>At or below target</span> : <span className="badge" style={{ flex: "none" }}>Watching</span>}
                       {w.alsoEbay && <span className="badge accent" style={{ flex: "none" }}>+ eBay</span>}
                     </div>

@@ -41,6 +41,21 @@ const sections = [
     ],
   },
   {
+    title: "Your collection",
+    items: [
+      ["What is the collection tracker?",
+        "A free place to keep every card and sealed product you own, with what each is worth today, what you paid, and how your whole collection's value changes over time. It's included on every plan, with no limit on cards."],
+      ["How do I add cards?",
+        "Search by name, set, or card number and tap + Add, or open a set and tap each card you own. That's the quickest way to enter a binder. For slabs, pick the grading company and grade; for raw cards, the condition. What you paid is optional, but it's how we show your gain or loss."],
+      ["How are my cards valued?",
+        "Raw cards use TCGplayer's market price for that printing and condition. Slabs use recent eBay sales for that exact grader and grade. Sealed products use TCGplayer's market price. Values update about once a day. If a card has no reliable recent price, you can enter your own value for it."],
+      ["What's the wishlist for?",
+        "Cards you want but don't own yet. One tap turns any of them into a price watch, and when you get one, \"Got it\" moves it into your collection."],
+      ["What do I get with Premium?",
+        "Your full value history (Free shows the last 30 days), CSV export of your whole collection, deal alerts on cards missing from sets you've started or on your wishlist, and a heads-up when a card you own jumps in value."],
+    ],
+  },
+  {
     title: "Plans",
     items: [
       ["What's the difference between Free and Premium?",
@@ -68,9 +83,9 @@ const sections = [
       ["How do I sign in?",
         "With Google, with Discord, or with a one-time sign-in link sent to your email. There's no password to remember or leak."],
       ["What data do you keep?",
-        <>Only what's needed to run the service: your email and name, your connected sign-ins, your filters, price watches, and alert history. See the <Link href="/privacy">privacy policy</Link> for details.</>],
+        <>Only what's needed to run the service: your email and name, your connected sign-ins, your filters, price watches, collection, and alert history. See the <Link href="/privacy">privacy policy</Link> for details.</>],
       ["How do I delete my account?",
-        "Account → Delete account. It permanently removes your account, filter profiles, price watches, and alert history."],
+        "Account → Delete account. It permanently removes your account, filter profiles, price watches, collection, and alert history."],
     ],
   },
   {

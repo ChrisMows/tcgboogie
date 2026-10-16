@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   ["/app", "Dashboard"],
-  ["/app/filters", "Filters"],
+  ["/app/collection", "Collection"],
   ["/app/feed", "Deal feed"],
   ["/app/watches", "Price watches"],
+  ["/app/filters", "Filters"],
   ["/app/alerts", "Alert history"],
   ["/app/account", "Account"],
   ["/app/billing", "Plan and billing"],
@@ -19,7 +20,8 @@ export default function SideNav({ planLabel, premium, onLogOut }) {
     <aside className="side">
       <nav aria-label="Member">
         {LINKS.map(([href, label]) => (
-          <Link key={href} href={href} className={path === href ? "on" : ""}>
+          <Link key={href} href={href}
+            className={path === href || (href === "/app/collection" && (path.startsWith("/app/collection") || path.startsWith("/app/cards"))) ? "on" : ""}>
             {label}
           </Link>
         ))}
