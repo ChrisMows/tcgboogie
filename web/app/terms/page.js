@@ -9,6 +9,12 @@ export default function Terms() {
         TCG Boogie is not open for sign-ups yet. Full terms of service will be posted here before accounts or
         subscriptions are offered.
       </p>
+      <h2>Cancelling and deleting your account</h2>
+      <p>
+        You can cancel Premium anytime from Plan and billing. Deleting your account also cancels any subscription at the
+        same moment, so you are not charged again. If we can&apos;t confirm the cancellation, your account is not deleted
+        until it is.
+      </p>
       <h2>Not financial advice</h2>
       <p>
         Card values and deal alerts are estimates based on past sales. They are not financial advice, and past prices

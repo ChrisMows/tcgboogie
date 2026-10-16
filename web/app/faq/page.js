@@ -85,7 +85,7 @@ const sections = [
       ["What data do you keep?",
         <>Only what's needed to run the service: your email and name, your connected sign-ins, your filters, price watches, collection, and alert history. See the <Link href="/privacy">privacy policy</Link> for details.</>],
       ["How do I delete my account?",
-        "Account → Delete account. It permanently removes your account, filter profiles, price watches, collection, and alert history."],
+        "Account → Delete account. It permanently removes your account, filter profiles, price watches, collection, and alert history. If you have a Premium subscription, deleting your account cancels it at the same moment, so you're never charged again. If we can't confirm the cancellation, we don't delete the account, and we'll let you know."],
     ],
   },
   {

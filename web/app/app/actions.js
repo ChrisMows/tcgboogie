@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
+import { endBillingForDeletion } from "@/lib/billing";
 import { validateFilters } from "@/lib/filters";
 import { setLinkIntent } from "@/lib/link-intent";
 import { demoMode, requireUser } from "@/lib/session";
@@ -70,6 +71,16 @@ export async function deleteAccount(formData) {
   const user = await requireUser();
   if (String(formData.get("confirm") || "").trim().toUpperCase() !== "DELETE") {
     redirect("/app/account?delete=confirm");
+  }
+  // Billing first: cancel any subscription. If that can't be confirmed, keep the account so nobody is charged
+  // for an account that no longer exists.
+  if (!user.demo) {
+    try {
+      await endBillingForDeletion(user);
+    } catch (e) {
+      console.error("[delete-account] billing not ended, account kept:", e.message);
+      redirect("/app/account?delete=billing");
+    }
   }
   await store.deleteUser(user.id);
   if (!user.demo) await signOut({ redirectTo: "/?deleted=1" });

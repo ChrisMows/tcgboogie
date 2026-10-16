@@ -156,10 +156,19 @@ export default async function Account({ searchParams }) {
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
         <h2>Delete account</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Permanently deletes your account, filter profiles, price watches, collection and alert history. If you're on Premium, cancel your
-          subscription first.
+          Permanently deletes your account, filter profiles, price watches, collection and alert history.
+          {premium && !user.isAdmin
+            ? " Your Premium subscription is cancelled at the same moment, and you won't be charged again."
+            : " If you have a subscription, it's cancelled at the same moment, and you won't be charged again."}
         </p>
         {params?.delete === "confirm" && <div className="notice bad">Type DELETE to confirm.</div>}
+        {params?.delete === "billing" && (
+          <div className="notice bad">
+            We couldn&apos;t confirm your subscription was cancelled, so your account was <b>not</b> deleted (that way you can&apos;t be
+            charged for an account that no longer exists). Please try again in a few minutes, or email support@tcgboogie.com and we&apos;ll
+            cancel it and delete your account for you.
+          </div>
+        )}
         <form action={deleteAccount} className="row" style={{ maxWidth: 440 }}>
           <input name="confirm" type="text" placeholder="Type DELETE to confirm" aria-label="Type DELETE to confirm" />
           <button className="btn danger" style={{ flex: "none" }}>Delete account</button>
