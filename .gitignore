@@ -14,6 +14,9 @@ node_modules/
 web/.next/
 web/out/
 
+# One-time setup script
+push-to-github.ps1
+
 # Editor / OS / local tooling
 .claude/
 .vscode/
