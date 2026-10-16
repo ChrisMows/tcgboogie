@@ -109,6 +109,50 @@ export async function deleteProfile(userId, id) {
   await db.delete(profiles).where(and(eq(profiles.userId, userId), eq(profiles.id, Number(id))));
 }
 
+// ---------- price watches ----------
+const { priceWatches } = schema;
+
+export async function listWatches(userId) {
+  if (isDemo(userId)) return [...(demo().watches ||= [])];
+  return db.select().from(priceWatches).where(eq(priceWatches.userId, userId)).orderBy(asc(priceWatches.id));
+}
+
+export async function countWatches(userId) {
+  return (await listWatches(userId)).length;
+}
+
+export async function createWatch(userId, fields) {
+  if (isDemo(userId)) {
+    const d = demo();
+    d.watches ||= [];
+    const row = { id: d.nextId++, userId, status: "watching", lastCheckedAt: new Date(), triggeredAt: null, createdAt: new Date(), ...fields };
+    d.watches.push(row);
+    return row;
+  }
+  const [row] = await db.insert(priceWatches).values({ userId, ...fields }).returning();
+  return row;
+}
+
+export async function updateWatch(userId, id, fields) {
+  if (isDemo(userId)) {
+    const w = (demo().watches || []).find((x) => x.id === Number(id));
+    if (w) Object.assign(w, fields);
+    return w;
+  }
+  const [row] = await db.update(priceWatches).set(fields)
+    .where(and(eq(priceWatches.userId, userId), eq(priceWatches.id, Number(id)))).returning();
+  return row;
+}
+
+export async function deleteWatch(userId, id) {
+  if (isDemo(userId)) {
+    const d = demo();
+    d.watches = (d.watches || []).filter((w) => w.id !== Number(id));
+    return;
+  }
+  await db.delete(priceWatches).where(and(eq(priceWatches.userId, userId), eq(priceWatches.id, Number(id))));
+}
+
 /** New members start with one profile. */
 export async function ensureStarterProfile(user) {
   const existing = await listProfiles(user.id);

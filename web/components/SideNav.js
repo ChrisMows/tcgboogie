@@ -7,6 +7,7 @@ const LINKS = [
   ["/app", "Dashboard"],
   ["/app/filters", "Filters"],
   ["/app/feed", "Deal feed"],
+  ["/app/watches", "Price watches"],
   ["/app/alerts", "Alert history"],
   ["/app/account", "Account"],
   ["/app/billing", "Plan and billing"],

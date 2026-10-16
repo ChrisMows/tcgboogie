@@ -10,6 +10,8 @@ const rows = [
   ["Lowest discount you can set", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],
   ["How early before the auction ends", `Up to ${PLANS.free.maxWindowMinutes} minutes`, `Up to ${PLANS.premium.maxWindowMinutes} minutes`],
   ["Card values covered", `$${PLANS.free.minValueFloor}+`, `$${PLANS.premium.minValueFloor}+`],
+  ["TCGplayer price-drop watches", "5", "Unlimited"],
+  ["eBay listing alerts for watched cards", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
   ["Email recap", "Weekly", "Daily"],

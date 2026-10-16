@@ -13,9 +13,12 @@ export const PLANS = {
     minValueFloor: 30,
     japanese: false,
     emailRecap: "weekly",
+    maxPriceWatches: 5, // always active; removing one frees a slot
+    watchAlertChannels: ["email"],
     features: [
       "Deals you missed, with what they actually sold for",
       "1 filter profile",
+      "5 TCGplayer price watches, plus eBay listing alerts for them",
       "Weekly email recap",
       "Community Discord",
     ],
@@ -33,10 +36,13 @@ export const PLANS = {
     minValueFloor: 10,
     japanese: true,
     emailRecap: "daily",
+    maxPriceWatches: null, // unlimited
+    watchAlertChannels: ["email", "discord", "push"],
     features: [
       "Live deal feed while auctions are still open",
       "Instant alerts on Discord and your phone",
       "15 filter profiles with every filter",
+      "Unlimited TCGplayer price watches, plus eBay listing alerts",
       "Deals from 15% below market, up to 60 minutes before the end",
       "Japanese cards",
       "Daily email recap",
