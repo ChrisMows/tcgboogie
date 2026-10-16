@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { signOut } from "@/auth";
+import { enabledProviders, signIn, signOut } from "@/auth";
 import { validateFilters } from "@/lib/filters";
 import { demoMode, requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -78,6 +78,33 @@ export async function deleteAccount(formData) {
 export async function logOut() {
   if (demoMode) redirect("/");
   await signOut({ redirectTo: "/" });
+}
+
+/** Connect another sign-in method (Google or Discord) to the signed-in account. */
+export async function connectProvider(provider) {
+  const user = await requireUser();
+  if (user.demo) {
+    store.demoPrefs().discordConnected = provider === "discord" ? true : store.demoPrefs().discordConnected;
+    revalidatePath("/app", "layout");
+    redirect(`/app/account?linked=${provider}`);
+  }
+  if (!enabledProviders.includes(provider) || provider === "email") redirect("/app/account?link=unavailable");
+  await signIn(provider, { redirectTo: `/app/account?linked=${provider}` });
+}
+
+/** Disconnect a sign-in method, as long as another one remains. */
+export async function disconnectProvider(provider) {
+  const user = await requireUser();
+  if (user.demo) {
+    if (provider === "discord") store.demoPrefs().discordConnected = false;
+    revalidatePath("/app", "layout");
+    redirect("/app/account?unlinked=discord");
+  }
+  const others = user.providers.filter((p) => p !== provider);
+  if (!others.length) redirect("/app/account?link=last");
+  await store.unlinkProvider(user.id, provider);
+  revalidatePath("/app", "layout");
+  redirect(`/app/account?unlinked=${provider}`);
 }
 
 /** Admins: preview the site as a Free or Premium member. */

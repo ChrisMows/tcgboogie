@@ -13,7 +13,7 @@ const ERRORS = {
   Verification: "That sign-in link has expired or was already used. Request a new one.",
   invite: "TCG Boogie is invite-only while we finish testing. Join our Discord to get on the list.",
   AccessDenied: "TCG Boogie is invite-only while we finish testing. Join our Discord to get on the list.",
-  unverified: "Your Google account's email address isn't verified yet. Verify it with Google, then try again.",
+  unverified: "That account's email address isn't verified yet. Verify it with Google or Discord, then try again.",
   noemail: "We couldn't get an email address from that sign-in. Try another option.",
 };
 

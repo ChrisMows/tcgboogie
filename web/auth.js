@@ -43,8 +43,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: { signIn: "/login", verifyRequest: "/login/check-email", error: "/login" },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Google must have verified the address, or anyone could claim someone else's email.
+      // A signed-in member connecting another sign-in method (e.g. Discord from the Account page): always allowed;
+      // Auth.js links it to their existing account.
+      if (account?.type === "oauth" || account?.type === "oidc") {
+        const current = await auth();
+        if (current?.user?.id) return true;
+      }
+      // The provider must have verified the address, or anyone could claim someone else's email.
       if (account?.provider === "google" && profile?.email_verified !== true) return "/login?error=unverified";
+      if (account?.provider === "discord" && profile?.verified !== true) return "/login?error=unverified";
       const email = String(user?.email || profile?.email || "").toLowerCase();
       if (!email) return "/login?error=noemail";
       if (mayJoin(email)) return true;

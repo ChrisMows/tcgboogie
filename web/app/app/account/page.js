@@ -1,18 +1,16 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
-import { deleteAccount, savePreferences } from "../actions";
-import { signInWith } from "@/app/login/actions";
+import { connectProvider, deleteAccount, disconnectProvider, savePreferences } from "../actions";
 
 export const metadata = { title: "Account" };
 
 const PROVIDER_LABELS = { google: "Google", discord: "Discord", email: "Email link" };
+const METHODS = ["google", "discord", "email"];
 
 export default async function Account({ searchParams }) {
   const user = await requireUser();
   const params = await searchParams;
   const premium = user.tier === "premium";
-  const linkable = (demoMode ? ["google", "discord"] : enabledProviders.filter((p) => p !== "email"))
-    .filter((p) => !user.providers.includes(p));
 
   return (
     <>
@@ -65,27 +63,45 @@ export default async function Account({ searchParams }) {
 
       <div className="panel">
         <h2>Sign-in methods and connections</h2>
+        {params?.linked && <div className="notice good">{PROVIDER_LABELS[params.linked] || "Account"} connected.{params.linked === "discord" ? " You can now sign in with Discord, and Discord alerts can reach you." : ""}</div>}
+        {params?.unlinked && <div className="notice good">{PROVIDER_LABELS[params.unlinked] || "Account"} disconnected.</div>}
+        {params?.link === "last" && <div className="notice warn">That&apos;s your only way to sign in, so it can&apos;t be disconnected. Connect another method first.</div>}
+        {params?.link === "unavailable" && <div className="notice warn">That connection isn&apos;t available yet.</div>}
         <ul className="checklist">
-          {user.providers.map((p) => (
-            <li key={p}><span className="dot done">✓</span><span style={{ flex: 1 }}>{PROVIDER_LABELS[p] || p}</span><span className="badge good">Connected</span></li>
-          ))}
-          {linkable.map((p) => (
-            <li key={p}>
-              <span className="dot" />
-              <span style={{ flex: 1 }}>
-                {PROVIDER_LABELS[p]}
-                {p === "discord" && <span className="hint" style={{ display: "block", marginTop: 2 }}>Needed for Discord alerts and the members' server.</span>}
-              </span>
-              <form action={signInWith.bind(null, p)}><button className="btn sm">Connect</button></form>
-            </li>
-          ))}
+          {METHODS.filter((p) => p !== "email" || user.providers.includes("email")).map((p) => {
+            const connected = user.providers.includes(p);
+            const available = demoMode || enabledProviders.includes(p);
+            return (
+              <li key={p}>
+                <span className={`dot ${connected ? "done" : ""}`}>{connected ? "✓" : ""}</span>
+                <span style={{ flex: 1 }}>
+                  {PROVIDER_LABELS[p]}
+                  {p === "discord" && <span className="hint" style={{ display: "block", marginTop: 2 }}>
+                    {connected ? "Sign in with Discord, get alerts in your private channel, and join the members' server." : "Connect to sign in with Discord, get alerts in your private channel, and join the members' server."}
+                  </span>}
+                </span>
+                {connected ? (
+                  <>
+                    <span className="badge good">Connected</span>
+                    {user.providers.length > 1 && p !== "email" && (
+                      <form action={disconnectProvider.bind(null, p)}><button className="btn sm ghost">Disconnect</button></form>
+                    )}
+                  </>
+                ) : available ? (
+                  <form action={connectProvider.bind(null, p)}><button className="btn sm primary">Connect {PROVIDER_LABELS[p]}</button></form>
+                ) : (
+                  <span className="badge">Coming soon</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
 
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
         <h2>Delete account</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Permanently deletes your account, filter profiles and alert history. If you're on Premium, cancel your
+          Permanently deletes your account, filter profiles, price watches, collection and alert history. If you're on Premium, cancel your
           subscription first.
         </p>
         {params?.delete === "confirm" && <div className="notice bad">Type DELETE to confirm.</div>}

@@ -42,6 +42,11 @@ export async function linkedProviders(userId) {
   return [...new Set(list)];
 }
 
+/** Remove one connected sign-in method (e.g. Discord) from an account. */
+export async function unlinkProvider(userId, provider) {
+  await db.delete(accounts).where(and(eq(accounts.userId, userId), eq(accounts.provider, provider)));
+}
+
 export async function updatePrefs(userId, prefs) {
   const clean = {
     alertDiscord: Boolean(prefs.alertDiscord),
