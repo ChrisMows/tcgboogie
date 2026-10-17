@@ -1,5 +1,6 @@
 import Link from "next/link";
-import DealCard from "@/components/DealCard";
+import { DealGrid } from "@/components/DealTile";
+import { withLinks } from "@/lib/deal-links";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
 import { clampToPlan, matches } from "@/lib/filters";
 import { requireUser } from "@/lib/session";
@@ -30,13 +31,8 @@ export default async function Feed() {
           Too late to bid on these. <Link href="/app/billing">Premium</Link> gets them to you live.
         </div>
       )}
-      {deals.length === 0 ? (
-        <div className="panel muted">No deals yet. <Link href="/app/filters">Widen your filters</Link> to catch more.</div>
-      ) : (
-        <div className="grid">
-          {deals.map((d) => <DealCard key={d.id} deal={d} mode={premium ? "live" : "missed"} />)}
-        </div>
-      )}
+      <DealGrid deals={withLinks(deals, "deal-feed")} mode={premium ? "live" : "missed"}
+        empty={<>No deals yet. <Link href="/app/filters">Widen your filters</Link> to catch more.</>} />
     </>
   );
 }

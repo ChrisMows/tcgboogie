@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
-import DealCard from "@/components/DealCard";
+import { DealGrid } from "@/components/DealTile";
+import { withLinks } from "@/lib/deal-links";
 import { itemLabel, money, pct, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
@@ -88,7 +89,7 @@ export default async function Dashboard() {
         </div>
         <div className="panel">
           <h2>{premium ? "Best recent deal" : "The one that got away"}</h2>
-          {best ? <DealCard deal={best} mode={premium ? "live" : "missed"} /> : (
+          {best ? <div style={{ maxWidth: 240 }}><DealGrid deals={withLinks([best], "dashboard")} mode={premium ? "live" : "missed"} /></div> : (
             <p className="muted">No matches yet. Loosen your filters a little to catch more deals.</p>
           )}
         </div>
