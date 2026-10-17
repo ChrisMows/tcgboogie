@@ -4,7 +4,7 @@ import { ownedCounts } from "@/lib/collection";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
-export const metadata = { title: "Price watches" };
+export const metadata = { title: "Price alerts" };
 
 export default async function WatchesPage() {
   const user = await requireUser();
@@ -23,8 +23,8 @@ export default async function WatchesPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Price watches</h1>
-          <p>Pick any card or sealed product on TCGplayer, set a target price, and we'll alert you when it drops.</p>
+          <h1>Price alerts</h1>
+          <p>Pick a card and your price. We&apos;ll tell you when it drops.</p>
         </div>
       </div>
       <WatchManager

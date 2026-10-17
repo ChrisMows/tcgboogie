@@ -19,7 +19,7 @@ export default async function SetsPage() {
         <div>
           <div className="crumbs"><Link href="/app/collection">Collection</Link> / Sets</div>
           <h1>Sets</h1>
-          <p>Open a set and tap the cards you own. The fastest way to add a binder&apos;s worth of cards.</p>
+          <p>Open a set and tap the cards you own.</p>
         </div>
       </div>
       {sets === null ? (

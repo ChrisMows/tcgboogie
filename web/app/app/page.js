@@ -33,7 +33,7 @@ export default async function Dashboard() {
       <div className="page-head">
         <div>
           <h1>Hi{user.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
-          <p>{premium ? "Your deals arrive live while the auctions are still open." : "You're on Free: you see deals after their auctions end."}</p>
+          <p>{premium ? "Your deals arrive live." : "You're on Free: deals show up after they end."}</p>
         </div>
         <Link href="/app/filters" className="btn primary">Edit filters</Link>
       </div>

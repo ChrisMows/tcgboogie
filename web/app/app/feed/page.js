@@ -19,9 +19,7 @@ export default async function Feed() {
         <div>
           <h1>Deal feed</h1>
           <p>
-            {premium
-              ? "Deals matching your filters, live while the auctions are still open."
-              : "Deals matching your filters, shown after their auctions ended, with what they actually sold for."}
+            {premium ? "Deals that match your filters, live." : "Deals that match your filters, after they end."}
           </p>
         </div>
         <Link href="/app/filters" className="btn">Edit filters</Link>
@@ -29,12 +27,11 @@ export default async function Feed() {
       {user.demo && <div className="notice">Sample deals. Real deals appear here once the scanner is connected to your account.</div>}
       {!premium && (
         <div className="notice warn">
-          You're seeing these too late to bid. <Link href="/app/billing">Premium</Link> shows them live and alerts you
-          instantly.
+          Too late to bid on these. <Link href="/app/billing">Premium</Link> gets them to you live.
         </div>
       )}
       {deals.length === 0 ? (
-        <div className="panel muted">No deals match your filters yet. Try a lower discount or a wider value range.</div>
+        <div className="panel muted">No deals yet. <Link href="/app/filters">Widen your filters</Link> to catch more.</div>
       ) : (
         <div className="grid">
           {deals.map((d) => <DealCard key={d.id} deal={d} mode={premium ? "live" : "missed"} />)}

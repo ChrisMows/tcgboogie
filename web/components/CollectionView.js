@@ -23,7 +23,7 @@ function WatchButton({ item, watched, onWatch, pending }) {
   return watched ? (
     <Link href="/app/watches" className="btn sm" title="You're watching this card's price">🔔 Watching</Link>
   ) : (
-    <button type="button" className="btn sm" disabled={pending} onClick={() => onWatch(item)} title="Alert me when the price drops">🔔 Watch price</button>
+    <button type="button" className="btn sm" disabled={pending} onClick={() => onWatch(item)} title="Alert me when the price drops">🔔 Price alert</button>
   );
 }
 
@@ -164,7 +164,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className="tile-actions">
                   <button type="button" className="btn sm primary" disabled={pending} onClick={() => act(() => moveToCollection(it.id), `${short(it.name)} moved to your collection 🎉`)}>Got it</button>
                   {watched.has(it.productId) ? <Link href="/app/watches" className="btn sm" title="Watching price">🔔</Link>
-                    : <button type="button" className="btn sm" disabled={pending} onClick={() => watch(it)} title="Watch price">🔔</button>}
+                    : <button type="button" className="btn sm" disabled={pending} onClick={() => watch(it)} title="Set a price alert">🔔</button>}
                 </div>
               )}
             </div>

@@ -45,7 +45,7 @@ export default async function CollectionPage({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Collection</h1>
-          <p>Everything you own and want, valued every day from real sales.</p>
+          <p>What you own, what it&apos;s worth, updated daily.</p>
         </div>
         <div className="head-actions">
           <Link href={adding ? "/app/collection" : "/app/collection?add=1"} className="btn primary">{adding ? "Done adding" : "+ Add cards"}</Link>

@@ -145,13 +145,13 @@ export async function watchProduct(productId, input = {}) {
   const existing = watches.find((w) => w.productId === String(productId));
   if (existing) return { ok: true, already: true };
   if (atWatchLimit(user.plan, watches.length)) {
-    return { ok: false, limit: true, error: `You're using all ${user.plan.maxPriceWatches} price watches on Free. Remove one, or upgrade for unlimited.` };
+    return { ok: false, limit: true, error: `You're using all ${user.plan.maxPriceWatches} price alerts on Free. Remove one, or upgrade for unlimited.` };
   }
   const product = await getProduct(productId);
   if (!product) return { ok: false, error: "That product is no longer available." };
   const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
   const target = input.targetPrice ?? (now ? Math.floor(now * 0.85 * 100) / 100 : null);
-  if (!target) return { ok: false, error: "There's no current price for this product yet, so set a target on the Price watches page." };
+  if (!target) return { ok: false, error: "There's no current price for this product yet, so set a target on the Price alerts page." };
   const { watch, errors } = validateWatch({ priceType: "market", mode: "below", condition: "Near Mint", targetPrice: target, alsoEbay: product.type === "card", ...input }, product);
   if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0] };
   const price = currentPrice(product, watch);

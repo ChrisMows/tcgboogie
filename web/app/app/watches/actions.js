@@ -30,7 +30,7 @@ export async function findProducts(query) {
 export async function addWatch(productId, input) {
   const user = await requireUser();
   if (atWatchLimit(user.plan, await store.countWatches(user.id))) {
-    return { ok: false, errors: { _: `You're using all ${user.plan.maxPriceWatches} price watches on Free. Remove one to add another, or upgrade for unlimited.` } };
+    return { ok: false, errors: { _: `You're using all ${user.plan.maxPriceWatches} price alerts on Free. Remove one to add another, or upgrade for unlimited.` } };
   }
   const product = await getProduct(productId);
   if (!product) return { ok: false, errors: { _: "That product is no longer available." } };

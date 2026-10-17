@@ -1,12 +1,33 @@
 import Link from "next/link";
 import CardArt from "@/components/CardArt";
 import DealTabs from "@/components/DealTabs";
+import Source from "@/components/Source";
+import { PLANS } from "@/lib/plans";
 import "./home.css";
 
 const EXAMPLES = [
   { name: "Umbreon VMAX", art: "umbreon", meta: "Evolving Skies · Alternate Art", price: "240.00", market: "335.00", off: 28, tag: "GRADED · PSA 10", left: "4m 32s" },
   { name: "Charizard ex", art: "charizard", meta: "Pokémon 151 · Special Illustration Rare", price: "112.00", market: "150.00", off: 25, tag: "RAW · NEAR MINT", left: "8m 14s" },
   { name: "Arceus VSTAR", art: "arceus", meta: "Crown Zenith · Galarian Gallery", price: "58.00", market: "78.00", off: 26, tag: "RAW · NEAR MINT", left: "12m 06s" },
+];
+
+const TOOLS = [
+  { icon: "⚡", title: "Catch underpriced auctions", body: "We flag eBay listings priced well below what the card really sells for, before they end." },
+  { icon: "🔔", title: "Get price-drop alerts", body: "Pick a card and your price. We tell you the moment it drops." },
+  { icon: "▦", title: "Track your collection", body: "See what every card is worth, updated daily, and how your sets are coming along." },
+];
+
+const STEPS = [
+  ["Tell us what you want", "The cards, grades and budget you care about."],
+  ["We keep watch", "Around the clock, across eBay and TCGplayer."],
+  ["You make the move", "Get the alert with the price and the time left."],
+];
+
+const COMPARE = [
+  { source: "tcgplayer", label: "Market price", price: "$325.00" },
+  { source: "tcgplayer", label: "Lowest listing", price: "$298.00" },
+  { source: "ebay", label: "Sold, last 30 days", price: "$318.00" },
+  { source: "ebay", label: "Auction ending soon", price: "$259.00", best: true },
 ];
 
 export default async function Home({ searchParams }) {
@@ -34,7 +55,7 @@ export default async function Home({ searchParams }) {
               <Link className="btn primary" href="/login?mode=signup">Find my next deal <span>↗</span></Link>
               <a className="btn" href="#how">▷ &nbsp; See how it works</a>
             </div>
-            <p className="micro">✓ &nbsp; Your cards. Your budget. Your edge.</p>
+            <p className="micro">✓ &nbsp; Free forever. No card needed.</p>
           </div>
 
           <div className="stage" aria-label="Collectible cards with an illustrative deal alert">
@@ -70,16 +91,75 @@ export default async function Home({ searchParams }) {
           <span className="game lorcana soon">LORCANA</span>
           <span className="game soon" style={{ fontStyle: "italic" }}>ONE PIECE</span>
           <span className="game soon">Yu-Gi-Oh!</span>
-          <span className="more">Live today: Pokémon.<br />The rest are on the radar ↗</span>
+          <span className="more"><b className="lime">Live: Pokémon.</b><br />The rest are coming soon.</span>
         </div>
       </div>
+
+      <section className="content wrap" id="tools">
+        <div className="eyebrow">THREE WAYS TO BOOGIE</div>
+        <h2>One place for the cards you love.</h2>
+        <div className="tools">
+          {TOOLS.map((t) => (
+            <article key={t.title} className="tool">
+              <span className="tool-icon" aria-hidden="true">{t.icon}</span>
+              <h3>{t.title}</h3>
+              <p>{t.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="content workflow" id="how">
+        <div className="wrap flow">
+          <div>
+            <div className="eyebrow">UP AND RUNNING IN 3 STEPS</div>
+            <h2>You collect.<br />We&apos;ll keep watch.</h2>
+            <p className="desc">Set it up once. Takes about a minute.</p>
+            <Link className="btn primary" href="/login?mode=signup">Start free ↗</Link>
+          </div>
+          <div className="steps">
+            {STEPS.map(([title, body], i) => (
+              <article key={title}><span className="num">0{i + 1}</span><h3>{title}</h3><p>{body}</p></article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="content wrap edge" id="compare">
+        <div className="compare" aria-label="Example price comparison">
+          <div className="compare-head">
+            <CardArt name="charizard" className="compare-card" alt="Charizard ex card" />
+            <div>
+              <b>Charizard ex</b>
+              <div className="small muted">151 · 199/165 · Near Mint</div>
+            </div>
+          </div>
+          {COMPARE.map((r) => (
+            <div key={r.label} className={`compare-row ${r.best ? "best" : ""}`}>
+              <Source name={r.source} />
+              <span className="compare-label">{r.label}</span>
+              <b>{r.price}</b>
+            </div>
+          ))}
+          <div className="compare-foot">↘ Ending in 6 minutes · 20% below what it sells for</div>
+        </div>
+        <div>
+          <div className="eyebrow">EVERY PRICE. ONE PLACE.</div>
+          <h2>See where the deal is.</h2>
+          <p className="desc">We line up prices from the places you buy, so the best one jumps out.</p>
+          <ul className="checks">
+            <li>Real sales from the last 30 days, not asking prices</li>
+            <li>Matched to the exact card, printing and grade</li>
+            <li>Shady sellers and listings flagged for you</li>
+          </ul>
+        </div>
+      </section>
 
       <section className="content wrap" id="deals">
         <div className="section-heading">
           <div>
             <div className="eyebrow">LESS SCROLLING. MORE SCORING.</div>
-            <h2>Good cards. Better opportunities.</h2>
-            <p className="desc">A look at the deals your next alert could uncover.</p>
+            <h2>Deals like these.</h2>
           </div>
           <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>
         </div>
@@ -87,56 +167,26 @@ export default async function Home({ searchParams }) {
         <p className="note">Illustrative listings and prices, not live offers.</p>
       </section>
 
-      <section className="content workflow" id="how">
-        <div className="wrap flow">
+      <section className="content wrap" id="pricing">
+        <div className="eyebrow">SIMPLE PRICING</div>
+        <h2>Start free. Upgrade when it pays for itself.</h2>
+        <div className="price-teaser">
           <div>
-            <div className="eyebrow">THE HUNT, ON AUTOPILOT.</div>
-            <h2>You collect.<br />We&apos;ll keep watch.</h2>
-            <p className="desc">The checks a careful collector would make.<br />Without another evening of endless tabs.</p>
-            <Link className="lime-link" href="/how-it-works">Go behind the alerts &nbsp; ↗</Link>
+            <b>Free</b> <span className="muted">$0 forever</span>
+            <p>Collection tracker, 5 price alerts, and the deals you missed.</p>
           </div>
-          <div className="steps">
-            <article><span className="num">01</span><h3>Set your sights</h3><p>Choose your cards, sets, grades, budget, and the discount worth your attention.</p></article>
-            <article><span className="num">02</span><h3>We do the digging</h3><p>Listings matched to the exact card. Recent sold comps checked. Seller red flags surfaced.</p></article>
-            <article><span className="num">03</span><h3>Make your move</h3><p>Get the listing, the context, and the time left. You decide when a deal is your deal.</p></article>
+          <div className="featured">
+            <b>Premium</b> <span className="muted">${PLANS.premium.price}/month</span>
+            <p>Every deal live, before the auction ends. Unlimited alerts.</p>
           </div>
-        </div>
-      </section>
-
-      <section className="content wrap edge" id="edge">
-        <div className="console">
-          <div className="console-top"><span>◈ &nbsp; Your collector radar</span><span className="lime">● Preview</span></div>
-          <div className="pills">
-            <span className="pill">Pokémon</span><span className="pill">PSA 10</span><span className="pill">Under $300</span><span className="pill">20%+ below market</span>
-          </div>
-          <div className="chart">
-            <svg viewBox="0 0 450 140" preserveAspectRatio="none" aria-label="Illustrative market trend">
-              <defs>
-                <linearGradient id="f" x2="0" y2="1">
-                  <stop stopColor="#d3ff66" stopOpacity=".2" />
-                  <stop offset="1" stopColor="#d3ff66" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M0 100 35 92 65 105 95 70 125 82 160 55 190 61 220 43 255 58 290 30 320 42 355 25 390 35 420 16 450 23 V140 H0Z" fill="url(#f)" />
-              <path d="M0 100 35 92 65 105 95 70 125 82 160 55 190 61 220 43 255 58 290 30 320 42 355 25 390 35 420 16 450 23" fill="none" stroke="#d3ff66" strokeWidth="2" />
-            </svg>
-          </div>
-          <div className="axis"><span>30 DAYS AGO</span><span>ILLUSTRATIVE SOLD PRICES</span><span>TODAY</span></div>
-          <div className="console-alert"><span>↘ &nbsp; A listing just hit your target price.</span><b>Your move. ↗</b></div>
-        </div>
-        <div>
-          <div className="eyebrow">SIGNAL OVER NOISE.</div>
-          <h2>Built for the way<br />you collect.</h2>
-          <div className="feature"><span>◎</span><div><h3>Only your kind of cards</h3><p>Dial in your filter profiles. Let the deals come to you.</p></div></div>
-          <div className="feature"><span>⌁</span><div><h3>Real sales. Real context.</h3><p>Recent sold comps for the exact card help you judge each opportunity with confidence.</p></div></div>
-          <div className="feature"><span>♧</span><div><h3>A heads-up that matters</h3><p>From ending auctions to TCGplayer price drops on your watch list, keep your next find within reach.</p></div></div>
+          <Link href="/pricing" className="btn">Compare plans ↗</Link>
         </div>
       </section>
 
       <section className="wrap cta">
         <div className="eyebrow">YOUR COLLECTION&apos;S NEXT CHAPTER</div>
         <h2>The right card.<br />The right price. <span className="lime">Your move.</span></h2>
-        <p>Spend less time searching. More time loving the hobby.</p>
+        <p>Free forever. No card needed.</p>
         <Link className="btn primary" href="/login?mode=signup">Let&apos;s Boogie ↗</Link>
       </section>
     </div>

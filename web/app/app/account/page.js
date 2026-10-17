@@ -156,7 +156,7 @@ export default async function Account({ searchParams }) {
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
         <h2>Delete account</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Permanently deletes your account, filter profiles, price watches, collection and alert history.
+          Permanently deletes your account, filter profiles, price alerts, collection and alert history.
           {premium && !user.isAdmin
             ? " Your Premium subscription is cancelled at the same moment, and you won't be charged again."
             : " If you have a subscription, it's cancelled at the same moment, and you won't be charged again."}

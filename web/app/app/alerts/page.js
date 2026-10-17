@@ -16,7 +16,7 @@ export default async function Alerts() {
       <div className="page-head">
         <div>
           <h1>Alert history</h1>
-          <p>Every alert you received, what it sold for, and how close the deal was.</p>
+          <p>Every alert we sent you, and what it sold for.</p>
         </div>
       </div>
       {user.demo && premium && <div className="notice">Sample alerts.</div>}

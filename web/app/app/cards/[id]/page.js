@@ -4,12 +4,13 @@ import CardActions from "@/components/CardActions";
 import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
 import { getProduct } from "@/lib/catalog";
-import { COND_SHORT, GRADERS, change, money, nmPrice, pct, pokemonName } from "@/lib/collection";
+import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
 import { ebaySearch } from "@/lib/ebay-link";
+import Source from "@/components/Source";
 
 export async function generateMetadata({ params }) {
   const p = await getProduct((await params).id).catch(() => null);
@@ -31,7 +32,10 @@ export default async function CardPage({ params }) {
   if (product === null) notFound();
   const p = slim(product);
   const [items, binders, watches] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id)]);
-  const mine = items.filter((it) => it.productId === p.id).map((it) => ({ ...it, createdAt: String(it.createdAt), valueUpdatedAt: null }));
+  // Value your copies from today's prices (the saved value can lag behind).
+  const mine = items.filter((it) => it.productId === p.id).map((it) => ({
+    ...it, unitValue: marketValue(p, it) ?? it.unitValue, createdAt: String(it.createdAt), valueUpdatedAt: null,
+  }));
   const watch = watches.find((w) => w.productId === p.id);
   const now = p.type === "sealed" ? p.prices?.market : nmPrice(p);
   const c7 = change(p, 7), c30 = change(p, 30);
@@ -42,6 +46,20 @@ export default async function CardPage({ params }) {
   const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim();
   const ebay = ebaySearch(ebayQuery, { source: "card-page" });
   const ebaySold = ebaySearch(ebayQuery, { sold: true, source: "card-page-sold" });
+
+  // One line per source, cheapest highlighted (null price = link only).
+  const firstPrinting = Object.keys(p.prices || {})[0];
+  const tcgLow = isSealed ? p.prices?.low : p.prices?.[firstPrinting]?.["Near Mint"]?.low ?? null;
+  const psa10 = p.graded?.psa10?.price ?? null;
+  const compareRows = [
+    { source: "tcgplayer", label: isSealed ? "Market price" : "Market price, NM", price: now ?? null, href: p.tcgplayerUrl },
+    { source: "tcgplayer", label: isSealed ? "Lowest listing" : "Lowest listing, NM", price: tcgLow, href: p.tcgplayerUrl },
+    ...(psa10 ? [{ source: "ebay", label: "Sold recently, PSA 10", price: psa10, href: ebaySold.href, affiliate: ebaySold.affiliate }] : []),
+    { source: "ebay", label: "Live listings and auctions", price: null, href: ebay.href, affiliate: ebay.affiliate },
+  ];
+  const priced = compareRows.filter((r) => r.price !== null && !r.label.includes("PSA"));
+  const cheapest = priced.length > 1 ? priced.reduce((a, b) => (b.price < a.price ? b : a)) : null;
+  if (cheapest) cheapest.best = true;
 
   return (
     <>
@@ -68,8 +86,23 @@ export default async function CardPage({ params }) {
             </span>
           </div>
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} filterHref={filterHref} ebay={ebay} ebaySold={ebaySold} />
+            plan={user.plan} filterHref={filterHref} />
         </div>
+      </div>
+
+      <div className="panel">
+        <h2>Compare prices</h2>
+        <div className="compare-list">
+          {compareRows.map((r) => (
+            <a key={r.label} href={r.href} target="_blank" rel={`noopener noreferrer${r.affiliate ? " sponsored" : ""}`}
+              className={`compare-item ${r.best ? "best" : ""}`}>
+              <Source name={r.source} />
+              <span className="compare-label">{r.label}{r.best ? " · lowest" : ""}</span>
+              <b>{r.price === null ? "See ↗" : money(r.price)}</b>
+            </a>
+          ))}
+        </div>
+        {(ebay.affiliate) && <p className="hint" style={{ margin: "8px 0 0" }}>Ad · Links may earn us a commission.</p>}
       </div>
 
       <div className="card-detail-grid">
@@ -79,14 +112,9 @@ export default async function CardPage({ params }) {
         </div>
 
         <div className="panel" style={{ marginBottom: 0 }}>
-          <h2>Prices</h2>
-          {isSealed ? (
-            <table className="list"><tbody>
-              <tr><td>Market price</td><td className="num">{money(p.prices?.market)}</td></tr>
-              <tr><td>Lowest listing</td><td className="num">{money(p.prices?.low)}</td></tr>
-            </tbody></table>
-          ) : (
+          {isSealed ? <p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p> : (
             <>
+              <h2>By condition</h2>
               {printings.map(([printing, byCond]) => (
                 <div key={printing} style={{ marginBottom: 12 }}>
                   {printings.length > 1 && <div className="small muted" style={{ marginBottom: 4 }}>{printing}</div>}

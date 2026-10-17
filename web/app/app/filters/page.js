@@ -16,7 +16,7 @@ export default async function FiltersPage({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Filters</h1>
-          <p>Choose exactly which deals reach you. Each profile is checked separately against every ending auction.</p>
+          <p>Choose which deals reach you.</p>
         </div>
       </div>
       <FilterEditor

@@ -236,6 +236,45 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .chg.up { color: var(--accent); }
 .chg.down { color: var(--bad); }
 
+details.compare-all { max-width: 820px; margin: 28px auto 0; }
+details.compare-all summary { cursor: pointer; text-align: center; color: var(--accent); font-weight: 600; list-style: none; padding: 8px; }
+details.compare-all summary::after { content: " ▾"; }
+details.compare-all[open] summary::after { content: " ▴"; }
+details.compare-all .table-wrap { margin-top: 12px; }
+
+/* how it works */
+.how-steps { display: grid; gap: 18px; margin-top: 32px; }
+.how-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 32px; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+.how-copy h3 { font-size: 24px; margin: 14px 0 8px; }
+.how-copy p { color: var(--muted); margin: 0; font-size: 16px; }
+.how .step-num { background: var(--accent); color: var(--accent-ink); }
+.mock { background: #0f141b; border: 1px solid var(--border-strong); border-radius: 12px; padding: 18px; display: grid; gap: 10px; font-size: 14px; }
+.mock-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+.mock-title.lime, .lime { color: var(--accent); }
+.mock-live { color: var(--accent); }
+.mock-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mock-chips span { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(211, 255, 102, 0.35); border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+.mock-line { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.mock-line span:not(.src) { color: var(--muted); }
+.mock-line b { margin-left: auto; }
+.alert-mock { border-color: rgba(211, 255, 102, 0.45); }
+.alert-mock .btn { justify-self: start; margin-top: 4px; }
+@media (max-width: 760px) { .how-step { grid-template-columns: minmax(0, 1fr); padding: 20px; gap: 18px; } }
+
+/* marketplace name badges */
+.src { display: inline-flex; align-items: center; justify-content: center; min-width: 86px; padding: 4px 8px; border-radius: 6px; font: 800 13px var(--font-body), sans-serif; letter-spacing: -0.02em; background: #fff; flex: none; }
+.src i { font-style: normal; }
+.src-ebay { font-size: 16px; letter-spacing: -0.06em; }
+.src-tcgplayer { color: #1b3d93; font-size: 12px; }
+
+.compare-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 8px; }
+.compare-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); color: var(--text); font-size: 14px; }
+.compare-item:hover { text-decoration: none; border-color: var(--border-strong); }
+.compare-item .compare-label { color: var(--muted); flex: 1; min-width: 0; }
+.compare-item b { white-space: nowrap; }
+.compare-item.best { border-color: rgba(211, 255, 102, 0.5); background: var(--accent-soft); }
+.compare-item.best b { color: var(--accent); }
+
 /* card pictures */
 .thumb { aspect-ratio: 63 / 88; height: auto; border-radius: 6px; object-fit: contain; background: #ffffff08; display: block; }
 .thumb-ph { background: linear-gradient(160deg, #2a3242, #171c26 70%); border: 1px solid var(--border-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px; text-align: center; color: var(--muted); overflow: hidden; }

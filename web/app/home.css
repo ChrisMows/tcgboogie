@@ -116,6 +116,35 @@
 .home .feature h3 { font-size: 13px; margin: 0 0 8px; }
 .home .feature p { color: #929eae; font-size: 12px; line-height: 1.8; margin: 0; }
 
+/* three tools */
+.home .tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 30px; }
+.home .tool { border: 1px solid var(--border); background: #151a22; border-radius: 12px; padding: 26px; }
+.home .tool-icon { display: inline-flex; width: 44px; height: 44px; border-radius: 10px; align-items: center; justify-content: center; background: #d3ff6614; color: var(--accent); font-size: 20px; }
+.home .tool h3 { font: 500 19px var(--font-head); margin: 18px 0 8px; }
+.home .tool p { color: #929eae; font-size: 13px; line-height: 1.7; margin: 0; }
+.home .flow .btn { margin-top: 10px; }
+
+/* price comparison */
+.home .compare { border: 1px solid #364150; background: #141b25; border-radius: 12px; padding: 22px; }
+.home .compare-head { display: flex; gap: 14px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #303b4c; margin-bottom: 8px; font-size: 15px; }
+.home .compare-card { width: 46px; height: auto; border-radius: 4px; }
+.home .compare-row { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 8px; font-size: 13px; }
+.home .compare-row b { font: 500 17px var(--font-head); margin-left: auto; }
+.home .compare-label { color: #acb8c9; }
+.home .compare-row.best { background: #d3ff6612; border: 1px solid #d3ff6640; }
+.home .compare-row.best b { color: var(--accent); }
+.home .compare-foot { margin-top: 12px; font-size: 11px; color: var(--accent); }
+.home .checks { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; }
+.home .checks li { padding-left: 28px; position: relative; color: #c9d1dd; font-size: 14px; }
+.home .checks li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+/* pricing teaser */
+.home .price-teaser { display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: center; margin-top: 26px; }
+.home .price-teaser > div { border: 1px solid var(--border); background: #151a22; border-radius: 12px; padding: 20px 22px; }
+.home .price-teaser > div.featured { border-color: var(--accent); }
+.home .price-teaser b { font: 500 20px var(--font-head); margin-right: 6px; }
+.home .price-teaser p { color: #929eae; font-size: 13px; margin: 8px 0 0; }
+
 /* cta */
 .home .cta { text-align: center; border: 1px solid var(--border); border-radius: 14px; padding: 65px 20px 75px; margin-bottom: 65px; background: radial-gradient(ellipse at bottom, #b7e14c12, transparent 65%); }
 .home .cta h2 { font-size: 46px; margin: 22px 0 16px; }
@@ -130,6 +159,8 @@
   .home .games small, .home .more { display: none; }
   .home .deal-grid { gap: 12px; }
   .home .info { padding: 14px; }
+  .home .tools { grid-template-columns: minmax(0, 1fr); }
+  .home .price-teaser { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
   .home h1 { font-size: 44px; letter-spacing: -2.5px; }

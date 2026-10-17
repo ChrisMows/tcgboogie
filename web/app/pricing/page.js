@@ -5,7 +5,7 @@ export const metadata = { title: "Pricing" };
 
 const rows = [
   ["Deal feed", "After the auction ends, with the sale price", "Live, while you can still bid"],
-  ["Instant alerts (Discord and phone)", "—", "✓"],
+  ["Instant alerts (Discord and email)", "—", "✓"],
   ["Filter profiles", "1", "15"],
   ["Lowest discount you can set", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],
   ["How early before the auction ends", `Up to ${PLANS.free.maxWindowMinutes} minutes`, `Up to ${PLANS.premium.maxWindowMinutes} minutes`],
@@ -26,8 +26,8 @@ export default function Pricing() {
   const { free, premium } = PLANS;
   return (
     <div className="wrap section">
-      <h2>Simple pricing</h2>
-      <p className="sub">Start free to see how many deals you're missing. Upgrade when one good flip pays for the month.</p>
+      <h2>Start free. Upgrade when it pays for itself.</h2>
+      <p className="sub">One good flip covers the month.</p>
       <div className="plans">
         <div className="plan">
           <h3>{free.label}</h3>
@@ -48,16 +48,19 @@ export default function Pricing() {
           <div className="hint" style={{ textAlign: "center" }}>Cancel anytime. Card payments launch soon.</div>
         </div>
       </div>
-      <div className="table-wrap" style={{ maxWidth: 820, margin: "32px auto 0" }}>
-        <table className="list">
-          <thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead>
-          <tbody>
-            {rows.map(([name, a, b]) => (
-              <tr key={name}><td>{name}</td><td className="muted">{a}</td><td>{b}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <details className="compare-all">
+        <summary>Compare every feature</summary>
+        <div className="table-wrap">
+          <table className="list">
+            <thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead>
+            <tbody>
+              {rows.map(([name, a, b]) => (
+                <tr key={name}><td>{name}</td><td className="muted">{a}</td><td>{b}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }

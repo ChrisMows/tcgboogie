@@ -9,7 +9,7 @@ import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFr
 import { itemLabel, money, nmPrice, pct, unitValue } from "@/lib/collection";
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it. */
-export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebay, ebaySold }) {
+export default function CardActions({ product, mine, binders, watch, plan, filterHref }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | "watch" | null
   const [editing, setEditing] = useState(null);
@@ -87,13 +87,10 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         {watch ? (
           <Link href="/app/watches" className="btn">🔔 {watch.status === "triggered" ? "At your target!" : `Watching · ${money(watch.target)}`}</Link>
         ) : (
-          <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Watch price</button>
+          <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Price alert</button>
         )}
         {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
-        <a href={ebay.href} className="btn ghost" target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`}>eBay listings ↗</a>
-        <a href={ebaySold.href} className="btn ghost" target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`}>eBay sold ↗</a>
       </div>
-      {ebay.affiliate && <div className="hint">Ad · eBay links may earn us a commission. It doesn&apos;t change the price you pay.</div>}
 
       {panel === "add" && !wish && (
         <div className="action-panel">
@@ -110,7 +107,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
       )}
 
       {panel === "watch" && !watch && (
-        <form className="action-panel" onSubmit={(e) => { e.preventDefault(); run(() => watchProduct(product.id, { targetPrice: target }), (r) => `Watching. We'll alert you at ${money(r.target)} or less.`, { href: "/app/watches", label: "Price watches" }); setPanel(null); }}>
+        <form className="action-panel" onSubmit={(e) => { e.preventDefault(); run(() => watchProduct(product.id, { targetPrice: target }), (r) => `Watching. We'll alert you at ${money(r.target)} or less.`, { href: "/app/watches", label: "Price alerts" }); setPanel(null); }}>
           <b>Alert me when {product.type === "card" ? "the Near Mint price" : "the price"} drops to</b>
           <div className="row" style={{ marginTop: 10, maxWidth: 360 }}>
             <input type="number" min="0.01" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Target price" />
@@ -120,7 +117,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
             Now {money(now)}{Number(target) && now ? ` · ${Math.round((1 - Number(target) / now) * 100)}% below today` : ""}.
             {product.type === "card" ? " We'll also watch eBay for listings at or under your target." : ""}
             {plan.maxPriceWatches !== null ? ` Free includes ${plan.maxPriceWatches} watches.` : ""}
-            {" "}More options on <Link href="/app/watches">Price watches</Link>.
+            {" "}More options on <Link href="/app/watches">Price alerts</Link>.
           </div>
         </form>
       )}

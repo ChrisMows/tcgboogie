@@ -113,7 +113,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
                       <button type="button" onClick={() => add(c)} aria-label="One more">+</button>
                     </span>
                   ) : watched.has(c.id) ? <Link href="/app/watches" className="small" title="Watching price">🔔</Link>
-                    : <button type="button" className="link-btn small" onClick={() => watch(c)} title="Watch price">🔔 Watch</button>}
+                    : <button type="button" className="link-btn small" onClick={() => watch(c)} title="Set a price alert">🔔 Alert</button>}
                 </div>
               </div>
             </div>

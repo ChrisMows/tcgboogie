@@ -160,7 +160,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
   return (
     <>
       <div className="stats">
-        <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price watches {limit === null ? "(unlimited)" : "used"}</span></div>
+        <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
         <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>at or below target</span></div>
         <div className="stat"><b>{watches.filter((w) => w.alsoEbay).length}</b><span>also watching eBay</span></div>
         <div className="stat"><b>{plan.watchAlertChannels.includes("discord") ? "Discord + email" : "Email"}</b><span>where alerts go</span></div>
@@ -168,10 +168,10 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
 
       <div className="panel">
-        <h2>Add a price watch</h2>
+        <h2>Add a price alert</h2>
         {full ? (
           <div className="notice warn" style={{ marginBottom: 0 }}>
-            You're using all {limit} price watches. Remove one below to add another, or{" "}
+            You're using all {limit} price alerts. Remove one below to add another, or{" "}
             <Link href="/app/billing">upgrade to Premium</Link> for unlimited watches.
           </div>
         ) : (
@@ -220,7 +220,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         )}
       </div>
 
-      <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>Your price watches</h2>
+      <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>Your price alerts</h2>
       {watches.length === 0 ? (
         <div className="panel muted">No watches yet. Add a card or sealed product above.</div>
       ) : (
@@ -273,7 +273,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         </div>
       )}
       <p className="hint" style={{ marginTop: 16 }}>
-        TCGplayer prices update about once a day, so price watches are best for tracking trends. After an alert, a watch
+        TCGplayer prices update about once a day, so price alerts are best for tracking trends. After an alert, a watch
         stays quiet until the price climbs back above your target (or you re-arm it). Links to TCGplayer may earn us a
         commission.
       </p>

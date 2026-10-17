@@ -8,7 +8,7 @@ import { repairPicture } from "@/app/app/actions";
 const ITEMS = [
   ["/app", "My dashboard"],
   ["/app/collection", "My collection"],
-  ["/app/watches", "Price watches"],
+  ["/app/watches", "Price alerts"],
   ["/app/account", "Profile & connections"],
   ["/app/account#alerts", "Alert settings"],
   ["/app/billing", "Plan & billing"],

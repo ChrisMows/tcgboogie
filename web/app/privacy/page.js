@@ -13,7 +13,7 @@ export default function Privacy() {
       <ul>
         <li>Your email address and name, from the sign-in method you choose (email link, Google, or Discord).</li>
         <li>An ID for each sign-in method you connect (for example your Discord user ID), so we can sign you in and deliver Discord alerts.</li>
-        <li>Your filter profiles, price watches, alert preferences, and the alerts we sent you.</li>
+        <li>Your filter profiles, price alerts, alert preferences, and the alerts we sent you.</li>
         <li>Your collection and wishlist: the cards and products you add, and any details you choose to enter (what you paid, dates, notes), plus a daily total of your collection&apos;s value for your chart.</li>
         <li>Your plan. When paid plans launch, payments are handled by our payment processor; we never see or store card numbers.</li>
       </ul>
@@ -26,7 +26,7 @@ export default function Privacy() {
       <h2>Deleting your data</h2>
       <p>
         You can delete your account at any time from Account → Delete account. That permanently removes your account,
-        filter profiles, price watches, collection, and alert history.
+        filter profiles, price alerts, collection, and alert history.
       </p>
       <h2>Contact</h2>
       <p>Questions about privacy can be sent to support@tcgboogie.com.</p>
