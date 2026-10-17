@@ -26,7 +26,8 @@ export function defaultFilters(plan) {
     minGrade: 7,
     maxGrade: 10,
     languages: plan.japanese ? ["english", "japanese"] : ["english"],
-    pokemon: [],
+    pokemon: [], // "any card named …" (e.g. every Charizard)
+    cards: [], // specific cards picked from the list: { name, setName, number }
     excludePokemon: [],
     sets: [],
     excludeSets: [],
@@ -102,6 +103,11 @@ export function validateFilters(input, plan) {
   else f.languages = langs;
 
   for (const key of ["pokemon", "excludePokemon", "sets", "excludeSets"]) f[key] = words(input[key]);
+  const text = (v, n) => String(v || "").trim().slice(0, n);
+  f.cards = (Array.isArray(input.cards) ? input.cards : [])
+    .map((c) => ({ name: text(c?.name, 80), setName: text(c?.setName, 80) || null, number: text(c?.number, 20) || null }))
+    .filter((c) => c.name)
+    .slice(0, 100);
 
   const comps = num(input.minComps, base.minComps);
   if (!Number.isInteger(comps) || comps < 3 || comps > 200) errors.minComps = "Use a whole number from 3 to 200.";
@@ -122,6 +128,9 @@ export function clampToPlan(filters, plan) {
   f.maxMinutesLeft = Math.min(f.maxMinutesLeft, plan.maxWindowMinutes);
   f.minMarketValue = Math.max(f.minMarketValue, plan.minValueFloor);
   if (!plan.japanese) f.languages = ["english"];
+  // "Never these" lists were retired from the filter page: you pick what you want, and get just that.
+  f.excludePokemon = [];
+  f.excludeSets = [];
   return f;
 }
 
@@ -130,7 +139,8 @@ const list = (a) => (a.length <= 2 ? a.join(" or ") : `${a.slice(0, -1).join(", 
 
 /** One plain-English sentence describing what a profile looks for. */
 export function describe(f) {
-  const what = f.pokemon.length ? list(f.pokemon) : "Any Pokémon";
+  const picked = [...f.pokemon, ...(f.cards || []).map((c) => `${c.name}${c.number ? ` #${cardNo(c.number)}` : ""}`)];
+  const what = picked.length ? list(picked) : "Any Pokémon";
   const parts = [];
   if (f.cardTypes.includes("graded")) parts.push(`slabs graded ${f.graders.join("/")} ${f.minGrade}${f.maxGrade < 10 ? `–${f.maxGrade}` : "+"}`);
   if (f.cardTypes.includes("raw")) parts.push(`raw cards in ${RAW_CONDITION_LABELS[f.minRawCondition].toLowerCase()} condition`);
@@ -152,6 +162,13 @@ const hasPhrase = (text, phrase) => {
   return p && new RegExp(`(^|[^a-z0-9])${p}([^a-z0-9]|$)`).test(norm(text));
 };
 
+/** "006/165" -> "6", "TG05/TG30" -> "TG5": the part of a card number that identifies it within its set. */
+const cardNo = (n) => String(n || "").split("/")[0].toUpperCase().replace(/^([A-Z]*)0+(?=\d)/, "$1");
+
+/** Set names are written differently in places ("SV: Scarlet & Violet 151" vs "Scarlet & Violet 151"): compare loosely. */
+const setKey = (s) => norm(s).replace(/^[a-z0-9]+:\s*/, "").replace(/[^a-z0-9]+/g, " ").trim();
+const sameSet = (a, b) => !a || !b || setKey(a) === setKey(b) || setKey(a).includes(setKey(b)) || setKey(b).includes(setKey(a));
+
 /** Does a deal pass a profile? deal = { kind, name, setName, grader, grade, condition, language, discountPct,
  *  marketValue, total, minutesLeft, comps, sellerFeedback, country, flags, title } */
 export function matches(f, deal) {
@@ -169,7 +186,14 @@ export function matches(f, deal) {
   if (!f.languages.includes(deal.language)) return false;
   const nameText = `${deal.name} ${deal.title || ""}`;
   const setText = `${deal.setName} ${deal.title || ""}`;
-  if (f.pokemon.length && !f.pokemon.some((p) => hasPhrase(nameText, p))) return false;
+  // Cards: a deal passes if it's one of the picked cards (same name and number) or matches an "any card named" entry.
+  const cards = f.cards || [];
+  if (cards.length || f.pokemon.length) {
+    const byCard = cards.some((c) => hasPhrase(nameText, c.name.replace(/\s*\(.*\)$/, ""))
+      && (!c.number || cardNo(c.number) === cardNo(deal.number))
+      && sameSet(c.setName, deal.setName));
+    if (!byCard && !f.pokemon.some((p) => hasPhrase(nameText, p))) return false;
+  }
   if (f.excludePokemon.some((p) => hasPhrase(nameText, p))) return false;
   if (f.sets.length && !f.sets.some((p) => hasPhrase(setText, p))) return false;
   if (f.excludeSets.some((p) => hasPhrase(setText, p))) return false;

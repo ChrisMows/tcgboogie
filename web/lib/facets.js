@@ -8,16 +8,16 @@ const usd = (v) => `$${Number(v).toLocaleString()}`;
 
 export const FACETS = [
   {
-    key: "pokemon", label: "Pokémon",
-    active: (f) => f.pokemon.length > 0 || f.excludePokemon.length > 0,
-    summary: (f) => [f.pokemon.length ? firstFew(f.pokemon) : null, f.excludePokemon.length ? `not ${firstFew(f.excludePokemon)}` : null].filter(Boolean).join(" · "),
-    reset: () => ({ pokemon: [], excludePokemon: [] }),
+    key: "sets", label: "Set",
+    active: (f) => f.sets.length > 0,
+    summary: (f) => firstFew(f.sets),
+    reset: () => ({ sets: [] }),
   },
   {
-    key: "sets", label: "Set",
-    active: (f) => f.sets.length > 0 || f.excludeSets.length > 0,
-    summary: (f) => [f.sets.length ? firstFew(f.sets) : null, f.excludeSets.length ? `not ${firstFew(f.excludeSets)}` : null].filter(Boolean).join(" · "),
-    reset: () => ({ sets: [], excludeSets: [] }),
+    key: "cards", label: "Cards",
+    active: (f) => f.pokemon.length > 0 || (f.cards || []).length > 0,
+    summary: (f) => firstFew([...f.pokemon.map((p) => `any ${p}`), ...(f.cards || []).map((c) => c.name.replace(/\s*\(.*\)$/, ""))]),
+    reset: () => ({ pokemon: [], cards: [] }),
   },
   {
     key: "type", label: "Type",

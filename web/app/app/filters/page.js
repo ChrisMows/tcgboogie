@@ -1,5 +1,6 @@
 import FilterStudio from "@/components/FilterStudio";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
+import { listSets } from "@/lib/catalog";
 import { withLinks } from "@/lib/deal-links";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -18,7 +19,7 @@ export default async function FiltersPage({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Filters</h1>
-          <p>Choose which deals reach you. Pick a filter, set it up, and see what it catches.</p>
+          <p>Choose which deals reach you. Open a filter to set it up and see what it catches.</p>
         </div>
       </div>
       <FilterStudio
@@ -27,6 +28,7 @@ export default async function FiltersPage({ searchParams }) {
         deals={withLinks(SAMPLE_DEALS, "filters")}
         isDemo={user.demo}
         prefill={prefill}
+        allSets={(await listSets().catch(() => [])).map((s) => ({ name: s.name, releaseDate: s.releaseDate || null }))}
       />
     </>
   );

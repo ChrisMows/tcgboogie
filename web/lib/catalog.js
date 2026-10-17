@@ -203,3 +203,6 @@ export async function getSetCards(setName) {
 }
 
 export const sampleIds = () => SAMPLE.map((p) => p.id);
+
+/** Preview catalog only: every sample card (the live catalog is far too big to list without a search). */
+export const allSampleCards = () => (catalogLive() ? [] : SAMPLE.filter((p) => p.type === "card"));

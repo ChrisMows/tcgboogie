@@ -301,6 +301,52 @@ details.compare-all .table-wrap { margin-top: 12px; }
 .fs-section h3 { font-size: 15px; margin: 0; }
 .fs-drawer-foot { position: sticky; bottom: 0; margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #11161d; border-top: 1px solid var(--border); }
 
+/* expandable filter boxes */
+.fx { border: 1px solid var(--border); border-radius: 14px; background: var(--panel); margin-bottom: 12px; overflow: visible; }
+.fx.open { border-color: var(--border-strong); }
+.fx.dirty { border-color: var(--accent); }
+.fx-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 6px; min-height: 58px; }
+.fx-toggle { display: inline-flex; align-items: center; gap: 10px; background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; padding: 10px 6px 10px 10px; flex: none; }
+.fx-name { font: 600 18px var(--font-head), sans-serif; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.fx-pencil { background: none; border: 1px solid transparent; color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 16px; padding: 4px 8px; flex: none; }
+.fx-pencil:hover { color: var(--accent); border-color: var(--border-strong); }
+.fx-rename { display: flex; align-items: center; gap: 6px; flex: none; }
+.fx-rename input { width: 220px; padding: 7px 10px; font-weight: 700; }
+.fx-rest { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 12px; background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 10px 4px; align-self: stretch; }
+.fx-summary { flex: 1; min-width: 0; text-align: left; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-chev { color: var(--muted); font-size: 14px; width: 18px; text-align: center; }
+.fx-head .fs-count { font-size: 13px; white-space: nowrap; }
+.fx.open .fs-count { background: var(--accent); color: var(--accent-ink); }
+.fx-body { padding: 0 16px 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+.fx-body .fs-bar { background: var(--panel-2); }
+.fx-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.fx-add { width: 100%; padding: 16px; border: 1px dashed var(--border-strong); border-radius: 14px; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.fx-add:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.fx-add:disabled { cursor: not-allowed; opacity: 0.75; }
+
+/* set and card pickers */
+.fs-pop.wide { width: 420px; }
+.fs-search { padding: 9px 12px; font-size: 14px; }
+.fs-sort { align-self: start; }
+.fs-sort button { padding: 5px 12px; font-size: 13px; }
+.fs-list { max-height: 300px; overflow-y: auto; display: grid; gap: 2px; padding-right: 4px; border-top: 1px solid var(--border); padding-top: 6px; }
+.fs-opt { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.fs-opt b { font-weight: 600; font-size: 14px; }
+.fs-check .fs-opt { flex-direction: row; display: block; }
+.fs-card { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; border-left: 3px solid transparent; }
+.fs-card:hover { background: var(--panel-3); }
+.fs-card input { flex: none; }
+.fs-card .fs-opt { flex: 1; }
+.fs-card.owned { border-left-color: var(--accent); background: rgba(211, 255, 102, 0.05); }
+.fs-card.owned .thumb { box-shadow: 0 0 0 2px var(--accent); }
+.fs-owned { flex: none; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+@media (max-width: 600px) {
+  .fx-summary { display: none; }
+  .fx-name { max-width: 150px; font-size: 16px; }
+  .fx-rename input { width: 140px; }
+  .fs-pop.wide { width: auto; }
+}
+
 /* deal tiles (filters preview, deal feed, alert history) */
 .deal-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
 .deal-tile { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; color: var(--text); transition: transform 0.2s, border-color 0.2s; }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import { endBillingForDeletion } from "@/lib/billing";
+import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
 import { validateFilters } from "@/lib/filters";
 import { setLinkIntent } from "@/lib/link-intent";
 import { demoMode, requireUser } from "@/lib/session";
@@ -90,6 +91,39 @@ export async function deleteAccount(formData) {
 export async function logOut() {
   if (demoMode) redirect("/");
   await signOut({ redirectTo: "/" });
+}
+
+/**
+ * Card picker on the Filters page: cards matching what's typed, limited to the chosen sets (if any), each marked
+ * with how many the member owns. Without sets, a search needs 2+ letters (keeps price-service lookups cheap).
+ */
+export async function cardOptions(query, sets = []) {
+  const user = await requireUser();
+  const q = String(query || "").trim().toLowerCase().slice(0, 60);
+  const chosen = (Array.isArray(sets) ? sets : []).map(String).slice(0, 5);
+  let cards = [];
+  try {
+    if (chosen.length) {
+      for (const s of chosen) cards.push(...(await getSetCards(s)));
+    } else if (q.length >= 2) {
+      cards = (await searchProducts(q)).filter((p) => p.type === "card");
+    } else if (!catalogLive()) {
+      cards = allSampleCards(); // preview catalog is small enough to list in full
+    }
+  } catch {
+    return { ok: false, error: "Card list didn't load. Please try again in a minute." };
+  }
+  const words = q.split(/\s+/).filter(Boolean);
+  const seen = new Set();
+  const owned = {};
+  for (const it of await store.listItems(user.id)) if (it.list === "owned") owned[it.productId] = (owned[it.productId] || 0) + it.quantity;
+  const releases = Object.fromEntries((await listSets().catch(() => [])).map((s) => [s.name, s.releaseDate || ""]));
+  const out = cards
+    .filter((c) => !seen.has(c.id) && seen.add(c.id))
+    .filter((c) => words.every((w) => `${c.name} ${c.number || ""} ${c.setName}`.toLowerCase().includes(w)))
+    .slice(0, 200)
+    .map((c) => ({ id: c.id, name: c.name, setName: c.setName, number: c.number, image: c.image, owned: owned[c.id] || 0, release: releases[c.setName] || "" }));
+  return { ok: true, cards: out, needsQuery: !chosen.length && q.length < 2 && catalogLive() };
 }
 
 /** Which profile picture to show: google, discord, or initials. */
