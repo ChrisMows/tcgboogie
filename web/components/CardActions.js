@@ -9,7 +9,7 @@ import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFr
 import { itemLabel, money, nmPrice, pct, unitValue } from "@/lib/collection";
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it. */
-export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebayHref }) {
+export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebay, ebaySold }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | "watch" | null
   const [editing, setEditing] = useState(null);
@@ -90,8 +90,10 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
           <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Watch price</button>
         )}
         {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
-        <a href={ebayHref} className="btn ghost" target="_blank" rel="noopener noreferrer">eBay listings ↗</a>
+        <a href={ebay.href} className="btn ghost" target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`}>eBay listings ↗</a>
+        <a href={ebaySold.href} className="btn ghost" target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`}>eBay sold ↗</a>
       </div>
+      {ebay.affiliate && <div className="hint">Ad · eBay links may earn us a commission. It doesn&apos;t change the price you pay.</div>}
 
       {panel === "add" && !wish && (
         <div className="action-panel">

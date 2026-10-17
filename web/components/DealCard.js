@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ebayLink, ebaySearch } from "@/lib/ebay-link";
 
 const money = (v) => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
@@ -11,6 +12,8 @@ export function dealLabel(d) {
 /** mode: "live" (auction still open), "missed" (free view: after the end, with the sale price), or "preview" */
 export default function DealCard({ deal: d, mode = "live" }) {
   const missed = mode === "missed";
+  const listing = ebayLink(d.url || "https://www.ebay.com/", "deal-feed");
+  const sold = ebaySearch(`${d.name} ${d.number || ""} ${d.kind === "raw" ? "" : `${d.grader} ${d.grade}`}`.trim(), { sold: true, source: "deal-feed-sold" });
   return (
     <div className="deal">
       <div className="top">
@@ -42,15 +45,16 @@ export default function DealCard({ deal: d, mode = "live" }) {
           </>
         ) : mode === "live" ? (
           <>
-            <a className="btn primary sm" href={d.url || "https://www.ebay.com/"} target="_blank" rel="noopener noreferrer sponsored">
+            <a className="btn primary sm" href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}>
               Open listing
             </a>
-            <a className="btn sm" href="https://www.ebay.com/sch/i.html?LH_Sold=1" target="_blank" rel="noopener noreferrer">
+            <a className="btn sm" href={sold.href} target="_blank" rel={`noopener noreferrer${sold.affiliate ? " sponsored" : ""}`}>
               Sold comps
             </a>
           </>
         ) : null}
       </div>
+      {mode === "live" && listing.affiliate && <div className="hint" style={{ marginTop: 6 }}>Ad · eBay links may earn us a commission.</div>}
     </div>
   );
 }

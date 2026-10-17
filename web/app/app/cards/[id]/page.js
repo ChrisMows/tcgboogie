@@ -9,6 +9,7 @@ import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
+import { ebaySearch } from "@/lib/ebay-link";
 
 export async function generateMetadata({ params }) {
   const p = await getProduct((await params).id).catch(() => null);
@@ -38,7 +39,9 @@ export default async function CardPage({ params }) {
   const graded = Object.entries(p.graded || {}).sort((a, b) => b[1].price - a[1].price);
   const isSealed = p.type === "sealed";
   const filterHref = `/app/filters?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
-  const ebayHref = `https://www.ebay.com/sch/i.html?${new URLSearchParams({ _nkw: `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim(), _sacat: "183454" })}`;
+  const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim();
+  const ebay = ebaySearch(ebayQuery, { source: "card-page" });
+  const ebaySold = ebaySearch(ebayQuery, { sold: true, source: "card-page-sold" });
 
   return (
     <>
@@ -65,7 +68,7 @@ export default async function CardPage({ params }) {
             </span>
           </div>
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} filterHref={filterHref} ebayHref={ebayHref} />
+            plan={user.plan} filterHref={filterHref} ebay={ebay} ebaySold={ebaySold} />
         </div>
       </div>
 
