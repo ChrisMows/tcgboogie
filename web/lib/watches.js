@@ -25,14 +25,21 @@ export function currentPrice(product, watch) {
   return product.prices?.[watch.printing]?.[watch.condition]?.[watch.priceType] ?? null;
 }
 
+// Alert modes. Buying: "below" (at or below a price) / "drop" (falls by a percent).
+// Selling: "above" (at or above a price) / "rise" (climbs by a percent). dropPct holds the percent for both.
+export const MODES = ["below", "drop", "above", "rise"];
+export const isRising = (watch) => watch.mode === "above" || watch.mode === "rise";
+
 /** The price at which a watch fires. */
 export function targetPrice(watch) {
   if (watch.mode === "drop") return Math.round(watch.basePrice * (1 - watch.dropPct / 100) * 100) / 100;
+  if (watch.mode === "rise") return Math.round(watch.basePrice * (1 + watch.dropPct / 100) * 100) / 100;
   return watch.targetPrice;
 }
 
 export function isTriggered(watch, price) {
-  return price !== null && price !== undefined && price <= targetPrice(watch);
+  if (price === null || price === undefined) return false;
+  return isRising(watch) ? price >= targetPrice(watch) : price <= targetPrice(watch);
 }
 
 /** Validate a new or edited watch for a product. Returns { watch, errors }. */
@@ -40,7 +47,7 @@ export function validateWatch(input, product) {
   const errors = {};
   const w = {
     priceType: PRICE_TYPES[input.priceType] ? input.priceType : "market",
-    mode: input.mode === "drop" ? "drop" : "below",
+    mode: MODES.includes(input.mode) ? input.mode : "below",
     printing: null,
     condition: null,
     targetPrice: null,
@@ -56,16 +63,18 @@ export function validateWatch(input, product) {
   } else {
     w.alsoEbay = false; // eBay matching covers single cards for now
   }
+  if (isRising(w)) w.alsoEbay = false; // eBay listing alerts are for buying (listed at or under your price)
   const base = currentPrice(product, w);
   w.basePrice = base;
-  if (w.mode === "below") {
+  if (w.mode === "below" || w.mode === "above") {
     const t = Number(String(input.targetPrice ?? "").replace(/[$,\s]/g, ""));
     if (!Number.isFinite(t) || t <= 0 || t > 1_000_000) errors.targetPrice = "Enter a target price in dollars.";
     else w.targetPrice = Math.round(t * 100) / 100;
   } else {
     const p = Number(input.dropPct);
-    if (!Number.isFinite(p) || p < 5 || p > 90) errors.dropPct = "Pick a drop between 5% and 90%.";
-    else if (!base) errors.dropPct = "There's no current price to measure a drop from. Use a target price instead.";
+    const max = w.mode === "rise" ? 500 : 90;
+    if (!Number.isFinite(p) || p < 5 || p > max) errors.dropPct = `Pick between 5% and ${max}%.`;
+    else if (!base) errors.dropPct = "There's no current price to measure from. Use a target price instead.";
     else w.dropPct = Math.round(p);
   }
   return { watch: w, errors };

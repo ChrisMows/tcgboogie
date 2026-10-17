@@ -13,8 +13,8 @@ const EXAMPLES = [
 
 const TOOLS = [
   { icon: "⚡", title: "Catch underpriced auctions", body: "We flag eBay listings priced well below what the card really sells for, before they end." },
-  { icon: "🔔", title: "Get price-drop alerts", body: "Pick a card and your price. We tell you the moment it drops." },
-  { icon: "▦", title: "Track your collection", body: "See what every card is worth, updated daily, and how your sets are coming along." },
+  { icon: "🔔", title: "Get price alerts", body: "Buying or selling? Pick a card and your price. We tell you when it drops or climbs." },
+  { icon: "▦", title: "Track your collection", body: "See what every card is worth, updated daily, and historical trends for your collection." },
 ];
 
 const STEPS = [

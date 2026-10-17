@@ -24,7 +24,7 @@ export default async function WatchesPage() {
       <div className="page-head">
         <div>
           <h1>Price alerts</h1>
-          <p>Pick a card and your price. We&apos;ll tell you when it drops.</p>
+          <p>Buying or selling? Pick a card and your price. We&apos;ll tell you when it gets there.</p>
         </div>
       </div>
       <WatchManager

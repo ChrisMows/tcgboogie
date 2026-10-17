@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sparkline from "@/components/Sparkline";
 import { addWatch, editWatch, findProducts, rearmWatch, removeWatch } from "@/app/app/watches/actions";
-import { PRICE_TYPES, currentPrice, targetPrice, trackingLabel } from "@/lib/watches";
+import { PRICE_TYPES, currentPrice, isRising, targetPrice, trackingLabel } from "@/lib/watches";
 
 const money = (v) => (v === null || v === undefined ? "—" : `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
@@ -27,15 +27,21 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   const conditions = product.type === "card" ? Object.keys(product.prices?.[printing] || {}) : [];
   const [condition, setCondition] = useState(initial?.condition || (conditions.includes("Near Mint") ? "Near Mint" : conditions[0]));
   const [priceType, setPriceType] = useState(initial?.priceType || "market");
-  const [mode, setMode] = useState(initial?.mode || "below");
   const now = currentPrice(product, { printing, condition, priceType });
-  const [target, setTarget] = useState(initial?.targetPrice ?? (now ? Math.floor(now * 0.85) : ""));
+  // Direction (buying: price drops / selling: price rises) and how (to a price / by a percent) make up the mode.
+  const [rising, setRising] = useState(isRising(initial || {}));
+  const [byPct, setByPct] = useState(initial?.mode === "drop" || initial?.mode === "rise");
+  const mode = rising ? (byPct ? "rise" : "above") : (byPct ? "drop" : "below");
+  const suggest = (up) => (now ? (up ? Math.ceil(now * 1.15) : Math.floor(now * 0.85)) : "");
+  const [target, setTarget] = useState(initial?.targetPrice ?? suggest(isRising(initial || {})));
   const [dropPct, setDropPct] = useState(initial?.dropPct ?? 15);
   const [alsoEbay, setAlsoEbay] = useState(product.type === "card" ? initial?.alsoEbay ?? true : false);
-  const fires = mode === "drop" ? (now ? now * (1 - dropPct / 100) : null) : Number(target) || null;
+  const fires = byPct ? (now ? now * (rising ? 1 + dropPct / 100 : 1 - dropPct / 100) : null) : Number(target) || null;
+  const already = fires && now ? (rising ? now >= fires : now <= fires) : false;
+  const pickDirection = (up) => { if (up !== rising) { setRising(up); if (!initial) setTarget(suggest(up)); } };
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay }); }}>
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay: rising ? false : alsoEbay }); }}>
       {product.type === "card" && (
         <div className="row" style={{ marginBottom: 14 }}>
           <div>
@@ -65,12 +71,18 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
       </div>
       <div className="hint" style={{ marginBottom: 14 }}>{PRICE_TYPES[priceType].hint} Right now: <b>{money(now)}</b></div>
 
+      <label className="field">I&apos;m</label>
+      <div className="seg" role="group" aria-label="Buying or selling" style={{ marginBottom: 12 }}>
+        <button type="button" className={!rising ? "on" : ""} onClick={() => pickDirection(false)}>📉 Buying: alert when it drops</button>
+        <button type="button" className={rising ? "on" : ""} onClick={() => pickDirection(true)}>📈 Selling: alert when it climbs</button>
+      </div>
+
       <label className="field">Alert me when the price</label>
       <div className="seg" role="group" aria-label="Alert type" style={{ marginBottom: 10 }}>
-        <button type="button" className={mode === "below" ? "on" : ""} onClick={() => setMode("below")}>Is at or below</button>
-        <button type="button" className={mode === "drop" ? "on" : ""} onClick={() => setMode("drop")} disabled={!now}>Drops by</button>
+        <button type="button" className={!byPct ? "on" : ""} onClick={() => setByPct(false)}>{rising ? "Reaches" : "Falls to"}</button>
+        <button type="button" className={byPct ? "on" : ""} onClick={() => setByPct(true)} disabled={!now}>{rising ? "Climbs by" : "Drops by"}</button>
       </div>
-      {mode === "below" ? (
+      {!byPct ? (
         <div style={{ maxWidth: 220 }}>
           <label className="field" htmlFor="target">Target price ($)</label>
           <input id="target" type="number" min="0.01" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} />
@@ -79,7 +91,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
       ) : (
         <div>
           <div className="range-row" style={{ maxWidth: 420 }}>
-            <input type="range" min={5} max={60} step={1} value={dropPct} onChange={(e) => setDropPct(Number(e.target.value))} aria-label="Drop percent" />
+            <input type="range" min={5} max={rising ? 200 : 60} step={1} value={dropPct} onChange={(e) => setDropPct(Number(e.target.value))} aria-label={rising ? "Rise percent" : "Drop percent"} />
             <output>{dropPct}%</output>
           </div>
           <Err msg={errors?.dropPct} />
@@ -87,17 +99,23 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
       )}
       {fires && now ? (
         <div className="hint" style={{ marginTop: 8 }}>
-          Alerts at {money(fires)}{fires >= now ? <b style={{ color: "var(--good)" }}> (already there today)</b> : `, ${Math.round((1 - fires / now) * 100)}% below today's price`}.
+          Alerts at {money(fires)}
+          {already ? <b style={{ color: "var(--accent)" }}> (already there today)</b>
+            : `, ${Math.round(Math.abs(fires / now - 1) * 100)}% ${rising ? "above" : "below"} today's price`}.
         </div>
       ) : null}
 
-      <label className={`check ${product.type === "card" ? "" : "dim"}`} style={{ marginTop: 14 }}>
-        <input type="checkbox" checked={alsoEbay} disabled={product.type !== "card"} onChange={(e) => setAlsoEbay(e.target.checked)} />
-        Also alert me when this card is listed on eBay at or below this price
-      </label>
-      <div className="hint" style={{ marginLeft: 27 }}>
-        {product.type === "card" ? "eBay listings are checked live, around the clock." : "eBay listing alerts cover single cards for now."}
-      </div>
+      {!rising && (
+        <>
+          <label className={`check ${product.type === "card" ? "" : "dim"}`} style={{ marginTop: 14 }}>
+            <input type="checkbox" checked={alsoEbay} disabled={product.type !== "card"} onChange={(e) => setAlsoEbay(e.target.checked)} />
+            Also alert me when this card is listed on eBay at or below this price
+          </label>
+          <div className="hint" style={{ marginLeft: 27 }}>
+            {product.type === "card" ? "eBay listings are checked live, around the clock." : "eBay listing alerts cover single cards for now."}
+          </div>
+        </>
+      )}
       <Err msg={errors?._} />
       <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
         <button className="btn primary" disabled={pending}>{pending ? "Saving..." : submitLabel}</button>
@@ -137,7 +155,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       const res = await addWatch(picked.id, input);
       if (!res.ok) return setErrors(res.errors || {});
       setErrors({});
-      setMessage({ kind: "good", text: res.alreadyBelow ? "Watch added. It's already at or below your target today, so you'll get an alert on the next check." : "Watch added. We'll alert you when the price reaches your target." });
+      setMessage({ kind: "good", text: res.alreadyBelow ? "Alert added. The price is already past your target today, so you'll hear from us on the next check." : "Alert added. We'll tell you when the price reaches your target." });
       setPicked(null); setResults(null); setQuery("");
       router.refresh();
     });
@@ -148,7 +166,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       const res = await editWatch(id, input);
       if (!res.ok) return setErrors(res.errors || {});
       setErrors({}); setEditing(null);
-      setMessage({ kind: "good", text: "Watch updated." });
+      setMessage({ kind: "good", text: "Alert updated." });
       router.refresh();
     });
   }
@@ -161,7 +179,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
     <>
       <div className="stats">
         <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
-        <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>at or below target</span></div>
+        <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>hit their target</span></div>
         <div className="stat"><b>{watches.filter((w) => w.alsoEbay).length}</b><span>also watching eBay</span></div>
         <div className="stat"><b>{plan.watchAlertChannels.includes("discord") ? "Discord + email" : "Email"}</b><span>where alerts go</span></div>
       </div>
@@ -172,7 +190,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         {full ? (
           <div className="notice warn" style={{ marginBottom: 0 }}>
             You're using all {limit} price alerts. Remove one below to add another, or{" "}
-            <Link href="/app/billing">upgrade to Premium</Link> for unlimited watches.
+            <Link href="/app/billing">upgrade to Premium</Link> for unlimited alerts.
           </div>
         ) : (
           <>
@@ -213,7 +231,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                   <Sparkline points={picked.history} width={180} />
                   <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>Change</button>
                 </div>
-                <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add watch" pending={pending} errors={errors} />
+                <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} />
               </div>
             )}
           </>
@@ -222,13 +240,14 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
 
       <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>Your price alerts</h2>
       {watches.length === 0 ? (
-        <div className="panel muted">No watches yet. Add a card or sealed product above.</div>
+        <div className="panel muted">No alerts yet. Find a card above, then choose buying or selling.</div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {watches.map((w) => {
             const product = products[w.productId] || { type: w.productType, prices: {}, history: [] };
             const fires = targetPrice(w);
-            const gap = w.lastPrice && fires ? (w.lastPrice - fires) / w.lastPrice : null;
+            const up = isRising(w);
+            const gap = w.lastPrice && fires ? (up ? fires - w.lastPrice : w.lastPrice - fires) / w.lastPrice : null;
             return (
               <div className="panel" key={w.id} style={{ marginBottom: 0 }}>
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -237,13 +256,16 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                       <Link href={`/app/cards/${w.productId}`} style={{ flex: "none", color: "var(--text)", fontWeight: 700 }}>{w.name}</Link>
                       {owned[w.productId] ? <Link href={`/app/cards/${w.productId}`} className="badge accent" style={{ flex: "none" }}>You own {owned[w.productId]}</Link> : null}
-                      {w.status === "triggered" ? <span className="badge good" style={{ flex: "none" }}>At or below target</span> : <span className="badge" style={{ flex: "none" }}>Watching</span>}
+                      <span className="badge" style={{ flex: "none" }}>{up ? "📈 Selling" : "📉 Buying"}</span>
+                      {w.status === "triggered"
+                        ? <span className="badge good" style={{ flex: "none" }}>{up ? "Hit your sell price" : "Hit your buy price"}</span>
+                        : <span className="badge" style={{ flex: "none" }}>Watching</span>}
                       {w.alsoEbay && <span className="badge accent" style={{ flex: "none" }}>+ eBay</span>}
                     </div>
                     <div className="small muted">{w.setName}{w.number ? ` · ${w.number}` : ""} · {trackingLabel({ type: w.productType }, w)}</div>
                     <div style={{ marginTop: 6 }}>
                       Now <b>{money(w.lastPrice)}</b> · target <b>{money(fires)}</b>
-                      {w.mode === "drop" ? <span className="small muted"> ({w.dropPct}% below {money(w.basePrice)})</span> : null}
+                      {w.mode === "drop" || w.mode === "rise" ? <span className="small muted"> ({w.dropPct}% {up ? "above" : "below"} {money(w.basePrice)})</span> : null}
                       {gap !== null && gap > 0 && <span className="small muted"> · {Math.round(gap * 100)}% to go</span>}
                     </div>
                   </div>
@@ -255,10 +277,10 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     {editing === w.id ? "Close" : "Edit"}
                   </button>
                   {w.status === "triggered" && (
-                    <button type="button" className="btn sm" disabled={pending} onClick={() => act(rearmWatch, w.id, "Watch re-armed.")}>Re-arm</button>
+                    <button type="button" className="btn sm" disabled={pending} onClick={() => act(rearmWatch, w.id, "Alert re-armed.")}>Re-arm</button>
                   )}
                   <button type="button" className="btn sm danger" disabled={pending}
-                    onClick={() => window.confirm(`Stop watching ${w.name}?`) && act(removeWatch, w.id, `Removed. You have a free slot for another watch.`)}>
+                    onClick={() => window.confirm(`Remove the alert for ${w.name}?`) && act(removeWatch, w.id, `Removed. You have room for another alert.`)}>
                     Remove
                   </button>
                 </div>
@@ -273,9 +295,8 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         </div>
       )}
       <p className="hint" style={{ marginTop: 16 }}>
-        TCGplayer prices update about once a day, so price alerts are best for tracking trends. After an alert, a watch
-        stays quiet until the price climbs back above your target (or you re-arm it). Links to TCGplayer may earn us a
-        commission.
+        TCGplayer prices update about once a day. Each alert fires once, then stays quiet until the price moves back
+        past your target (or you re-arm it). Links to TCGplayer may earn us a commission.
       </p>
     </>
   );

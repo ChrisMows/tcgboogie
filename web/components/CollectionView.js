@@ -21,9 +21,12 @@ function Change({ v }) {
 
 function WatchButton({ item, watched, onWatch, pending }) {
   return watched ? (
-    <Link href="/app/watches" className="btn sm" title="You're watching this card's price">🔔 Watching</Link>
+    <Link href="/app/watches" className="btn sm" title="You have a price alert for this card">🔔 Alert set</Link>
   ) : (
-    <button type="button" className="btn sm" disabled={pending} onClick={() => onWatch(item)} title="Alert me when the price drops">🔔 Price alert</button>
+    <button type="button" className="btn sm" disabled={pending} onClick={() => onWatch(item)}
+      title={item.list === "owned" ? "Alert me when it's worth 15% more (time to sell)" : "Alert me when the price drops"}>
+      🔔 {item.list === "owned" ? "Sell alert" : "Price alert"}
+    </button>
   );
 }
 
@@ -70,10 +73,14 @@ export default function CollectionView({ items, binders, products, watched: watc
 
   function watch(it) {
     start(async () => {
-      const r = await watchProduct(it.productId);
+      // Cards you own: tell me when to sell. Wishlist cards: tell me when to buy.
+      const selling = it.list === "owned";
+      const r = await watchProduct(it.productId, selling ? { mode: "above" } : {});
       if (!r.ok) return show(r.error, r.limit ? { href: "/app/billing", label: "Upgrade" } : null, "bad");
       setWatched((s) => new Set(s).add(it.productId));
-      show(r.already ? "You're already watching this one." : `Watching ${short(it.name)} · alert at ${money(r.target)} or less`, { href: "/app/watches", label: "Adjust" });
+      show(r.already ? "You already have an alert for this one."
+        : `${selling ? "Selling" : "Buying"} alert set for ${short(it.name)} · at ${money(r.target)} or ${selling ? "more" : "less"}`,
+        { href: "/app/watches", label: "Adjust" });
       router.refresh();
     });
   }

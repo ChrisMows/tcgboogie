@@ -15,7 +15,10 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
   const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
-  const [target, setTarget] = useState(now ? (Math.floor(now * 0.85 * 100) / 100).toFixed(2) : "");
+  const suggest = (up) => (now ? (Math.round(now * (up ? 1.15 : 0.85) * 100) / 100).toFixed(2) : "");
+  const [selling, setSelling] = useState(mine.some((it) => it.list === "owned")); // own it? you're probably selling
+  const [target, setTarget] = useState(suggest(mine.some((it) => it.list === "owned")));
+  const pickSide = (up) => { setSelling(up); setTarget(suggest(up)); };
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const owned = mine.filter((it) => it.list === "owned");
@@ -85,7 +88,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
             : <button type="button" className="btn" disabled={pending} onClick={() => run(() => quickAdd(product.id, "wishlist"), "Added to your wishlist.", { href: "/app/collection?tab=wishlist", label: "Wishlist" })}>♡ Wishlist</button>
         )}
         {watch ? (
-          <Link href="/app/watches" className="btn">🔔 {watch.status === "triggered" ? "At your target!" : `Watching · ${money(watch.target)}`}</Link>
+          <Link href="/app/watches" className="btn">🔔 {watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`}</Link>
         ) : (
           <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Price alert</button>
         )}
@@ -107,16 +110,25 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
       )}
 
       {panel === "watch" && !watch && (
-        <form className="action-panel" onSubmit={(e) => { e.preventDefault(); run(() => watchProduct(product.id, { targetPrice: target }), (r) => `Watching. We'll alert you at ${money(r.target)} or less.`, { href: "/app/watches", label: "Price alerts" }); setPanel(null); }}>
-          <b>Alert me when {product.type === "card" ? "the Near Mint price" : "the price"} drops to</b>
+        <form className="action-panel" onSubmit={(e) => {
+          e.preventDefault();
+          run(() => watchProduct(product.id, { targetPrice: target, mode: selling ? "above" : "below" }),
+            (r) => `Alert set. We'll tell you at ${money(r.target)} or ${selling ? "more" : "less"}.`, { href: "/app/watches", label: "Price alerts" });
+          setPanel(null);
+        }}>
+          <div className="seg" role="group" aria-label="Buying or selling" style={{ marginBottom: 12 }}>
+            <button type="button" className={!selling ? "on" : ""} onClick={() => pickSide(false)}>📉 Buying</button>
+            <button type="button" className={selling ? "on" : ""} onClick={() => pickSide(true)}>📈 Selling</button>
+          </div>
+          <b>Alert me when {product.type === "card" ? "the Near Mint price" : "the price"} {selling ? "climbs to" : "drops to"}</b>
           <div className="row" style={{ marginTop: 10, maxWidth: 360 }}>
             <input type="number" min="0.01" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Target price" />
-            <button className="btn primary" style={{ flex: "none" }} disabled={pending || !Number(target)}>Start watching</button>
+            <button className="btn primary" style={{ flex: "none" }} disabled={pending || !Number(target)}>Set alert</button>
           </div>
           <div className="hint">
-            Now {money(now)}{Number(target) && now ? ` · ${Math.round((1 - Number(target) / now) * 100)}% below today` : ""}.
-            {product.type === "card" ? " We'll also watch eBay for listings at or under your target." : ""}
-            {plan.maxPriceWatches !== null ? ` Free includes ${plan.maxPriceWatches} watches.` : ""}
+            Now {money(now)}{Number(target) && now ? ` · ${Math.round(Math.abs(Number(target) / now - 1) * 100)}% ${Number(target) >= now ? "above" : "below"} today` : ""}.
+            {product.type === "card" && !selling ? " We'll also watch eBay for listings at or under your price." : ""}
+            {plan.maxPriceWatches !== null ? ` Free includes ${plan.maxPriceWatches} alerts.` : ""}
             {" "}More options on <Link href="/app/watches">Price alerts</Link>.
           </div>
         </form>

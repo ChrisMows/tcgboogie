@@ -13,7 +13,7 @@ const FAQS = [
   ["How do you know what a card is worth?",
     "From real sales of that exact card in the last 30 days: same set, number, printing, and grade or condition. If there aren't enough sales to trust, we stay quiet."],
   ["What's a price alert?",
-    "Pick any card or sealed product and your price. When its TCGplayer price drops there, or it's listed on eBay at or under it, we let you know."],
+    "Pick any card or sealed product and your price. Buying? We tell you when it drops there, or when it's listed on eBay at or under it. Selling? We tell you when it climbs to your price."],
   ["What does the collection tracker do?",
     "Keeps every card you own in one place with what it's worth, updated daily. Add cards by search, or open a set and tap the ones you have."],
   ["What's the difference between Free and Premium?",
