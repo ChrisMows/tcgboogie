@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { grantComp, removeMemberPhone, renameMember, revokeComp, setPlan } from "./actions";
+import { grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert } from "./actions";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
 export const metadata = { title: "Admin", robots: { index: false } };
@@ -42,15 +42,18 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
-      {tab === "status" && <Status ping={sp?.ping === "1"} />}
+      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
     </>
   );
 }
 
-async function Status({ ping }) {
+const CHANNEL_NAMES = { email: "Email", discord: "Discord DM", sms: "Text" };
+
+async function Status({ ping, test, why }) {
   const [checks, counts] = await Promise.all([systemStatus({ pingPrices: ping }), memberCounts()]);
+  const tested = String(test || "").split(",").filter(Boolean).map((x) => x.split(":"));
   const groups = [...new Set(checks.map((c) => c.group))];
   const problems = checks.filter((c) => c.state === "down" || c.state === "warn").length;
   return (
@@ -61,8 +64,15 @@ async function Status({ ping }) {
         <div className="stat"><b>{counts.week}</b><span>joined this week</span></div>
         <div className="stat"><b className={problems ? "down" : "up"}>{problems ? `${problems} to check` : "All good"}</b><span>system status</span></div>
       </div>
-      <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
-        <span className="small muted" style={{ flex: "none" }}>Checked just now. Nothing here sends messages or charges anything.</span>
+      {tested.length > 0 && (
+        <div className={`notice ${tested.some(([, r]) => r === "fail") ? "warn" : "good"}`}>
+          <b>Test alert:</b> {tested.map(([c, r]) => `${CHANNEL_NAMES[c] || c} ${r === "ok" ? "✅ sent" : r === "fail" ? "❌ failed" : "○ not set up"}`).join(" · ")}
+          {why ? <div className="small" style={{ marginTop: 4 }}>{why}</div> : null}
+        </div>
+      )}
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+        <span className="small muted" style={{ flex: "1 1 260px" }}>Checked just now. Nothing here sends messages or charges anything, except the two buttons.</span>
+        <form action={testAlert} style={{ flex: "none" }}><button className="btn sm primary" title="Sends a sample alert to you on every channel that's set up">Send me a test alert</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
       </div>
       {groups.map((g) => (

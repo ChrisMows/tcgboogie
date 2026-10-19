@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, updateMember } from "@/lib/admin";
+import { sendTestAlert } from "@/lib/price-alerts";
 
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
 const back = (id, done) => redirect(`/app/admin?tab=members&user=${encodeURIComponent(id)}&done=${done}#member`);
@@ -64,4 +65,13 @@ export async function removeMemberPhone(userId) {
   const u = await updateMember(admin, userId, { phone: null, phoneVerifiedAt: null, alertSms: false, smsCodeHash: null, smsCodeExpires: null }, "remove_phone", {});
   if (!u) back(userId, "missing");
   back(userId, "phone");
+}
+
+/** Send a sample alert to the signed-in admin on every channel that's set up. */
+export async function testAlert() {
+  const admin = await requireAdmin();
+  const results = await sendTestAlert(admin);
+  const code = results.map((r) => `${r.channel}:${r.ok === true ? "ok" : r.ok === false ? "fail" : "off"}`).join(",");
+  const why = results.filter((r) => r.ok === false).map((r) => `${r.channel}: ${r.detail}`).join(" | ").slice(0, 300);
+  redirect(`/app/admin?test=${encodeURIComponent(code)}${why ? `&why=${encodeURIComponent(why)}` : ""}`);
 }

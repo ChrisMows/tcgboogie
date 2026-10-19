@@ -112,3 +112,37 @@ async function notify(user, discordId, w, price, ready) {
   }
   return results;
 }
+
+/**
+ * Admin test: send a sample price alert to this member on every channel that's set up for them.
+ * Returns [{ channel, ok, detail }] so the admin page can show what worked.
+ */
+export async function sendTestAlert(user) {
+  const ready = channelsReady();
+  const [discord] = db ? await db.select({ id: accounts.providerAccountId }).from(accounts)
+    .where(and(eq(accounts.userId, user.id), eq(accounts.provider, "discord"))).limit(1) : [];
+  const title = "🔔 Test alert: Charizard ex dropped to $259.00";
+  const line = "This is a test from the TCG Boogie admin panel. Real alerts look just like this.";
+  const url = `${SITE}/app/watches`;
+  const results = [];
+  const run = async (channel, available, why, fn) => {
+    if (!available) return results.push({ channel, ok: null, detail: why });
+    try {
+      await fn();
+      results.push({ channel, ok: true, detail: "Sent" });
+      if (db) await db.insert(alertLog).values({ userId: user.id, kind: "test", channel, title, ok: true });
+    } catch (e) {
+      results.push({ channel, ok: false, detail: String(e.message).slice(0, 200) });
+      if (db) await db.insert(alertLog).values({ userId: user.id, kind: "test", channel, title, ok: false, error: String(e.message).slice(0, 300) });
+    }
+  };
+  await run("email", ready.email && user.email, !ready.email ? "Email isn't set up" : "No email on this account", () => sendEmail(user.email, {
+    subject: title, heading: title, lines: ["Charizard ex · Scarlet & Violet 151 · 199/165", line], button: { label: "Open price alerts", url },
+    footer: "You're getting this because you pressed “Send me a test alert”.",
+  }));
+  await run("discord", ready.discord && discord?.id, !ready.discord ? "Discord bot isn't set up" : "Your Discord isn't connected (Settings → Connect Discord)",
+    () => sendDiscordDM(discord.id, { title, url, description: `Charizard ex · Scarlet & Violet 151\n${line}` }));
+  await run("sms", ready.sms && user.phone && user.phoneVerifiedAt, !ready.sms ? "Texts aren't set up (Twilio)" : "No confirmed phone number on your account",
+    () => sendSms(user.phone, `TCG Boogie: test alert. Real price alerts will look like this. ${url}`));
+  return results;
+}
