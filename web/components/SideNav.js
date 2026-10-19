@@ -3,39 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// The whole member area: four places. Account, plan and sign out live in the profile-picture menu.
 const LINKS = [
-  ["/app", "Dashboard"],
-  ["/app/collection", "Collection"],
-  ["/app/feed", "Deal feed"],
-  ["/app/watches", "Price alerts"],
-  ["/app/filters", "Filters"],
-  ["/app/alerts", "Alert history"],
-  ["/app/account", "Account"],
-  ["/app/billing", "Plan and billing"],
+  ["/app", "Home", "⌂", (p) => p === "/app"],
+  ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
+  ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
+  ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
 ];
 
-export default function SideNav({ planLabel, premium, onLogOut }) {
+export default function SideNav({ planLabel, premium }) {
   const path = usePathname();
   return (
     <aside className="side">
       <nav aria-label="Member">
-        {LINKS.map(([href, label]) => (
-          <Link key={href} href={href}
-            className={path === href || (href === "/app/collection" && (path.startsWith("/app/collection") || path.startsWith("/app/cards"))) ? "on" : ""}>
-            {label}
+        {LINKS.map(([href, label, icon, isOn]) => (
+          <Link key={href} href={href} className={isOn(path) ? "on" : ""} aria-current={isOn(path) ? "page" : undefined}>
+            <span className="side-icon" aria-hidden="true">{icon}</span>{label}
           </Link>
         ))}
-        <form action={onLogOut}>
-          <button className="btn ghost" style={{ width: "100%", justifyContent: "flex-start", padding: "9px 12px" }}>Log out</button>
-        </form>
-        <div className="plan-chip">
-          <span className={`badge ${premium ? "accent" : ""}`}>{planLabel} plan</span>
-          {!premium && (
-            <div style={{ marginTop: 8 }}>
-              <Link href="/app/billing" className="small">Upgrade to Premium</Link>
-            </div>
-          )}
-        </div>
+        {!premium && (
+          <Link href="/app/account#plan" className="side-upgrade">
+            <b>Go Premium</b>
+            <span>Every deal live, before it ends.</span>
+          </Link>
+        )}
+        {premium && <div className="plan-chip"><span className="badge accent">{planLabel} plan</span></div>}
       </nav>
     </aside>
   );

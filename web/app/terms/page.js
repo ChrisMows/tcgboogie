@@ -11,7 +11,7 @@ export default function Terms() {
       </p>
       <h2>Cancelling and deleting your account</h2>
       <p>
-        You can cancel Premium anytime from Plan and billing. Deleting your account also cancels any subscription at the
+        You can cancel Premium anytime from Account → Plan. Deleting your account also cancels any subscription at the
         same moment, so you are not charged again. If we can&apos;t confirm the cancellation, your account is not deleted
         until it is.
       </p>

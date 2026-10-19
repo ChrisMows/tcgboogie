@@ -190,7 +190,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         {full ? (
           <div className="notice warn" style={{ marginBottom: 0 }}>
             You're using all {limit} price alerts. Remove one below to add another, or{" "}
-            <Link href="/app/billing">upgrade to Premium</Link> for unlimited alerts.
+            <Link href="/app/account#plan">upgrade to Premium</Link> for unlimited alerts.
           </div>
         ) : (
           <>

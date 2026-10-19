@@ -76,7 +76,7 @@ export default function CollectionView({ items, binders, products, watched: watc
       // Cards you own: tell me when to sell. Wishlist cards: tell me when to buy.
       const selling = it.list === "owned";
       const r = await watchProduct(it.productId, selling ? { mode: "above" } : {});
-      if (!r.ok) return show(r.error, r.limit ? { href: "/app/billing", label: "Upgrade" } : null, "bad");
+      if (!r.ok) return show(r.error, r.limit ? { href: "/app/account#plan", label: "Upgrade" } : null, "bad");
       setWatched((s) => new Set(s).add(it.productId));
       show(r.already ? "You already have an alert for this one."
         : `${selling ? "Selling" : "Buying"} alert set for ${short(it.name)} · at ${money(r.target)} or ${selling ? "more" : "less"}`,

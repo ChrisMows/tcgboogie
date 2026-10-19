@@ -42,7 +42,7 @@ export default async function CardPage({ params }) {
   const printings = p.type === "card" ? Object.entries(p.prices || {}) : [];
   const graded = Object.entries(p.graded || {}).sort((a, b) => b[1].price - a[1].price);
   const isSealed = p.type === "sealed";
-  const filterHref = `/app/filters?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
+  const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
   const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim();
   const ebay = ebaySearch(ebayQuery, { source: "card-page" });
   const ebaySold = ebaySearch(ebayQuery, { sold: true, source: "card-page-sold" });

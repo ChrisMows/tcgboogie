@@ -4,7 +4,7 @@ import { PLANS } from "@/lib/plans";
 export const metadata = { title: "Pricing" };
 
 const rows = [
-  ["Deal feed", "After the auction ends, with the sale price", "Live, while you can still bid"],
+  ["Deals", "After the auction ends, with the sale price", "Live, while you can still bid"],
   ["Instant alerts (Discord and email)", "—", "✓"],
   ["Filter profiles", "1", "15"],
   ["Lowest discount you can set", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],

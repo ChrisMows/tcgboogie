@@ -41,7 +41,7 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
           {ranges.map(([label, days]) => {
             const locked = historyDays && (days === null || days > historyDays);
             return locked ? (
-              <Link key={label} href="/app/billing" className="locked" title="Full value history is a Premium feature">{label} 🔒</Link>
+              <Link key={label} href="/app/account#plan" className="locked" title="Full value history is a Premium feature">{label} 🔒</Link>
             ) : (
               <button key={label} type="button" className={range === days ? "on" : ""} onClick={() => setRange(days)}>{label}</button>
             );

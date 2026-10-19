@@ -21,7 +21,7 @@ export default function CollectionAlerts({ plan, prefs }) {
     <div className={`panel coll-alerts ${locked ? "is-locked" : ""}`} style={{ marginTop: 20 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
         <h2 style={{ flex: "none" }}>Collection alerts</h2>
-        {locked ? <Link href="/app/billing" className="btn sm primary" style={{ flex: "none" }}>Unlock with Premium</Link>
+        {locked ? <Link href="/app/account#plan" className="btn sm primary" style={{ flex: "none" }}>Unlock with Premium</Link>
           : saved && <span className="small muted" style={{ flex: "none" }}>{pending ? "Saving…" : saved}</span>}
       </div>
       <label className="check">

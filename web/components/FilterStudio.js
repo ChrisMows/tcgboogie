@@ -10,7 +10,7 @@ import { FACETS, activeFacets } from "@/lib/facets";
 import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches } from "@/lib/filters";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
-const Lock = ({ children }) => <div className="locked-note">🔒 {children} <Link href="/app/billing">Upgrade</Link></div>;
+const Lock = ({ children }) => <div className="locked-note">🔒 {children} <Link href="/app/account#plan">Upgrade</Link></div>;
 const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
 const cardNo = (n) => String(n || "").split("/")[0].replace(/^0+(?=\d)/, "");
 const sameCard = (a, b) => a.name === b.name && (a.number || "") === (b.number || "") && (a.setName || "") === (b.setName || "");
@@ -318,7 +318,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, isDemo, p
     <div className="fs">
       <div className="fs-legend small muted">
         <span><span className="fs-dot on" /> Running</span><span><span className="fs-dot paused" /> Paused</span>
-        {profiles.length > plan.maxProfiles && <span><span className="fs-dot locked" /> Not running on {plan.label} · <Link href="/app/billing">Upgrade</Link></span>}
+        {profiles.length > plan.maxProfiles && <span><span className="fs-dot locked" /> Not running on {plan.label} · <Link href="/app/account#plan">Upgrade</Link></span>}
       </div>
 
       {profiles.map((p, i) => {
@@ -411,7 +411,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, isDemo, p
 
       <button type="button" className="fx-add" onClick={addFilter} disabled={pending || atLimit}
         title={atLimit ? `${plan.label} includes ${plan.maxProfiles} filter${plan.maxProfiles > 1 ? "s" : ""}` : ""}>
-        + New filter{atLimit && !premium ? <> · 🔒 <Link href="/app/billing">Premium</Link> for up to {15}</> : null}
+        + New filter{atLimit && !premium ? <> · 🔒 <Link href="/app/account#plan">Premium</Link> for up to {15}</> : null}
       </button>
 
       {drawer && selected && (

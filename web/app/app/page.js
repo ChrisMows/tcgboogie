@@ -1,98 +1,105 @@
 import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
-import { DealGrid } from "@/components/DealTile";
+import DealTile from "@/components/DealTile";
 import { withLinks } from "@/lib/deal-links";
-import { itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { money, pct, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
 import { clampToPlan, matches } from "@/lib/filters";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
+import { isRising, targetPrice } from "@/lib/watches";
 
-export default async function Dashboard() {
+// Home: one card per tool, each saying what needs you and offering one next step.
+export default async function Home() {
   const user = await requireUser();
-  const profiles = await store.ensureStarterProfile(user);
   const premium = user.tier === "premium";
-  const running = profiles.filter((p) => p.active).slice(0, user.plan.maxProfiles);
-  const caught = SAMPLE_DEALS.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
-  const best = [...caught].sort((a, b) => b.soldFor - b.total - (a.soldFor - a.total))[0];
-  const savings = caught.reduce((s, d) => s + (d.soldFor - d.total), 0);
+  const [profiles, watches, coll] = await Promise.all([store.ensureStarterProfile(user), store.listWatches(user.id), loadCollection(user)]);
 
-  const coll = await loadCollection(user);
-  const top = [...coll.owned].sort((a, b) => (unitValue(b) ?? 0) * b.quantity - (unitValue(a) ?? 0) * a.quantity).slice(0, 4);
+  const running = profiles.filter((p) => p.active).slice(0, user.plan.maxProfiles);
+  const deals = SAMPLE_DEALS.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
+  const best = withLinks([...deals].sort((a, b) => b.discountPct - a.discountPct).slice(0, 1), "home")[0];
+  const hit = watches.filter((w) => w.status === "triggered");
+  const closest = [...watches].filter((w) => w.status !== "triggered" && w.lastPrice && targetPrice(w))
+    .map((w) => ({ ...w, gap: Math.abs(w.lastPrice - targetPrice(w)) / w.lastPrice }))
+    .sort((a, b) => a.gap - b.gap).slice(0, 3);
+  const top = [...coll.owned].sort((a, b) => (unitValue(b) ?? 0) * b.quantity - (unitValue(a) ?? 0) * a.quantity).slice(0, 3);
+  const prev = [...coll.snapshots].reverse().find((s) => s.day < new Date().toISOString().slice(0, 10));
+  const today = prev ? coll.summary.value - prev.value : null;
 
   const steps = [
-    ["Create your account", true, null],
-    ["Add your first cards to your collection", coll.owned.length > 0, "/app/collection?add=1"],
-    ["Set up your first filter profile", profiles.some((p) => p.updatedAt > p.createdAt), "/app/filters"],
-    ["Connect Discord for instant alerts", user.discordConnected, "/app/account"],
-    ["Upgrade to Premium to get deals live", premium, "/app/billing"],
+    ["Add a few cards to your collection", coll.owned.length > 0, "/app/collection?add=1"],
+    ["Set up a deal filter", profiles.some((p) => p.updatedAt > p.createdAt), "/app/deals"],
+    ["Set a price alert", watches.length > 0, "/app/watches"],
   ];
+  const left = steps.filter((s) => !s[1]);
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Hi{user.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
-          <p>{premium ? "Your deals arrive live." : "You're on Free: deals show up after they end."}</p>
+          <p>Here&apos;s what&apos;s happening with your cards.</p>
         </div>
-        <Link href="/app/filters" className="btn primary">Edit filters</Link>
       </div>
 
-      <div className="panel dash-collection">
-        <div className="dash-coll-head">
-          <div>
-            <h2 style={{ marginBottom: 4 }}>Your collection</h2>
-            <div className="dash-coll-value">{money(coll.summary.value)}</div>
-            <div className="small muted">
-              {coll.summary.copies} cards & products
-              {coll.summary.gain !== null ? <> · <span className={coll.summary.gain >= 0 ? "up" : "down"}>{coll.summary.gain >= 0 ? "+" : ""}{money(coll.summary.gain)} ({pct(coll.summary.gainPct)})</span> on what you paid</> : null}
-              {coll.wishlist.length ? <> · {coll.wishlist.length} on your wishlist</> : null}
-            </div>
-          </div>
-          <div className="head-actions">
-            <Link href="/app/collection?add=1" className="btn primary sm">+ Add cards</Link>
-            <Link href="/app/collection" className="btn sm">Open collection</Link>
-          </div>
-        </div>
-        {top.length > 0 ? (
-          <div className="dash-top">
-            {top.map((it) => (
-              <Link key={it.id} href={`/app/cards/${it.productId}`} className="dash-top-card">
-                <CardThumb item={it} width={64} />
-                <span><b>{it.name.replace(/\s*\(.*\)$/, "")}</b><span className="small muted">{itemLabel(it)}{it.quantity > 1 ? ` · ×${it.quantity}` : ""}</span><span className="small">{money((unitValue(it) ?? 0) * it.quantity)}</span></span>
-              </Link>
-            ))}
-          </div>
-        ) : <p className="muted small" style={{ margin: "10px 0 0" }}>Track what you own and what it&apos;s worth, free. Start by adding a few cards or <Link href="/app/collection/sets">browsing a set</Link>.</p>}
-      </div>
-
-      <div className="stats">
-        <div className="stat"><b>{running.length} / {user.plan.maxProfiles}</b><span>filter profiles running</span></div>
-        <div className="stat"><b>{caught.length}</b><span>deals matched {user.demo ? "(sample data)" : "today"}</span></div>
-        <div className="stat"><b>${savings.toLocaleString()}</b><span>below what they sold for</span></div>
-        <div className="stat"><b>{premium ? "Instant" : "After it ends"}</b><span>when you see deals</span></div>
-      </div>
-
-      <div className="form-grid" style={{ alignItems: "start" }}>
-        <div className="panel">
-          <h2>Getting started</h2>
-          <ul className="checklist">
-            {steps.map(([label, done, href]) => (
-              <li key={label}>
-                <span className={`dot ${done ? "done" : ""}`}>{done ? "✓" : ""}</span>
-                <span style={{ flex: 1 }}>{label}</span>
-                {!done && href && <Link href={href} className="btn sm">Go</Link>}
+      {left.length > 0 && (
+        <div className="start-here">
+          <b>Get set up</b>
+          <ol>
+            {steps.map(([label, done, href], i) => (
+              <li key={label} className={done ? "done" : ""}>
+                <span className="start-num">{done ? "✓" : i + 1}</span>
+                {done ? <span>{label}</span> : <Link href={href}>{label} →</Link>}
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
-        <div className="panel">
-          <h2>{premium ? "Best recent deal" : "The one that got away"}</h2>
-          {best ? <div style={{ maxWidth: 240 }}><DealGrid deals={withLinks([best], "dashboard")} mode={premium ? "live" : "missed"} /></div> : (
-            <p className="muted">No matches yet. Loosen your filters a little to catch more deals.</p>
-          )}
-        </div>
+      )}
+
+      <div className="home-tiles">
+        <section className="home-tile">
+          <div className="home-tile-head"><span className="home-icon">⚡</span><h2>Deals</h2></div>
+          <div className="home-big">{deals.length} <span>{deals.length === 1 ? "deal matches" : "deals match"} your filters</span></div>
+          <p className="small muted">{premium ? "You get these live, before the auction ends." : "On Free you see them after they end."}</p>
+          {best ? <div className="home-deal"><DealTile deal={best} mode={premium ? "live" : "missed"} href={best.href} affiliate={best.affiliate} /></div>
+            : <p className="muted small">No matches yet. Widen a filter to catch more.</p>}
+          <Link href="/app/deals" className="btn primary home-cta">See deals</Link>
+        </section>
+
+        <section className="home-tile">
+          <div className="home-tile-head"><span className="home-icon">🔔</span><h2>Price alerts</h2></div>
+          <div className="home-big">{hit.length} <span>{hit.length === 1 ? "alert hit" : "alerts hit"} your price</span></div>
+          <p className="small muted">{watches.length ? `${watches.length} ${watches.length === 1 ? "card" : "cards"} watched for buying or selling.` : "Pick a card and your price. We'll tell you when it gets there."}</p>
+          {(hit.length ? hit.slice(0, 3) : closest).map((w) => (
+            <Link key={w.id} href={`/app/cards/${w.productId}`} className="home-row">
+              <CardThumb item={{ image: w.image, name: w.name, number: w.number, type: w.productType }} width={30} />
+              <span className="home-row-text"><b>{w.name.replace(/\s*\(.*\)$/, "")}</b>
+                <span className="small muted">{isRising(w) ? "Selling" : "Buying"} at {money(targetPrice(w))} · now {money(w.lastPrice)}</span></span>
+              {w.status === "triggered" ? <span className="badge good">Hit</span> : <span className="small muted">{Math.round(w.gap * 100)}% to go</span>}
+            </Link>
+          ))}
+          <Link href="/app/watches" className="btn primary home-cta">{watches.length ? "Price alerts" : "Set a price alert"}</Link>
+        </section>
+
+        <section className="home-tile">
+          <div className="home-tile-head"><span className="home-icon">▦</span><h2>Collection</h2></div>
+          <div className="home-big">{money(coll.summary.value, 0)}</div>
+          <p className="small muted">
+            {coll.summary.copies} cards & products
+            {today !== null && Math.abs(today) >= 1 ? <> · <span className={today >= 0 ? "up" : "down"}>{today >= 0 ? "+" : ""}{money(today, 0)} today</span></> : null}
+            {coll.summary.gain !== null ? <> · <span className={coll.summary.gain >= 0 ? "up" : "down"}>{pct(coll.summary.gainPct)}</span> on what you paid</> : null}
+          </p>
+          {top.map((it) => (
+            <Link key={it.id} href={`/app/cards/${it.productId}`} className="home-row">
+              <CardThumb item={it} width={30} />
+              <span className="home-row-text"><b>{it.name.replace(/\s*\(.*\)$/, "")}</b><span className="small muted">{it.quantity > 1 ? `×${it.quantity}` : "1 copy"}</span></span>
+              <span className="small">{money((unitValue(it) ?? 0) * it.quantity, 0)}</span>
+            </Link>
+          ))}
+          {!top.length && <p className="muted small">Track what you own and what it&apos;s worth, free.</p>}
+          <Link href={coll.owned.length ? "/app/collection" : "/app/collection?add=1"} className="btn primary home-cta">{coll.owned.length ? "Open collection" : "Add cards"}</Link>
+        </section>
       </div>
     </>
   );

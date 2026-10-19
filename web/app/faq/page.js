@@ -23,7 +23,7 @@ const FAQS = [
   ["Do you bid or buy for me?",
     "No. We send the alert. You decide whether to bid or buy, and we never touch your eBay or TCGplayer account."],
   ["Can I cancel anytime?",
-    "Yes, from Plan and billing, and you keep Premium until the end of the month you paid for. Deleting your account cancels your subscription too."],
+    "Yes, from Account → Plan, and you keep Premium until the end of the month you paid for. Deleting your account cancels your subscription too."],
   ["Are you affiliated with eBay or TCGplayer?",
     "No, we're independent. Some eBay and TCGplayer links earn us a small commission. They're labeled, and they never change your price."],
 ];

@@ -52,7 +52,7 @@ export default async function CollectionPage({ searchParams }) {
           <Link href="/app/collection/sets" className="btn">Browse sets</Link>
           {user.plan.collectionExport
             ? <a href="/app/collection/export" className="btn" download>Export CSV</a>
-            : <Link href="/app/billing" className="btn" title="CSV export is a Premium feature">Export CSV 🔒</Link>}
+            : <Link href="/app/account#plan" className="btn" title="CSV export is a Premium feature">Export CSV 🔒</Link>}
         </div>
       </div>
 

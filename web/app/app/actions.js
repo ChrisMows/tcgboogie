@@ -94,7 +94,7 @@ export async function logOut() {
 }
 
 /**
- * Card picker on the Filters page: cards matching what's typed, limited to the chosen sets (if any), each marked
+ * Card picker on the Deals page (filters): cards matching what's typed, limited to the chosen sets (if any), each marked
  * with how many the member owns. Without sets, a search needs 2+ letters (keeps price-service lookups cheap).
  */
 export async function cardOptions(query, sets = []) {

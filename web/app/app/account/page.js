@@ -2,6 +2,7 @@ import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
 import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, savePreferences, setAvatar } from "../actions";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
+import { PLANS } from "@/lib/plans";
 
 export const metadata = { title: "Account" };
 
@@ -20,8 +21,32 @@ export default async function Account({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Account</h1>
-          <p>Your profile, sign-in methods and how alerts reach you.</p>
+          <p>Your plan, profile, sign-ins and how alerts reach you.</p>
         </div>
+      </div>
+
+      <div className={`panel plan-panel ${premium ? "is-premium" : ""}`} id="plan">
+        <div className="plan-panel-head">
+          <div>
+            <div className="small muted">Your plan</div>
+            <div className="plan-panel-name">{user.plan.label} {premium ? <span className="badge accent">Active</span> : null}</div>
+            <div className="small muted">
+              {user.isAdmin ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+                : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
+            </div>
+          </div>
+          {premium ? (
+            <button className="btn" disabled title="Billing management launches with card payments">Manage subscription</button>
+          ) : (
+            <div style={{ textAlign: "right" }}>
+              <button className="btn primary" disabled>Upgrade to Premium · ${PLANS.premium.price}/mo</button>
+              <div className="hint">Card payments launch soon.</div>
+            </div>
+          )}
+        </div>
+        {!premium && (
+          <ul className="plan-perks">{PLANS.premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
+        )}
       </div>
       {params?.saved && <div className="notice good">{params.saved === "avatar" ? "Profile picture updated." : "Saved."}</div>}
       {params?.refreshed && (

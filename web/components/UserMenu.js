@@ -6,12 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { repairPicture } from "@/app/app/actions";
 
 const ITEMS = [
-  ["/app", "My dashboard"],
-  ["/app/collection", "My collection"],
-  ["/app/watches", "Price alerts"],
-  ["/app/account", "Profile & connections"],
-  ["/app/account#alerts", "Alert settings"],
-  ["/app/billing", "Plan & billing"],
+  ["/app", "Home"],
+  ["/app/account", "Account"],
+  ["/app/account#plan", "Plan & billing"],
 ];
 
 /** Round profile picture in the header; opens a menu with the member's pages and Sign out. */
