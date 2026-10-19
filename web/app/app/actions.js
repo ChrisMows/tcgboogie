@@ -4,7 +4,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
+import crypto from "node:crypto";
 import { endBillingForDeletion } from "@/lib/billing";
+import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
 import { validateFilters } from "@/lib/filters";
 import { setLinkIntent } from "@/lib/link-intent";
@@ -60,7 +62,9 @@ export async function savePreferences(formData) {
   if (emailRecap === "daily" && user.plan.emailRecap !== "daily") emailRecap = "weekly"; // daily recap is Premium
   await store.updatePrefs(user.id, {
     alertDiscord: formData.get("alertDiscord") === "on",
-    alertWebPush: formData.get("alertWebPush") === "on",
+    alertWebPush: false,
+    alertEmail: formData.get("alertEmail") === "on",
+    alertSms: formData.get("alertSms") === "on" && Boolean(user.phoneVerifiedAt) && user.plan.watchAlertChannels.includes("sms"),
     emailRecap,
   });
   await store.updateName(user.id, formData.get("name"));
@@ -124,6 +128,53 @@ export async function cardOptions(query, sets = []) {
     .slice(0, 200)
     .map((c) => ({ id: c.id, name: c.name, setName: c.setName, number: c.number, image: c.image, owned: owned[c.id] || 0, release: releases[c.setName] || "" }));
   return { ok: true, cards: out, needsQuery: !chosen.length && q.length < 2 && catalogLive() };
+}
+
+// ---------- text alerts ----------
+const hashCode = (userId, code) => crypto.createHmac("sha256", process.env.AUTH_SECRET || "dev").update(`${userId}:${code}`).digest("hex");
+
+/** Step 1: send a 6-digit code to the number the member typed. */
+export async function sendPhoneCode(formData) {
+  const user = await requireUser();
+  if (!user.plan.watchAlertChannels.includes("sms")) redirect("/app/account?sms=premium#alerts");
+  if (!user.demo && !channelsReady().sms) redirect("/app/account?sms=unavailable#alerts");
+  if (formData.get("consent") !== "on") redirect("/app/account?sms=consent#alerts");
+  const phone = normalizePhone(formData.get("phone"));
+  if (!phone) redirect("/app/account?sms=badnumber#alerts");
+  const pending = await store.getPhoneCode(user.id);
+  if (pending.smsCodeExpires && new Date(pending.smsCodeExpires).getTime() - 9 * 60 * 1000 > Date.now()) {
+    redirect("/app/account?sms=wait#alerts"); // one code a minute
+  }
+  const code = String(crypto.randomInt(100000, 1000000));
+  await store.setPhoneCode(user.id, phone, hashCode(user.id, code), new Date(Date.now() + 10 * 60 * 1000));
+  if (user.demo) redirect(`/app/account?sms=sent&demo=${code}#alerts`);
+  try {
+    await sendSms(phone, `Your TCG Boogie code is ${code}. It expires in 10 minutes. Reply STOP to opt out.`);
+  } catch (e) {
+    console.error("[sms] code not sent:", e.message);
+    redirect("/app/account?sms=failed#alerts");
+  }
+  redirect("/app/account?sms=sent#alerts");
+}
+
+/** Step 2: check the code; on success, text alerts switch on. */
+export async function verifyPhoneCode(formData) {
+  const user = await requireUser();
+  const code = String(formData.get("code") || "").replace(/\D/g, "");
+  const pending = await store.getPhoneCode(user.id);
+  const valid = pending.smsCodeHash && pending.smsCodeExpires && new Date(pending.smsCodeExpires).getTime() > Date.now()
+    && code.length === 6 && crypto.timingSafeEqual(Buffer.from(hashCode(user.id, code)), Buffer.from(pending.smsCodeHash));
+  if (!valid) redirect("/app/account?sms=badcode#alerts");
+  await store.confirmPhone(user.id);
+  revalidatePath("/app", "layout");
+  redirect("/app/account?sms=verified#alerts");
+}
+
+export async function removePhone() {
+  const user = await requireUser();
+  await store.clearPhone(user.id);
+  revalidatePath("/app", "layout");
+  redirect("/app/account?sms=removed#alerts");
 }
 
 /** Which profile picture to show: google, discord, or initials. */

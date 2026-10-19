@@ -20,6 +20,13 @@ export const users = pgTable("user", {
   // Alert delivery preferences
   alertDiscord: boolean("alert_discord").notNull().default(true),
   alertWebPush: boolean("alert_web_push").notNull().default(false),
+  alertEmail: boolean("alert_email").notNull().default(true),
+  // Text alerts (Premium): number in E.164 (+15551234567), confirmed with a one-time code, and the member's opt-in.
+  phone: text("phone"),
+  phoneVerifiedAt: timestamp("phone_verified_at", { mode: "date" }),
+  alertSms: boolean("alert_sms").notNull().default(false),
+  smsCodeHash: text("sms_code_hash"),
+  smsCodeExpires: timestamp("sms_code_expires", { mode: "date" }),
   emailRecap: text("email_recap").notNull().default("weekly"), // off / weekly / daily
   // Collection alert settings (Premium): { setDeals: bool, sellHigh: bool, sellHighPct: number }
   collectionPrefs: jsonb("collection_prefs"),
@@ -149,5 +156,27 @@ export const profiles = pgTable("profile", {
   filters: jsonb("filters").notNull(),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// Every alert we send (price alerts today; deal alerts later), so nothing goes out twice and members have a history.
+export const alertLog = pgTable("alert_log", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  watchId: integer("watch_id").references(() => priceWatches.id, { onDelete: "set null" }),
+  kind: text("kind").notNull(), // price_buy / price_sell
+  channel: text("channel").notNull(), // email / discord
+  title: text("title").notNull(),
+  price: doublePrecision("price"),
+  target: doublePrecision("target"),
+  ok: boolean("ok").notNull().default(true),
+  error: text("error"),
+  sentAt: timestamp("sent_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("alert_log_user_idx").on(t.userId)]);
+
+// Small server-side settings (e.g. when the price-alert job last ran).
+export const appSettings = pgTable("app_setting", {
+  key: text("key").primaryKey(),
+  value: jsonb("value"),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });

@@ -41,13 +41,13 @@ export const PLANS = {
     japanese: true,
     emailRecap: "daily",
     maxPriceWatches: null, // unlimited
-    watchAlertChannels: ["email", "discord", "push"],
+    watchAlertChannels: ["email", "discord", "sms"],
     collectionHistoryDays: null, // all time
     collectionExport: true,
     collectionAlerts: true,
     features: [
       "Every deal live, before the auction ends",
-      "Instant alerts on Discord and email",
+      "Instant alerts by text, Discord and email",
       "Unlimited price alerts",
       "15 deal filters, Japanese cards, earlier and deeper deals",
       "Full collection history, CSV export, set-completion deals",

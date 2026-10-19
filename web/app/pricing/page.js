@@ -5,7 +5,8 @@ export const metadata = { title: "Pricing" };
 
 const rows = [
   ["Deals", "After the auction ends, with the sale price", "Live, while you can still bid"],
-  ["Instant alerts (Discord and email)", "—", "✓"],
+  ["Instant alerts by text and Discord", "—", "✓"],
+  ["Price alerts by email", "✓", "✓"],
   ["Filter profiles", "1", "15"],
   ["Lowest discount you can set", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],
   ["How early before the auction ends", `Up to ${PLANS.free.maxWindowMinutes} minutes`, `Up to ${PLANS.premium.maxWindowMinutes} minutes`],

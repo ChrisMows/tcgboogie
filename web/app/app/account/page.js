@@ -1,10 +1,24 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
-import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, savePreferences, setAvatar } from "../actions";
+import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
+import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
 
 export const metadata = { title: "Account" };
+
+const SMS_NOTES = {
+  sent: "Code sent. It expires in 10 minutes.",
+  verified: "Number confirmed. Text alerts are on.",
+  removed: "Number removed. No more texts.",
+  badcode: "That code didn't match or has expired. Try again, or send a new one.",
+  badnumber: "That doesn't look like a mobile number. Use 10 digits, like (555) 123-4567.",
+  consent: "Tick the box to agree to receive texts.",
+  wait: "A code was just sent. Wait a minute before asking for another.",
+  failed: "We couldn't send a text to that number. Check it and try again.",
+  unavailable: "Text alerts aren't switched on yet.",
+  premium: "Text alerts are a Premium feature.",
+};
 
 const PROVIDER_LABELS = { google: "Google", discord: "Discord", email: "Email link" };
 const METHODS = ["google", "discord", "email"];
@@ -14,6 +28,7 @@ export default async function Account({ searchParams }) {
   const params = await searchParams;
   const premium = user.tier === "premium";
   const pictures = avatarOptions(user);
+  const smsReady = channelsReady().sms;
   const current = avatarFor(user);
 
   return (
@@ -95,7 +110,7 @@ export default async function Account({ searchParams }) {
         </p>
       </div>
 
-      <form action={savePreferences}>
+      <form action={savePreferences} key={`${user.phoneVerifiedAt ? "sms" : "no-sms"}-${user.alertSms ? 1 : 0}-${user.tier}`}>
         <div className="panel">
           <h2>Profile</h2>
           <div className="form-grid">
@@ -112,16 +127,22 @@ export default async function Account({ searchParams }) {
         </div>
 
         <div className="panel" id="alerts">
-          <h2>Alerts</h2>
-          {!premium && <div className="notice">Instant alerts are a Premium feature. These settings switch on when you upgrade.</div>}
+          <h2>Where alerts go</h2>
+          <p className="small muted" style={{ marginTop: -6 }}>Price alerts and deal alerts reach you on every channel you turn on.</p>
           <label className="check">
-            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} /> Discord: your private alerts channel
+            <input type="checkbox" name="alertEmail" defaultChecked={user.alertEmail !== false} /> ✉️ Email <span className="muted">· {user.email}</span>
           </label>
-          {!user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord below to receive these.</div>}
-          <label className="check" style={{ marginTop: 10 }}>
-            <input type="checkbox" name="alertWebPush" defaultChecked={user.alertWebPush} /> Phone and browser notifications
+          <label className={`check ${premium ? "" : "dim"}`} style={{ marginTop: 6 }}>
+            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!premium} /> 💬 Discord message from BoogieBot
+            {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
-          <div className="hint" style={{ marginLeft: 27 }}>Coming soon.</div>
+          {premium && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord below to get these.</div>}
+          <label className={`check ${premium && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
+            <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!premium || !user.phoneVerifiedAt} /> 📱 Text message
+            {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
+            {premium && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
+          </label>
+          {premium && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number below to get texts.</div>}
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap}>
@@ -133,6 +154,41 @@ export default async function Account({ searchParams }) {
         </div>
         <button className="btn primary" style={{ marginBottom: 16 }}>Save changes</button>
       </form>
+
+      {premium && (
+        <div className="panel" id="phone">
+          <h2>Text alerts</h2>
+          {SMS_NOTES[params?.sms] && <div className={`notice ${["verified", "sent", "removed"].includes(params.sms) ? "good" : "warn"}`}>{SMS_NOTES[params.sms]}{params?.demo ? ` (Demo code: ${params.demo})` : ""}</div>}
+          {!smsReady && !user.demo ? (
+            <p className="muted" style={{ margin: 0 }}>Text alerts are coming soon.</p>
+          ) : user.phoneVerifiedAt ? (
+            <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+              <span style={{ flex: "none" }}>📱 <b>{user.phone}</b> <span className="badge good">Confirmed</span></span>
+              <form action={removePhone} style={{ flex: "none" }}><button className="btn sm ghost">Remove number</button></form>
+            </div>
+          ) : params?.sms === "sent" || params?.sms === "badcode" ? (
+            <form action={verifyPhoneCode} className="row" style={{ maxWidth: 420, alignItems: "flex-end" }}>
+              <div>
+                <label className="field" htmlFor="code">Enter the 6-digit code we texted you</label>
+                <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" required />
+              </div>
+              <button className="btn primary" style={{ flex: "none" }}>Confirm</button>
+            </form>
+          ) : (
+            <form action={sendPhoneCode} style={{ maxWidth: 460 }}>
+              <label className="field" htmlFor="phone">Mobile number</label>
+              <div className="row">
+                <input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="(555) 123-4567" required />
+                <button className="btn primary" style={{ flex: "none" }}>Text me a code</button>
+              </div>
+              <label className="check small" style={{ marginTop: 10, alignItems: "flex-start" }}>
+                <input type="checkbox" name="consent" required style={{ marginTop: 3 }} />
+                <span className="muted">Yes, text me TCG Boogie alerts for the cards I choose. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span>
+              </label>
+            </form>
+          )}
+        </div>
+      )}
 
       <div className="panel">
         <h2>Sign-in methods and connections</h2>

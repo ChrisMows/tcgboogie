@@ -12,7 +12,7 @@ function demo() {
     const f = defaultFilters(PLANS.premium);
     g.__tcgDemo = {
       nextId: 3,
-      prefs: { alertDiscord: true, alertWebPush: false, emailRecap: "daily", discordConnected: false },
+      prefs: { alertDiscord: true, alertWebPush: false, alertEmail: true, alertSms: false, phone: null, phoneVerifiedAt: null, emailRecap: "daily", discordConnected: false },
       profiles: [
         { id: 1, userId: "demo", name: "My deals", active: true, filters: f, createdAt: new Date(), updatedAt: new Date() },
         {
@@ -116,6 +116,29 @@ export async function setAvatarSource(userId, source) {
   await db.update(users).set({ avatarSource: clean }).where(eq(users.id, userId));
 }
 
+// ---------- text alerts: phone number + one-time code ----------
+export async function setPhoneCode(userId, phone, codeHash, expires) {
+  if (isDemo(userId)) return void Object.assign(demo().prefs, { pendingPhone: phone, smsCodeHash: codeHash, smsCodeExpires: expires });
+  await db.update(users).set({ phone, phoneVerifiedAt: null, alertSms: false, smsCodeHash: codeHash, smsCodeExpires: expires }).where(eq(users.id, userId));
+}
+
+export async function getPhoneCode(userId) {
+  if (isDemo(userId)) { const p = demo().prefs; return { phone: p.pendingPhone, smsCodeHash: p.smsCodeHash, smsCodeExpires: p.smsCodeExpires }; }
+  const [row] = await db.select({ phone: users.phone, smsCodeHash: users.smsCodeHash, smsCodeExpires: users.smsCodeExpires }).from(users).where(eq(users.id, userId)).limit(1);
+  return row || {};
+}
+
+export async function confirmPhone(userId) {
+  const now = new Date();
+  if (isDemo(userId)) { const p = demo().prefs; return void Object.assign(p, { phone: p.pendingPhone, phoneVerifiedAt: now, alertSms: true, smsCodeHash: null }); }
+  await db.update(users).set({ phoneVerifiedAt: now, alertSms: true, smsCodeHash: null, smsCodeExpires: null }).where(eq(users.id, userId));
+}
+
+export async function clearPhone(userId) {
+  if (isDemo(userId)) return void Object.assign(demo().prefs, { phone: null, phoneVerifiedAt: null, alertSms: false, pendingPhone: null });
+  await db.update(users).set({ phone: null, phoneVerifiedAt: null, alertSms: false, smsCodeHash: null, smsCodeExpires: null }).where(eq(users.id, userId));
+}
+
 /** Remove one connected sign-in method (e.g. Discord) from an account. */
 export async function unlinkProvider(userId, provider) {
   await db.delete(accounts).where(and(eq(accounts.userId, userId), eq(accounts.provider, provider)));
@@ -125,6 +148,8 @@ export async function updatePrefs(userId, prefs) {
   const clean = {
     alertDiscord: Boolean(prefs.alertDiscord),
     alertWebPush: Boolean(prefs.alertWebPush),
+    alertEmail: Boolean(prefs.alertEmail),
+    alertSms: Boolean(prefs.alertSms),
     emailRecap: ["off", "weekly", "daily"].includes(prefs.emailRecap) ? prefs.emailRecap : "weekly",
   };
   if (isDemo(userId)) return Object.assign(demo().prefs, clean);
