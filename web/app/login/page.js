@@ -35,6 +35,8 @@ export default async function Login({ searchParams }) {
   return (
     <div className="wrap">
       <div className="auth-box">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="logo-full" src="/brand/logo.webp" alt="TCG Boogie" width={900} height={569} style={{ width: 220 }} />
         <h1>{signup ? "Create your free account" : "Welcome back"}</h1>
         <p className="muted" style={{ marginTop: 0 }}>
           {signup ? "Start free. Upgrade to Premium anytime." : "Sign in to your TCG Boogie account."}

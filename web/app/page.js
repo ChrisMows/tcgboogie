@@ -184,6 +184,8 @@ export default async function Home({ searchParams }) {
       </section>
 
       <section className="wrap cta">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="logo-full" src="/brand/logo.webp" alt="TCG Boogie" width={900} height={569} loading="lazy" />
         <div className="eyebrow">YOUR COLLECTION&apos;S NEXT CHAPTER</div>
         <h2>The right card.<br />The right price. <span className="lime">Your move.</span></h2>
         <p>Free forever. No card needed.</p>

@@ -25,8 +25,11 @@ export const metadata = {
 
 function Brand() {
   return (
-    <Link href="/" className="brand">
-      <span className="mark" aria-hidden="true" />TCG <em>boogie</em>
+    <Link href="/" className="brand" aria-label="TCG Boogie home">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="brand-card" src="/brand/card.webp" alt="" width={144} height={160} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="brand-word" src="/brand/wordmark.webp" alt="TCG Boogie" width={605} height={90} />
     </Link>
   );
 }

@@ -38,8 +38,13 @@ header.top { border-bottom: 1px solid var(--border); position: sticky; top: 0; z
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 90px; }
 .brand { font: 700 26px var(--font-head), sans-serif; letter-spacing: -1px; color: var(--text); white-space: nowrap; display: inline-flex; align-items: center; gap: 9px; }
 .brand em { font-style: normal; color: var(--accent); }
+.brand-card { height: 58px; width: auto; display: block; filter: drop-shadow(0 4px 10px #0008); transition: transform 0.25s; }
+.brand-word { height: 30px; width: auto; display: block; }
+.brand:hover .brand-card { transform: rotate(-6deg) scale(1.05); }
+footer .brand-card { height: 40px; }
+footer .brand-word { height: 20px; }
+.logo-full { display: block; width: min(300px, 70%); height: auto; margin: 0 auto 18px; filter: drop-shadow(0 12px 30px #0009); }
 .brand:hover { text-decoration: none; }
-.mark { background: var(--accent); width: 28px; height: 32px; flex: none; clip-path: polygon(0 0, 100% 0, 80% 40%, 48% 40%, 80% 56%, 60% 100%, 0 100%, 20% 56%, 50% 56%, 16% 40%); }
 nav.main { display: flex; align-items: center; gap: 30px; }
 nav.main a { color: #a1a8b3; font-size: 12px; }
 nav.main a:hover { color: var(--text); text-decoration: none; }
@@ -599,7 +604,8 @@ td.num { text-align: right; font-weight: 600; }
 @media (max-width: 600px) {
   header.top .wrap { height: 75px; gap: 10px; }
   .brand { font-size: 22px; }
-  header .brand .mark { width: 24px; height: 28px; }
+  header .brand-card { height: 42px; }
+  header .brand-word { height: 19px; }
   .header-actions { gap: 14px; }
   header .btn { padding: 12px 14px; font-size: 11px; gap: 10px; }
   .avatar-btn { width: 42px; height: 42px; }
