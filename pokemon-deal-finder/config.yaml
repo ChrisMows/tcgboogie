@@ -86,7 +86,7 @@ ebay:
   category_id: "183454"       # eBay "CCG Individual Cards"
   aspect_filter: "categoryId:183454,Game:{Pokémon TCG}"
   buyer_zip: "10001"          # used so eBay can calculate shipping to you; set to your ZIP
-  affiliate_campaign_id: ""   # eBay Partner Network campaign ID; when set, listing links carry your affiliate tracking
+  affiliate_campaign_id: "5339225226"   # eBay Partner Network campaign ID; when set, listing links carry your affiliate tracking
   affiliate_disclosure: "Ad · eBay links may earn us a commission"
 
 graders_allowed: [PSA, BGS, BVG, CGC, CSG, SGC, TAG, ACE]

@@ -231,7 +231,7 @@ class AffiliateTests(unittest.TestCase):
         c.cfg = dict(CFG, ebay=dict(CFG["ebay"], affiliate_campaign_id="5338000000"))
         c._get_token = lambda: "t"
         self.assertTrue(c._headers()["X-EBAY-C-ENDUSERCTX"].startswith("affiliateCampaignId=5338000000,"))
-        c.cfg = CFG
+        c.cfg = dict(CFG, ebay=dict(CFG["ebay"], affiliate_campaign_id=""))  # no campaign -> no tracking
         self.assertNotIn("affiliate", c._headers()["X-EBAY-C-ENDUSERCTX"])
 
 
