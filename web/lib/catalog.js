@@ -117,6 +117,17 @@ async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
   }, cachedOnly);
 }
 
+/**
+ * Drop price points that can't be real: new cards often start with a placeholder (e.g. $5 on a $3,700 card) before
+ * real sales, which would show as a +74,000% "change". Anything under a tenth or over 10x the typical price goes.
+ */
+function cleanHistory(points) {
+  const vals = points.map((p) => p.price).filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+  if (vals.length < 3) return points.filter((p) => Number.isFinite(p.price) && p.price > 0);
+  const median = vals[Math.floor(vals.length / 2)];
+  return points.filter((p) => Number.isFinite(p.price) && p.price >= median / 10 && p.price <= median * 10);
+}
+
 function fromCard(c) {
   const prices = {};
   for (const [printing, byCond] of Object.entries(c.prices?.variants || {})) {
@@ -141,7 +152,7 @@ function fromCard(c) {
     number: c.cardNumber, rarity: c.rarity || null,
     image: c.imageCdnUrl400 || c.imageCdnUrl200 || c.imageCdnUrl || null,
     tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
-    prices, graded, history: hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market })),
+    prices, graded, history: cleanHistory(hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market }))),
   };
 }
 
