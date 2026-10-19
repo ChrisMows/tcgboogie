@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert } from "./actions";
+import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert } from "./actions";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
 export const metadata = { title: "Admin", robots: { index: false } };
@@ -42,7 +42,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
-      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} />}
+      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
     </>
@@ -51,7 +51,7 @@ export default async function Admin({ searchParams }) {
 
 const CHANNEL_NAMES = { email: "Email", discord: "Discord DM", sms: "Text" };
 
-async function Status({ ping, test, why }) {
+async function Status({ ping, test, why, stripe }) {
   const [checks, counts] = await Promise.all([systemStatus({ pingPrices: ping }), memberCounts()]);
   const tested = String(test || "").split(",").filter(Boolean).map((x) => x.split(":"));
   const groups = [...new Set(checks.map((c) => c.group))];
@@ -70,10 +70,18 @@ async function Status({ ping, test, why }) {
           {why ? <div className="small" style={{ marginTop: 4 }}>{why}</div> : null}
         </div>
       )}
+      {stripe && (
+        <div className={`notice ${stripe.startsWith("ok") ? "good" : "bad"}`}>
+          {stripe.startsWith("ok")
+            ? <><b>Stripe connected</b> ({stripe.split(":")[1]} mode). Premium price and payment webhook are {stripe.split(":")[2] === "created" ? "set up" : "up to date"}.</>
+            : <><b>Stripe setup failed:</b> {stripe.slice(5)}</>}
+        </div>
+      )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-        <span className="small muted" style={{ flex: "1 1 260px" }}>Checked just now. Nothing here sends messages or charges anything, except the two buttons.</span>
+        <span className="small muted" style={{ flex: "1 1 260px" }}>Checked just now. Nothing here sends messages or charges anything, except these buttons.</span>
         <form action={testAlert} style={{ flex: "none" }}><button className="btn sm primary" title="Sends a sample alert to you on every channel that's set up">Send me a test alert</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
+        {process.env.STRIPE_SECRET_KEY ? <form action={connectStripe} style={{ flex: "none" }}><button className="btn sm" title="Creates the Premium price and the payment webhook in Stripe. Safe to press again.">Set up Stripe</button></form> : null}
       </div>
       {groups.map((g) => (
         <div key={g} className="panel status-group">
@@ -170,7 +178,11 @@ async function Members({ q, userId, done }) {
             <div className="form-grid" style={{ alignItems: "start" }}>
               <form action={setPlan.bind(null, member.id)} className="panel">
                 <h2>Paid plan</h2>
-                <p className="small muted" style={{ marginTop: -6 }}>For manual fixes. Once payments launch, Stripe keeps this up to date.</p>
+                <p className="small muted" style={{ marginTop: -6 }}>
+                  {member.stripeCustomerId
+                    ? <>Stripe keeps this up to date{member.currentPeriodEnd ? <> · {member.cancelAtPeriodEnd ? "ends" : "renews"} {fmtDate(member.currentPeriodEnd)}</> : null}. A manual change here is overwritten at the next payment event; refunds and cancellations are done in the Stripe dashboard.</>
+                    : "For manual fixes. Members who pay by card are kept up to date by Stripe."}
+                </p>
                 <div className="row">
                   <select name="tier" defaultValue={member.tier} aria-label="Plan"><option value="free">Free</option><option value="premium">Premium</option></select>
                   <select name="status" defaultValue={member.subscriptionStatus || ""} aria-label="Billing status">

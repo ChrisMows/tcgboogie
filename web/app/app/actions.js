@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import crypto from "node:crypto";
-import { endBillingForDeletion } from "@/lib/billing";
+import { billingLive, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
@@ -91,6 +91,42 @@ export async function deleteAccount(formData) {
   await store.deleteUser(user.id);
   if (!user.demo) await signOut({ redirectTo: "/?deleted=1" });
   redirect("/?deleted=1");
+}
+
+// ---------- Billing (Stripe) ----------
+
+const billingError = (code) => redirect(`/app/account?billing=${code}#plan`);
+
+/** Upgrade: send the member to Stripe's secure checkout page. */
+export async function startCheckout() {
+  const user = await requireUser();
+  if (user.demo || !billingLive()) billingError("off");
+  if (!allow("billing", user.id)) billingError("slow");
+  if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription
+  let url;
+  try { url = await checkoutUrl(user); } catch (e) { console.error("[billing] checkout:", e.message); billingError("error"); }
+  redirect(url);
+}
+
+/** Manage subscription: Stripe's billing page (card, invoices, cancel). */
+export async function openBillingPortal() {
+  const user = await requireUser();
+  if (user.demo || !billingLive() || !user.stripeCustomerId) billingError("off");
+  if (!allow("billing", user.id)) billingError("slow");
+  let url;
+  try { url = await portalUrl(user); } catch (e) { console.error("[billing] portal:", e.message); billingError("error"); }
+  redirect(url);
+}
+
+/** Cancel at the end of the paid month (keeps Premium until then), or keep the subscription after all. */
+export async function changeRenewal(formData) {
+  const user = await requireUser();
+  if (user.demo || !billingLive() || !user.stripeSubscriptionId) billingError("off");
+  if (!allow("billing", user.id)) billingError("slow");
+  const cancel = formData.get("renew") !== "on";
+  try { await setCancelAtPeriodEnd(user, cancel); } catch (e) { console.error("[billing] renewal:", e.message); billingError("error"); }
+  revalidatePath("/app", "layout");
+  billingError(cancel ? "cancelled-renewal" : "renewing");
 }
 
 export async function logOut() {

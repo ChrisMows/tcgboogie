@@ -6,6 +6,7 @@ import nodemailer from "nodemailer";
 import { compActive, effectiveTier, signupOpen } from "@/lib/access";
 import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
+import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
 import { channelsReady } from "@/lib/notify";
 import { getCurrentUser } from "@/lib/session";
@@ -118,7 +119,11 @@ export async function systemStatus({ pingPrices = false } = {}) {
   add("Sign-in", "Google sign-in", process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? "ok" : "off", process.env.AUTH_GOOGLE_ID ? "Configured" : "Not configured");
   add("Sign-in", "Discord sign-in", process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET ? "ok" : "off", process.env.AUTH_DISCORD_ID ? "Configured" : "Not configured");
   add("Sign-in", "Sign-ups", "ok", signupOpen() ? "Open to everyone" : `Invite-only (${String(process.env.ALLOWED_EMAILS || "").split(",").filter(Boolean).length} invited)`);
-  add("Sign-in", "Payments (Stripe)", process.env.STRIPE_SECRET_KEY ? "ok" : "off", process.env.STRIPE_SECRET_KEY ? "Configured" : "Not built yet");
+  if (!billingLive()) add("Money", "Payments (Stripe)", "off", "No STRIPE_SECRET_KEY yet");
+  else if (db) {
+    const b = await billingStatus();
+    add("Money", "Payments (Stripe)", b.ok ? (b.mode === "test" ? "warn" : "ok") : "down", b.detail);
+  }
   add("Money", "eBay affiliate (EPN)", epnLive() ? "ok" : "off", epnLive() ? "Campaign ID set: eBay links are tracked" : "No EBAY_CAMPAIGN_ID yet");
   add("Bot", "Deal bot", "off", "Runs on your PC; not connected to the website yet");
   return checks;
@@ -137,6 +142,7 @@ export { ago };
 const pub = (u) => ({
   id: u.id, name: u.name, email: u.email, image: u.image, tier: u.tier, effective: effectiveTier(u), comp: compActive(u),
   compUntil: u.compUntil, compUnlimited: Boolean(u.compUnlimited), compNote: u.compNote, subscriptionStatus: u.subscriptionStatus || null,
+  stripeCustomerId: u.stripeCustomerId || null, currentPeriodEnd: u.currentPeriodEnd || null, cancelAtPeriodEnd: Boolean(u.cancelAtPeriodEnd),
   createdAt: u.createdAt, phone: u.phone, phoneVerifiedAt: u.phoneVerifiedAt,
 });
 

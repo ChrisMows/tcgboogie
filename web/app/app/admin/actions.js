@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, updateMember } from "@/lib/admin";
+import { setupStripe } from "@/lib/billing";
 import { sendTestAlert } from "@/lib/price-alerts";
 
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
@@ -74,4 +75,17 @@ export async function testAlert() {
   const code = results.map((r) => `${r.channel}:${r.ok === true ? "ok" : r.ok === false ? "fail" : "off"}`).join(",");
   const why = results.filter((r) => r.ok === false).map((r) => `${r.channel}: ${r.detail}`).join(" | ").slice(0, 300);
   redirect(`/app/admin?test=${encodeURIComponent(code)}${why ? `&why=${encodeURIComponent(why)}` : ""}`);
+}
+
+/** Create the Premium price and the payment webhook in Stripe (safe to press again: it updates instead). */
+export async function connectStripe() {
+  await requireAdmin();
+  let msg;
+  try {
+    const r = await setupStripe();
+    msg = `ok:${r.mode}:${r.webhook}`;
+  } catch (e) {
+    msg = `fail:${String(e.message).slice(0, 200)}`;
+  }
+  redirect(`/app/admin?stripe=${encodeURIComponent(msg)}`);
 }

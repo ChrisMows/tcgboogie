@@ -17,6 +17,9 @@ export const users = pgTable("user", {
   // Billing (Stripe). Deleting an account deletes the Stripe customer first, which cancels any subscription.
   stripeCustomerId: text("stripe_customer_id"),
   subscriptionStatus: text("subscription_status"), // active / past_due / canceled ... (from Stripe)
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  currentPeriodEnd: timestamp("current_period_end", { mode: "date" }), // paid through
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   // Complimentary Premium granted by an admin (never charged): until a date, or unlimited.
   compUntil: timestamp("comp_until", { mode: "date" }),
   compUnlimited: boolean("comp_unlimited").notNull().default(false),
@@ -195,4 +198,11 @@ export const adminLog = pgTable("admin_log", {
   action: text("action").notNull(),
   details: jsonb("details"),
   at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// Stripe webhook events already handled (Stripe can send the same event more than once).
+export const stripeEvents = pgTable("stripe_event", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: timestamp("received_at", { mode: "date" }).notNull().defaultNow(),
 });

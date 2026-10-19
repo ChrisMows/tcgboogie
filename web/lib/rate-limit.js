@@ -9,6 +9,7 @@ export const LIMITS = {
   cardPage: { max: 300, windowMs: 60 * 60 * 1000 }, // card pages opened
   setLoad: { max: 40, windowMs: 60 * 60 * 1000 }, // whole-set card lists (the expensive one)
   smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000 }, // "text me a code" requests
+  billing: { max: 20, windowMs: 60 * 60 * 1000 }, // opening Stripe checkout / billing pages
 };
 
 /** Count one use of `bucket` by `key`. Returns true if allowed, false if over the limit. */

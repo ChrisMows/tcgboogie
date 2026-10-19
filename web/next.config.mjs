@@ -8,7 +8,7 @@ const CSP = [
   "font-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",
-  "form-action 'self' https://accounts.google.com https://discord.com",
+  "form-action 'self' https://accounts.google.com https://discord.com https://checkout.stripe.com https://billing.stripe.com",
   "base-uri 'self'",
   "object-src 'none'",
   "upgrade-insecure-requests",

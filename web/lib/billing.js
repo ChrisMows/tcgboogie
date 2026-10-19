@@ -1,9 +1,265 @@
 import "server-only";
+import crypto from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { PLANS } from "@/lib/plans";
 
-// Billing (Stripe). Card payments aren't live yet; this holds the safety rules that must hold once they are.
-//   STRIPE_SECRET_KEY  set on Hostinger when payments launch
+// Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
+//   STRIPE_SECRET_KEY      sk_test_… while testing, sk_live_… once launched (set on Hostinger)
+//   STRIPE_WEBHOOK_SECRET  optional: whsec_… from the Stripe dashboard. Without it, the admin panel's
+//                          "Set up Stripe" button creates the webhook and keeps its secret in the database.
+
+const { users, appSettings, stripeEvents } = schema;
+const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
+const PRICE_KEY = "tcgboogie_premium_monthly"; // Stripe lookup key for the Premium price
+const EVENTS = [
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.payment_failed",
+];
 
 export const billingLive = () => Boolean(process.env.STRIPE_SECRET_KEY);
+export const billingMode = () => (String(process.env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test");
+
+/** Stripe statuses that keep Premium on. past_due = a renewal failed and Stripe is retrying the card. */
+const PAID = ["active", "trialing", "past_due"];
+export const hasLiveSubscription = (user) => Boolean(user?.stripeSubscriptionId) && PAID.includes(user.subscriptionStatus);
+
+// ---------- Stripe API ----------
+
+/** Flatten { a: { b: 1 }, c: [x] } into Stripe's form encoding: a[b]=1&c[0]=x */
+function form(obj, prefix = "", out = new URLSearchParams()) {
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined || v === null) continue;
+    const key = prefix ? `${prefix}[${k}]` : k;
+    if (typeof v === "object") form(v, key, out);
+    else out.append(key, String(v));
+  }
+  return out;
+}
+
+async function stripe(method, path, params) {
+  if (!billingLive()) throw new Error("Payments aren't set up yet.");
+  const url = `https://api.stripe.com/v1/${path}`;
+  const body = params && method !== "GET" ? form(params) : undefined;
+  const q = params && method === "GET" ? `?${form(params)}` : "";
+  const r = await fetch(url + q, {
+    method,
+    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}) },
+    body,
+    cache: "no-store",
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error(json?.error?.message || `Stripe said ${r.status}`);
+    err.status = r.status;
+    throw err;
+  }
+  return json;
+}
+
+// ---------- Settings kept in the database (per mode, so test and live never mix) ----------
+
+async function getSetting(key) {
+  const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
+  return row?.value ?? null;
+}
+async function putSetting(key, value) {
+  await db.insert(appSettings).values({ key, value }).onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+}
+
+/**
+ * The Stripe price for Premium. Found by lookup key; if it's missing, or its amount no longer matches
+ * lib/plans.js, a new one is created and takes over the key (existing subscribers keep the price they signed up at).
+ */
+export async function premiumPrice() {
+  const cents = Math.round(PLANS.premium.price * 100);
+  const found = await stripe("GET", "prices", { lookup_keys: [PRICE_KEY], active: "true", limit: 1 });
+  const p = found.data?.[0];
+  if (p && p.unit_amount === cents && p.currency === "usd" && p.recurring?.interval === "month") return p.id;
+  const product = p?.product || (await stripe("POST", "products", {
+    name: "TCG Boogie Premium",
+    description: "Instant deal alerts, price alerts by text, Discord and email, and the full collection tracker.",
+    statement_descriptor: "TCG BOOGIE",
+  })).id;
+  const created = await stripe("POST", "prices", {
+    product, currency: "usd", unit_amount: cents, recurring: { interval: "month" },
+    lookup_key: PRICE_KEY, transfer_lookup_key: "true", nickname: `Premium $${PLANS.premium.price}/month`,
+  });
+  return created.id;
+}
+
+/** Create (or update) the webhook that tells the site about payments. Returns what happened, for the admin panel. */
+export async function setupStripe() {
+  const mode = billingMode();
+  const url = `${SITE}/api/stripe/webhook`;
+  const price = await premiumPrice();
+  let saved = await getSetting(`stripe_webhook_${mode}`);
+  if (saved?.id) {
+    try {
+      await stripe("POST", `webhook_endpoints/${saved.id}`, { url, enabled_events: EVENTS, disabled: "false" });
+      return { mode, price, webhook: "updated" };
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      saved = null; // deleted in the dashboard: make a fresh one
+    }
+  }
+  const hook = await stripe("POST", "webhook_endpoints", { url, enabled_events: EVENTS, description: "TCG Boogie website" });
+  await putSetting(`stripe_webhook_${mode}`, { id: hook.id, secret: hook.secret, url });
+  return { mode, price, webhook: "created" };
+}
+
+async function webhookSecret() {
+  if (process.env.STRIPE_WEBHOOK_SECRET) return process.env.STRIPE_WEBHOOK_SECRET;
+  return (await getSetting(`stripe_webhook_${billingMode()}`))?.secret || null;
+}
+
+/** For the admin status page. */
+export async function billingStatus() {
+  if (!billingLive()) return { ok: false, detail: "No STRIPE_SECRET_KEY yet" };
+  const mode = billingMode();
+  const hook = process.env.STRIPE_WEBHOOK_SECRET ? "env" : (await getSetting(`stripe_webhook_${mode}`))?.id;
+  if (!hook) return { ok: false, mode, detail: `${mode === "live" ? "Live" : "Test"} key added. Press “Set up Stripe” to finish.` };
+  try {
+    await stripe("GET", "prices", { lookup_keys: [PRICE_KEY], limit: 1 });
+    return { ok: true, mode, detail: mode === "live" ? "Live: real cards are charged" : "Test mode: fake cards only, no real money" };
+  } catch (e) {
+    return { ok: false, mode, detail: `Stripe: ${e.message}` };
+  }
+}
+
+// ---------- Member flows ----------
+
+async function customerFor(user) {
+  if (user.stripeCustomerId) {
+    try {
+      const c = await stripe("GET", `customers/${encodeURIComponent(user.stripeCustomerId)}`);
+      if (!c.deleted) return c.id;
+    } catch (e) {
+      if (e.status !== 404) throw e; // 404: e.g. a test-mode customer after switching to live keys
+    }
+  }
+  const c = await stripe("POST", "customers", { email: user.email, name: user.name || undefined, metadata: { userId: user.id } });
+  await db.update(users).set({ stripeCustomerId: c.id }).where(eq(users.id, user.id));
+  return c.id;
+}
+
+/** Start Checkout for Premium. Returns the Stripe-hosted page to send the member to. */
+export async function checkoutUrl(user) {
+  const [customer, price] = await Promise.all([customerFor(user), premiumPrice()]);
+  const s = await stripe("POST", "checkout/sessions", {
+    mode: "subscription",
+    customer,
+    client_reference_id: user.id,
+    line_items: [{ price, quantity: 1 }],
+    subscription_data: { metadata: { userId: user.id } },
+    allow_promotion_codes: "true",
+    customer_update: { name: "auto", address: "auto" },
+    success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
+    cancel_url: `${SITE}/app/account?billing=cancelled#plan`,
+  });
+  return s.url;
+}
+
+/** Stripe's own billing page: update card, see invoices, cancel. Returns the URL. */
+export async function portalUrl(user) {
+  if (!user.stripeCustomerId) throw new Error("No billing account yet.");
+  const s = await stripe("POST", "billing_portal/sessions", { customer: user.stripeCustomerId, return_url: `${SITE}/app/account#plan` });
+  return s.url;
+}
+
+/** Right after Checkout: confirm the payment ourselves, so Premium is on even if the webhook is a few seconds behind. */
+export async function confirmCheckout(user, sessionId) {
+  if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(String(sessionId || ""))) return false;
+  const s = await stripe("GET", `checkout/sessions/${sessionId}`);
+  if (s.client_reference_id !== user.id || !s.subscription) return false; // someone else's session: ignore
+  await syncSubscription(s.subscription, user.id);
+  return true;
+}
+
+/** Cancel at the end of the paid month (the member keeps Premium until then), or undo that. */
+export async function setCancelAtPeriodEnd(user, cancel) {
+  if (!user.stripeSubscriptionId) throw new Error("No subscription to change.");
+  const sub = await stripe("POST", `subscriptions/${user.stripeSubscriptionId}`, { cancel_at_period_end: cancel ? "true" : "false" });
+  await applySubscription(sub, user.id);
+}
+
+// ---------- Keeping the member's plan in step with Stripe ----------
+
+/** Always re-read the subscription from Stripe, so events arriving out of order can't leave a stale plan. */
+async function syncSubscription(subscriptionId, userId) {
+  const sub = await stripe("GET", `subscriptions/${encodeURIComponent(subscriptionId)}`);
+  await applySubscription(sub, userId);
+}
+
+async function applySubscription(sub, userId) {
+  let id = userId || sub.metadata?.userId;
+  if (!id) {
+    const [u] = await db.select({ id: users.id }).from(users).where(eq(users.stripeCustomerId, sub.customer)).limit(1);
+    id = u?.id;
+  }
+  if (!id) return; // not one of our members (e.g. made by hand in the dashboard)
+  const [u] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (!u) return;
+  // A member only has one subscription that counts. Don't let an old, ended one overwrite a newer active one.
+  if (u.stripeSubscriptionId && u.stripeSubscriptionId !== sub.id && !PAID.includes(sub.status) && PAID.includes(u.subscriptionStatus)) return;
+  const end = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
+  await db.update(users).set({
+    stripeCustomerId: sub.customer,
+    stripeSubscriptionId: sub.id,
+    subscriptionStatus: sub.status,
+    tier: PAID.includes(sub.status) ? "premium" : "free",
+    currentPeriodEnd: end ? new Date(end * 1000) : null,
+    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end || sub.cancel_at),
+  }).where(eq(users.id, id));
+}
+
+/** Check Stripe's signature on a webhook (Stripe-Signature: t=…,v1=…). Rejects anything older than 5 minutes. */
+async function verify(raw, header) {
+  const secret = await webhookSecret();
+  if (!secret || !header) return false;
+  let t = null;
+  const sigs = [];
+  for (const kv of String(header).split(",")) {
+    const [k, v] = kv.split("=");
+    if (k === "t") t = v;
+    if (k === "v1" && v) sigs.push(v);
+  }
+  if (!t || !sigs.length || Math.abs(Date.now() / 1000 - Number(t)) > 300) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.${raw}`).digest("hex");
+  const a = Buffer.from(expected);
+  return sigs.some((s) => { const b = Buffer.from(s); return b.length === a.length && crypto.timingSafeEqual(a, b); });
+}
+
+/** Handle one webhook. Returns an HTTP status. */
+export async function handleWebhook(raw, signature) {
+  if (!db || !billingLive()) return 503;
+  if (!(await verify(raw, signature))) return 400;
+  const event = JSON.parse(raw);
+  // Stripe may deliver an event more than once: handle each only once.
+  const fresh = await db.insert(stripeEvents).values({ id: event.id, type: event.type }).onConflictDoNothing().returning({ id: stripeEvents.id });
+  if (!fresh.length) return 200;
+  try {
+    const o = event.data?.object || {};
+    if (event.type === "checkout.session.completed" && o.mode === "subscription" && o.subscription) {
+      await syncSubscription(o.subscription, o.client_reference_id);
+    } else if (event.type.startsWith("customer.subscription.")) {
+      await syncSubscription(o.id);
+    } else if (event.type.startsWith("invoice.")) {
+      const subId = o.subscription || o.parent?.subscription_details?.subscription;
+      if (subId) await syncSubscription(subId);
+    }
+    return 200;
+  } catch (e) {
+    // Let Stripe retry later: forget we saw it.
+    await db.delete(stripeEvents).where(eq(stripeEvents.id, event.id));
+    console.error("stripe webhook", event.type, e.message);
+    return 500;
+  }
+}
 
 /**
  * Stop all billing for a member before their account is deleted: deletes their Stripe customer, which cancels every

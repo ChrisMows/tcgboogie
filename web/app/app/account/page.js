@@ -1,6 +1,8 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
-import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
+import { redirect } from "next/navigation";
+import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
+import { changeRenewal, connectProvider, deleteAccount, openBillingPortal, startCheckout, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
@@ -25,6 +27,19 @@ const SMS_NOTES = {
 const PROVIDER_LABELS = { google: "Google", discord: "Discord", email: "Email link" };
 const METHODS = ["google", "discord", "email"];
 
+const fmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+const BILLING_NOTES = {
+  welcome: ["good", "Welcome to Premium! Your receipt is on its way to your email."],
+  pending: ["warn", "Payment received by Stripe. Your Premium switches on within a minute; refresh this page if it hasn't yet."],
+  cancelled: ["", "Checkout cancelled. You weren't charged."],
+  already: ["", "You already have Premium. Use Manage billing to change your card or plan."],
+  "cancelled-renewal": ["good", "Done. Premium stays on until the end of the month you've paid for, and you won't be charged again."],
+  renewing: ["good", "Great, your Premium will keep renewing."],
+  slow: ["warn", "Too many tries in a short time. Please wait a few minutes."],
+  off: ["warn", "Card payments aren't available right now."],
+  error: ["bad", "We couldn't reach our payment provider. Please try again in a minute."],
+};
+
 export default async function Account({ searchParams }) {
   const user = await requireUser();
   const params = await searchParams;
@@ -32,6 +47,19 @@ export default async function Account({ searchParams }) {
   const pictures = avatarOptions(user);
   const smsReady = channelsReady().sms;
   const current = avatarFor(user);
+
+  // Back from Stripe Checkout: confirm the payment right away (the webhook does the same a moment later).
+  if (params?.billing === "success" && params?.session_id && !user.demo) {
+    let ok = false;
+    try { ok = await confirmCheckout(user, params.session_id); } catch (e) { console.error("[billing] confirm:", e.message); }
+    redirect(`/app/account?billing=${ok ? "welcome" : "pending"}#plan`);
+  }
+  const payments = billingLive() && !user.demo;
+  const testMode = billingMode() === "test";
+  const subscribed = hasLiveSubscription(user);
+  // Admins can test checkout while previewing as Free; comped members don't need to pay.
+  const showUpgrade = !premium && !compActive(user);
+  const periodEnd = user.currentPeriodEnd ? fmt(user.currentPeriodEnd) : null;
 
   return (
     <>
@@ -46,22 +74,51 @@ export default async function Account({ searchParams }) {
         <div className="plan-panel-head">
           <div>
             <div className="small muted">Your plan</div>
-            <div className="plan-panel-name">{user.plan.label} {premium ? <span className="badge accent">Active</span> : null}</div>
+            <div className="plan-panel-name">
+              {user.plan.label}{" "}
+              {subscribed && user.subscriptionStatus === "past_due" ? <span className="badge warn">Payment due</span>
+                : subscribed && user.cancelAtPeriodEnd ? <span className="badge">Ending</span>
+                : premium ? <span className="badge accent">Active</span> : null}
+            </div>
             <div className="small muted">
-              {user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
-                : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${new Date(user.compUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`}. You won&apos;t be charged.</>
+              {subscribed ? (
+                user.cancelAtPeriodEnd
+                  ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
+                  : <>${PLANS.premium.price}/month{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
+              ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+                : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
             </div>
           </div>
-          {premium ? (
-            <button className="btn" disabled title="Billing management launches with card payments">Manage subscription</button>
-          ) : (
-            <div style={{ textAlign: "right" }}>
-              <button className="btn primary" disabled>Upgrade to Premium · ${PLANS.premium.price}/mo</button>
-              <div className="hint">Card payments launch soon.</div>
+          {subscribed ? (
+            <div className="row" style={{ flex: "none", gap: 8, justifyContent: "flex-end" }}>
+              <form action={changeRenewal}>
+                {user.cancelAtPeriodEnd
+                  ? <><input type="hidden" name="renew" value="on" /><button className="btn primary">Keep Premium</button></>
+                  : <button className="btn ghost">Cancel at end of month</button>}
+              </form>
+              <form action={openBillingPortal}><button className="btn">Manage billing</button></form>
             </div>
-          )}
+          ) : showUpgrade ? (
+            <div style={{ textAlign: "right" }}>
+              <form action={startCheckout}>
+                <button className="btn primary" disabled={!payments}>Upgrade to Premium · ${PLANS.premium.price}/mo</button>
+              </form>
+              <div className="hint">{payments ? "Secure checkout by Stripe. Cancel anytime." : "Card payments launch soon."}</div>
+            </div>
+          ) : null}
         </div>
+        {subscribed && user.subscriptionStatus === "past_due" && (
+          <div className="notice warn" style={{ marginTop: 12 }}>
+            Your last payment didn&apos;t go through. Stripe will try again over the next few days; update your card under <b>Manage billing</b> to keep Premium.
+          </div>
+        )}
+        {payments && testMode && !subscribed && showUpgrade && (
+          <div className="hint" style={{ marginTop: 8 }}>Test mode: no real money. Pay with card 4242 4242 4242 4242, any future date, any CVC.</div>
+        )}
+        {BILLING_NOTES[params?.billing] && (
+          <div className={`notice ${BILLING_NOTES[params.billing][0]}`} style={{ marginTop: 12 }}>{BILLING_NOTES[params.billing][1]}</div>
+        )}
         {!premium && (
           <ul className="plan-perks">{PLANS.premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
         )}
