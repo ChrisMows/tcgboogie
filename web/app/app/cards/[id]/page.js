@@ -4,6 +4,7 @@ import CardActions from "@/components/CardActions";
 import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
 import { getProduct } from "@/lib/catalog";
+import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
@@ -13,7 +14,8 @@ import { ebaySearch } from "@/lib/ebay-link";
 import Source from "@/components/Source";
 
 export async function generateMetadata({ params }) {
-  const p = await getProduct((await params).id).catch(() => null);
+  // Title from the cache only: this runs before the sign-in check, so it must never spend price-service credits.
+  const p = await getProduct((await params).id, { cachedOnly: true }).catch(() => null);
   return { title: p ? p.name : "Card" };
 }
 
@@ -27,8 +29,11 @@ const GRADE_LABEL = (key) => {
 export default async function CardPage({ params }) {
   const user = await requireUser();
   const { id } = await params;
-  let product;
-  try { product = await getProduct(id); } catch { product = null; }
+  let product = await getProduct(id, { cachedOnly: true }).catch(() => null);
+  if (product === undefined) {
+    if (!allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
+    try { product = await getProduct(id); } catch { product = null; }
+  }
   if (product === null) notFound();
   const p = slim(product);
   const [items, binders, watches] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id)]);

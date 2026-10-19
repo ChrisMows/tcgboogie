@@ -1,22 +1,28 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import SetGrid from "@/components/SetGrid";
 import { getSetCards, listSets } from "@/lib/catalog";
+import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { money, nmPrice, ownedCounts, unitValue } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
 export async function generateMetadata({ params }) {
-  return { title: decodeURIComponent((await params).set) };
+  return { title: decodeURIComponent((await params).set).slice(0, 80) };
 }
 
 export default async function SetPage({ params }) {
   const user = await requireUser();
-  const name = decodeURIComponent((await params).set);
-  const [cards, sets, items, watches] = await Promise.all([
-    getSetCards(name).catch(() => null), listSets().catch(() => []), store.listItems(user.id), store.listWatches(user.id),
-  ]);
+  const name = decodeURIComponent((await params).set).slice(0, 120);
+  // Only real set names get looked up (a made-up name in the address must not reach the price service).
+  const sets = await listSets().catch(() => []);
   const set = sets.find((s) => s.name === name);
+  if (!set) notFound();
+  if (!allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
+  const [cards, items, watches] = await Promise.all([
+    getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id),
+  ]);
   const owned = ownedCounts(items);
   const wished = items.filter((it) => it.list === "wishlist").map((it) => it.productId);
   const inSet = new Set((cards || []).map((c) => c.id));

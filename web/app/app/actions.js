@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import crypto from "node:crypto";
 import { endBillingForDeletion } from "@/lib/billing";
+import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
 import { validateFilters } from "@/lib/filters";
@@ -103,11 +104,14 @@ export async function logOut() {
  */
 export async function cardOptions(query, sets = []) {
   const user = await requireUser();
+  if (!allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
   const q = String(query || "").trim().toLowerCase().slice(0, 60);
-  const chosen = (Array.isArray(sets) ? sets : []).map(String).slice(0, 5);
+  const known = new Set((await listSets().catch(() => [])).map((s) => s.name));
+  const chosen = (Array.isArray(sets) ? sets : []).map(String).filter((s) => known.has(s)).slice(0, 5); // real sets only
   let cards = [];
   try {
     if (chosen.length) {
+      if (!allow("setLoad", user.id)) return { ok: false, error: SLOW_DOWN };
       for (const s of chosen) cards.push(...(await getSetCards(s)));
     } else if (q.length >= 2) {
       cards = (await searchProducts(q)).filter((p) => p.type === "card");
@@ -140,7 +144,8 @@ export async function sendPhoneCode(formData) {
   if (!user.demo && !channelsReady().sms) redirect("/app/account?sms=unavailable#alerts");
   if (formData.get("consent") !== "on") redirect("/app/account?sms=consent#alerts");
   const phone = normalizePhone(formData.get("phone"));
-  if (!phone) redirect("/app/account?sms=badnumber#alerts");
+  if (!phone || !phone.startsWith("+1")) redirect("/app/account?sms=badnumber#alerts"); // US & Canada only
+  if (!allow("smsCode", user.id)) redirect("/app/account?sms=toomany#alerts");
   const pending = await store.getPhoneCode(user.id);
   if (pending.smsCodeExpires && new Date(pending.smsCodeExpires).getTime() - 9 * 60 * 1000 > Date.now()) {
     redirect("/app/account?sms=wait#alerts"); // one code a minute

@@ -12,10 +12,11 @@ const SMS_NOTES = {
   verified: "Number confirmed. Text alerts are on.",
   removed: "Number removed. No more texts.",
   badcode: "That code didn't match or has expired. Try again, or send a new one.",
-  badnumber: "That doesn't look like a mobile number. Use 10 digits, like (555) 123-4567.",
+  badnumber: "That doesn't look like a US or Canadian mobile number. Use 10 digits, like (555) 123-4567.",
   consent: "Tick the box to agree to receive texts.",
   wait: "A code was just sent. Wait a minute before asking for another.",
   failed: "We couldn't send a text to that number. Check it and try again.",
+  toomany: "That's a lot of codes for one day. Try again tomorrow, or email support@tcgboogie.com.",
   unavailable: "Text alerts aren't switched on yet.",
   premium: "Text alerts are a Premium feature.",
 };

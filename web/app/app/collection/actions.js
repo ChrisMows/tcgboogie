@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { catalogLive, getProduct, searchProducts } from "@/lib/catalog";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
+import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
@@ -20,7 +21,8 @@ const snapshotFields = (p) => ({
 
 /** Search by name, card number, or a pasted TCGplayer link. */
 export async function searchCatalog(query) {
-  await requireUser();
+  const user = await requireUser();
+  if (!allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
   const id = parseTcgplayerInput(query);
   try {
     if (id) {
@@ -68,6 +70,7 @@ export async function addItem(productId, input) {
 
 /** One tap: add a copy as raw Near Mint (or sealed), the most common case. Used by set grids and card pages. */
 export async function quickAdd(productId, list = "owned") {
+  await requireUser(); // before any price lookup, so signed-out callers can't spend credits
   const product = await getProduct(productId);
   if (!product) return { ok: false, error: "That product is no longer available." };
   const res = await addItem(productId, { list, kind: product.type === "sealed" ? "sealed" : "raw", condition: "Near Mint", quantity: 1 });
