@@ -19,11 +19,11 @@ const FAQS = [
   ["What's the difference between Free and Premium?",
     `Free shows deals after the auction ends, so you can see what you missed. Premium gets them to you live, with instant alerts, unlimited price alerts and ${premium.maxProfiles} deal filters.`],
   ["How do alerts reach me? Do I need Discord?",
-    "No. Alerts come by email on every plan. Premium adds text messages and Discord. Pick what you want under Account → Where alerts go."],
+    "No. Alerts come by email on every plan. Premium adds text messages and Discord. Pick what you want under Settings → Where alerts go."],
   ["Do you bid or buy for me?",
     "No. We send the alert. You decide whether to bid or buy, and we never touch your eBay or TCGplayer account."],
   ["Can I cancel anytime?",
-    "Yes, from Account → Plan, and you keep Premium until the end of the month you paid for. Deleting your account cancels your subscription too."],
+    "Yes, from Settings → Plan, and you keep Premium until the end of the month you paid for. Deleting your account cancels your subscription too."],
   ["Are you affiliated with eBay or TCGplayer?",
     "No, we're independent. Some eBay and TCGplayer links earn us a small commission. They're labeled, and they never change your price."],
 ];

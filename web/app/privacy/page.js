@@ -25,7 +25,7 @@ export default function Privacy() {
       <p>Some links to eBay or TCGplayer are affiliate links. They are labeled, and they don't change the price you pay.</p>
       <h2>Deleting your data</h2>
       <p>
-        You can delete your account at any time from Account → Delete account. That permanently removes your account,
+        You can delete your account at any time from Settings → Delete account. That permanently removes your account,
         filter profiles, price alerts, collection, and alert history.
       </p>
       <h2>Contact</h2>

@@ -7,7 +7,7 @@ import { repairPicture } from "@/app/app/actions";
 
 const ITEMS = [
   ["/app", "Home"],
-  ["/app/account", "Account"],
+  ["/app/account", "Settings"],
   ["/app/account#plan", "Plan & billing"],
 ];
 

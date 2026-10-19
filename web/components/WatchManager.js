@@ -181,7 +181,6 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
         <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>hit their target</span></div>
         <div className="stat"><b>{watches.filter((w) => w.alsoEbay).length}</b><span>also watching eBay</span></div>
-        <div className="stat"><b>{plan.watchAlertChannels.includes("discord") ? "Discord + email" : "Email"}</b><span>where alerts go</span></div>
       </div>
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
 

@@ -5,7 +5,7 @@ import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
 
-export const metadata = { title: "Account" };
+export const metadata = { title: "Settings" };
 
 const SMS_NOTES = {
   sent: "Code sent. It expires in 10 minutes.",
@@ -35,7 +35,7 @@ export default async function Account({ searchParams }) {
     <>
       <div className="page-head">
         <div>
-          <h1>Account</h1>
+          <h1>Settings</h1>
           <p>Your plan, profile, sign-ins and how alerts reach you.</p>
         </div>
       </div>
@@ -190,7 +190,7 @@ export default async function Account({ searchParams }) {
         </div>
       )}
 
-      <div className="panel">
+      <div className="panel" id="connections">
         <h2>Sign-in methods and connections</h2>
         {params?.linked && <div className="notice good">{PROVIDER_LABELS[params.linked] || "Account"} connected.{params.linked === "discord" ? " You can now sign in with Discord, and Discord alerts can reach you." : ""}</div>}
         {params?.unlinked && <div className="notice good">{PROVIDER_LABELS[params.unlinked] || "Account"} disconnected.</div>}

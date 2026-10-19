@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The whole member area: four places. Account, plan and sign out live in the profile-picture menu.
+// The whole member area: four places, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const LINKS = [
   ["/app", "Home", "⌂", (p) => p === "/app"],
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
@@ -21,6 +21,10 @@ export default function SideNav({ planLabel, premium }) {
             <span className="side-icon" aria-hidden="true">{icon}</span>{label}
           </Link>
         ))}
+        <div className="side-sep" />
+        <Link href="/app/account" className={path.startsWith("/app/account") ? "on" : ""} aria-current={path.startsWith("/app/account") ? "page" : undefined}>
+          <span className="side-icon" aria-hidden="true">⚙</span>Settings
+        </Link>
         {!premium && (
           <Link href="/app/account#plan" className="side-upgrade">
             <b>Go Premium</b>

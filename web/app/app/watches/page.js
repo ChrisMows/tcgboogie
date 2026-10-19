@@ -1,3 +1,4 @@
+import AlertChannels from "@/components/AlertChannels";
 import WatchManager from "@/components/WatchManager";
 import { getProduct } from "@/lib/catalog";
 import { ownedCounts } from "@/lib/collection";
@@ -27,6 +28,7 @@ export default async function WatchesPage() {
           <p>Buying or selling? Pick a card and your price. We&apos;ll tell you when it gets there.</p>
         </div>
       </div>
+      <AlertChannels user={user} />
       <WatchManager
         watches={watches.map((w) => ({ ...w, createdAt: String(w.createdAt), lastCheckedAt: w.lastCheckedAt ? String(w.lastCheckedAt) : null, triggeredAt: w.triggeredAt ? String(w.triggeredAt) : null }))}
         products={products}
