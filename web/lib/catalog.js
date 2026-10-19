@@ -82,6 +82,23 @@ for (const p of SAMPLE) {
 
 export const catalogLive = () => Boolean(process.env.PPT_API_KEY);
 
+// Last price-service response, for the admin status page.
+const status = globalThis.__tcgPptStatus ?? (globalThis.__tcgPptStatus = { at: null, ok: null, code: null, creditsLeft: null });
+function recordStatus(r) {
+  const left = r.headers.get("x-ratelimit-daily-remaining") ?? r.headers.get("x-ratelimit-total-remaining");
+  Object.assign(status, { at: new Date().toISOString(), ok: r.ok || r.status === 404, code: r.status, creditsLeft: left === null ? status.creditsLeft : Number(left) });
+}
+export const priceServiceStatus = () => ({ ...status });
+
+/** Admin status check: one tiny live request (1 credit). */
+export async function pingPriceService() {
+  if (!catalogLive()) return { ok: false, detail: "No PPT_API_KEY set" };
+  const started = Date.now();
+  const r = await fetch(`${PPT}/sets?limit=1`, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
+  recordStatus(r);
+  return { ok: r.ok, ms: Date.now() - started, code: r.status, creditsLeft: status.creditsLeft };
+}
+
 // ---------- cache: memory first, then the shared database table ----------
 const mem = globalThis.__tcgCatalog ?? (globalThis.__tcgCatalog = new Map());
 const MISS = Symbol("miss");
@@ -111,6 +128,7 @@ async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
   const url = `${PPT}${path}?${new URLSearchParams(params)}`;
   return cached(url, maxAgeMs, async () => {
     const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
+    recordStatus(r);
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(`Price service error ${r.status}`);
     return r.json();

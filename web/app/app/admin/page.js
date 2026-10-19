@@ -1,0 +1,230 @@
+import Link from "next/link";
+import { grantComp, removeMemberPhone, renameMember, revokeComp, setPlan } from "./actions";
+import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
+
+export const metadata = { title: "Admin", robots: { index: false } };
+
+const STATE = { ok: ["✅", "OK"], warn: ["⚠️", "Check"], down: ["❌", "Down"], off: ["○", "Not set up"] };
+const DONE = {
+  granted: ["good", "Complimentary Premium granted."],
+  revoked: ["good", "Complimentary Premium removed."],
+  plan: ["good", "Plan updated."],
+  renamed: ["good", "Name updated."],
+  phone: ["good", "Phone number removed."],
+  baddate: ["bad", "Pick a date in the future."],
+  badlength: ["bad", "Pick how long to grant Premium for."],
+  missing: ["bad", "That member no longer exists."],
+};
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
+const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number" };
+
+function PlanBadge({ m, compact }) {
+  if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">Premium</span> : <span className="badge">Free</span>;
+  if (m.comp) return <span className="badge accent">Premium · comp{m.compUnlimited ? " ∞" : ` to ${fmtDate(m.compUntil)}`}</span>;
+  return m.effective === "premium" ? <span className="badge good">Premium{m.subscriptionStatus ? ` · ${m.subscriptionStatus}` : ""}</span> : <span className="badge">Free</span>;
+}
+
+export default async function Admin({ searchParams }) {
+  const admin = await requireAdmin();
+  const sp = await searchParams;
+  const tab = ["members", "log"].includes(sp?.tab) || sp?.user ? (sp?.tab === "log" ? "log" : "members") : "status";
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Admin</h1>
+          <p>Signed in as {admin.email}. Only admins can see this page.</p>
+        </div>
+      </div>
+      <div className="tabs-row" role="tablist">
+        <Link href="/app/admin" className={tab === "status" ? "on" : ""} role="tab" aria-selected={tab === "status"}>Status</Link>
+        <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
+        <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
+      </div>
+      {tab === "status" && <Status ping={sp?.ping === "1"} />}
+      {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
+      {tab === "log" && <Log />}
+    </>
+  );
+}
+
+async function Status({ ping }) {
+  const [checks, counts] = await Promise.all([systemStatus({ pingPrices: ping }), memberCounts()]);
+  const groups = [...new Set(checks.map((c) => c.group))];
+  const problems = checks.filter((c) => c.state === "down" || c.state === "warn").length;
+  return (
+    <>
+      <div className="stats">
+        <div className="stat"><b>{counts.total}</b><span>members</span></div>
+        <div className="stat"><b>{counts.premium}</b><span>on Premium ({counts.comp} complimentary)</span></div>
+        <div className="stat"><b>{counts.week}</b><span>joined this week</span></div>
+        <div className="stat"><b className={problems ? "down" : "up"}>{problems ? `${problems} to check` : "All good"}</b><span>system status</span></div>
+      </div>
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+        <span className="small muted" style={{ flex: "none" }}>Checked just now. Nothing here sends messages or charges anything.</span>
+        <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
+      </div>
+      {groups.map((g) => (
+        <div key={g} className="panel status-group">
+          <h2>{g}</h2>
+          {checks.filter((c) => c.group === g).map((c) => (
+            <div key={c.name} className={`status-row ${c.state}`}>
+              <span className="status-icon" aria-hidden="true">{STATE[c.state][0]}</span>
+              <b>{c.name}</b>
+              <span className="status-detail">{c.detail}</span>
+              <span className={`badge ${c.state === "ok" ? "good" : c.state === "warn" ? "warn" : c.state === "down" ? "bad" : ""}`}>{STATE[c.state][1]}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+async function Members({ q, userId, done }) {
+  const [list, member] = await Promise.all([searchMembers(q), userId ? memberDetail(userId) : null]);
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <div className="admin-members">
+      <div>
+        <form className="search-box" action="/app/admin" style={{ marginBottom: 12 }}>
+          <input type="hidden" name="tab" value="members" />
+          <span aria-hidden="true">⌕</span>
+          <input type="search" name="q" defaultValue={q} placeholder="Search by name or email" aria-label="Search members" autoFocus={!userId} />
+          <button className="btn sm">Search</button>
+        </form>
+        <div className="member-list">
+          {list.length ? list.map((m) => (
+            <Link key={m.id} href={`/app/admin?tab=members&q=${encodeURIComponent(q)}&user=${m.id}#member`} className={`member-row ${m.id === userId ? "on" : ""}`}>
+              <span className="member-avatar" aria-hidden="true">{(m.name || m.email || "?")[0].toUpperCase()}</span>
+              <span className="member-text"><b>{m.name || "(no name)"}</b><span className="small muted">{m.email}</span></span>
+              <PlanBadge m={m} compact />
+            </Link>
+          )) : <p className="muted">No members match “{q}”.</p>}
+        </div>
+      </div>
+
+      <div id="member">
+        {!member ? (
+          <div className="panel empty-state">{userId ? "That member wasn't found." : "Select a member to see their details and change their plan."}</div>
+        ) : (
+          <>
+            {DONE[done] && <div className={`notice ${DONE[done][0]}`}>{DONE[done][1]}</div>}
+            <div className="panel">
+              <div className="member-head">
+                <span className="member-avatar lg" aria-hidden="true">{(member.name || member.email || "?")[0].toUpperCase()}</span>
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ margin: 0 }}>{member.name || "(no name)"}</h2>
+                  <div className="muted small">{member.email}</div>
+                  <div style={{ marginTop: 6 }}><PlanBadge m={member} /></div>
+                </div>
+              </div>
+              <div className="member-facts">
+                <span>Joined <b>{fmtDate(member.createdAt)}</b></span>
+                <span>Signs in with <b>{member.providers.join(", ") || "—"}</b></span>
+                <span>Phone <b>{member.phoneVerifiedAt ? member.phone : "none"}</b></span>
+                <span><b>{member.stats.cards}</b> cards · <b>{member.stats.wishlist}</b> wishlist</span>
+                <span><b>{member.stats.alerts}</b> price alerts · <b>{member.stats.filters}</b> deal filters</span>
+              </div>
+            </div>
+
+            <div className="panel">
+              <h2>Complimentary Premium</h2>
+              {member.comp ? (
+                <div className="comp-now">
+                  <span>Active {member.compUnlimited ? <b>with no end date</b> : <>until <b>{fmtDate(member.compUntil)}</b></>}{member.compNote ? <> · “{member.compNote}”</> : null}</span>
+                  <form action={revokeComp.bind(null, member.id)}><button className="btn sm danger">Remove</button></form>
+                </div>
+              ) : <p className="small muted" style={{ marginTop: -6 }}>Give Premium for free. They&apos;re never charged, and it ends on its own when the time is up.</p>}
+              <form action={grantComp.bind(null, member.id)} className="comp-form">
+                <div className="comp-lengths" role="radiogroup" aria-label="How long">
+                  {[["7", "7 days"], ["30", "30 days"], ["90", "90 days"], ["365", "1 year"], ["date", "Until a date"], ["unlimited", "Unlimited"]].map(([v, l], i) => (
+                    <label key={v}><input type="radio" name="length" value={v} defaultChecked={i === 1} /> {l}</label>
+                  ))}
+                </div>
+                <div className="row" style={{ flexWrap: "wrap", alignItems: "flex-end" }}>
+                  <div style={{ flex: "0 1 180px" }}>
+                    <label className="field" htmlFor="until">Date (for “Until a date”)</label>
+                    <input id="until" name="until" type="date" min={today} />
+                  </div>
+                  <div style={{ flex: "1 1 220px" }}>
+                    <label className="field" htmlFor="note">Note (optional)</label>
+                    <input id="note" name="note" type="text" maxLength={200} placeholder="e.g. Beta tester, giveaway winner" />
+                  </div>
+                  <button className="btn primary" style={{ flex: "none" }}>{member.comp ? "Replace with this" : "Grant Premium"}</button>
+                </div>
+              </form>
+            </div>
+
+            <div className="form-grid" style={{ alignItems: "start" }}>
+              <form action={setPlan.bind(null, member.id)} className="panel">
+                <h2>Paid plan</h2>
+                <p className="small muted" style={{ marginTop: -6 }}>For manual fixes. Once payments launch, Stripe keeps this up to date.</p>
+                <div className="row">
+                  <select name="tier" defaultValue={member.tier} aria-label="Plan"><option value="free">Free</option><option value="premium">Premium</option></select>
+                  <select name="status" defaultValue={member.subscriptionStatus || ""} aria-label="Billing status">
+                    <option value="">No subscription</option><option value="active">Active</option><option value="past_due">Past due</option><option value="canceled">Canceled</option>
+                  </select>
+                </div>
+                <button className="btn sm" style={{ marginTop: 10 }}>Save plan</button>
+              </form>
+              <div className="panel">
+                <h2>Account</h2>
+                <form action={renameMember.bind(null, member.id)} className="row">
+                  <input name="name" defaultValue={member.name || ""} maxLength={60} aria-label="Name" />
+                  <button className="btn sm" style={{ flex: "none" }}>Rename</button>
+                </form>
+                {member.phoneVerifiedAt && (
+                  <form action={removeMemberPhone.bind(null, member.id)} style={{ marginTop: 10 }}>
+                    <button className="btn sm ghost">Remove phone {member.phone}</button>
+                  </form>
+                )}
+              </div>
+            </div>
+
+            <div className="form-grid" style={{ alignItems: "start" }}>
+              <div className="panel">
+                <h2>Recent alerts sent</h2>
+                {member.recentAlerts.length ? member.recentAlerts.map((a) => (
+                  <div key={a.id} className="mini-line"><span>{a.ok ? "✅" : "❌"} {a.channel}</span><span className="small">{a.title}</span><span className="small muted">{ago(a.sentAt)}</span></div>
+                )) : <p className="small muted" style={{ margin: 0 }}>None yet.</p>}
+              </div>
+              <div className="panel">
+                <h2>Admin changes</h2>
+                {member.log.length ? member.log.map((l) => (
+                  <div key={l.id} className="mini-line"><span>{ACTIONS[l.action] || l.action}</span><span className="small muted">{l.adminEmail} · {ago(l.at)}</span></div>
+                )) : <p className="small muted" style={{ margin: 0 }}>No changes yet.</p>}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+async function Log() {
+  const log = await recentAdminLog(50);
+  return (
+    <div className="panel">
+      {log.length ? (
+        <div className="table-wrap" style={{ border: 0 }}>
+          <table className="list">
+            <thead><tr><th>When</th><th>Admin</th><th>Member</th><th>Change</th></tr></thead>
+            <tbody>
+              {log.map((l) => (
+                <tr key={l.id}>
+                  <td className="muted">{ago(l.at)}</td>
+                  <td>{l.adminEmail}</td>
+                  <td><Link href={`/app/admin?tab=members&user=${l.targetUserId}#member`}>{l.targetEmail}</Link></td>
+                  <td>{ACTIONS[l.action] || l.action}{l.details?.until ? ` (${l.details.until === "unlimited" ? "unlimited" : `to ${fmtDate(l.details.until)}`})` : ""}{l.details?.tier ? ` → ${l.details.tier}` : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="muted" style={{ margin: 0 }}>No admin changes yet.</p>}
+    </div>
+  );
+}

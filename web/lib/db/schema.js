@@ -17,6 +17,11 @@ export const users = pgTable("user", {
   // Billing (Stripe). Deleting an account deletes the Stripe customer first, which cancels any subscription.
   stripeCustomerId: text("stripe_customer_id"),
   subscriptionStatus: text("subscription_status"), // active / past_due / canceled ... (from Stripe)
+  // Complimentary Premium granted by an admin (never charged): until a date, or unlimited.
+  compUntil: timestamp("comp_until", { mode: "date" }),
+  compUnlimited: boolean("comp_unlimited").notNull().default(false),
+  compNote: text("comp_note"),
+  compGrantedAt: timestamp("comp_granted_at", { mode: "date" }),
   // Alert delivery preferences
   alertDiscord: boolean("alert_discord").notNull().default(true),
   alertWebPush: boolean("alert_web_push").notNull().default(false),
@@ -179,4 +184,15 @@ export const appSettings = pgTable("app_setting", {
   key: text("key").primaryKey(),
   value: jsonb("value"),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// Every change an admin makes to a member (who, what, when).
+export const adminLog = pgTable("admin_log", {
+  id: serial("id").primaryKey(),
+  adminEmail: text("admin_email").notNull(),
+  targetUserId: text("target_user_id"),
+  targetEmail: text("target_email"),
+  action: text("action").notNull(),
+  details: jsonb("details"),
+  at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
 });

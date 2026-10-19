@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
-import { isAdminEmail } from "@/lib/access";
+import { effectiveTier } from "@/lib/access";
 import { getProduct } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
@@ -68,7 +68,7 @@ export async function runPriceAlerts() {
 
 /** Send one alert on every channel this member has (and their plan allows). */
 async function notify(user, discordId, w, price, ready) {
-  const tier = isAdminEmail(user.email) ? "premium" : user.tier;
+  const tier = effectiveTier(user);
   const allowed = planFor(tier).watchAlertChannels;
   const selling = isRising(w);
   const target = targetPrice(w);

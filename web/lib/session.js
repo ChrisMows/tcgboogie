@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth, authEnabled } from "@/auth";
-import { isAdminEmail } from "@/lib/access";
+import { effectiveTier, isAdminEmail } from "@/lib/access";
 import { planFor } from "@/lib/plans";
 import * as store from "@/lib/store";
 
@@ -25,6 +25,7 @@ export async function getCurrentUser() {
       plan: planFor(tier),
       ...prefs,
       providers: prefs.discordConnected ? ["email", "discord"] : ["email"],
+      isAdmin: true, // demo only, so the admin panel can be previewed locally
       demo: true,
     };
   }
@@ -43,7 +44,7 @@ export async function getCurrentUser() {
   }
   // Admins get Premium, and can preview the site as a Free member (admin bar at the top).
   const isAdmin = isAdminEmail(row.email);
-  const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : row.tier;
+  const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : effectiveTier(row);
   return { ...row, tier, plan: planFor(tier), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
 }
 

@@ -53,7 +53,7 @@ export default async function RootLayout({ children }) {
             </div>
           </div>
         )}
-        {user?.isAdmin && (
+        {user?.isAdmin && !user.demo && (
           <div className="demo-bar">
             <div className="wrap">
               <b>Admin</b>

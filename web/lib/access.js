@@ -15,3 +15,16 @@ export function mayJoin(email) {
   const e = String(email || "").toLowerCase();
   return isAdminEmail(e) || list(process.env.ALLOWED_EMAILS).includes(e);
 }
+
+/** Complimentary Premium (granted by an admin) that's still running. */
+export function compActive(user, now = Date.now()) {
+  if (!user) return false;
+  return Boolean(user.compUnlimited) || Boolean(user.compUntil && new Date(user.compUntil).getTime() > now);
+}
+
+/** The plan a member actually gets: paid Premium, or complimentary Premium, else Free. */
+export function effectiveTier(user) {
+  if (!user) return "free";
+  if (isAdminEmail(user.email)) return "premium";
+  return user.tier === "premium" || compActive(user) ? "premium" : "free";
+}

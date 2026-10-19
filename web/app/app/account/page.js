@@ -4,6 +4,7 @@ import { connectProvider, deleteAccount, disconnectProvider, refreshPicture, rem
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
+import { compActive } from "@/lib/access";
 
 export const metadata = { title: "Settings" };
 
@@ -47,7 +48,8 @@ export default async function Account({ searchParams }) {
             <div className="small muted">Your plan</div>
             <div className="plan-panel-name">{user.plan.label} {premium ? <span className="badge accent">Active</span> : null}</div>
             <div className="small muted">
-              {user.isAdmin ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+              {user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+                : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${new Date(user.compUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
             </div>
           </div>

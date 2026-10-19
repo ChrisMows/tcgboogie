@@ -11,7 +11,7 @@ const LINKS = [
   ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
 ];
 
-export default function SideNav({ planLabel, premium }) {
+export default function SideNav({ planLabel, premium, isAdmin }) {
   const path = usePathname();
   return (
     <aside className="side">
@@ -25,6 +25,11 @@ export default function SideNav({ planLabel, premium }) {
         <Link href="/app/account" className={path.startsWith("/app/account") ? "on" : ""} aria-current={path.startsWith("/app/account") ? "page" : undefined}>
           <span className="side-icon" aria-hidden="true">⚙</span>Settings
         </Link>
+        {isAdmin && (
+          <Link href="/app/admin" className={path.startsWith("/app/admin") ? "on" : ""} aria-current={path.startsWith("/app/admin") ? "page" : undefined}>
+            <span className="side-icon" aria-hidden="true">🛡</span>Admin
+          </Link>
+        )}
         {!premium && (
           <Link href="/app/account#plan" className="side-upgrade">
             <b>Go Premium</b>
