@@ -75,7 +75,7 @@ export default async function Home({ searchParams }) {
               <p>A new deal matches your filters.</p>
             </div>
             <div className="float deal-float">
-              <div className="frow"><small>YOUR NEXT GREAT FIND</small><small style={{ fontSize: 8 }}>SAMPLE ALERT</small></div>
+              <div className="frow"><small>YOUR NEXT GREAT FIND</small><small className="sample-tag">SAMPLE</small></div>
               <div className="frow" style={{ marginTop: 12 }}><strong>$240.00</strong><span className="discount">↓ 28% below market</span></div>
             </div>
             <span className="spark">✦</span>
