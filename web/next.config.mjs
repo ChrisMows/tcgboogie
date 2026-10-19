@@ -21,6 +21,7 @@ const nextConfig = {
   // Old member pages, merged into Deals and Account (query strings such as ?pokemon= are kept).
   async redirects() {
     return [
+      { source: "/pricing", destination: "/#pricing", permanent: false },
       { source: "/app/filters", destination: "/app/deals", permanent: false },
       { source: "/app/feed", destination: "/app/deals", permanent: false },
       { source: "/app/alerts", destination: "/app/deals?tab=history", permanent: false },

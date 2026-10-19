@@ -1,7 +1,6 @@
 import Link from "next/link";
+import { billingLive } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
-
-export const metadata = { title: "Pricing" };
 
 const rows = [
   ["Deals", "After the auction ends, with the sale price", "Live, while you can still bid"],
@@ -23,19 +22,19 @@ const rows = [
   ["Community Discord", "✓", "✓"],
 ];
 
-export default function Pricing() {
+/** Free vs Premium cards plus the full comparison table (homepage #pricing). */
+export default function PlanCards({ signedIn = false }) {
   const { free, premium } = PLANS;
+  const upgrade = signedIn ? "/app/account#plan" : "/login?mode=signup&plan=premium";
   return (
-    <div className="wrap section">
-      <h2>Start free. Upgrade when it pays for itself.</h2>
-      <p className="sub">One good flip covers the month.</p>
+    <>
       <div className="plans">
         <div className="plan">
           <h3>{free.label}</h3>
           <div className="price">$0</div>
           <div className="muted">{free.tagline}</div>
           <ul>{free.features.map((f) => <li key={f}>{f}</li>)}</ul>
-          <Link href="/login?mode=signup" className="btn block">Start free</Link>
+          <Link href={signedIn ? "/app" : "/login?mode=signup"} className="btn block">{signedIn ? "Go to dashboard" : "Start free"}</Link>
         </div>
         <div className="plan featured">
           <div className="row" style={{ justifyContent: "space-between" }}>
@@ -44,9 +43,12 @@ export default function Pricing() {
           </div>
           <div className="price">${premium.price}<small> / month</small></div>
           <div className="muted">{premium.tagline}</div>
-          <ul>{premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
-          <Link href="/login?mode=signup&plan=premium" className="btn primary block">Get Premium</Link>
-          <div className="hint" style={{ textAlign: "center" }}>Cancel anytime. Card payments launch soon.</div>
+          <ul>
+            <li className="plus-all">Everything in Free, plus:</li>
+            {premium.features.map((f) => <li key={f}>{f}</li>)}
+          </ul>
+          <Link href={upgrade} className="btn primary block">Get Premium</Link>
+          <div className="hint" style={{ textAlign: "center" }}>Cancel anytime.{billingLive() ? " Secure checkout by Stripe." : " Card payments launch soon."}</div>
         </div>
       </div>
       <details className="compare-all">
@@ -62,6 +64,6 @@ export default function Pricing() {
           </table>
         </div>
       </details>
-    </div>
+    </>
   );
 }

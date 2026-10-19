@@ -136,6 +136,9 @@ header .btn:hover, .home .btn:hover { transform: translateY(-3px); }
 .plan ul { list-style: none; padding: 0; margin: 18px 0 24px; flex: 1; }
 .plan li { padding: 6px 0 6px 26px; position: relative; color: #c9d1dd; font-size: 15px; }
 .plan li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.plan li.plus-all { padding-left: 0; color: var(--text); font-weight: 600; }
+.plan li.plus-all::before { content: none; }
+#pricing { scroll-margin-top: 80px; }
 .compare { width: 100%; border-collapse: collapse; margin-top: 32px; font-size: 14px; }
 .compare th, .compare td { padding: 11px 12px; border-bottom: 1px solid var(--border); text-align: left; }
 .compare th { color: var(--muted); font-weight: 600; }

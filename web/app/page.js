@@ -1,8 +1,9 @@
 import Link from "next/link";
 import CardArt from "@/components/CardArt";
 import DealTabs from "@/components/DealTabs";
+import PlanCards from "@/components/PlanCards";
 import Source from "@/components/Source";
-import { PLANS } from "@/lib/plans";
+import { getCurrentUser } from "@/lib/session";
 import "./home.css";
 
 const EXAMPLES = [
@@ -31,6 +32,7 @@ const COMPARE = [
 ];
 
 export default async function Home({ searchParams }) {
+  const user = await getCurrentUser();
   const deleted = (await searchParams)?.deleted;
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
@@ -170,17 +172,8 @@ export default async function Home({ searchParams }) {
       <section className="content wrap" id="pricing">
         <div className="eyebrow">SIMPLE PRICING</div>
         <h2>Start free. Upgrade when it pays for itself.</h2>
-        <div className="price-teaser">
-          <div>
-            <b>Free</b> <span className="muted">$0 forever</span>
-            <p>Collection tracker, 5 price alerts, and the deals you missed.</p>
-          </div>
-          <div className="featured">
-            <b>Premium</b> <span className="muted">${PLANS.premium.price}/month</span>
-            <p>Every deal live, before the auction ends. Unlimited alerts.</p>
-          </div>
-          <Link href="/pricing" className="btn">Compare plans ↗</Link>
-        </div>
+        <p className="sub">One good flip covers the month.</p>
+        <PlanCards signedIn={Boolean(user)} />
       </section>
 
       <section className="wrap cta">
