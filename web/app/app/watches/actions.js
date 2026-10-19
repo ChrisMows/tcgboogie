@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getProduct, searchProducts } from "@/lib/catalog";
+import { catalogLive, getProduct, searchProducts } from "@/lib/catalog";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
@@ -11,6 +11,11 @@ const publicProduct = (p) => p && {
   tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, history: p.history,
 };
 
+// Until the price service is connected, only the small preview catalog is searchable: say so plainly.
+const notFound = (how) => (!catalogLive()
+  ? "Our live card catalog isn't connected yet, so only a few sample cards can be found right now (try Charizard, Umbreon or Psyduck). Every TCGplayer card will work once it's switched on."
+  : how === "link" ? "We couldn't find that TCGplayer product. Check the link, or search by name." : "No matches. Try fewer words, or paste the TCGplayer link.");
+
 /** Find a product from a pasted TCGplayer link/ID, or search by name. */
 export async function findProducts(query) {
   await requireUser();
@@ -18,10 +23,10 @@ export async function findProducts(query) {
   try {
     if (id) {
       const p = await getProduct(id);
-      return p ? { ok: true, results: [publicProduct(p)] } : { ok: false, error: "We couldn't find that TCGplayer product. Check the link, or search by name." };
+      return p ? { ok: true, results: [publicProduct(p)] } : { ok: false, error: notFound("link") };
     }
     const results = (await searchProducts(query)).map(publicProduct);
-    return results.length ? { ok: true, results } : { ok: false, error: "No matches. Try fewer words, or paste the TCGplayer link." };
+    return results.length ? { ok: true, results } : { ok: false, error: notFound("search") };
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
   }

@@ -25,7 +25,7 @@ export async function searchCatalog(query) {
   try {
     if (id) {
       const p = await getProduct(id);
-      return p ? { ok: true, results: [slim(p)] } : { ok: false, error: "We couldn't find that TCGplayer product." };
+      return p ? { ok: true, results: [slim(p)] } : { ok: false, error: catalogLive() ? "We couldn't find that TCGplayer product." : "Our live card catalog isn't connected yet, so only sample cards can be added right now. Every TCGplayer card will work once it's switched on." };
     }
     const results = (await searchProducts(query)).map(slim);
     if (results.length) return { ok: true, results };
