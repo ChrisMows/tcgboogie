@@ -61,8 +61,8 @@ export async function systemStatus({ pingPrices = false } = {}) {
     const s = priceServiceStatus();
     const ok = r ? r.ok : s.ok;
     const credits = (r?.creditsLeft ?? s.creditsLeft);
-    add("Data", "Price service (PokemonPriceTracker)", ok === false ? "down" : ok === null ? "warn" : credits !== null && credits < 200 ? "warn" : "ok",
-      [r ? `Test: ${r.ok ? "OK" : `failed (${r.code ?? r.detail})`} in ${r.ms} ms` : s.at ? `Last call ${ago(s.at)} (${s.code})` : "No calls since the server started",
+    add("Data", "Price service (PokemonPriceTracker)", ok === false ? "down" : credits !== null && credits < 200 ? "warn" : "ok",
+      [r ? `Test: ${r.ok ? "OK" : `failed (${r.code ?? r.detail})`} in ${r.ms} ms` : s.at ? `Last call ${ago(s.at)} (${s.code})` : "Key set · no calls since the last restart (use Test to check)",
         credits !== null ? `${credits.toLocaleString()} credits left today` : null].filter(Boolean).join(" · "));
   }
 
