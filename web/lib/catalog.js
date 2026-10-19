@@ -128,17 +128,34 @@ function cleanHistory(points) {
   return points.filter((p) => Number.isFinite(p.price) && p.price >= median / 10 && p.price <= median * 10);
 }
 
+const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
+/** "Near Mint Holofoil" / "Near Mint" / "NM" -> "Near Mint" (null if it isn't a condition we know). */
+function conditionName(raw) {
+  const s = String(raw || "").trim().toLowerCase();
+  return CONDITIONS.find((c) => s.startsWith(c.toLowerCase()))
+    || ({ nm: "Near Mint", lp: "Lightly Played", mp: "Moderately Played", hp: "Heavily Played", dmg: "Damaged" })[s] || null;
+}
+
 function fromCard(c) {
   const prices = {};
   for (const [printing, byCond] of Object.entries(c.prices?.variants || {})) {
     prices[printing] = {};
-    for (const [cond, v] of Object.entries(byCond || {})) {
+    for (const [rawCond, v] of Object.entries(byCond || {})) {
+      // Bulk set lookups label conditions with the printing added ("Near Mint Holofoil"): keep just the condition.
+      const cond = conditionName(rawCond);
+      if (!cond || v?.price == null) continue;
       prices[printing][cond] = {
-        market: v?.price ?? null,
+        market: v.price,
         low: cond === "Near Mint" ? c.variants?.[printing]?.lowPrice ?? null : null,
       };
     }
   }
+  // Some cards only carry an overall price: use it as Near Mint for the main printing.
+  const main = c.prices?.primaryPrinting || Object.keys(prices)[0] || (c.printingsAvailable || [])[0] || "Normal";
+  if (!prices[main]?.["Near Mint"] && c.prices?.market) {
+    prices[main] = { ...(prices[main] || {}), "Near Mint": { market: c.prices.market, low: c.prices.low ?? c.variants?.[main]?.lowPrice ?? null } };
+  }
+  for (const k of Object.keys(prices)) if (!Object.keys(prices[k]).length) delete prices[k];
   const graded = {};
   for (const [key, g] of Object.entries(c.ebay?.salesByGrade || {})) {
     if (c.ebay?.smartPriceOutlierByGrade?.[key]) continue; // flagged as unreliable by the service
@@ -146,7 +163,9 @@ function fromCard(c) {
     if (price) graded[key] = { price: r2(price), sales: g?.count ?? g?.totalSales ?? null };
   }
   const primary = c.prices?.primaryPrinting || Object.keys(prices)[0];
-  const hist = c.priceHistory?.variants?.[primary]?.["Near Mint"]?.history || [];
+  const byCond = c.priceHistory?.variants?.[primary] || {};
+  const nmKey = Object.keys(byCond).find((k) => conditionName(k) === "Near Mint");
+  const hist = (nmKey && byCond[nmKey]?.history) || [];
   return {
     id: String(c.tcgPlayerId), type: "card", name: c.name, setName: c.setName, setId: c.setId ? String(c.setId) : null,
     number: c.cardNumber, rarity: c.rarity || null,
