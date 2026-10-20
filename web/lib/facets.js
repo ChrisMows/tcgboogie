@@ -20,13 +20,13 @@ export const FACETS = [
     reset: () => ({ pokemon: [], cards: [] }),
   },
   {
-    key: "type", label: "Type",
+    key: "type", label: "Card type",
     active: (f) => f.cardTypes.length === 1,
     summary: (f) => (f.cardTypes[0] === "graded" ? "Graded only" : "Raw only"),
     reset: () => ({ cardTypes: ["graded", "raw"] }),
   },
   {
-    key: "grade", label: "Grade",
+    key: "grade", label: "Grading company",
     active: (f, d) => !same(f.graders, d.graders) || f.minGrade !== d.minGrade || f.maxGrade !== d.maxGrade,
     summary: (f) => `${f.graders.length === GRADERS.length ? "Any grader" : f.graders.join(", ")} ${f.minGrade}${f.maxGrade < 10 ? `–${f.maxGrade}` : "+"}`,
     reset: (d) => ({ graders: d.graders, minGrade: d.minGrade, maxGrade: d.maxGrade }),
