@@ -140,7 +140,7 @@ async function alertMember(user, discordId, d, filterName, ready) {
   const title = `⚡ ${d.name} ${grade}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
   // Every alert opens the deal on TCG Boogie: price check, recent eBay sales, and the eBay button (affiliate-tracked).
   const dealUrl = d.productId
-    ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}`
+    ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
     : `${SITE}/app/deals`;
   const lines = [
     `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${grade}`,

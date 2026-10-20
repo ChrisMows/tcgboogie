@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardActions, { AddCardButton } from "@/components/CardActions";
+import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
 import { getProduct } from "@/lib/catalog";
@@ -74,7 +75,7 @@ export default async function CardPage({ params, searchParams }) {
   const sp = await searchParams;
   const language = sp?.lang === "japanese" ? "japanese" : "english";
   // Signed out (e.g. tapped a deal alert): sign in, then come straight back to this deal.
-  const back = `/app/cards/${encodeURIComponent(id)}${sp?.deal ? `?deal=${encodeURIComponent(sp.deal)}${language === "japanese" ? "&lang=japanese" : ""}` : ""}`;
+  const back = `/app/cards/${encodeURIComponent(id)}${sp?.deal ? `?deal=${encodeURIComponent(sp.deal)}${language === "japanese" ? "&lang=japanese" : ""}${sp?.from === "alert" ? "&from=alert" : ""}` : ""}`;
   const user = await requireUser(back);
   let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
   if (product === undefined) {
@@ -113,6 +114,11 @@ export default async function CardPage({ params, searchParams }) {
   const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
   // Sold searches per grade ("… PSA 10"), for the graded cells.
   const gradeSold = (key) => ebaySearch(`${ebayQuery} ${GRADE_LABEL(key)}`, { sold: true, source: "card-page-sold-graded" });
+  // Arrived from a deal alert and the auction is still open: the quick-check pop-up (listing + recent sales).
+  const quick = deal && !deal.ended && sp?.from === "alert" ? {
+    listing: ebayLink(deal.url, "deal-quick-listing"),
+    sold: ebaySearch(`${ebayQuery}${deal.kind === "raw" ? "" : ` ${deal.grader} ${deal.grade}`}`, { sold: true, source: "deal-quick-sold" }),
+  } : null;
 
   // Raw condition prices link to that condition's live listings on TCGplayer.
   const tcgListings = (printing, cond) => {
@@ -153,6 +159,7 @@ export default async function CardPage({ params, searchParams }) {
             </span>
           </div>
           {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
+          {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
 {language === "japanese" ? (
             <div className="card-actions">
               <div className="action-row">
