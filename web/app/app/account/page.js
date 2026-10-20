@@ -1,6 +1,7 @@
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { logError } from "@/lib/log";
 import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
 import { changeRenewal, connectProvider, deleteAccount, openBillingPortal, startCheckout, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
@@ -51,7 +52,7 @@ export default async function Account({ searchParams }) {
   // Back from Stripe Checkout: confirm the payment right away (the webhook does the same a moment later).
   if (params?.billing === "success" && params?.session_id && !user.demo) {
     let ok = false;
-    try { ok = await confirmCheckout(user, params.session_id); } catch (e) { console.error("[billing] confirm:", e.message); }
+    try { ok = await confirmCheckout(user, params.session_id); } catch (e) { await logError("payments", "Couldn't confirm checkout", e, { session: params.session_id }, user.id); }
     redirect(`/app/account?billing=${ok ? "welcome" : "pending"}#plan`);
   }
   const payments = billingLive() && !user.demo;

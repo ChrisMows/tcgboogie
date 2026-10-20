@@ -8,6 +8,7 @@ import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog
 import { db, schema } from "@/lib/db";
 import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
+import { log } from "@/lib/log";
 import { channelsReady } from "@/lib/notify";
 import { getCurrentUser } from "@/lib/session";
 
@@ -218,6 +219,7 @@ export async function updateMember(admin, id, fields, action, details) {
   const [u] = await db.update(users).set(fields).where(eq(users.id, id)).returning();
   if (!u) return null;
   await db.insert(adminLog).values({ adminEmail: admin.email, targetUserId: id, targetEmail: u.email, action, details });
+  await log("admin", "info", `${admin.email}: ${action.replace(/_/g, " ")} for ${u.email}`, details, id);
   return u;
 }
 

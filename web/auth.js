@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { mayJoin } from "@/lib/access";
 import { readLinkIntent } from "@/lib/link-intent";
 import { db, schema } from "@/lib/db";
+import { log } from "@/lib/log";
 import { emailConfigured, sendLoginEmail } from "@/lib/mail";
 
 // Accounts switch on once the database and a secret are configured (see .env.example).
@@ -65,11 +66,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: { signIn: "/login", verifyRequest: "/login/check-email", error: "/login" },
   events: {
     // Keep each provider's profile picture, so members can choose which one we show.
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile, isNewUser }) {
       await saveProviderImage(user?.id, account?.provider, profile);
+      await log("signin", "info", `${isNewUser ? "New member joined" : "Signed in"} with ${account?.provider || "email"}: ${user?.email || "?"}`, null, user?.id);
     },
     async linkAccount({ user, account, profile }) {
       await saveProviderImage(user?.id, account?.provider, profile);
+      await log("signin", "info", `Connected ${account?.provider}: ${user?.email || "?"}`, null, user?.id);
     },
   },
   callbacks: {
@@ -81,13 +84,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if ((await auth())?.user?.id) return true;
       } catch { /* no session readable here; fall through to the normal checks */ }
       // The provider must have verified the address, or anyone could claim someone else's email.
-      if (account?.provider === "google" && profile?.email_verified !== true) return "/login?error=unverified";
-      if (account?.provider === "discord" && profile?.verified !== true) return "/login?error=unverified";
       const email = String(user?.email || profile?.email || "").toLowerCase();
-      if (!email) return "/login?error=noemail";
+      if ((account?.provider === "google" && profile?.email_verified !== true) || (account?.provider === "discord" && profile?.verified !== true)) {
+        await log("signin", "warn", `Sign-in refused: ${account.provider} email not verified (${email || "no email"})`);
+        return "/login?error=unverified";
+      }
+      if (!email) {
+        await log("signin", "warn", `Sign-in refused: ${account?.provider} gave no email`);
+        return "/login?error=noemail";
+      }
       if (mayJoin(email)) return true;
       // While sign-up is invite-only, people who already have an account can still sign in.
       const [existing] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
+      if (!existing) await log("signin", "warn", `Sign-up blocked (invite-only): ${email}`);
       return existing ? true : "/login?error=invite";
     },
     session({ session, user }) {

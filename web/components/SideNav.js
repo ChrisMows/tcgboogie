@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The whole member area: four places, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
+// The whole member area: four places (A–Z), plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const LINKS = [
-  ["/app", "Home", "⌂", (p) => p === "/app"],
-  ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
-  ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
   ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
+  ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
+  ["/app", "Home", "⌂", (p) => p === "/app"],
+  ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
+];
+// Bottom section, also A–Z. Admin and Logs are for admins only.
+const BOTTOM = [
+  ["/app/admin", "Admin", "🛡", true],
+  ["/app/logs", "Logs", "📜", true],
+  ["/app/account", "Settings", "⚙", false],
 ];
 
 export default function SideNav({ planLabel, premium, isAdmin }) {
@@ -22,14 +28,11 @@ export default function SideNav({ planLabel, premium, isAdmin }) {
           </Link>
         ))}
         <div className="side-sep" />
-        <Link href="/app/account" className={path.startsWith("/app/account") ? "on" : ""} aria-current={path.startsWith("/app/account") ? "page" : undefined}>
-          <span className="side-icon" aria-hidden="true">⚙</span>Settings
-        </Link>
-        {isAdmin && (
-          <Link href="/app/admin" className={path.startsWith("/app/admin") ? "on" : ""} aria-current={path.startsWith("/app/admin") ? "page" : undefined}>
-            <span className="side-icon" aria-hidden="true">🛡</span>Admin
+        {BOTTOM.filter(([, , , adminOnly]) => isAdmin || !adminOnly).map(([href, label, icon]) => (
+          <Link key={href} href={href} className={path.startsWith(href) ? "on" : ""} aria-current={path.startsWith(href) ? "page" : undefined}>
+            <span className="side-icon" aria-hidden="true">{icon}</span>{label}
           </Link>
-        )}
+        ))}
         {!premium && (
           <Link href="/app/account#plan" className="side-upgrade">
             <b>Go Premium</b>

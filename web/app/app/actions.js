@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import crypto from "node:crypto";
 import { billingLive, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
+import { log, logError } from "@/lib/log";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
@@ -84,11 +85,12 @@ export async function deleteAccount(formData) {
     try {
       await endBillingForDeletion(user);
     } catch (e) {
-      console.error("[delete-account] billing not ended, account kept:", e.message);
+      await logError("payments", "Account NOT deleted: couldn't end billing", e, {}, user.id);
       redirect("/app/account?delete=billing");
     }
   }
   await store.deleteUser(user.id);
+  if (!user.demo) await log("signin", "info", "Member deleted their account", { email: user.email }, user.id);
   if (!user.demo) await signOut({ redirectTo: "/?deleted=1" });
   redirect("/?deleted=1");
 }
@@ -104,7 +106,7 @@ export async function startCheckout() {
   if (!allow("billing", user.id)) billingError("slow");
   if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription
   let url;
-  try { url = await checkoutUrl(user); } catch (e) { console.error("[billing] checkout:", e.message); billingError("error"); }
+  try { url = await checkoutUrl(user); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
   redirect(url);
 }
 
@@ -114,7 +116,7 @@ export async function openBillingPortal() {
   if (user.demo || !billingLive() || !user.stripeCustomerId) billingError("off");
   if (!allow("billing", user.id)) billingError("slow");
   let url;
-  try { url = await portalUrl(user); } catch (e) { console.error("[billing] portal:", e.message); billingError("error"); }
+  try { url = await portalUrl(user); } catch (e) { await logError("payments", "Billing page couldn't open", e, {}, user.id); billingError("error"); }
   redirect(url);
 }
 
@@ -124,7 +126,7 @@ export async function changeRenewal(formData) {
   if (user.demo || !billingLive() || !user.stripeSubscriptionId) billingError("off");
   if (!allow("billing", user.id)) billingError("slow");
   const cancel = formData.get("renew") !== "on";
-  try { await setCancelAtPeriodEnd(user, cancel); } catch (e) { console.error("[billing] renewal:", e.message); billingError("error"); }
+  try { await setCancelAtPeriodEnd(user, cancel); } catch (e) { await logError("payments", "Renewal change failed", e, { cancel }, user.id); billingError("error"); }
   revalidatePath("/app", "layout");
   billingError(cancel ? "cancelled-renewal" : "renewing");
 }
@@ -192,7 +194,7 @@ export async function sendPhoneCode(formData) {
   try {
     await sendSms(phone, `Your TCG Boogie code is ${code}. It expires in 10 minutes. Reply STOP to opt out.`);
   } catch (e) {
-    console.error("[sms] code not sent:", e.message);
+    await logError("alerts", "Text-message code not sent", e, {}, user.id);
     redirect("/app/account?sms=failed#alerts");
   }
   redirect("/app/account?sms=sent#alerts");

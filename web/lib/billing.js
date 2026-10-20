@@ -2,6 +2,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { log } from "@/lib/log";
 import { PLANS } from "@/lib/plans";
 
 // Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
@@ -89,6 +90,7 @@ export async function premiumPrice() {
     statement_descriptor: "TCG BOOGIE",
     tax_code: TAX_CODE,
   })).id;
+  await log("payments", "info", `Creating Stripe price $${PLANS.premium.price}/month`, { replaces: p?.id || null });
   const created = await stripe("POST", "prices", {
     product, currency: "usd", unit_amount: cents, recurring: { interval: "month" },
     lookup_key: PRICE_KEY, transfer_lookup_key: "true", nickname: `Premium $${PLANS.premium.price}/month`,
@@ -105,6 +107,7 @@ export async function setupStripe() {
   if (saved?.id) {
     try {
       await stripe("POST", `webhook_endpoints/${saved.id}`, { url, enabled_events: EVENTS, disabled: "false" });
+      await log("payments", "info", `Stripe set up (${mode} mode): webhook updated`, { price, url });
       return { mode, price, webhook: "updated" };
     } catch (e) {
       if (e.status !== 404) throw e;
@@ -113,6 +116,7 @@ export async function setupStripe() {
   }
   const hook = await stripe("POST", "webhook_endpoints", { url, enabled_events: EVENTS, description: "TCG Boogie website" });
   await putSetting(`stripe_webhook_${mode}`, { id: hook.id, secret: hook.secret, url });
+  await log("payments", "info", `Stripe set up (${mode} mode): webhook created`, { price, url, webhook: hook.id });
   return { mode, price, webhook: "created" };
 }
 
@@ -148,6 +152,7 @@ async function customerFor(user) {
   }
   const c = await stripe("POST", "customers", { email: user.email, name: user.name || undefined, metadata: { userId: user.id } });
   await db.update(users).set({ stripeCustomerId: c.id }).where(eq(users.id, user.id));
+  await log("payments", "info", "Stripe customer created", { customer: c.id }, user.id);
   return c.id;
 }
 
@@ -165,6 +170,7 @@ export async function checkoutUrl(user) {
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
     cancel_url: `${SITE}/app/account?billing=cancelled#plan`,
   });
+  await log("payments", "info", "Checkout opened", { session: s.id }, user.id);
   return s.url;
 }
 
@@ -179,7 +185,10 @@ export async function portalUrl(user) {
 export async function confirmCheckout(user, sessionId) {
   if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(String(sessionId || ""))) return false;
   const s = await stripe("GET", `checkout/sessions/${sessionId}`);
-  if (s.client_reference_id !== user.id || !s.subscription) return false; // someone else's session: ignore
+  if (s.client_reference_id !== user.id || !s.subscription) {
+    await log("payments", "warn", "Checkout return didn't match this member", { session: sessionId, status: s.status }, user.id);
+    return false; // someone else's session (or not paid yet): ignore
+  }
   await syncSubscription(s.subscription, user.id);
   return true;
 }
@@ -189,6 +198,7 @@ export async function setCancelAtPeriodEnd(user, cancel) {
   if (!user.stripeSubscriptionId) throw new Error("No subscription to change.");
   const sub = await stripe("POST", `subscriptions/${user.stripeSubscriptionId}`, { cancel_at_period_end: cancel ? "true" : "false" });
   await applySubscription(sub, user.id);
+  await log("payments", "info", cancel ? "Member cancelled renewal (keeps Premium to month end)" : "Member turned renewal back on", { subscription: sub.id }, user.id);
 }
 
 // ---------- Keeping the member's plan in step with Stripe ----------
@@ -205,17 +215,26 @@ async function applySubscription(sub, userId) {
     const [u] = await db.select({ id: users.id }).from(users).where(eq(users.stripeCustomerId, sub.customer)).limit(1);
     id = u?.id;
   }
-  if (!id) return; // not one of our members (e.g. made by hand in the dashboard)
+  if (!id) {
+    await log("payments", "warn", "Subscription doesn't belong to any member", { subscription: sub.id, customer: sub.customer, status: sub.status });
+    return; // not one of our members (e.g. made by hand in the dashboard)
+  }
   const [u] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!u) return;
   // A member only has one subscription that counts. Don't let an old, ended one overwrite a newer active one.
   if (u.stripeSubscriptionId && u.stripeSubscriptionId !== sub.id && !PAID.includes(sub.status) && PAID.includes(u.subscriptionStatus)) return;
   const end = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
+  const tier = PAID.includes(sub.status) ? "premium" : "free";
+  if (u.subscriptionStatus !== sub.status || u.tier !== tier || Boolean(u.cancelAtPeriodEnd) !== Boolean(sub.cancel_at_period_end || sub.cancel_at)) {
+    await log("payments", sub.status === "past_due" || sub.status === "unpaid" ? "warn" : "info",
+      `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${sub.cancel_at_period_end ? " (cancels at month end)" : ""}; plan ${tier}`,
+      { subscription: sub.id, renews: end ? new Date(end * 1000).toISOString() : null }, id);
+  }
   await db.update(users).set({
     stripeCustomerId: sub.customer,
     stripeSubscriptionId: sub.id,
     subscriptionStatus: sub.status,
-    tier: PAID.includes(sub.status) ? "premium" : "free",
+    tier,
     currentPeriodEnd: end ? new Date(end * 1000) : null,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end || sub.cancel_at),
   }).where(eq(users.id, id));
@@ -241,7 +260,10 @@ async function verify(raw, header) {
 /** Handle one webhook. Returns an HTTP status. */
 export async function handleWebhook(raw, signature) {
   if (!db || !billingLive()) return 503;
-  if (!(await verify(raw, signature))) return 400;
+  if (!(await verify(raw, signature))) {
+    await log("payments", "warn", "Webhook rejected: bad or missing Stripe signature", { hasSignature: Boolean(signature) });
+    return 400;
+  }
   const event = JSON.parse(raw);
   // Stripe may deliver an event more than once: handle each only once.
   const fresh = await db.insert(stripeEvents).values({ id: event.id, type: event.type }).onConflictDoNothing().returning({ id: stripeEvents.id });
@@ -255,12 +277,14 @@ export async function handleWebhook(raw, signature) {
     } else if (event.type.startsWith("invoice.")) {
       const subId = o.subscription || o.parent?.subscription_details?.subscription;
       if (subId) await syncSubscription(subId);
+      if (event.type === "invoice.payment_failed") await log("payments", "warn", "A payment failed (Stripe will retry)", { invoice: o.id, customer: o.customer, amount: o.amount_due / 100 });
+      if (event.type === "invoice.paid") await log("payments", "info", `Payment received: $${(o.amount_paid / 100).toFixed(2)}`, { invoice: o.id, customer: o.customer });
     }
     return 200;
   } catch (e) {
     // Let Stripe retry later: forget we saw it.
     await db.delete(stripeEvents).where(eq(stripeEvents.id, event.id));
-    console.error("stripe webhook", event.type, e.message);
+    await log("payments", "error", `Webhook ${event.type} failed (Stripe will retry): ${e.message}`, { event: event.id });
     return 500;
   }
 }
@@ -285,5 +309,6 @@ export async function endBillingForDeletion(user) {
   if (r.status === 404) return { ended: true, reason: "already-gone" };
   const body = await r.json().catch(() => ({}));
   if (!r.ok || body.deleted !== true) throw new Error(`Stripe didn't confirm the cancellation (${r.status}).`);
+  await log("payments", "info", "Account deleted: Stripe customer and subscription ended", { customer: user.stripeCustomerId }, user.id);
   return { ended: true };
 }

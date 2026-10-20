@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
+import { log } from "@/lib/log";
 import { runPriceAlerts } from "@/lib/price-alerts";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
@@ -29,9 +30,11 @@ async function handle(req) {
     const summary = await runPriceAlerts();
     const value = { at: started.toISOString(), ms: Date.now() - started.getTime(), ...summary };
     await db.update(schema.appSettings).set({ value, updatedAt: new Date() }).where(eq(schema.appSettings.key, KEY));
+    await log("alerts", summary.failed ? "warn" : "info",
+      `Price-alert check: ${summary.checked} alerts checked, ${summary.fired} hit, ${summary.sent} sent${summary.failed ? `, ${summary.failed} failed` : ""}`, value);
     return NextResponse.json({ ok: true, ...value });
   } catch (e) {
-    console.error("[price-alerts]", e);
+    await log("alerts", "error", `Price-alert check crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });
     await db.update(schema.appSettings).set({ value: { at: started.toISOString(), error: String(e.message).slice(0, 300) }, updatedAt: new Date() })
       .where(eq(schema.appSettings.key, KEY));
     return NextResponse.json({ ok: false, error: "The price-alert check failed. See the server log." }, { status: 500 });

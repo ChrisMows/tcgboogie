@@ -1,6 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { log } from "@/lib/log";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -87,6 +88,11 @@ const status = globalThis.__tcgPptStatus ?? (globalThis.__tcgPptStatus = { at: n
 function recordStatus(r) {
   const left = r.headers.get("x-ratelimit-daily-remaining") ?? r.headers.get("x-ratelimit-total-remaining");
   Object.assign(status, { at: new Date().toISOString(), ok: r.ok || r.status === 404, code: r.status, creditsLeft: left === null ? status.creditsLeft : Number(left) });
+  if (!status.ok) void log("prices", r.status === 429 ? "warn" : "error", `Price service answered ${r.status}${r.status === 429 ? " (out of credits or rate-limited)" : ""}`, { url: String(r.url || "").replace(/\?.*$/, ""), creditsLeft: status.creditsLeft });
+  else if (status.creditsLeft !== null && status.creditsLeft !== undefined && status.creditsLeft < 500 && !status.lowWarned) {
+    status.lowWarned = true;
+    void log("prices", "warn", `Price service credits running low: ${status.creditsLeft} left today`);
+  }
 }
 export const priceServiceStatus = () => ({ ...status });
 

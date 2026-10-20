@@ -206,3 +206,14 @@ export const stripeEvents = pgTable("stripe_event", {
   type: text("type").notNull(),
   receivedAt: timestamp("received_at", { mode: "date" }).notNull().defaultNow(),
 });
+
+// Site-wide event log (Admin → Logs): what ran, what worked, what broke. Kept 60 days.
+export const systemLog = pgTable("system_log", {
+  id: serial("id").primaryKey(),
+  at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
+  source: text("source").notNull(), // payments / alerts / prices / signin / admin / website
+  level: text("level").notNull().default("info"), // info / warn / error
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  userId: text("user_id"), // no foreign key: the log outlives deleted accounts
+}, (t) => [index("system_log_at_idx").on(t.at), index("system_log_source_idx").on(t.source, t.at)]);

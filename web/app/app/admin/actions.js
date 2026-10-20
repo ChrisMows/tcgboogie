@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, updateMember } from "@/lib/admin";
 import { setupStripe } from "@/lib/billing";
+import { logError } from "@/lib/log";
 import { sendTestAlert } from "@/lib/price-alerts";
 
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
@@ -85,6 +86,7 @@ export async function connectStripe() {
     const r = await setupStripe();
     msg = `ok:${r.mode}:${r.webhook}`;
   } catch (e) {
+    await logError("payments", "Stripe setup failed", e);
     msg = `fail:${String(e.message).slice(0, 200)}`;
   }
   redirect(`/app/admin?stripe=${encodeURIComponent(msg)}`);

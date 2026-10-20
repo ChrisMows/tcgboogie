@@ -4,6 +4,7 @@ import { effectiveTier } from "@/lib/access";
 import { getProduct } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
+import { log } from "@/lib/log";
 import { planFor } from "@/lib/plans";
 import { currentPrice, isRising, isTriggered, targetPrice } from "@/lib/watches";
 
@@ -25,7 +26,10 @@ export async function runPriceAlerts() {
   // One price lookup per product, however many people watch it (cached and shared, see lib/catalog.js).
   const products = {};
   for (const id of [...new Set(watches.map((w) => w.productId))]) {
-    try { products[id] = await getProduct(id); } catch { products[id] = null; }
+    try { products[id] = await getProduct(id); } catch (e) {
+      products[id] = null;
+      await log("alerts", "warn", `Couldn't look up product ${id}: ${e.message}`, { productId: id });
+    }
     if (!products[id]) out.skippedProducts++;
   }
   out.products = Object.keys(products).length;
@@ -85,9 +89,11 @@ async function notify(user, discordId, w, price, ready) {
       await fn();
       results.sent++;
       await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind: selling ? "price_sell" : "price_buy", channel, title, price, target, ok: true });
+      await log("alerts", "info", `Sent by ${channel}: ${title}`, { watch: w.id, price, target }, user.id);
     } catch (e) {
       results.failed++;
       await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind: selling ? "price_sell" : "price_buy", channel, title, price, target, ok: false, error: String(e.message).slice(0, 300) });
+      await log("alerts", "error", `Couldn't send by ${channel}: ${e.message}`, { watch: w.id, title }, user.id);
     }
   };
 
@@ -130,9 +136,11 @@ export async function sendTestAlert(user) {
     try {
       await fn();
       results.push({ channel, ok: true, detail: "Sent" });
+      await log("alerts", "info", `Test alert sent by ${channel}`, null, user.id);
       if (db) await db.insert(alertLog).values({ userId: user.id, kind: "test", channel, title, ok: true });
     } catch (e) {
       results.push({ channel, ok: false, detail: String(e.message).slice(0, 200) });
+      await log("alerts", "error", `Test alert by ${channel} failed: ${e.message}`, null, user.id);
       if (db) await db.insert(alertLog).values({ userId: user.id, kind: "test", channel, title, ok: false, error: String(e.message).slice(0, 300) });
     }
   };
