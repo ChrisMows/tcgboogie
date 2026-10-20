@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The whole member area: four places (A–Z), plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
+// The whole member area: Home first, then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const LINKS = [
+  ["/app", "Home", "⌂", (p) => p === "/app"],
   ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
-  ["/app", "Home", "⌂", (p) => p === "/app"],
   ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
 ];
 // Bottom section, also A–Z. Admin and Logs are for admins only.
