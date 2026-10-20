@@ -86,9 +86,10 @@ export default async function Account({ searchParams }) {
                 user.cancelAtPeriodEnd
                   ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
                   : <>${PLANS.premium.price}/month{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
-              ){subscribed && user.isAdmin && !user.demo && !premium ? <> · previewing the site as <b>Free</b></> : null} : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+              ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
                 : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
+              {subscribed && user.isAdmin && !user.demo && !premium ? <> · previewing the site as <b>Free</b></> : null}
             </div>
           </div>
           {subscribed ? (
