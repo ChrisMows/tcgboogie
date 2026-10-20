@@ -22,9 +22,6 @@ export default async function CollectionPage({ searchParams }) {
   const sets = await listSets().catch(() => []);
   const { summary } = c;
 
-  // Today's change: against the most recent earlier snapshot.
-  const prev = [...c.snapshots].reverse().find((s) => s.day < new Date().toISOString().slice(0, 10));
-  const dayChange = prev ? summary.value - prev.value : null;
 
   // Sets you've started, by how much of each you own (set sizes come from the set list, so this costs nothing).
   const bySet = {};
@@ -66,26 +63,13 @@ export default async function CollectionPage({ searchParams }) {
         </div>
       )}
 
-      <div className="stats">
-        <div className="stat">
-          <b>{money(summary.value)}</b>
-          <span>collection value{dayChange !== null && Math.abs(dayChange) >= 0.01 ? <> · <span className={dayChange >= 0 ? "up" : "down"}>{dayChange >= 0 ? "+" : ""}{money(dayChange)} today</span></> : null}</span>
-        </div>
-        <div className="stat">
-          <b className={summary.gain === null ? "" : summary.gain >= 0 ? "up" : "down"}>{summary.gain === null ? "—" : `${summary.gain >= 0 ? "+" : ""}${money(summary.gain)}`}</b>
-          <span>{summary.gain === null ? "gain (add what you paid to see it)" : `gain on ${money(summary.cost)} paid (${pct(summary.gainPct)})`}</span>
-        </div>
-        <div className="stat"><b>{summary.copies.toLocaleString()}</b><span>cards & products · {Object.keys(bySet).length} sets</span></div>
-        <div className="stat"><b>{c.wishlist.length}</b><span>on your wishlist · {money(wishValue, 0)} to get them all</span></div>
-      </div>
-
       {c.owned.length > 0 && (
-        <div className="coll-overview">
-          <div className="panel" style={{ marginBottom: 0 }}>
+        <>
+          <div className="panel coll-chart">
             <ValueChart points={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} />
             {summary.unpriced > 0 && <p className="hint" style={{ marginBottom: 0 }}>{summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market value yet, so {summary.unpriced === 1 ? "it isn't" : "they aren't"} counted. You can set your own value from Edit.</p>}
           </div>
-          <div className="side-stack">
+          <div className="coll-cards">
             <div className="panel" style={{ marginBottom: 0 }}>
               <h2>Biggest movers · 7 days</h2>
               {movers.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No big moves this week.</p> : movers.map((it) => (
@@ -106,8 +90,16 @@ export default async function CollectionPage({ searchParams }) {
               ))}
               <Link href="/app/collection/sets" className="small">All sets →</Link>
             </div>
+            <div className="panel" style={{ marginBottom: 0 }}>
+              <h2>Wishlist</h2>
+              <p className="small muted" style={{ margin: "0 0 8px" }}>
+                {c.wishlist.length === 0 ? "Nothing on it yet. Tap ♡ Wishlist on any card page."
+                  : `${c.wishlist.length} ${c.wishlist.length === 1 ? "card" : "cards"} · ${money(wishValue, 0)} to get them all`}
+              </p>
+              <Link href="/app/collection?tab=wishlist" className="small">Open wishlist →</Link>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <CollectionAlerts plan={user.plan} prefs={c.prefs} />

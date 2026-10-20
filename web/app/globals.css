@@ -461,6 +461,10 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 /* collection page */
 .coll-overview { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; margin-bottom: 20px; }
 .side-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
+.coll-chart { margin-bottom: 16px; }
+.coll-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; align-items: start; }
+.coll-cards > * { min-width: 0; }
+@media (max-width: 900px) { .coll-cards { grid-template-columns: minmax(0, 1fr); } }
 .coll-overview > *, .card-detail-grid > *, .card-hero > * { min-width: 0; }
 .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .chart-value { font: 600 30px var(--font-head), sans-serif; letter-spacing: -0.02em; }
