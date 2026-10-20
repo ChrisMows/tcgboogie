@@ -34,7 +34,6 @@
 .home .deal-float .frow { gap: 8px 16px; flex-wrap: wrap; }
 .home .deal-float small { font-size: 11.5px; font-weight: 600; letter-spacing: 0.5px; color: #b4bfcd; }
 .home .deal-float strong { font: 600 34px var(--font-head); }
-.home .spark { position: absolute; bottom: 95px; right: 15px; color: var(--accent); font-size: 55px; }
 
 /* illustrative card art (used when no real image is in /public/assets) */
 .home .art-card { aspect-ratio: 63 / 88; height: auto; padding: 7%; border-radius: 11px; background: linear-gradient(160deg, var(--c), var(--a) 30%, var(--b) 80%); border: 4px solid #e8d58a; display: flex; flex-direction: column; gap: 5%; overflow: hidden; color: #141414; }

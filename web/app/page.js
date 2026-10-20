@@ -75,7 +75,6 @@ export default async function Home({ searchParams }) {
               <div className="frow"><small>YOUR NEXT GREAT FIND</small><small className="sample-tag">SAMPLE</small></div>
               <div className="frow" style={{ marginTop: 12 }}><strong>$240.00</strong><span className="discount">↓ 28% below market</span></div>
             </div>
-            <span className="spark">✦</span>
           </div>
         </div>
       </section>
