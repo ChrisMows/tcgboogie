@@ -29,7 +29,11 @@ export function itemLabel(item) {
 export function marketValue(product, item) {
   if (!product) return null;
   if (item.kind === "sealed") return product.prices?.market ?? product.prices?.low ?? null;
-  if (item.kind === "graded") return product.graded?.[gradeKey(item.grader, item.grade)]?.price ?? null;
+  if (item.kind === "graded") {
+    // Thin or stale graded data isn't a value: keep the member's own figure instead.
+    const g = product.graded?.[gradeKey(item.grader, item.grade)];
+    return g && g.reliable !== false ? g.price : null;
+  }
   const byPrinting = product.prices?.[item.printing] || {};
   return byPrinting[item.condition]?.market ?? null;
 }

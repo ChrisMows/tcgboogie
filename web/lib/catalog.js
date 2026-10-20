@@ -85,6 +85,16 @@ export const catalogLive = () => Boolean(process.env.PPT_API_KEY);
 
 // Last price-service response, for the admin status page.
 const status = globalThis.__tcgPptStatus ?? (globalThis.__tcgPptStatus = { at: null, ok: null, code: null, creditsLeft: null });
+/**
+ * Is a graded price backed by enough recent sales to show as a value? One sale from two years ago isn't:
+ * the service must rate it medium/high confidence, or there must be 3+ sales with one in the last 6 months.
+ */
+function gradedReliable({ sales, lastSale, confidence }) {
+  if (confidence === "high" || confidence === "medium") return true;
+  const recent = lastSale && Date.now() - new Date(lastSale).getTime() < 183 * 86400000;
+  return Boolean(recent && (sales ?? 0) >= 3);
+}
+
 function recordStatus(r) {
   const left = r.headers.get("x-ratelimit-daily-remaining") ?? r.headers.get("x-ratelimit-total-remaining");
   Object.assign(status, { at: new Date().toISOString(), ok: r.ok || r.status === 404, code: r.status, creditsLeft: left === null ? status.creditsLeft : Number(left) });
@@ -184,7 +194,11 @@ function fromCard(c) {
   for (const [key, g] of Object.entries(c.ebay?.salesByGrade || {})) {
     if (c.ebay?.smartPriceOutlierByGrade?.[key]) continue; // flagged as unreliable by the service
     const price = g?.smartMarketPrice?.price ?? g?.averagePrice ?? g?.medianPrice ?? null;
-    if (price) graded[key] = { price: r2(price), sales: g?.count ?? g?.totalSales ?? null };
+    if (!price) continue;
+    const sales = g?.count ?? g?.totalSales ?? null;
+    const lastSale = g?.lastSaleDate ? String(g.lastSaleDate).slice(0, 10) : null;
+    const confidence = g?.smartMarketPrice?.confidence || null;
+    graded[key] = { price: r2(price), sales, lastSale, confidence, reliable: gradedReliable({ sales, lastSale, confidence }) };
   }
   const primary = c.prices?.primaryPrinting || Object.keys(prices)[0];
   const byCond = c.priceHistory?.variants?.[primary] || {};
