@@ -84,14 +84,16 @@ class PhotoChecker:
             content += [{"type": "text", "text": f"Listing photo {i + 1}"},
                         {"type": "image", "source": {"type": "url", "url": big_ebay_image(url)}}]
         try:
-            r = self.client.beta.messages.create(
+            request = dict(
                 model=self.model,
                 max_tokens=2000,
-                betas=["server-side-fallback-2026-07-01"],
-                fallbacks="default",
                 output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": SCHEMA}},
                 messages=[{"role": "user", "content": content}],
             )
+            if self.model.startswith("claude-haiku"):
+                r = self.client.messages.create(**request)  # Haiku has no server-side refusal fallback
+            else:
+                r = self.client.beta.messages.create(**request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
         except anthropic.BadRequestError as e:
             # Usually an image eBay or TCGplayer wouldn't serve; don't retry this listing.
             log.warning("Photo check couldn't run for %s: %s", item_id, e.message)
