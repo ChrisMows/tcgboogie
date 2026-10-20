@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authEnabled, enabledProviders } from "@/auth";
-import { demoMode, getCurrentUser } from "@/lib/session";
+import { demoMode, getCurrentUser, safeNext } from "@/lib/session";
 import { signInWith, signInWithEmail } from "./actions";
 
 export const metadata = { title: "Log in" };
@@ -27,7 +27,8 @@ const DiscordIcon = () => (
 export default async function Login({ searchParams }) {
   const params = await searchParams;
   // Signed in already: a failed "Connect Discord" lands here with an error, so show it on the Account page.
-  if (await getCurrentUser()) redirect(params?.error ? `/app/account?link=failed&reason=${encodeURIComponent(params.error)}` : "/app");
+  const next = safeNext(params?.next);
+  if (await getCurrentUser()) redirect(params?.error ? `/app/account?link=failed&reason=${encodeURIComponent(params.error)}` : next);
   const signup = params?.mode === "signup";
   const open = demoMode || authEnabled;
   const has = (p) => demoMode || enabledProviders.includes(p);
@@ -50,12 +51,12 @@ export default async function Login({ searchParams }) {
           <>
             <div style={{ display: "grid", gap: 10 }}>
               {has("google") && (
-                <form action={signInWith.bind(null, "google")}>
+                <form action={signInWith.bind(null, "google", next)}>
                   <button className="btn block"><GoogleIcon /> Continue with Google</button>
                 </form>
               )}
               {has("discord") && (
-                <form action={signInWith.bind(null, "discord")}>
+                <form action={signInWith.bind(null, "discord", next)}>
                   <button className="btn block"><DiscordIcon /> Continue with Discord</button>
                 </form>
               )}
@@ -64,6 +65,7 @@ export default async function Login({ searchParams }) {
               <>
                 <div className="divider">or use your email</div>
                 <form action={signInWithEmail}>
+                  <input type="hidden" name="next" value={next} />
                   <label className="field" htmlFor="email">Email address</label>
                   <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
                   <button className="btn primary block" style={{ marginTop: 12 }}>Email me a sign-in link</button>

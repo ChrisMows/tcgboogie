@@ -3,7 +3,6 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-
 import { effectiveTier } from "@/lib/access";
 import { db, schema } from "@/lib/db";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
-import { ebayLink } from "@/lib/ebay-link";
 import { clampToPlan, matches, RAW_CONDITIONS } from "@/lib/filters";
 import { log } from "@/lib/log";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
@@ -139,14 +138,16 @@ async function alertMember(user, discordId, d, filterName, ready) {
   const allowed = planFor("premium").watchAlertChannels;
   const grade = d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
   const title = `⚡ ${d.name} ${grade}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
-  const link = ebayLink(d.url, "deal-alert");
+  // Every alert opens the deal on TCG Boogie: price check, recent eBay sales, and the eBay button (affiliate-tracked).
+  const dealUrl = d.productId
+    ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}`
+    : `${SITE}/app/deals`;
   const lines = [
     `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${grade}`,
     `${money(d.total)} with shipping. Sells for about ${money(d.marketValue)} (${d.comps || "recent"} sales).`,
     `About ${d.minutesLeft} min left. Matched your filter “${filterName}”.`,
     ...(d.photoCheck === "match" ? ["✓ Photo checked: the listing photos match this card."] : []),
     ...(d.flags?.length ? [`Check first: ${d.flags.join(" · ")}`] : []),
-    ...(d.productId ? [`Prices by condition and grade, and recent sales: ${SITE}/app/cards/${d.productId}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}`] : []),
   ];
   const res = { sent: 0, failed: 0 };
   const attempt = async (channel, fn) => {
@@ -162,17 +163,18 @@ async function alertMember(user, discordId, d, filterName, ready) {
   };
   if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
     await attempt("email", () => sendEmail(user.email, {
-      subject: title, heading: title, lines, button: { label: "Open on eBay", url: link.href },
-      footer: `${link.affiliate ? "eBay links may earn us a commission. " : ""}Manage your filters: ${SITE}/app/deals`,
+      subject: title, heading: title, lines: [...lines, "See recent eBay sales and open the listing from the deal page."],
+      button: { label: "See the deal", url: dealUrl },
+      footer: `Manage your filters: ${SITE}/app/deals`,
     }));
   }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {
-      title, url: link.href, description: lines.join("\n"),
+      title, url: dealUrl, description: `${lines.join("\n")}\n[See the deal, recent sales and the listing](${dealUrl})`,
     }));
   }
   if (ready.sms && user.phone && user.phoneVerifiedAt && user.alertSms && allowed.includes("sms")) {
-    await attempt("sms", () => sendSms(user.phone, `TCG Boogie deal: ${d.name} ${grade} ${money(d.total)}, ${Math.round(d.discountPct)}% below, ~${d.minutesLeft} min left. ${link.href}  Reply STOP to opt out.`));
+    await attempt("sms", () => sendSms(user.phone, `TCG Boogie deal: ${d.name} ${grade} ${money(d.total)}, ${Math.round(d.discountPct)}% below, ~${d.minutesLeft} min left. ${dealUrl}  Reply STOP to opt out.`));
   }
   return res;
 }

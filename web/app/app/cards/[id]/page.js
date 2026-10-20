@@ -70,9 +70,12 @@ function DealBox({ deal: d, premium }) {
 }
 
 export default async function CardPage({ params, searchParams }) {
-  const user = await requireUser();
   const { id } = await params;
-  const language = (await searchParams)?.lang === "japanese" ? "japanese" : "english";
+  const sp = await searchParams;
+  const language = sp?.lang === "japanese" ? "japanese" : "english";
+  // Signed out (e.g. tapped a deal alert): sign in, then come straight back to this deal.
+  const back = `/app/cards/${encodeURIComponent(id)}${sp?.deal ? `?deal=${encodeURIComponent(sp.deal)}${language === "japanese" ? "&lang=japanese" : ""}` : ""}`;
+  const user = await requireUser(back);
   let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
   if (product === undefined) {
     if (!allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;

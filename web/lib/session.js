@@ -48,9 +48,18 @@ export async function getCurrentUser() {
   return { ...row, tier, plan: planFor(tier), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
 }
 
-/** Use in member pages: returns the user or sends them to the login page. */
-export async function requireUser() {
+/**
+ * Where to go after signing in: only pages inside the member area (no other sites, no "//evil.com" tricks).
+ * Anything else falls back to the dashboard.
+ */
+export function safeNext(path) {
+  const p = String(path || "");
+  return /^\/app(\/[\w\-/%.]*)?(\?[\w\-=&%.]*)?$/.test(p) && !p.startsWith("//") && !p.includes("..") ? p : "/app";
+}
+
+/** Use in member pages: returns the user or sends them to the login page (and back to `next` afterwards). */
+export async function requireUser(next) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(next && safeNext(next) !== "/app" ? `/login?next=${encodeURIComponent(safeNext(next))}` : "/login");
   return user;
 }
