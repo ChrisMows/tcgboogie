@@ -1,6 +1,7 @@
 "use server";
 
-import { listItem, SellError } from "@/lib/ebay-sell";
+import { redirect } from "next/navigation";
+import { listItem, SellError, setupPolicies } from "@/lib/ebay-sell";
 import { logError } from "@/lib/log";
 import { allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
@@ -37,4 +38,24 @@ export async function listOnEbay(itemId, formData) {
     await logError("admin", "eBay listing failed", e, { itemId }, user.id);
     return { ok: false, error: "Something went wrong talking to eBay. Please try again." };
   }
+}
+
+/** Quick setup: create the seller's missing shipping, payment and return policies on eBay, then back to the listing. */
+export async function createPolicies(itemId, formData) {
+  const user = await requireUser();
+  const back = `/app/collection/sell/${Number(itemId)}`;
+  if (user.demo) redirect(back);
+  if (!allow("ebayList", user.id)) redirect(`${back}?setup=${encodeURIComponent("Too many tries. Please wait a few minutes.")}`);
+  let err = null;
+  try {
+    await setupPolicies(user.id, {
+      shipping: formData.get("shipping") === "free" ? "free" : "flat",
+      shipCost: formData.get("shipCost"), handlingDays: formData.get("handlingDays"),
+      returns: formData.get("returns") === "30" ? "30" : "none",
+    });
+  } catch (e) {
+    err = e instanceof SellError && e.code === "opting_in" ? "opting_in" : `eBay: ${e.message}`.slice(0, 300);
+    if (!(e instanceof SellError)) await logError("admin", "eBay policy setup failed", e, {}, user.id);
+  }
+  redirect(err ? `${back}?setup=${encodeURIComponent(err)}` : back);
 }

@@ -147,7 +147,49 @@ export async function sellerPolicies(userId) {
     .then((j) => (j[`${kind}Policies`] || []).map((p) => ({ id: p[`${kind}PolicyId`], name: p.name })))
     .catch((e) => { if (e.code === "ebay_20403") return null; throw e; }); // 20403: not opted in to business policies
   const [fulfillment, payment, ret] = await Promise.all([get("fulfillment"), get("payment"), get("return")]);
-  return { fulfillment, payment, return: ret, ready: Boolean(fulfillment?.length && payment?.length && ret?.length) };
+  return { fulfillment, payment, return: ret, optedIn: fulfillment !== null && payment !== null && ret !== null,
+    ready: Boolean(fulfillment?.length && payment?.length && ret?.length) };
+}
+
+const ALL = [{ name: "ALL_EXCLUDING_MOTORS_VEHICLES" }];
+
+/**
+ * Create whichever of the three policies the seller is missing, from a few simple choices, switching on eBay's
+ * business policies first if needed. choices: { shipping: "free"|"flat", shipCost, handlingDays, returns: "none"|"30" }.
+ */
+export async function setupPolicies(userId, choices) {
+  let have = await sellerPolicies(userId);
+  if (!have.optedIn) {
+    await ebay(userId, "POST", "/sell/account/v1/program/opt_in", { programType: "SELLING_POLICY_MANAGEMENT" })
+      .catch((e) => { if (!/already/i.test(e.message)) throw e; });
+    have = await sellerPolicies(userId);
+    if (!have.optedIn) throw new SellError("eBay is still switching on business policies for your account. Try again in a few minutes.", "opting_in");
+  }
+  const free = choices.shipping === "free";
+  const cost = free ? 0 : Math.max(0, Math.min(100, Number(choices.shipCost) || 0));
+  if (!have.fulfillment.length) {
+    const service = (code) => ({
+      name: `TCG Boogie: ${free ? "free shipping" : `$${cost.toFixed(2)} shipping`}`, marketplaceId: MARKETPLACE, categoryTypes: ALL,
+      handlingTime: { value: [1, 2, 3].includes(Number(choices.handlingDays)) ? Number(choices.handlingDays) : 1, unit: "DAY" },
+      shippingOptions: [{ optionType: "DOMESTIC", costType: "FLAT_RATE", shippingServices: [{
+        shippingCarrierCode: "USPS", shippingServiceCode: code, sortOrder: 1, freeShipping: free,
+        shippingCost: { value: cost.toFixed(2), currency: "USD" },
+      }] }],
+    });
+    // USPS Ground Advantage replaced First Class; fall back to Priority if eBay doesn't take the code.
+    await ebay(userId, "POST", "/sell/account/v1/fulfillment_policy", service("USPSGroundAdvantage"))
+      .catch(() => ebay(userId, "POST", "/sell/account/v1/fulfillment_policy", service("USPSPriority")));
+  }
+  if (!have.payment.length) {
+    await ebay(userId, "POST", "/sell/account/v1/payment_policy", { name: "TCG Boogie: eBay checkout", marketplaceId: MARKETPLACE, categoryTypes: ALL, immediatePay: true });
+  }
+  if (!have.return.length) {
+    const r = choices.returns === "30"
+      ? { returnsAccepted: true, returnPeriod: { value: 30, unit: "DAY" }, returnShippingCostPayer: "BUYER", refundMethod: "MONEY_BACK" }
+      : { returnsAccepted: false };
+    await ebay(userId, "POST", "/sell/account/v1/return_policy", { name: `TCG Boogie: ${choices.returns === "30" ? "30-day returns" : "no returns"}`, marketplaceId: MARKETPLACE, categoryTypes: ALL, ...r });
+  }
+  await log("admin", "info", "Created eBay shipping, payment and return policies", { shipping: free ? "free" : cost, returns: choices.returns }, userId);
 }
 
 async function ensureLocation(userId, postalCode) {
