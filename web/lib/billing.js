@@ -12,6 +12,7 @@ import { PLANS } from "@/lib/plans";
 const { users, appSettings, stripeEvents } = schema;
 const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
 const PRICE_KEY = "tcgboogie_premium_monthly"; // Stripe lookup key for the Premium price
+const TAX_CODE = "txcd_10103001"; // Stripe tax code: Software as a service (SaaS), personal use
 const EVENTS = [
   "checkout.session.completed",
   "customer.subscription.created",
@@ -77,13 +78,16 @@ async function putSetting(key, value) {
  */
 export async function premiumPrice() {
   const cents = Math.round(PLANS.premium.price * 100);
-  const found = await stripe("GET", "prices", { lookup_keys: [PRICE_KEY], active: "true", limit: 1 });
+  const found = await stripe("GET", "prices", { lookup_keys: [PRICE_KEY], active: "true", limit: 1, expand: ["data.product"] });
   const p = found.data?.[0];
+  // Stripe Tax needs a tax code on the product: Premium is a software subscription for personal use.
+  if (p?.product && !p.product.tax_code) await stripe("POST", `products/${p.product.id}`, { tax_code: TAX_CODE });
   if (p && p.unit_amount === cents && p.currency === "usd" && p.recurring?.interval === "month") return p.id;
-  const product = p?.product || (await stripe("POST", "products", {
+  const product = p?.product?.id || (await stripe("POST", "products", {
     name: "TCG Boogie Premium",
     description: "Instant deal alerts, price alerts by text, Discord and email, and the full collection tracker.",
     statement_descriptor: "TCG BOOGIE",
+    tax_code: TAX_CODE,
   })).id;
   const created = await stripe("POST", "prices", {
     product, currency: "usd", unit_amount: cents, recurring: { interval: "month" },
