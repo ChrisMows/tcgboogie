@@ -1,6 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { PLANS } from "@/lib/plans";
@@ -225,19 +225,28 @@ async function applySubscription(sub, userId) {
   if (u.stripeSubscriptionId && u.stripeSubscriptionId !== sub.id && !PAID.includes(sub.status) && PAID.includes(u.subscriptionStatus)) return;
   const end = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
   const tier = PAID.includes(sub.status) ? "premium" : "free";
-  if (u.subscriptionStatus !== sub.status || u.tier !== tier || Boolean(u.cancelAtPeriodEnd) !== Boolean(sub.cancel_at_period_end || sub.cancel_at)) {
-    await log("payments", sub.status === "past_due" || sub.status === "unpaid" ? "warn" : "info",
-      `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${sub.cancel_at_period_end ? " (cancels at month end)" : ""}; plan ${tier}`,
-      { subscription: sub.id, renews: end ? new Date(end * 1000).toISOString() : null }, id);
-  }
-  await db.update(users).set({
+  const cancelling = Boolean(sub.cancel_at_period_end || sub.cancel_at);
+  const fields = {
     stripeCustomerId: sub.customer,
     stripeSubscriptionId: sub.id,
     subscriptionStatus: sub.status,
     tier,
     currentPeriodEnd: end ? new Date(end * 1000) : null,
-    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end || sub.cancel_at),
-  }).where(eq(users.id, id));
+    cancelAtPeriodEnd: cancelling,
+  };
+  // Stripe sends several events at once: only the update that actually changes the plan gets logged.
+  const changed = await db.update(users).set(fields).where(and(eq(users.id, id), or(
+    sql`${users.subscriptionStatus} is distinct from ${sub.status}`,
+    sql`${users.tier} is distinct from ${tier}`,
+    sql`${users.cancelAtPeriodEnd} is distinct from ${cancelling}`,
+  ))).returning({ id: users.id });
+  if (changed.length) {
+    await log("payments", sub.status === "past_due" || sub.status === "unpaid" ? "warn" : "info",
+      `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${cancelling ? " (cancels at month end)" : ""}; plan ${tier}`,
+      { subscription: sub.id, renews: fields.currentPeriodEnd?.toISOString() ?? null }, id);
+  } else {
+    await db.update(users).set(fields).where(eq(users.id, id)); // e.g. the renewal date moved on
+  }
 }
 
 /** Check Stripe's signature on a webhook (Stripe-Signature: t=…,v1=…). Rejects anything older than 5 minutes. */

@@ -30,7 +30,7 @@ const METHODS = ["google", "discord", "email"];
 
 const fmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 const BILLING_NOTES = {
-  welcome: ["good", "Welcome to Premium! Your receipt is on its way to your email."],
+  welcome: ["good", "Welcome to Premium! Stripe emails your receipt, and you can find every invoice under Manage billing."],
   pending: ["warn", "Payment received by Stripe. Your Premium switches on within a minute; refresh this page if it hasn't yet."],
   cancelled: ["", "Checkout cancelled. You weren't charged."],
   already: ["", "You already have Premium. Use Manage billing to change your card or plan."],
@@ -76,17 +76,17 @@ export default async function Account({ searchParams }) {
           <div>
             <div className="small muted">Your plan</div>
             <div className="plan-panel-name">
-              {user.plan.label}{" "}
+              {subscribed ? "Premium" : user.plan.label}{" "}
               {subscribed && user.subscriptionStatus === "past_due" ? <span className="badge warn">Payment due</span>
                 : subscribed && user.cancelAtPeriodEnd ? <span className="badge">Ending</span>
-                : premium ? <span className="badge accent">Active</span> : null}
+                : premium || subscribed ? <span className="badge accent">Active</span> : null}
             </div>
             <div className="small muted">
               {subscribed ? (
                 user.cancelAtPeriodEnd
                   ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
                   : <>${PLANS.premium.price}/month{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
-              ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+              ){subscribed && user.isAdmin && !user.demo && !premium ? <> · previewing the site as <b>Free</b></> : null} : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
                 : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
             </div>
@@ -120,7 +120,7 @@ export default async function Account({ searchParams }) {
         {BILLING_NOTES[params?.billing] && (
           <div className={`notice ${BILLING_NOTES[params.billing][0]}`} style={{ marginTop: 12 }}>{BILLING_NOTES[params.billing][1]}</div>
         )}
-        {!premium && (
+        {!premium && !subscribed && (
           <ul className="plan-perks">{PLANS.premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
         )}
       </div>
@@ -299,7 +299,7 @@ export default async function Account({ searchParams }) {
         <h2>Delete account</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Permanently deletes your account, filter profiles, price alerts, collection and alert history.
-          {premium && !user.isAdmin
+          {subscribed || (premium && !user.isAdmin)
             ? " Your Premium subscription is cancelled at the same moment, and you won't be charged again."
             : " If you have a subscription, it's cancelled at the same moment, and you won't be charged again."}
         </p>
