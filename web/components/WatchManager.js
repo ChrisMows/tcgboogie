@@ -295,7 +295,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       )}
       <p className="hint" style={{ marginTop: 16 }}>
         TCGplayer prices update about once a day. Each alert fires once, then stays quiet until the price moves back
-        past your target (or you re-arm it). Links to TCGplayer may earn us a commission.
+        past your target (or you re-arm it).
       </p>
     </>
   );

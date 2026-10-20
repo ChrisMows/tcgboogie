@@ -3,8 +3,9 @@ import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { logError } from "@/lib/log";
+import { ebayAccount, ebaySellReady } from "@/lib/ebay-sell";
 import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
-import { changeRenewal, connectProvider, deleteAccount, openBillingPortal, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
+import { changeRenewal, connectProvider, deleteAccount, disconnectEbay, openBillingPortal, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
@@ -30,6 +31,13 @@ const PROVIDER_LABELS = { google: "Google", discord: "Discord", email: "Email li
 const METHODS = ["google", "discord", "email"];
 
 const fmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+const EBAY_NOTES = {
+  connected: ["good", "eBay connected. Open any card in your collection and tap Sell on eBay."],
+  declined: ["warn", "eBay wasn't connected (access wasn't allowed). You can try again anytime."],
+  failed: ["bad", "We couldn't connect eBay. Please try again; if it keeps failing, email support@tcgboogie.com."],
+  unavailable: ["warn", "eBay selling isn't available yet."],
+  disconnected: ["good", "eBay disconnected. We've deleted the access eBay gave us."],
+};
 const BILLING_NOTES = {
   welcome: ["good", "Welcome to Premium! Stripe emails your receipt, and you can find every invoice under Manage billing."],
   pending: ["warn", "Payment received by Stripe. Your Premium switches on within a minute; refresh this page if it hasn't yet."],
@@ -57,6 +65,8 @@ export default async function Account({ searchParams }) {
     redirect(`/app/account?billing=${ok ? "welcome" : "pending"}#plan`);
   }
   const payments = billingLive() && !user.demo;
+  const ebay = user.demo ? null : await ebayAccount(user.id).catch(() => null);
+  const ebayReady = ebaySellReady() && !user.demo;
   const testMode = billingMode() === "test";
   const subscribed = hasLiveSubscription(user);
   // Admins can test checkout while previewing as Free; comped members don't need to pay.
@@ -293,6 +303,28 @@ export default async function Account({ searchParams }) {
             );
           })}
         </ul>
+      </div>
+
+      <div className="panel" id="ebay">
+        <h2>Sell on eBay</h2>
+        {EBAY_NOTES[params?.ebay] && <div className={`notice ${EBAY_NOTES[params.ebay][0]}`}>{EBAY_NOTES[params.ebay][1]}</div>}
+        {ebay ? (
+          <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <span style={{ flex: "1 1 260px" }}>
+              ✓ Connected{ebay.ebayUsername ? <> as <b>{ebay.ebayUsername}</b></> : ""}. Use <b>Sell on eBay</b> on any card in your collection to list it in a minute.
+            </span>
+            <form action={disconnectEbay} style={{ flex: "none" }}><button className="btn sm ghost">Disconnect eBay</button></form>
+          </div>
+        ) : (
+          <>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Connect your eBay seller account and list cards straight from your collection: we fill in the title, set, number, grade or
+              condition, cert number and a price from recent sales. You add photos and post. We never see your eBay password.
+            </p>
+            {ebayReady ? <a className="btn primary" href="/api/ebay/connect">Connect eBay</a>
+              : <span className="small muted">Coming soon.</span>}
+          </>
+        )}
       </div>
 
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>

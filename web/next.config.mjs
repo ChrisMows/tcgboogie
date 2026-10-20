@@ -18,6 +18,8 @@ const CSP = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // "Sell on eBay" sends card photos with the form (up to 6 photos, resized in the browser first).
+  experimental: { serverActions: { bodySizeLimit: "25mb" } },
   // Old member pages, merged into Deals and Account (query strings such as ?pokemon= are kept).
   async redirects() {
     return [

@@ -833,3 +833,25 @@ a.cond-link:hover { border-color: var(--accent); }
 .dq-main { width: 100%; justify-content: center; padding: 15px; font-size: 16px; margin-top: 16px; }
 .dq-alt { display: flex; gap: 8px; }
 .dq-alt > * { flex: 1; justify-content: center; text-align: center; }
+
+/* Sell on eBay */
+.sell-head { display: flex; gap: 16px; align-items: center; margin: 4px 0 16px; }
+.sell-head h1 { margin: 2px 0 4px; }
+.sell-form { max-width: 760px; }
+.sell-step { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.sell-step h2 { font-size: 17px; margin: 0 0 10px; }
+.sell-photos { display: flex; gap: 10px; flex-wrap: wrap; }
+.sell-photo { position: relative; width: 104px; height: 104px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: #0d1117; }
+.sell-photo img { width: 100%; height: 100%; object-fit: cover; }
+.sell-photo button { position: absolute; top: 4px; right: 4px; background: #000a; color: #fff; border: 0; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; }
+.sell-main { position: absolute; left: 4px; bottom: 4px; font-size: 10px; font-weight: 700; background: var(--accent); color: var(--accent-ink); border-radius: 4px; padding: 1px 5px; }
+.sell-add { width: 104px; height: 104px; border-radius: 10px; border: 2px dashed #4a5361; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 13px; text-align: center; }
+.sell-add:hover { border-color: var(--accent); color: var(--accent); }
+.sell-facts { margin: 6px 0 10px; }
+.sell-form textarea { width: 100%; }
+.sell-form .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.sell-form .seg label { padding: 7px 16px; cursor: pointer; font-size: 14px; }
+.sell-form .seg label.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.sell-go { width: 100%; justify-content: center; padding: 15px; font-size: 16px; }
+.sell-done { max-width: 560px; text-align: center; }
+.sell-link { color: var(--accent); }

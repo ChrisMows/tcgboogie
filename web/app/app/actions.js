@@ -271,6 +271,16 @@ export async function connectProvider(provider) {
 }
 
 /** Disconnect a sign-in method, as long as another one remains. */
+/** Forget the member's eBay connection (deletes the stored eBay tokens). */
+export async function disconnectEbay() {
+  const user = await requireUser();
+  if (!user.demo) {
+    const { disconnect } = await import("@/lib/ebay-sell");
+    await disconnect(user.id);
+  }
+  redirect("/app/account?ebay=disconnected#ebay");
+}
+
 export async function disconnectProvider(provider) {
   const user = await requireUser();
   if (user.demo) {

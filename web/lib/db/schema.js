@@ -231,3 +231,29 @@ export const deals = pgTable("deal", {
   lastSeenAt: timestamp("last_seen_at", { mode: "date" }),
   dispatchedAt: timestamp("dispatched_at", { mode: "date" }),
 }, (t) => [index("deal_ends_idx").on(t.endsAt)]);
+
+// A member's connected eBay seller account (for "Sell on eBay"). Tokens are encrypted (lib/secret-box.js).
+export const ebayAccounts = pgTable("ebay_account", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  ebayUsername: text("ebay_username"),
+  accessToken: text("access_token").notNull(), // encrypted
+  accessExpiresAt: timestamp("access_expires_at", { mode: "date" }).notNull(),
+  refreshToken: text("refresh_token").notNull(), // encrypted
+  refreshExpiresAt: timestamp("refresh_expires_at", { mode: "date" }),
+  postalCode: text("postal_code"), // where items ship from (eBay requires a location)
+  connectedAt: timestamp("connected_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+// Listings a member created on eBay from their collection.
+export const ebayListings = pgTable("ebay_listing", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemId: integer("item_id").references(() => collectionItems.id, { onDelete: "set null" }),
+  sku: text("sku").notNull(),
+  offerId: text("offer_id"),
+  listingId: text("listing_id"),
+  format: text("format"), // FIXED_PRICE / AUCTION
+  price: doublePrecision("price"),
+  title: text("title"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("ebay_listing_user_idx").on(t.userId)]);
