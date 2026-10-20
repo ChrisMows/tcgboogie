@@ -40,7 +40,9 @@ export async function getDeal(id) {
 /** Deals found in the last `days` (live and ended), newest first. */
 export async function recentDeals({ days = 7, limit = 300 } = {}) {
   if (!db) return [];
-  const rows = await db.select().from(deals).where(gt(deals.endsAt, new Date(Date.now() - days * DAY)))
+  // Deals the photo check found to be a different card are never shown.
+  const rows = await db.select().from(deals).where(and(gt(deals.endsAt, new Date(Date.now() - days * DAY)),
+    sql`coalesce(${deals.data}->>'photoCheck', '') <> 'different_card'`))
     .orderBy(desc(deals.endsAt)).limit(limit);
   return rows.map((r) => toDeal(r));
 }

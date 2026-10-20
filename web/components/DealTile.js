@@ -15,6 +15,7 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
       <div className="dt-art">
         <CardThumb item={{ image: d.image, name: d.name, number: d.number, type: "card" }} width={120} />
         <span className="dt-off">−{d.discountPct}%</span>
+        <span className={`dt-status ${missed ? "ended" : "live"}`}>{missed ? "Ended" : "● Live"}</span>
         {d.flags?.length > 0 && <span className="dt-flag" title={d.flags.join(" · ")}>⚠ {d.flags.length}</span>}
       </div>
       <div className="dt-info">
@@ -45,12 +46,15 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
   );
 }
 
-/** A grid of deal tiles with an empty state. */
+/** A grid of deal tiles with an empty state. Live deals first (ending soonest), then ended ones (newest first). */
 export function DealGrid({ deals, mode, empty }) {
   if (!deals.length) return <div className="panel empty-state">{empty || "No deals yet."}</div>;
+  const isLive = (d) => mode !== "missed" && !d.ended;
+  const sorted = [...deals].sort((a, b) => (isLive(b) - isLive(a))
+    || (isLive(a) ? (a.minutesLeft ?? 0) - (b.minutesLeft ?? 0) : String(b.endsAt || "").localeCompare(String(a.endsAt || ""))));
   return (
     <div className="deal-tiles">
-      {deals.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} />)}
+      {sorted.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} />)}
     </div>
   );
 }

@@ -373,7 +373,15 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .dt-mkt { font-size: 12px; color: var(--muted); text-decoration: line-through; }
 .dt-time { font-size: 12px; color: var(--muted); }
 .dt-time.live { color: var(--accent); font-weight: 600; }
-.deal-tile.missed .dt-art .thumb { filter: saturate(0.6); }
+/* Live vs ended: ended deals are greyed out and labeled, so it's obvious which auctions are still open. */
+.dt-status { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.dt-status.live { background: var(--good); color: #06210c; box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.25); }
+.dt-status.ended { background: #2a313c; color: #c3cad4; border: 1px solid #4a5361; }
+.deal-tile.missed { background: #12161c; border-color: #252b34; }
+.deal-tile.missed .dt-art .thumb { filter: grayscale(1) brightness(0.75); opacity: 0.7; }
+.deal-tile.missed .dt-off { background: #3a414c; color: #c3cad4; }
+.deal-tile.missed .dt-name, .deal-tile.missed .dt-price b { color: #9aa3ae; }
+.deal-tile.missed a, a.deal-tile.missed:hover { border-color: #3a414c; }
 @media (max-width: 600px) {
   .fs-bar { flex-wrap: nowrap; overflow-x: auto; padding: 10px; }
   .fs-pop { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; }
