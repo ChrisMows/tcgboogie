@@ -30,7 +30,7 @@
 .home .slab-label b { font-size: 30px; line-height: 1; }
 .home .float { position: absolute; background: #1b222cef; border: 1px solid #414b5b; border-radius: 10px; padding: 16px; box-shadow: 0 15px 35px #0009; z-index: 2; }
 .home .frow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.home .alert { right: -40px; top: 128px; transform: rotate(4deg); font-size: 15px; width: 250px; padding: 18px; }
+.home .alert { right: -40px; top: 352px; transform: rotate(4deg); font-size: 15px; width: 250px; padding: 18px; }
 .home .alert small { color: var(--accent); font-size: 11.5px; font-weight: 700; letter-spacing: 1px; }
 .home .alert strong { display: block; margin: 8px 0 6px; font-size: 16px; }
 .home .alert p { color: #b4bfcd; margin: 0; font-size: 13px; line-height: 1.4; }
