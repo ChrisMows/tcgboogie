@@ -13,9 +13,10 @@ import { targetPrice } from "@/lib/watches";
 import { ebayLink, ebaySearch } from "@/lib/ebay-link";
 import { getDeal } from "@/lib/deals";
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   // Title from the cache only: this runs before the sign-in check, so it must never spend price-service credits.
-  const p = await getProduct((await params).id, { cachedOnly: true }).catch(() => null);
+  const language = (await searchParams)?.lang === "japanese" ? "japanese" : "english";
+  const p = await getProduct((await params).id, { cachedOnly: true, language }).catch(() => null);
   return { title: p ? p.name : "Card" };
 }
 
@@ -71,10 +72,11 @@ function DealBox({ deal: d, premium }) {
 export default async function CardPage({ params, searchParams }) {
   const user = await requireUser();
   const { id } = await params;
-  let product = await getProduct(id, { cachedOnly: true }).catch(() => null);
+  const language = (await searchParams)?.lang === "japanese" ? "japanese" : "english";
+  let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
   if (product === undefined) {
     if (!allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
-    try { product = await getProduct(id); } catch { product = null; }
+    try { product = await getProduct(id, { language }); } catch { product = null; }
   }
   if (product === null) notFound();
   const p = slim(product);
@@ -103,7 +105,7 @@ export default async function CardPage({ params, searchParams }) {
   const thinGraded = allGraded.filter(([, g]) => g.reliable === false);
   const isSealed = p.type === "sealed";
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
-  const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim();
+  const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}${language === "japanese" ? " Japanese" : ""}`.trim();
   const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
   const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
   // Sold searches per grade ("… PSA 10"), for the graded cells.
@@ -148,9 +150,19 @@ export default async function CardPage({ params, searchParams }) {
             </span>
           </div>
           {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
-          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
+{language === "japanese" ? (
+            <div className="card-actions">
+              <div className="action-row">
+                <a href={ebay.href} target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live">Live listings ↗</a>
+                <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold">🧾 Recent sales ↗</a>
+              </div>
+              <p className="hint">Japanese card. Collection tracking and price alerts cover English cards for now.</p>
+            </div>
+          ) : (
+                    <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
             plan={user.plan} filterHref={filterHref}
             ebayLive={ebay} ebaySold={ebaySold} />
+          )}
         </div>
       </div>
 

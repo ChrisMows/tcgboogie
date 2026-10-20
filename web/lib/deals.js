@@ -146,7 +146,7 @@ async function alertMember(user, discordId, d, filterName, ready) {
     `About ${d.minutesLeft} min left. Matched your filter “${filterName}”.`,
     ...(d.photoCheck === "match" ? ["✓ Photo checked: the listing photos match this card."] : []),
     ...(d.flags?.length ? [`Check first: ${d.flags.join(" · ")}`] : []),
-    ...(d.productId ? [`Prices by condition and grade, and recent sales: ${SITE}/app/cards/${d.productId}?deal=${encodeURIComponent(d.id)}`] : []),
+    ...(d.productId ? [`Prices by condition and grade, and recent sales: ${SITE}/app/cards/${d.productId}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}`] : []),
   ];
   const res = { sent: 0, failed: 0 };
   const attempt = async (channel, fn) => {

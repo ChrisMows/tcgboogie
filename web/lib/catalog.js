@@ -239,12 +239,16 @@ function fromSealed(s) {
  * One TCGplayer product (card or sealed) by TCGplayer product ID, with prices, slab values and 90 days of history.
  * With { cachedOnly: true } it returns undefined instead of spending API credits when the product isn't cached.
  */
-export async function getProduct(id, { cachedOnly = false } = {}) {
+export async function getProduct(id, { cachedOnly = false, language = "english" } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
   // Same request (and cache entry) as the deal bot's price lookups; prices update about once a day.
-  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { includeHistory: "true", includeEbay: "true", days: "90" }, PRICE_TTL, cachedOnly);
+  // Japanese cards are a separate catalog: the bot adds language=japanese, so we do too and share its copy.
+  const japanese = language === "japanese";
+  const card = await ppt(`/cards/${encodeURIComponent(id)}`,
+    { includeHistory: "true", includeEbay: "true", days: "90", ...(japanese ? { language: "japanese" } : {}) }, PRICE_TTL, cachedOnly);
   if (card === MISS) return undefined;
-  if (card?.data) return fromCard(Array.isArray(card.data) ? card.data[0] : card.data);
+  if (card?.data) return { ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) };
+  if (japanese) return null;
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
