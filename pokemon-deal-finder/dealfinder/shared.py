@@ -43,22 +43,28 @@ def _db():
 
 
 def _run(sql, params=(), fetch=False):
+    """Run one statement. The database closes idle connections (after ~5 minutes), so on a connection error
+    reconnect and try once more before falling back to the local cache."""
     global _conn, _down_until
-    conn = _db()
-    if conn is None:
-        return None
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            return cur.fetchone() if fetch else True
-    except Exception as e:  # noqa: BLE001
-        log.warning("Shared database error (%s); using the local cache for now", type(e).__name__)
+    for attempt in (1, 2):
+        conn = _db()
+        if conn is None:
+            return None
         try:
-            conn.close()
-        except Exception:  # noqa: BLE001
-            pass
-        _conn, _down_until = None, time.time() + 60
-        return None
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchone() if fetch else True
+        except Exception as e:  # noqa: BLE001
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+            _conn = None
+            if attempt == 2 or not isinstance(e, psycopg.OperationalError):
+                log.warning("Shared database error (%s); using the local cache for now", type(e).__name__)
+                _down_until = time.time() + 60
+                return None
+    return None
 
 
 # ----- price-lookup cache -----

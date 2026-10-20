@@ -125,3 +125,15 @@ Change these with `/settings set`, on the dashboard's **Settings** page, or in `
 ## eBay API usage
 Checks run every 75 seconds, which uses roughly 1,200–2,500 of the 5,000 free daily calls. The finder slows down
 automatically if it nears the limit. eBay will raise the limit for free through its "Application Growth Check" if needed.
+
+## Running on the server (website mode)
+
+The bot runs 24/7 on a Hostinger VPS (Ubuntu, 2.24.77.223) as the `dealbot` service, in website mode (`run_web.py`):
+deals go to tcgboogie.com, which alerts members by their filters. Don't also run `run_web.py` / `start_web.bat` on your
+PC, or the two copies will share (and double-spend) the eBay and price-lookup budgets.
+
+- Log: `ssh -i ~/.ssh/tcgboogie_vps root@2.24.77.223 journalctl -u dealbot -f`
+- Restart: `... systemctl restart dealbot`  ·  Stop: `... systemctl stop dealbot`
+- Deploy code changes: `bash deploy/update_vps.sh` (keeps the server's .env and data/)
+- First-time setup of a new server: `deploy/setup_vps.sh`
+- Health: tcgboogie.com → Admin → Status → Deal bot
