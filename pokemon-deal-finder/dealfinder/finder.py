@@ -108,7 +108,7 @@ def next_interval(cfg, calls_today):
 
 
 class Finder:
-    def __init__(self, dry_run=False, notifier=None, on_deal=None, scan_fn=None):
+    def __init__(self, dry_run=False, notifier=None, on_deal=None, scan_fn=None, on_listings=None, after_check=None):
         """notifier(rec, card) -> bool sends one alert (webhook mode).
         on_deal(rec, card) -> bool hands each deal to the member dispatcher instead (bot mode).
         scan_fn(cfg) -> cfg|None widens/narrows each check to what active filter profiles need."""
@@ -119,6 +119,8 @@ class Finder:
         self.notifier = notifier
         self.on_deal = on_deal
         self.scan_fn = scan_fn
+        self.on_listings = on_listings  # on_listings(summaries): every ending auction seen this check
+        self.after_check = after_check  # after_check(stats): once each check is done
         self.detail_cache = {}  # item_id -> (fetched_at, detail json)
         self.ppt = None
         self._auto_blocked = False
@@ -159,6 +161,8 @@ class Finder:
 
         summaries = self.ebay.search_ending_auctions(search_window(self.cfg), self.cfg["poll"]["max_pages"])
         stats["listings"] = len(summaries)
+        if getattr(self, "on_listings", None):
+            self.on_listings(summaries)
         self._auto_blocked = False
         self._paused_reason = None
         # Most valuable listings first: when price-lookup credits are being paced, they get the lookups.
@@ -201,6 +205,8 @@ class Finder:
             ppt.cache_hits = 0
         db.set_setting(self.conn, "last_check", db.now_iso())
         db.set_setting(self.conn, "last_check_listings", stats["listings"])
+        if getattr(self, "after_check", None):
+            self.after_check(stats)
         return stats
 
     # ----- watchlist (your own comps) -----
@@ -312,7 +318,7 @@ class Finder:
 
         ident = {"id": None, "kind": "graded", "name": _base_name(card.get("name", "")), "set_name": card.get("setName", ""),
                  "card_number": card.get("cardNumber", ""), "variants": ", ".join(sorted(listing.variants())),
-                 "language": lang, "grader": grader, "grade": grade}
+                 "language": lang, "grader": grader, "grade": grade, "product_id": card.get("tcgPlayerId")}
         mv = auto_market_value(priced.get("card"), int(priced.get("history_days") or 0), grader, grade, self.cfg)
         if not mv.ok:
             return skip(mv.reason, label=card_label(ident), mv=mv)
@@ -393,7 +399,8 @@ class Finder:
         def ident_for(condition):
             return {"id": None, "kind": "raw", "name": _base_name(card.get("name", "")), "set_name": card.get("setName", ""),
                     "card_number": card.get("cardNumber", ""), "variants": printing, "language": lang,
-                    "grader": "Raw", "grade": condition, "tcgplayer_url": tcg_url, "tcgplayer_affiliate": tcg_aff}
+                    "grader": "Raw", "grade": condition, "tcgplayer_url": tcg_url, "tcgplayer_affiliate": tcg_aff,
+                    "product_id": card.get("tcgPlayerId")}
 
         # Cheap check first: even at Near Mint value, is it cheap enough? Only then fetch the listing's condition.
         best = raw_market_value(full, history_days, printing, "NM", self.cfg)

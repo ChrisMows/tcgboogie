@@ -175,3 +175,8 @@ red_flags:
     - stock photo
     - stock image
     - not the actual
+
+# Website mode (run_web.py): deals go to tcgboogie.com, which alerts members by their filters.
+website:
+  url: https://tcgboogie.com
+  scan_refresh_seconds: 120   # how often to re-ask the website how wide to scan

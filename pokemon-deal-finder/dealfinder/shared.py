@@ -102,3 +102,29 @@ def credits_get():
     if at.date() != datetime.now(timezone.utc).date():
         return None
     return int(v["remaining"]), at
+
+
+# ----- deals for the website (web/lib/deals.js reads these) -----
+def publish_deal(item_id, data, ends_at):
+    """Save (or refresh) a deal. Returns True if it's new. Never resets dispatched_at, so no alert goes out twice."""
+    row = _run("INSERT INTO deal (id, data, ends_at, found_at, last_price, last_seen_at) VALUES (%s, %s, %s, now(), %s, now()) "
+               "ON CONFLICT (id) DO UPDATE SET data = excluded.data, ends_at = excluded.ends_at, "
+               "last_price = excluded.last_price, last_seen_at = now() RETURNING (xmax = 0)",
+               (item_id, Jsonb(data), ends_at, data.get("total")), fetch=True)
+    return bool(row and row is not True and row[0])
+
+
+def update_last_prices(prices):
+    """{item_id: current price + shipping} for deals still visible on eBay (the last bid we saw)."""
+    if not prices:
+        return
+    _run("UPDATE deal SET last_price = v.price, last_seen_at = now() FROM "
+         "(SELECT unnest(%s::text[]) AS id, unnest(%s::float8[]) AS price) v WHERE deal.id = v.id",
+         (list(prices.keys()), list(prices.values())))
+
+
+def heartbeat(value):
+    """What the bot did on its last check (Admin → Status)."""
+    value = {**value, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    _run("INSERT INTO app_setting (key, value, updated_at) VALUES ('bot_heartbeat', %s, now()) "
+         "ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at", (Jsonb(value),))
