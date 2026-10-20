@@ -4,6 +4,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { PLANS } from "@/lib/plans";
+import { TERMS_VERSION } from "@/lib/terms";
 
 // Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
 //   STRIPE_SECRET_KEY      sk_test_… while testing, sk_live_… once launched (set on Hostinger)
@@ -164,11 +165,11 @@ export async function checkoutUrl(user) {
     customer,
     client_reference_id: user.id,
     line_items: [{ price, quantity: 1 }],
-    subscription_data: { metadata: { userId: user.id } },
+    subscription_data: { metadata: { userId: user.id, terms: TERMS_VERSION } },
     allow_promotion_codes: "true",
     customer_update: { name: "auto", address: "auto" },
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
-    cancel_url: `${SITE}/app/account?billing=cancelled#plan`,
+    cancel_url: `${SITE}/app/premium?billing=cancelled#enroll`,
   });
   await log("payments", "info", "Checkout opened", { session: s.id }, user.id);
   return s.url;

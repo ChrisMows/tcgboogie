@@ -2,7 +2,7 @@ import Link from "next/link";
 import { billingLive } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
 
-const rows = [
+export const PLAN_ROWS = [
   ["Deals", "After the auction ends, with the sale price", "Live, while you can still bid"],
   ["Instant alerts by text and Discord", "—", "✓"],
   ["Price alerts by email", "✓", "✓"],
@@ -25,7 +25,7 @@ const rows = [
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */
 export default function PlanCards({ signedIn = false }) {
   const { free, premium } = PLANS;
-  const upgrade = signedIn ? "/app/account#plan" : "/login?mode=signup&plan=premium";
+  const upgrade = signedIn ? "/app/premium" : "/login?mode=signup&plan=premium";
   return (
     <>
       <div className="plans">
@@ -58,7 +58,7 @@ export default function PlanCards({ signedIn = false }) {
           <table className="list">
             <thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead>
             <tbody>
-              {rows.map(([name, a, b]) => (
+              {PLAN_ROWS.map(([name, a, b]) => (
                 <tr key={name}><td>{name}</td><td className="muted">{a}</td><td>{b}</td></tr>
               ))}
             </tbody>

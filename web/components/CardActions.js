@@ -47,7 +47,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
     const r = await fn();
     if (r?.ok === false) {
       if (r.errors) return setErrors(r.errors);
-      return show(r.error || "Something went wrong.", r.limit ? { href: "/app/account#plan", label: "Upgrade" } : null, "bad");
+      return show(r.error || "Something went wrong.", r.limit ? { href: "/app/premium?from=watches", label: "See Premium" } : null, "bad");
     }
     setErrors({});
     if (msg) show(typeof msg === "function" ? msg(r) : msg, action);

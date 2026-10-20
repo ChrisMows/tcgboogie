@@ -34,7 +34,7 @@ export default function SideNav({ planLabel, premium, isAdmin }) {
           </Link>
         ))}
         {!premium && (
-          <Link href="/app/account#plan" className="side-upgrade">
+          <Link href="/app/premium" className="side-upgrade">
             <b>Go Premium</b>
             <span>Every deal live, before it ends.</span>
           </Link>

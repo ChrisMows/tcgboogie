@@ -7,6 +7,7 @@ import { enabledProviders, signIn, signOut } from "@/auth";
 import crypto from "node:crypto";
 import { billingLive, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
 import { log, logError } from "@/lib/log";
+import { TERMS_VERSION } from "@/lib/terms";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
@@ -100,12 +101,15 @@ export async function deleteAccount(formData) {
 const billingError = (code) => redirect(`/app/account?billing=${code}#plan`);
 
 /** Upgrade: send the member to Stripe's secure checkout page. */
-export async function startCheckout() {
+export async function startCheckout(formData) {
   const user = await requireUser();
   if (user.demo || !billingLive()) billingError("off");
+  // The Premium page asks members to agree to the terms before paying; keep a record of who agreed to which version.
+  if (formData?.get("agree") !== "on") redirect("/app/premium?agree=missing#enroll");
   if (!allow("billing", user.id)) billingError("slow");
   if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription
   let url;
+  await log("payments", "info", `Agreed to the Terms of Service (version ${TERMS_VERSION}) and started checkout`, { terms: TERMS_VERSION }, user.id);
   try { url = await checkoutUrl(user); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
   redirect(url);
 }

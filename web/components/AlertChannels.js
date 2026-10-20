@@ -28,7 +28,7 @@ export default function AlertChannels({ user }) {
       <span className="ac-title">Alerts go to</span>
       <div className="ac-list">
         {channels.map((c) => (
-          <Link key={c.key} href={c.state === "locked" ? "/app/account#plan" : c.href || "/app/account#alerts"} className={`ac-chip ${c.state}`}
+          <Link key={c.key} href={c.state === "locked" ? "/app/premium?from=alerts" : c.href || "/app/account#alerts"} className={`ac-chip ${c.state}`}
             title={c.state === "on" ? `${c.label} alerts are on` : c.state === "off" ? `${c.label} alerts are off` : c.note}>
             <span aria-hidden="true">{c.icon}</span> {c.label}
             <span className="ac-note">{c.state === "on" ? "✓" : c.state === "locked" ? "🔒" : c.state === "todo" ? `· ${c.note}` : "· off"}</span>

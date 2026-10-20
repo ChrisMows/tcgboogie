@@ -22,7 +22,7 @@ export default function LockedButton({ label, title, children, upgrade = "featur
         <span className="locked-pop" role="dialog" aria-label={title}>
           <b>{title}</b>
           <span className="small muted">{children}</span>
-          <Link href={`/app/account?upgrade=${encodeURIComponent(upgrade)}#plan`} className="btn sm primary">See Premium</Link>
+          <Link href={`/app/premium?from=${encodeURIComponent(upgrade)}`} className="btn sm primary">See Premium</Link>
         </span>
       )}
     </span>

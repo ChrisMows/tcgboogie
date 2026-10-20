@@ -34,7 +34,7 @@ export default async function DealsPage({ searchParams }) {
           {!premium ? (
             <div className="panel empty-state">
               Deal alerts come with Premium, so there&apos;s no history on Free yet.
-              <div style={{ marginTop: 14 }}><Link className="btn primary" href="/app/account#plan">See Premium</Link></div>
+              <div style={{ marginTop: 14 }}><Link className="btn primary" href="/app/premium?from=deals">See Premium</Link></div>
             </div>
           ) : (
             <>

@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { logError } from "@/lib/log";
 import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
-import { changeRenewal, connectProvider, deleteAccount, openBillingPortal, startCheckout, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
+import { changeRenewal, connectProvider, deleteAccount, openBillingPortal, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
@@ -29,10 +30,6 @@ const PROVIDER_LABELS = { google: "Google", discord: "Discord", email: "Email li
 const METHODS = ["google", "discord", "email"];
 
 const fmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-const UPGRADE_NOTES = {
-  export: "CSV export of your collection is part of Premium.",
-  history: "Your full collection history is part of Premium.",
-};
 const BILLING_NOTES = {
   welcome: ["good", "Welcome to Premium! Stripe emails your receipt, and you can find every invoice under Manage billing."],
   pending: ["warn", "Payment received by Stripe. Your Premium switches on within a minute; refresh this page if it hasn't yet."],
@@ -107,10 +104,8 @@ export default async function Account({ searchParams }) {
             </div>
           ) : showUpgrade ? (
             <div style={{ textAlign: "right" }}>
-              <form action={startCheckout}>
-                <button className="btn primary" disabled={!payments}>Upgrade to Premium · ${PLANS.premium.price}/mo</button>
-              </form>
-              <div className="hint">{payments ? "Plus applicable sales tax. Secure checkout by Stripe. Cancel anytime." : "Card payments launch soon."}</div>
+              <Link href="/app/premium" className="btn primary">Upgrade to Premium · ${PLANS.premium.price}/mo</Link>
+              <div className="hint">Plus applicable sales tax. Cancel anytime.</div>
             </div>
           ) : null}
         </div>
@@ -121,11 +116,6 @@ export default async function Account({ searchParams }) {
         )}
         {payments && testMode && !subscribed && showUpgrade && (
           <div className="hint" style={{ marginTop: 8 }}>Test mode: no real money. Pay with card 4242 4242 4242 4242, any future date, any CVC.</div>
-        )}
-        {params?.upgrade && !premium && !subscribed && (
-          <div className="notice accent-note" style={{ marginTop: 12 }}>
-            {UPGRADE_NOTES[params.upgrade] || "That's part of Premium."} Upgrade below to unlock it, along with everything else in Premium.
-          </div>
         )}
         {BILLING_NOTES[params?.billing] && (
           <div className={`notice ${BILLING_NOTES[params.billing][0]}`} style={{ marginTop: 12 }}>{BILLING_NOTES[params.billing][1]}</div>

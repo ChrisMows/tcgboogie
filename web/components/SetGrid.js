@@ -62,7 +62,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
   function watch(c) {
     start(async () => {
       const r = await watchProduct(c.id);
-      if (!r.ok) return toastShow(r.error, r.limit ? { href: "/app/account#plan", label: "Upgrade" } : null, "bad");
+      if (!r.ok) return toastShow(r.error, r.limit ? { href: "/app/premium", label: "See Premium" } : null, "bad");
       setWatched((s) => new Set(s).add(c.id));
       toastShow(r.already ? "Already watching this card." : `Watching ${short(c.name)} · alert at ${money(r.target)} or less`, { href: "/app/watches", label: "Adjust" });
     });

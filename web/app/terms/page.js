@@ -1,29 +1,103 @@
-export const metadata = { title: "Terms | TCG Boogie" };
+import Link from "next/link";
+import { PLANS } from "@/lib/plans";
+import { TERMS_UPDATED } from "@/lib/terms";
+
+export const metadata = { title: "Terms of Service | TCG Boogie" };
 
 export default function Terms() {
+  const price = PLANS.premium.price;
   return (
     <div className="wrap doc">
-      <h1>Terms</h1>
-      <p className="updated">Last updated October 2026</p>
+      <h1>Terms of Service</h1>
+      <p className="updated">Last updated {TERMS_UPDATED}</p>
       <p>
-        TCG Boogie is not open for sign-ups yet. Full terms of service will be posted here before accounts or
-        subscriptions are offered.
+        These terms cover your use of TCG Boogie (tcgboogie.com, our Discord bot and our alerts). By creating an account or
+        using the site, you agree to them. If you don&apos;t agree, please don&apos;t use TCG Boogie.
       </p>
-      <h2>Cancelling and deleting your account</h2>
+
+      <h2 id="service">1. What TCG Boogie is</h2>
       <p>
-        You can cancel Premium anytime from Settings → Plan. Deleting your account also cancels any subscription at the
-        same moment, so you are not charged again. If we can&apos;t confirm the cancellation, your account is not deleted
-        until it is.
+        TCG Boogie helps collectors find underpriced trading cards, track card prices, set price alerts and keep track of
+        their collection. We show prices and listings from other marketplaces (such as eBay and TCGplayer). We don&apos;t
+        sell cards, hold payments for card purchases, or take part in any purchase you make on another site.
       </p>
-      <h2>Not financial advice</h2>
+
+      <h2 id="accounts">2. Your account</h2>
+      <ul>
+        <li>You must be at least 13 to use TCG Boogie, and at least 18 (or have a parent or guardian&apos;s permission) to buy Premium.</li>
+        <li>You sign in with Google, Discord or an email link. Keep access to those accounts secure; you&apos;re responsible for activity on your TCG Boogie account.</li>
+        <li>Give us accurate information, including the phone number you use for text alerts.</li>
+      </ul>
+
+      <h2 id="premium">3. Premium subscription</h2>
+      <ul>
+        <li><b>Price.</b> Premium costs ${price} per month, plus any sales tax that applies where you live. The total is shown before you pay.</li>
+        <li><b>Billing.</b> You&apos;re charged when you subscribe, then automatically every month on the same date until you cancel. Payments are processed securely by Stripe; we never see or store your full card number.</li>
+        <li><b>Cancelling.</b> You can cancel anytime in Settings → Plan (or through Manage billing). When you cancel, Premium stays on through the end of the period you&apos;ve already paid for, then your account returns to the Free plan automatically. You won&apos;t be charged again.</li>
+        <li><b>Refunds.</b> Payments aren&apos;t refunded for partial months, including the month you cancel in, except where the law requires it. If you believe you were charged in error, email <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a> and we&apos;ll make it right.</li>
+        <li><b>Failed payments.</b> If a renewal payment fails, Stripe retries it over the following days and Premium stays on meanwhile. If it still can&apos;t be collected, the subscription ends and your account returns to Free.</li>
+        <li><b>Price changes.</b> If the price of Premium changes, we&apos;ll email you at least 30 days before your next renewal at the new price. You can cancel before then.</li>
+        <li><b>Back to Free.</b> When Premium ends, your account, collection and settings are kept. Premium-only features (such as live deal alerts, text and Discord alerts, extra filters, full value history and CSV export) stop working.</li>
+        <li><b>Complimentary Premium.</b> Premium we give you for free (for example in a giveaway) is never charged and ends on the date we tell you.</li>
+      </ul>
+
+      <h2 id="cancel-delete">4. Deleting your account</h2>
       <p>
-        Card values and deal alerts are estimates based on past sales. They are not financial advice, and past prices
-        don't guarantee future results.
+        You can delete your account anytime from Settings. Deleting it cancels any subscription at the same moment, so
+        you&apos;re not charged again, and permanently removes your collection, filters, alerts and history. If we can&apos;t
+        confirm the cancellation with our payment provider, your account is not deleted until it is.
       </p>
-      <h2>Trademarks</h2>
+
+      <h2 id="alerts">5. Alerts and messages</h2>
       <p>
-        TCG Boogie is independent and not affiliated with or endorsed by eBay, TCGplayer, Nintendo, The Pokémon
-        Company, or any grading company. All trademarks belong to their owners.
+        Alerts go to the channels you turn on (email, Discord direct message, and text message on Premium). Text messages
+        need your consent and a confirmed number; reply STOP to any text to stop them. Message and data rates may apply.
+        Alerts can arrive late or not at all (for example if a marketplace or messaging service is down), so don&apos;t rely
+        on them for anything time-critical.
+      </p>
+
+      <h2 id="prices">6. Prices, deals and other sites</h2>
+      <ul>
+        <li>Card values, &quot;deals&quot; and discounts are estimates based on recent sales and listings. They can be wrong, out of date, or change quickly. They are not financial or investment advice.</li>
+        <li>Listings belong to the marketplaces and sellers who post them. Check every listing yourself before you buy. Any purchase is between you and the seller, under that marketplace&apos;s rules.</li>
+        <li>Some links to eBay and other sites are affiliate links, which means we may earn a commission if you buy. It doesn&apos;t change your price.</li>
+      </ul>
+
+      <h2 id="use">7. Fair use</h2>
+      <p>
+        Don&apos;t misuse TCG Boogie: no scraping or reselling our data, no automated access beyond normal use, no attempts
+        to break or overload the site, and no sharing accounts to get around plan limits. We may suspend or close accounts
+        that do. If we close a paid account for reasons other than misuse, we&apos;ll refund the unused part of your current month.
+      </p>
+
+      <h2 id="changes">8. Changes to TCG Boogie and these terms</h2>
+      <p>
+        We may add, change or remove features. If we change these terms in a way that matters, we&apos;ll update the date
+        above and tell you by email or on the site before the change takes effect. Continuing to use TCG Boogie after that
+        means you accept the new terms.
+      </p>
+
+      <h2 id="liability">9. Disclaimers and limits</h2>
+      <p>
+        TCG Boogie is provided &quot;as is&quot;. We do our best to keep it accurate and running, but we can&apos;t promise it will
+        be error-free or always available. To the fullest extent the law allows, we aren&apos;t liable for indirect or
+        consequential losses (such as a missed deal or a purchase that lost value), and our total liability to you is
+        limited to what you paid us in the 12 months before the claim.
+      </p>
+
+      <h2 id="law">10. Governing law</h2>
+      <p>These terms are governed by the laws of the State of Ohio, USA.</p>
+
+      <h2 id="trademarks">11. Trademarks</h2>
+      <p>
+        TCG Boogie is independent and not affiliated with or endorsed by eBay, TCGplayer, Nintendo, The Pokémon Company,
+        or any grading company. All trademarks belong to their owners.
+      </p>
+
+      <h2 id="contact">12. Contact</h2>
+      <p>
+        Questions about these terms or your subscription: <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a>.
+        See also our <Link href="/privacy">Privacy policy</Link>.
       </p>
     </div>
   );
