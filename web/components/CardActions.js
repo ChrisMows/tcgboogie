@@ -96,7 +96,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         {soldHref && (
           <a href={soldHref} target="_blank" rel={`noopener noreferrer${soldAffiliate ? " sponsored" : ""}`} className="btn"
             title="eBay sold and completed listings for this card, most recent first">
-            🧾 Sold on eBay ↗{soldAffiliate && <span className="ad-tag">Ad</span>}
+            🧾 Recent eBay Sales ↗
           </a>
         )}
       </div>
