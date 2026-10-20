@@ -63,7 +63,7 @@ export default async function Home({ searchParams }) {
           <div className="stage" aria-label="Collectible cards with an illustrative deal alert">
             <div className="orbit" />
             <CardArt name="charizard" className="tcg left" alt="Charizard ex card" />
-            <CardArt name="card-back" className="tcg right" alt="Trading card back" />
+            <CardArt name="rayquaza-star" className="tcg right" alt="Rayquaza Gold Star card, EX Deoxys" />
             <div className="slab">
               <div className="slab-label">
                 <span>2021 EVOLVING SKIES<br />UMBREON VMAX · #215<br />ILLUSTRATIVE GRADED CARD</span>
