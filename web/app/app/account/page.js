@@ -284,7 +284,7 @@ export default async function Account({ searchParams }) {
                 <span style={{ flex: 1 }}>
                   {PROVIDER_LABELS[p]}
                   {p === "discord" && <span className="hint" style={{ display: "block", marginTop: 2 }}>
-                    {connected ? "Sign in with Discord, get alerts in your private channel, and join the members' server." : "Connect to sign in with Discord, get alerts in your private channel, and join the members' server."}
+                    {connected ? "Sign in with Discord and get alerts as Discord messages." : "Connect to sign in with Discord and get alerts as Discord messages."}
                   </span>}
                 </span>
                 {connected ? (
@@ -302,29 +302,24 @@ export default async function Account({ searchParams }) {
               </li>
             );
           })}
-        </ul>
-      </div>
-
-      <div className="panel" id="ebay">
-        <h2>Sell on eBay</h2>
-        {EBAY_NOTES[params?.ebay] && <div className={`notice ${EBAY_NOTES[params.ebay][0]}`}>{EBAY_NOTES[params.ebay][1]}</div>}
-        {ebay ? (
-          <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <span style={{ flex: "1 1 260px" }}>
-              ✓ Connected{ebay.ebayUsername ? <> as <b>{ebay.ebayUsername}</b></> : ""}. Use <b>Sell on eBay</b> on any card in your collection to list it in a minute.
+          <li id="ebay">
+            <span className={`dot ${ebay ? "done" : ""}`}>{ebay ? "✓" : ""}</span>
+            <span style={{ flex: 1 }}>
+              eBay
+              <span className="hint" style={{ display: "block", marginTop: 2 }}>
+                {ebay ? <>Connected{ebay.ebayUsername ? <> as <b>{ebay.ebayUsername}</b></> : ""}. Use Sell on eBay on any card in your collection.</>
+                  : "List cards from your collection in a minute: we fill in the details and a price, you add photos. We never see your eBay password."}
+              </span>
             </span>
-            <form action={disconnectEbay} style={{ flex: "none" }}><button className="btn sm ghost">Disconnect eBay</button></form>
-          </div>
-        ) : (
-          <>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Connect your eBay seller account and list cards straight from your collection: we fill in the title, set, number, grade or
-              condition, cert number and a price from recent sales. You add photos and post. We never see your eBay password.
-            </p>
-            {ebayReady ? <a className="btn primary" href="/api/ebay/connect">Connect eBay</a>
-              : <span className="small muted">Coming soon.</span>}
-          </>
-        )}
+            {ebay ? (
+              <>
+                <span className="badge good">Connected</span>
+                <form action={disconnectEbay}><button className="btn sm ghost">Disconnect</button></form>
+              </>
+            ) : ebayReady ? <a className="btn sm primary" href="/api/ebay/connect">Connect eBay</a> : <span className="badge">Coming soon</span>}
+          </li>
+        </ul>
+        {EBAY_NOTES[params?.ebay] && <div className={`notice ${EBAY_NOTES[params.ebay][0]}`} style={{ marginTop: 10 }}>{EBAY_NOTES[params.ebay][1]}</div>}
       </div>
 
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
