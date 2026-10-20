@@ -1,8 +1,8 @@
 // Sample deals for previews and the "would have caught" estimate until the bot feeds real data in.
 const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
 const img = (id) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_in_200x200.jpg`;
-// TCGplayer products for the samples we have pictures of (others show a placeholder).
-const PRODUCTS = { d1: "246723", d2: "517045", d3: "42382", d5: "517035" };
+// TCGplayer product for each sample (gives it a picture and a card page).
+const PRODUCTS = { d1: "246723", d2: "517045", d3: "42382", d4: "518861", d5: "517035", d7: "86903", d8: "253266" };
 
 export const SAMPLE_DEALS = [
   { id: "d1", kind: "graded", name: "Umbreon VMAX", setName: "Evolving Skies", number: "215/203", grader: "PSA", grade: 10,
@@ -35,6 +35,9 @@ export const SAMPLE_DEALS = [
     country: "US", flags: ["Raw card: condition is the seller's own description"], soldFor: 192, foundAt: minutesAgo(260),
     title: "Gengar VMAX 271/264 Alt Art Fusion Strike" },
 ];
+// Japanese cards: picture only (our price service covers English cards, so no card page).
+const IMAGE_ONLY = { d6: "570557" };
 for (const d of SAMPLE_DEALS) {
   if (PRODUCTS[d.id]) Object.assign(d, { productId: PRODUCTS[d.id], image: img(PRODUCTS[d.id]) });
+  else if (IMAGE_ONLY[d.id]) d.image = img(IMAGE_ONLY[d.id]);
 }
