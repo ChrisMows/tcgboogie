@@ -37,11 +37,11 @@ export default function CollectionAlerts({ plan, prefs }) {
           <input type="checkbox" checked={Boolean(p.sellHigh)} disabled={locked} onChange={(e) => update({ sellHigh: e.target.checked })} />
           <b>Tell me when to sell high</b>
         </label>
-        <select value={p.sellHighPct} disabled={locked || !p.sellHigh} onChange={(e) => update({ sellHighPct: Number(e.target.value) })} aria-label="Alert when a card climbs this much in a week" className="coll-alert-pct">
+        <select value={p.sellHighPct} onChange={(e) => (locked ? setP({ ...p, sellHighPct: Number(e.target.value) }) : update({ sellHighPct: Number(e.target.value) }))} aria-label="Alert when a card climbs this much in a week" className="coll-alert-pct">
           {[10, 15, 25, 40, 60, 100].map((n) => <option key={n} value={n}>{n}%</option>)}
         </select>
         <InfoTip label="About sell-high alerts">
-          When a card you own climbs {p.sellHighPct}% or more in a week, we tell you, so you can sell while it&apos;s high. Sent by Discord and email with your other alerts.
+          When a card you own climbs by the percentage you picked (or more) within a week, we tell you, so you can sell while it&apos;s high. Sent by Discord and email with your other alerts.
         </InfoTip>
         </span>
       </div>
