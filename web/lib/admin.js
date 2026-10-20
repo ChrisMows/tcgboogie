@@ -128,6 +128,14 @@ export async function systemStatus({ pingPrices = false } = {}) {
   }
   add("Money", "eBay affiliate (EPN)", epnLive() ? "ok" : "off", epnLive() ? "Campaign ID set: eBay links are tracked" : "No EBAY_CAMPAIGN_ID yet");
   if (db) {
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "db_backup")).limit(1).catch(() => []);
+    const bk = row?.value;
+    const hours = bk?.at ? (Date.now() - new Date(bk.at).getTime()) / 3600000 : null;
+    if (hours === null) add("Website", "Database backups", "down", "No backup recorded yet");
+    else add("Website", "Database backups", hours < 30 ? "ok" : "down",
+      `${hours < 30 ? "Last backup" : "Overdue! Last backup"} ${ago(bk.at)} · ${Math.round((bk.bytes || 0) / 1024)} KB, ${bk.tables} tables checked · ${bk.copies} nightly copies kept (plus monthly) on the bot server`);
+  }
+  if (db) {
     const b = await botStatus().catch(() => null);
     const hb = b?.heartbeat;
     const mins = hb?.at ? (Date.now() - new Date(hb.at).getTime()) / 60000 : null;

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:push": "node scripts/db-push.mjs"
   },
   "engines": {
     "node": ">=20.9"
