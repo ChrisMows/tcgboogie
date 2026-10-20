@@ -4,7 +4,7 @@ import DealTile from "@/components/DealTile";
 import { withLinks } from "@/lib/deal-links";
 import { money, pct, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
-import { SAMPLE_DEALS } from "@/lib/demo-deals";
+import { dealsFor } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -14,10 +14,10 @@ import { isRising, targetPrice } from "@/lib/watches";
 export default async function Home() {
   const user = await requireUser();
   const premium = user.tier === "premium";
-  const [profiles, watches, coll] = await Promise.all([store.ensureStarterProfile(user), store.listWatches(user.id), loadCollection(user)]);
+  const [profiles, watches, coll, found] = await Promise.all([store.ensureStarterProfile(user), store.listWatches(user.id), loadCollection(user), dealsFor(user)]);
 
   const running = profiles.filter((p) => p.active).slice(0, user.plan.maxProfiles);
-  const deals = SAMPLE_DEALS.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
+  const deals = found.deals.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
   const best = withLinks([...deals].sort((a, b) => b.discountPct - a.discountPct).slice(0, 1), "home")[0];
   const hit = watches.filter((w) => w.status === "triggered");
   const closest = [...watches].filter((w) => w.status !== "triggered" && w.lastPrice && targetPrice(w))
@@ -60,9 +60,18 @@ export default async function Home() {
       <div className="home-tiles">
         <section className="home-tile">
           <div className="home-tile-head"><span className="home-icon">⚡</span><h2>Deals</h2></div>
-          <div className="home-big">{deals.length} <span>{deals.length === 1 ? "deal matches" : "deals match"} your filters</span></div>
-          <p className="small muted">{premium ? "You get these live, before the auction ends." : "On Free you see them after they end."}</p>
-          {best ? <div className="home-deal"><DealTile deal={best} mode={premium ? "live" : "missed"} href={best.href} affiliate={best.affiliate} /></div>
+          {found.sample ? (
+            <>
+              <div className="home-big"><span>Example deals</span></div>
+              <p className="small muted">Real deals appear here as the deal finder catches them. Here&apos;s the kind of deal your filters would get.</p>
+            </>
+          ) : (
+            <>
+              <div className="home-big">{deals.length} <span>{deals.length === 1 ? "deal matches" : "deals match"} your filters</span></div>
+              <p className="small muted">{premium ? "You get these live, before the auction ends." : "On Free you see them after they end."}</p>
+            </>
+          )}
+          {best ? <div className="home-deal"><DealTile deal={best} mode={premium && !best.ended ? "live" : "missed"} sample={found.sample} href={best.href} affiliate={best.affiliate} /></div>
             : <p className="muted small">No matches yet. Widen a filter to catch more.</p>}
           <Link href="/app/deals" className="btn primary home-cta">See deals</Link>
         </section>

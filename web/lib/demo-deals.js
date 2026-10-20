@@ -38,6 +38,7 @@ export const SAMPLE_DEALS = [
 // Japanese cards: picture only (our price service covers English cards, so no card page).
 const IMAGE_ONLY = { d6: "570557" };
 for (const d of SAMPLE_DEALS) {
+  d.sample = true; // tiles say "Example"
   if (PRODUCTS[d.id]) Object.assign(d, { productId: PRODUCTS[d.id], image: img(PRODUCTS[d.id]) });
   else if (IMAGE_ONLY[d.id]) d.image = img(IMAGE_ONLY[d.id]);
 }

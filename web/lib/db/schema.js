@@ -179,8 +179,9 @@ export const alertLog = pgTable("alert_log", {
   target: doublePrecision("target"),
   ok: boolean("ok").notNull().default(true),
   error: text("error"),
+  dealId: text("deal_id"), // deal alerts: the eBay item (see deal)
   sentAt: timestamp("sent_at", { mode: "date" }).notNull().defaultNow(),
-}, (t) => [index("alert_log_user_idx").on(t.userId)]);
+}, (t) => [index("alert_log_user_idx").on(t.userId), index("alert_log_deal_idx").on(t.dealId)]);
 
 // Small server-side settings (e.g. when the price-alert job last ran).
 export const appSettings = pgTable("app_setting", {
@@ -217,3 +218,16 @@ export const systemLog = pgTable("system_log", {
   details: jsonb("details"),
   userId: text("user_id"), // no foreign key: the log outlives deleted accounts
 }, (t) => [index("system_log_at_idx").on(t.at), index("system_log_source_idx").on(t.source, t.at)]);
+
+// Deals found by the deal bot (pokemon-deal-finder), one row per eBay auction. `data` has the shape lib/filters.js
+// matches against. The bot updates lastPrice while it can still see the auction; the website sends alerts once
+// (dispatchedAt) and shows ended deals to Free members.
+export const deals = pgTable("deal", {
+  id: text("id").primaryKey(), // eBay item id
+  data: jsonb("data").notNull(),
+  endsAt: timestamp("ends_at", { mode: "date" }).notNull(),
+  foundAt: timestamp("found_at", { mode: "date" }).notNull().defaultNow(),
+  lastPrice: doublePrecision("last_price"),
+  lastSeenAt: timestamp("last_seen_at", { mode: "date" }),
+  dispatchedAt: timestamp("dispatched_at", { mode: "date" }),
+}, (t) => [index("deal_ends_idx").on(t.endsAt)]);

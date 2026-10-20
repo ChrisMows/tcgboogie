@@ -8,8 +8,8 @@ export function gradeLabel(d) {
   return d.kind === "raw" ? `Raw · ${d.condition}` : `${d.grader} ${d.grade}`;
 }
 
-export default function DealTile({ deal: d, mode = "live", href, affiliate = false }) {
-  const missed = mode === "missed";
+export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false }) {
+  const missed = mode === "missed" || d.ended; // a real deal whose auction is over
   const body = (
     <>
       <div className="dt-art">
@@ -26,7 +26,8 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
           <span className="dt-mkt">{money(d.marketValue)} mkt</span>
         </div>
         <div className={`dt-time ${missed ? "" : "live"}`}>
-          {missed ? `Ended · sold for ${money(d.soldFor)}` : `◷ ${d.minutesLeft} min left`}
+          {missed ? (d.soldFor ? `Ended · sold for ${money(d.soldFor)}` : d.lastBid ? `Ended · last bid ${money(d.lastBid)}` : "Ended")
+            : `◷ ${d.minutesLeft} min left`}{sample || d.sample ? " · Example" : ""}
         </div>
       </div>
     </>

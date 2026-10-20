@@ -3,7 +3,8 @@ import FilterStudio from "@/components/FilterStudio";
 import { DealGrid } from "@/components/DealTile";
 import { listSets } from "@/lib/catalog";
 import { withLinks } from "@/lib/deal-links";
-import { SAMPLE_DEALS } from "@/lib/demo-deals";
+import { dealsFor, sentDeals } from "@/lib/deals";
+import { clampToPlan, matches } from "@/lib/filters";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -30,18 +31,7 @@ export default async function DealsPage({ searchParams }) {
       </div>
       {tab === "filters" ? <Filters user={user} sp={sp} /> : (
         <>
-          <p className="muted" style={{ marginTop: 0 }}>Every deal we sent you, and what it sold for.</p>
-          {!premium ? (
-            <div className="panel empty-state">
-              Deal alerts come with Premium, so there&apos;s no history on Free yet.
-              <div style={{ marginTop: 14 }}><Link className="btn primary" href="/app/premium?from=deals">See Premium</Link></div>
-            </div>
-          ) : (
-            <>
-              {user.demo && <div className="notice">Sample alerts.</div>}
-              <DealGrid deals={withLinks(SAMPLE_DEALS.slice(0, 6), "alert-history")} mode="missed" empty="No alerts yet. They'll show up here as they're sent." />
-            </>
-          )}
+          <History user={user} premium={premium} />
         </>
       )}
     </>
@@ -52,15 +42,42 @@ async function Filters({ user, sp }) {
   const profiles = await store.ensureStarterProfile(user);
   const clean = (v) => String(v || "").trim().slice(0, 60) || null;
   const prefill = sp?.pokemon || sp?.set ? { pokemon: clean(sp.pokemon), set: clean(sp.set) } : null;
-  const sets = (await listSets().catch(() => [])).map((s) => ({ name: s.name, releaseDate: s.releaseDate || null }));
+  const [sets, found] = await Promise.all([
+    listSets().catch(() => []).then((all) => all.map((s) => ({ name: s.name, releaseDate: s.releaseDate || null }))),
+    dealsFor(user),
+  ]);
   return (
     <FilterStudio
       profiles={profiles.map((p) => ({ id: p.id, name: p.name, active: p.active, filters: p.filters }))}
       plan={user.plan}
-      deals={withLinks(SAMPLE_DEALS, "deals")}
-      isDemo={user.demo}
+      deals={withLinks(found.deals, "deals")}
+      sample={found.sample}
       prefill={prefill}
       allSets={sets}
     />
+  );
+}
+
+// Premium: the deals we alerted you about. Free: recent deals your filters would have caught, after they ended.
+async function History({ user, premium }) {
+  if (premium) {
+    const sent = await sentDeals(user.id);
+    return (
+      <>
+        <p className="muted" style={{ marginTop: 0 }}>Every deal we sent you, newest first.</p>
+        <DealGrid deals={withLinks(sent, "alert-history")} mode="missed" empty="No deal alerts yet. They'll show up here as they're sent." />
+      </>
+    );
+  }
+  const found = await dealsFor(user);
+  const running = (await store.listProfiles(user.id)).filter((p) => p.active).slice(0, user.plan.maxProfiles);
+  const missed = found.sample ? [] : found.deals.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
+  return (
+    <>
+      <p className="muted" style={{ marginTop: 0 }}>Deals your filters caught this week, after they ended. On Premium you get them live, while you can still bid.</p>
+      <DealGrid deals={withLinks(missed, "missed-history")} mode="missed"
+        empty={found.sample ? "No deals caught yet. They'll show up here as the deal finder catches them." : "None of this week's deals matched your filters. Try widening one."} />
+      <div style={{ marginTop: 14 }}><Link className="btn primary" href="/app/premium?from=deals">Get them live with Premium</Link></div>
+    </>
   );
 }

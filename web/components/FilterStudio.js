@@ -215,7 +215,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets }) {
   }
 }
 
-export default function FilterStudio({ profiles: initial, plan, deals, isDemo, prefill, allSets }) {
+export default function FilterStudio({ profiles: initial, plan, deals, sample, prefill, allSets }) {
   const router = useRouter();
   const defaults = useMemo(() => defaultFilters(plan), [plan]);
   const [profiles, setProfiles] = useState(initial);
@@ -399,7 +399,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, isDemo, p
 
                 <div className="fs-results-head">
                   <b>{results.length} {results.length === 1 ? "deal matches" : "deals match"}</b>
-                  <span className="small muted">{isDemo ? "sample deals" : "recent deals"} · {premium ? "you'll get these live" : "Free shows them after they end"}</span>
+                  <span className="small muted">{sample ? "example deals: real ones appear as the deal finder catches them" : `deals from the last 7 days · ${premium ? "you get new ones live" : "Free shows them after they end"}`}</span>
                 </div>
                 <DealGrid deals={results} mode={premium ? "live" : "missed"}
                   empty={<>Nothing matches yet. Try <button type="button" className="link-btn" onClick={() => setDraft({ ...defaults })}>clearing this filter</button> or widening a setting.</>} />

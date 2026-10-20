@@ -8,6 +8,7 @@ import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog
 import { db, schema } from "@/lib/db";
 import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
+import { botStatus } from "@/lib/deals";
 import { log } from "@/lib/log";
 import { channelsReady } from "@/lib/notify";
 import { getCurrentUser } from "@/lib/session";
@@ -126,7 +127,16 @@ export async function systemStatus({ pingPrices = false } = {}) {
     add("Money", "Payments (Stripe)", b.ok ? (b.mode === "test" ? "warn" : "ok") : "down", b.detail);
   }
   add("Money", "eBay affiliate (EPN)", epnLive() ? "ok" : "off", epnLive() ? "Campaign ID set: eBay links are tracked" : "No EBAY_CAMPAIGN_ID yet");
-  add("Bot", "Deal bot", "off", "Runs on your PC; not connected to the website yet");
+  if (db) {
+    const b = await botStatus().catch(() => null);
+    const hb = b?.heartbeat;
+    const mins = hb?.at ? (Date.now() - new Date(hb.at).getTime()) / 60000 : null;
+    if (mins === null) add("Bot", "Deal bot", "off", "Hasn't checked in yet");
+    else add("Bot", "Deal bot", mins < 10 ? "ok" : "down",
+      `${mins < 10 ? "Running" : "Stopped?"}: last check ${ago(hb.at)} (${hb.listings ?? 0} auctions) · ${b.today} deal${b.today === 1 ? "" : "s"} found in 24 h`
+      + (hb.creditsLeft != null ? ` · ${Number(hb.creditsLeft).toLocaleString()} price credits left today` : "")
+      + (hb.paused ? ` · lookups waiting: ${hb.paused}` : ""));
+  }
   return checks;
 }
 
