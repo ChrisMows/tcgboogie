@@ -8,7 +8,7 @@ export function gradeLabel(d) {
   return d.kind === "raw" ? `Raw · ${d.condition}` : `${d.grader} ${d.grade}`;
 }
 
-export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false }) {
+export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false, cardHref = null }) {
   const missed = mode === "missed" || d.ended; // a real deal whose auction is over
   const body = (
     <>
@@ -21,6 +21,7 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
         <div className="dt-name" title={d.name}>{d.name}</div>
         <div className="dt-meta">{d.setName} · {d.number}{d.language === "japanese" ? " · JP" : ""}</div>
         <span className="chip-mini">{gradeLabel(d)}</span>
+        {d.photoCheck === "match" && <span className="chip-mini good" title="We compared the listing photos with this card">✓ Photo checked</span>}
         <div className="dt-price">
           <b>{money(d.total)}</b>
           <span className="dt-mkt">{money(d.marketValue)} mkt</span>
@@ -32,6 +33,9 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
       </div>
     </>
   );
+  if (cardHref) {
+    return <a className={`deal-tile ${missed ? "missed" : ""}`} href={cardHref} title={`${d.name}: prices, recent sales and the listing`}>{body}</a>;
+  }
   if (missed || !href) return <div className={`deal-tile ${missed ? "missed" : ""}`}>{body}</div>;
   return (
     <a className="deal-tile" href={href} target="_blank" rel={`noopener noreferrer${affiliate ? " sponsored" : ""}`}
@@ -46,7 +50,7 @@ export function DealGrid({ deals, mode, empty }) {
   if (!deals.length) return <div className="panel empty-state">{empty || "No deals yet."}</div>;
   return (
     <div className="deal-tiles">
-      {deals.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} />)}
+      {deals.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} />)}
     </div>
   );
 }

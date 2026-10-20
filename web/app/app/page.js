@@ -71,7 +71,7 @@ export default async function Home() {
               <p className="small muted">{premium ? "You get these live, before the auction ends." : "On Free you see them after they end."}</p>
             </>
           )}
-          {best ? <div className="home-deal"><DealTile deal={best} mode={premium && !best.ended ? "live" : "missed"} sample={found.sample} href={best.href} affiliate={best.affiliate} /></div>
+          {best ? <div className="home-deal"><DealTile deal={best} mode={premium && !best.ended ? "live" : "missed"} sample={found.sample} href={best.href} affiliate={best.affiliate} cardHref={best.cardHref} /></div>
             : <p className="muted small">No matches yet. Widen a filter to catch more.</p>}
           <Link href="/app/deals" className="btn primary home-cta">See deals</Link>
         </section>

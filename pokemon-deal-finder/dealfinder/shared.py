@@ -134,3 +134,9 @@ def heartbeat(value):
     value = {**value, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     _run("INSERT INTO app_setting (key, value, updated_at) VALUES ('bot_heartbeat', %s, now()) "
          "ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at", (Jsonb(value),))
+
+
+def log_event(source, level, message, details=None):
+    """A line in the website's Logs page (Admin -> Logs), like web/lib/log.js writes."""
+    _run("INSERT INTO system_log (source, level, message, details) VALUES (%s, %s, %s, %s)",
+         (source, level, str(message)[:500], Jsonb(details) if details else None))

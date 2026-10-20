@@ -180,3 +180,10 @@ red_flags:
 website:
   url: https://tcgboogie.com
   scan_refresh_seconds: 120   # how often to re-ask the website how wide to scan
+
+# Photo check: before a deal goes out, Claude compares the listing photos with the official image of the card we priced
+# (and other versions of it), and drops deals whose photos show a different card. Needs ANTHROPIC_API_KEY in .env.
+vision:
+  model: claude-opus-5-5      # claude-haiku-5-5 costs about 1/40 as much
+  effort: low
+  max_listing_photos: 3

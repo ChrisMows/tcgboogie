@@ -30,6 +30,13 @@ function toDeal(row, now = Date.now()) {
   };
 }
 
+/** One deal by its eBay item id (for the card page's deal box), or null. */
+export async function getDeal(id) {
+  if (!db || !id) return null;
+  const [row] = await db.select().from(deals).where(eq(deals.id, String(id).slice(0, 80))).limit(1);
+  return row ? toDeal(row) : null;
+}
+
 /** Deals found in the last `days` (live and ended), newest first. */
 export async function recentDeals({ days = 7, limit = 300 } = {}) {
   if (!db) return [];
@@ -135,7 +142,9 @@ async function alertMember(user, discordId, d, filterName, ready) {
     `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${grade}`,
     `${money(d.total)} with shipping. Sells for about ${money(d.marketValue)} (${d.comps || "recent"} sales).`,
     `About ${d.minutesLeft} min left. Matched your filter “${filterName}”.`,
+    ...(d.photoCheck === "match" ? ["✓ Photo checked: the listing photos match this card."] : []),
     ...(d.flags?.length ? [`Check first: ${d.flags.join(" · ")}`] : []),
+    ...(d.productId ? [`Prices by condition and grade, and recent sales: ${SITE}/app/cards/${d.productId}?deal=${encodeURIComponent(d.id)}`] : []),
   ];
   const res = { sent: 0, failed: 0 };
   const attempt = async (channel, fn) => {

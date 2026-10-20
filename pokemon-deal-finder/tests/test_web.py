@@ -31,6 +31,61 @@ class DealRecordTests(unittest.TestCase):
         self.assertEqual(half["grade"], 9.5)
 
 
+class PhotoCheckTests(unittest.TestCase):
+    """The wrong-set listing: titled as the $267 Surging Sparks Pikachu ex, photos show a ~$47 30th Celebration one."""
+
+    def setUp(self):
+        from unittest import mock
+        import dealfinder.web as web
+        self.web, self.mock = web, mock
+        self.patch = mock.patch.multiple(web.shared, publish_deal=lambda *a: True, log_event=lambda *a, **k: None)
+        self.patch.start()
+        self.link = web.WebLink({"website": {}, "vision": {}})
+        self.card = {"kind": "raw", "name": "Pikachu ex", "set_name": "SV08: Surging Sparks", "card_number": "238/191",
+                     "language": "english", "grade": "NM", "product_id": "590027"}
+        self.rec = {"item_id": "v1|9|0", "total": 85.9, "market_value": 266.98, "discount_pct": 68, "end_time": "2026-10-20T20:00:00Z",
+                    "images": ["https://i.ebayimg.com/images/g/x/s-l225.jpg"], "reason": {}}
+
+        class PPT:
+            def cards_by_name(self, name, lang):
+                return [{"name": "Pikachu ex - 238/191", "setName": "SV08: Surging Sparks", "cardNumber": "238/191", "tcgPlayerId": "590027", "prices": {"market": 266.98}},
+                        {"name": "Pikachu ex - 149/128", "setName": "ME: 30th Celebration", "cardNumber": "149/128", "tcgPlayerId": "712953", "prices": {"market": 47.14}},
+                        {"name": "Pikachu V", "setName": "Other", "cardNumber": "1", "tcgPlayerId": "1", "prices": {"market": 80}}]
+
+        self.link.finder = type("F", (), {"ppt": PPT()})()
+
+    def tearDown(self):
+        self.patch.stop()
+
+    def run_with(self, verdict):
+        self.link.photos.check = lambda *a, **k: verdict
+        return self.link.on_deal(dict(self.rec), dict(self.card))
+
+    def test_photo_of_a_different_card_is_dropped(self):
+        self.assertFalse(self.run_with({"verdict": "different_card", "shown": "B", "reason": "30th Celebration border"}))
+        self.assertEqual(self.link.held, 1)
+
+    def test_lookalikes_are_offered_and_unclear_photos_flagged(self):
+        seen = {}
+        def check(item, claimed, ref, photos, looks):
+            seen["looks"] = looks
+            return {"verdict": "unclear", "shown": "none", "reason": "photo too small"}
+        self.link.photos.check = check
+        captured = {}
+        with self.mock.patch.object(self.web.shared, "publish_deal", lambda iid, data, end: captured.update(data) or True):
+            self.assertTrue(self.link.on_deal(dict(self.rec), dict(self.card)))
+        self.assertEqual([pid for _, pid in seen["looks"]], ["712953"])  # same name only, not the card itself
+        self.assertTrue(captured["flags"][0].startswith("Photo check unclear"))
+
+    def test_without_photo_check_the_cheaper_version_is_named(self):
+        captured = {}
+        self.link.photos.check = lambda *a, **k: None
+        with self.mock.patch.object(self.web.shared, "publish_deal", lambda iid, data, end: captured.update(data) or True):
+            self.link.on_deal(dict(self.rec), dict(self.card))
+        self.assertIn("ME: 30th Celebration", captured["flags"][0])
+        self.assertEqual(captured["photoCheck"], "skipped")
+
+
 class EbayPacingTests(unittest.TestCase):
     def test_checks_spread_to_last_the_day(self):
         from datetime import datetime, timezone

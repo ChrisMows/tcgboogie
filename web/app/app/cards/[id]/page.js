@@ -10,7 +10,8 @@ import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
-import { ebaySearch } from "@/lib/ebay-link";
+import { ebayLink, ebaySearch } from "@/lib/ebay-link";
+import { getDeal } from "@/lib/deals";
 
 export async function generateMetadata({ params }) {
   // Title from the cache only: this runs before the sign-in check, so it must never spend price-service credits.
@@ -35,7 +36,39 @@ const saleNote = (g) => {
   return [n, last].filter(Boolean).join(" · ");
 };
 
-export default async function CardPage({ params }) {
+/** The eBay listing this page was opened from: price, time left, warnings, and the way to the listing. */
+function DealBox({ deal: d, premium }) {
+  const link = ebayLink(d.url, "card-page-deal");
+  const grade = d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
+  const live = !d.ended;
+  return (
+    <div className={`deal-box ${live ? "live" : "ended"}`}>
+      <div className="deal-box-head">
+        <span className="badge accent">{live ? "⚡ Live deal" : "Deal ended"}</span>
+        {d.photoCheck === "match" && <span className="badge good" title="We compared the listing photos with this card">✓ Photo checked</span>}
+        <span className="small muted">{grade}{d.language === "japanese" ? " · Japanese" : ""}</span>
+      </div>
+      <div className="deal-box-price">
+        <b>{money(live ? d.total : d.lastBid)}</b>
+        <span className="muted">{live ? "with shipping" : "last bid we saw"}</span>
+        <span className="deal-box-off">{Math.round(d.discountPct)}% below {money(d.marketValue)}</span>
+      </div>
+      <div className="small muted">
+        {live ? `About ${d.minutesLeft} min left` : `Ended ${new Date(d.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
+        {d.comps ? ` · value from ${d.comps} recent sales` : ""}
+      </div>
+      {d.flags?.length > 0 && <ul className="deal-box-flags">{d.flags.map((f) => <li key={f}>⚠ {f}</li>)}</ul>}
+      <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        <a className="btn primary" style={{ flex: "none" }} href={link.href} target="_blank" rel={`noopener noreferrer${link.affiliate ? " sponsored" : ""}`}>
+          Open listing on eBay ↗
+        </a>
+        {!premium && live && <span className="small muted" style={{ flex: "1 1 200px" }}>Premium members get deals like this the moment we find them.</span>}
+      </div>
+    </div>
+  );
+}
+
+export default async function CardPage({ params, searchParams }) {
   const user = await requireUser();
   const { id } = await params;
   let product = await getProduct(id, { cachedOnly: true }).catch(() => null);
@@ -45,6 +78,10 @@ export default async function CardPage({ params }) {
   }
   if (product === null) notFound();
   const p = slim(product);
+  // Opened from a deal: show that listing on top (only if it's this card).
+  const dealId = (await searchParams)?.deal;
+  const found = dealId ? await getDeal(dealId).catch(() => null) : null;
+  const deal = found && String(found.productId) === String(p.id) ? found : null;
   const [items, binders, watches] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id)]);
   // Value your copies from today's prices (the saved value can lag behind).
   const mine = items.filter((it) => it.productId === p.id).map((it) => ({
@@ -110,6 +147,7 @@ export default async function CardPage({ params }) {
               {c30 !== null && <span className={c30 >= 0 ? "up" : "down"} style={{ marginLeft: 12 }}>{c30 >= 0 ? "▲" : "▼"} {pct(c30)} 30d</span>}
             </span>
           </div>
+          {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
             plan={user.plan} filterHref={filterHref}
             ebayLive={ebay} ebaySold={ebaySold} />

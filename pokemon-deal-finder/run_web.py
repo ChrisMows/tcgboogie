@@ -32,6 +32,7 @@ def main():
     link = WebLink(load_config())
     try:
         finder = Finder(on_deal=link.on_deal, scan_fn=link.scan_fn, on_listings=link.on_listings)
+        link.finder = finder
     except EbayError as e:
         log.error("%s", e)
         sys.exit(1)
@@ -46,6 +47,8 @@ def main():
     if args.once:
         log.info("Result: %s", check())
         return
+    from dealfinder import vision
+    log.info("Photo check: %s", f"on ({link.photos.model})" if vision.enabled() else "off (add ANTHROPIC_API_KEY to .env to turn it on)")
     log.info("Deal finder (website mode) started. Ctrl+C to stop.")
     per_check = None  # average eBay calls per check, to spread the daily budget evenly
     while True:

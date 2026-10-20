@@ -171,6 +171,15 @@ class PPTClient:
         d = j.get("data") or []
         return d if isinstance(d, list) else [d]
 
+    def cards_by_name(self, name, language):
+        """Every version of a card by name (e.g. all 'Pikachu ex' printings), for the look-alike check. Costs the
+        limit in credits, so it's cached as long as card-number searches and only used for deals."""
+        a = self.cfg["auto"]
+        params = {"search": name, "limit": a.get("lookalike_limit", 15), "language": language}
+        j = self._cached("/cards", params, a["catalog_cache_days"] * 24, a.get("not_found_cache_days", 3) * 24) or {}
+        d = j.get("data") or []
+        return d if isinstance(d, list) else [d]
+
     def card_prices(self, tcg_id, language, days):
         """Card with eBay graded sales + daily price history. Returns {'card': ..., 'history_days': N}.
 

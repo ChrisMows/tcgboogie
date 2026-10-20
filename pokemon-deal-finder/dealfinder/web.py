@@ -14,8 +14,11 @@ import time
 import requests
 
 from . import shared
+from .auto import _base_name
 from .finder import minutes_left
-from .parse import Listing, RAW_CONDITIONS
+from .parse import Listing, RAW_CONDITIONS, norm_text
+from .ppt import PPTError
+from .vision import PhotoChecker
 
 log = logging.getLogger("dealfinder.web")
 
@@ -69,6 +72,9 @@ class WebLink:
         self._scan = (0.0, None)
         self.tracked = {}  # item_id -> end time (iso) for deals we published that haven't ended
         self.new_deals = 0
+        self.photos = PhotoChecker(cfg)
+        self.finder = None  # set by run_web.py (for the price client)
+        self.held = 0  # deals the photo check stopped
 
     # ----- 1. how wide to scan -----
     def scan_fn(self, cfg):
@@ -100,8 +106,64 @@ class WebLink:
         return c
 
     # ----- 2. save deals -----
+    def lookalikes(self, card, rec):
+        """Other versions of this card (same name, other sets/numbers), most similar in value first.
+        Returns [(label, product_id, raw_market)]; [] if the lookup isn't possible."""
+        ppt = getattr(self.finder, "ppt", None)
+        name = card.get("name") or ""
+        if not ppt or not name:
+            return []
+        try:
+            found = ppt.cards_by_name(name, card.get("language") or "english")
+        except PPTError as e:
+            log.info("Look-alike lookup skipped (%s)", e)
+            return []
+        base = norm_text(name)
+        out = []
+        for c in found:
+            if str(c.get("tcgPlayerId")) == str(card.get("product_id")) or norm_text(_base_name(c.get("name", ""))) != base:
+                continue
+            market = (c.get("prices") or {}).get("market")
+            out.append((f"{_base_name(c.get('name', ''))} from {c.get('setName')} #{c.get('cardNumber')}", str(c["tcgPlayerId"]),
+                        float(market) if market else None))
+        total = rec.get("total") or 0
+        out.sort(key=lambda x: abs((x[2] if x[2] is not None else 1e9) - total))
+        return out
+
+    def photo_check(self, rec, card, data):
+        """Check the listing photos against the card we priced. Returns False to drop the deal."""
+        if rec["item_id"] in self.tracked:
+            return True  # already checked when first found
+        looks = self.lookalikes(card, rec)
+        total = rec.get("total") or 0
+        # A cheaper version worth about what this listing costs is the classic wrong-set listing.
+        cheaper = [l for l in looks if l[2] is not None and l[2] <= total * 1.3] if data["kind"] == "raw" else []
+        if cheaper:
+            data["lookalike"] = {"label": cheaper[0][0], "market": cheaper[0][2]}
+        claimed = f"{card.get('name')} from {card.get('set_name')} #{card.get('card_number')}"
+        result = self.photos.check(rec["item_id"], claimed, card.get("product_id"), rec.get("images") or [],
+                                   [(l[0], l[1]) for l in looks])
+        if result is None:
+            note = (f"Possibly a different version: {cheaper[0][0]} is worth about ${cheaper[0][2]:,.0f}. Check the set "
+                    f"symbol and number in the photos." if cheaper else "Photo not checked: confirm the set symbol and number in the listing photos.")
+            data["flags"] = [note] + data["flags"]
+            data["photoCheck"] = "skipped"
+            return True
+        data["photoCheck"] = result["verdict"]
+        if result["verdict"] == "different_card":
+            self.held += 1
+            log.info("Deal held back by the photo check: %s (%s)", rec.get("card_label"), result.get("reason"))
+            shared.log_event("alerts", "info", f"Deal held back: the photos don't show {claimed}. {result.get('reason', '')}",
+                             {"item": rec["item_id"], "url": rec.get("url"), "shown": result.get("shown"), "model": result.get("model")})
+            return False
+        if result["verdict"] == "unclear":
+            data["flags"] = [f"Photo check unclear: {result.get('reason', 'confirm the set symbol and number')}"] + data["flags"]
+        return True
+
     def on_deal(self, rec, card):
         data = deal_record(rec, card)
+        if not self.photo_check(rec, card, data):
+            return False
         is_new = shared.publish_deal(rec["item_id"], data, rec["end_time"])
         self.tracked[rec["item_id"]] = rec["end_time"]
         if is_new:

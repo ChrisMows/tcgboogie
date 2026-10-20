@@ -800,3 +800,13 @@ a.cond-link:hover { border-color: var(--accent); }
 .premium-facts span { color: var(--muted); line-height: 1.4; }
 .premium-links { text-align: center; }
 @media (max-width: 600px) { .premium-facts { grid-template-columns: minmax(0, 1fr); } .premium-head, .premium-body { padding-left: 20px; padding-right: 20px; } }
+
+/* Card page: the listing a deal tile opened */
+.deal-box { border: 2px solid var(--accent); border-radius: 12px; padding: 14px 16px; margin: 0 0 14px; background: rgba(211, 255, 102, 0.05); }
+.deal-box.ended { border-color: var(--border); background: var(--panel-2); }
+.deal-box-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.deal-box-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.deal-box-price b { font: 600 28px var(--font-head), sans-serif; }
+.deal-box-off { color: var(--accent); font-weight: 600; }
+.deal-box-flags { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--warn); display: grid; gap: 3px; }
+.chip-mini.good { color: var(--good); border-color: rgba(63, 185, 80, 0.4); }

@@ -40,6 +40,9 @@ def evaluate(listing, card, mv, cfg, now=None):
         "minutes_left": mins, "end_time": listing.end_time, "seller": "", "feedback_score": listing.feedback_score,
         "feedback_pct": listing.feedback_pct, "bid_count": listing.bid_count, "flags": [],
         "image": ((listing.summary.get("image") or {}).get("imageUrl")),
+        # Every listing photo we have (the photo check compares them with the official card image).
+        "images": [u for u in [((listing.summary.get("image") or {}).get("imageUrl"))]
+                   + [i.get("imageUrl") for i in ((listing.detail or {}).get("additionalImages") or [])] if u][:6],
         "affiliate_disclosure": (cfg["ebay"].get("affiliate_disclosure") or "")
         if ("itemAffiliateWebUrl" in listing.summary or "itemAffiliateWebUrl" in (listing.detail or {})
             or card.get("tcgplayer_affiliate")) else "",
