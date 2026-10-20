@@ -855,3 +855,7 @@ a.cond-link:hover { border-color: var(--accent); }
 .sell-go { width: 100%; justify-content: center; padding: 15px; font-size: 16px; }
 .sell-done { max-width: 560px; text-align: center; }
 .sell-link { color: var(--accent); }
+.card-title-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; flex: none; margin-top: 4px; }
+.card-title-actions .card-add-btn { margin-top: 0; }
+.card-sell-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+@media (max-width: 600px) { .card-title-actions { flex-direction: row; } }

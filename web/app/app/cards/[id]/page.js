@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardActions, { AddCardButton } from "@/components/CardActions";
+import Source from "@/components/Source";
 import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
@@ -130,6 +131,8 @@ export default async function CardPage({ params, searchParams }) {
   };
   const owned = mine.filter((it) => it.list === "owned").reduce((n, it) => n + it.quantity, 0);
   const wished = mine.some((it) => it.list === "wishlist");
+  // Sell on eBay: the copy you own (the first one if you have several; each copy also has its own link below).
+  const sellItem = p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
   return (
     <>
@@ -144,7 +147,14 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-info">
           <div className="card-title-row">
             <h1>{p.name}</h1>
-            {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
+            <div className="card-title-actions">
+              {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
+              {sellItem && (
+                <Link href={`/app/collection/sell/${sellItem.id}`} className="btn card-sell-btn" title="List this card on eBay with the details filled in">
+                  <Source name="ebay" className="src-sm" /> Sell on eBay
+                </Link>
+              )}
+            </div>
           </div>
           <div className="muted">
             {p.setName && <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link>}
