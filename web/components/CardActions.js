@@ -1,17 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import Source from "@/components/Source";
 import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
 import { itemLabel, money, nmPrice, pct, unitValue } from "@/lib/collection";
 
-/** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it. */
-export default function CardActions({ product, mine, binders, watch, plan, filterHref, soldHref, soldAffiliate }) {
+/** The "add a copy" button next to the card title: opens the add panel below. */
+export function AddCardButton({ label }) {
+  return (
+    <button type="button" className="btn primary card-add-btn" onClick={() => window.dispatchEvent(new Event("tcgb:add-card"))}>{label}</button>
+  );
+}
+
+/** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
+export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebayLive, ebaySold }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | "watch" | null
+  const panelRef = useRef(null);
+  useEffect(() => {
+    const open = () => { setPanel("add"); setTimeout(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
+    window.addEventListener("tcgb:add-card", open);
+    return () => window.removeEventListener("tcgb:add-card", open);
+  }, []);
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
   const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
@@ -78,10 +92,8 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
       ) : null}
 
       <div className="action-row">
-        {wish ? (
+        {wish && (
           <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
-        ) : (
-          <button type="button" className="btn primary" onClick={() => setPanel(panel === "add" ? null : "add")}>{copies ? "+ Add another" : "+ Add to collection"}</button>
         )}
         {copies === 0 && (
           wish ? <button type="button" className="btn" disabled={pending} onClick={() => run(() => removeFromWishlist(product.id), "Removed from your wishlist.")}>♥ Wishlisted</button>
@@ -93,16 +105,23 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
           <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Price alert</button>
         )}
         {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
-        {soldHref && (
-          <a href={soldHref} target="_blank" rel={`noopener noreferrer${soldAffiliate ? " sponsored" : ""}`} className="btn"
+        {ebayLive && (
+          <a href={ebayLive.href} target="_blank" rel={`noopener noreferrer${ebayLive.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live"
+            title="Live eBay listings and auctions for this card">
+            <Source name="ebay" className="src-sm" /> <span className="live-dot" aria-hidden="true" />Live listings ↗
+          </a>
+        )}
+        {ebaySold && (
+          <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold"
             title="eBay sold and completed listings for this card, most recent first">
-            🧾 Recent eBay Sales ↗
+            <Source name="ebay" className="src-sm" /> <span aria-hidden="true">🧾</span>Recent sales ↗
           </a>
         )}
       </div>
+      {(ebayLive?.affiliate || ebaySold?.affiliate) && <p className="hint ebay-note">eBay links may earn us a commission.</p>}
 
       {panel === "add" && !wish && (
-        <div className="action-panel">
+        <div className="action-panel" ref={panelRef}>
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
             <b style={{ flex: "none" }}>Add to your collection</b>
             <button type="button" className="link-btn small" style={{ flex: "none" }} disabled={pending}
