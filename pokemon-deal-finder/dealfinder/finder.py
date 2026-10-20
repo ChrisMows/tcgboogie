@@ -64,6 +64,11 @@ def evaluate(listing, card, mv, cfg, now=None):
     if disc < deal["min_discount_pct"]:
         return False, {**rec, "skip": f"only {disc:.0f}% below market (need {deal['min_discount_pct']}%)"}
     rec["flags"] = red_flags(listing, cfg)
+    # A huge discount with almost no bids and minutes still to go usually means bidding hasn't started yet.
+    eb = (cfg.get("red_flags") or {}).get("early_bid") or {}
+    bids = listing.bid_count or 0
+    if disc >= eb.get("min_discount_pct", 50) and bids <= eb.get("max_bids", 2) and mins >= eb.get("min_minutes_left", 3):
+        rec["flags"].append(f"Early bid: only {bids} bid{'' if bids == 1 else 's'} so far, so the price will likely climb before it ends")
     rec["reason"] = {
         "rule": f"${total:,.2f} is {disc:.1f}% below market ${mv.value:,.2f} "
                 f"(threshold {deal['min_discount_pct']}%), {mins:.1f} min left (limit {deal['max_minutes_left']})",

@@ -3,37 +3,69 @@ import nodemailer from "nodemailer";
 
 // Sending alerts. Each channel switches on when its settings exist (Hostinger environment variables):
 //   Email:   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM   (the tcgboogie.com mailbox)
+//            Optional ALERT_SMTP_HOST, ALERT_SMTP_PORT, ALERT_SMTP_USER, ALERT_SMTP_PASS: a separate sender for alert
+//            emails (Amazon SES), so volume doesn't count against the mailbox's daily limit.
 //   Discord: DISCORD_BOT_TOKEN                                        (BoogieBot; members must share a server with it)
 //   Text:    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM        (a Twilio number, e.g. +18885551234)
 
+const alertSmtp = () => Boolean(process.env.ALERT_SMTP_HOST && process.env.ALERT_SMTP_USER && process.env.ALERT_SMTP_PASS);
+
 export const channelsReady = () => ({
-  email: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+  email: alertSmtp() || Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
   discord: Boolean(process.env.DISCORD_BOT_TOKEN),
   sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM),
 });
 
+/** Which service alert emails go through (Admin -> Status). */
+export const emailSender = () => (alertSmtp() ? "Amazon SES" : "Hostinger mailbox");
+
 let transport;
-const mailer = () => (transport ||= nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: Number(process.env.SMTP_PORT || 465) === 465,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-}));
+const mailer = () => {
+  if (transport) return transport;
+  const ses = alertSmtp();
+  const port = Number((ses ? process.env.ALERT_SMTP_PORT : process.env.SMTP_PORT) || 465);
+  // A small pool of open connections: many alerts at once go out in parallel instead of one handshake each.
+  transport = nodemailer.createTransport({
+    pool: true, maxConnections: 3, maxMessages: 100,
+    host: ses ? process.env.ALERT_SMTP_HOST : process.env.SMTP_HOST,
+    port, secure: port === 465,
+    auth: ses ? { user: process.env.ALERT_SMTP_USER, pass: process.env.ALERT_SMTP_PASS } : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  return transport;
+};
+
+// Emails sent today (UTC), shared with Admin -> Status so you can see how close the mailbox is to its daily limit.
+async function countEmail() {
+  try {
+    const { db, schema } = await import("@/lib/db");
+    if (!db) return;
+    const { sql } = await import("drizzle-orm");
+    const day = new Date().toISOString().slice(0, 10);
+    await db.insert(schema.appSettings).values({ key: "emails_sent", value: { day, n: 1 } })
+      .onConflictDoUpdate({ target: schema.appSettings.key, set: {
+        value: sql`case when ${schema.appSettings.value}->>'day' = ${day}
+          then jsonb_build_object('day', ${day}::text, 'n', coalesce((${schema.appSettings.value}->>'n')::int, 0) + 1)
+          else jsonb_build_object('day', ${day}::text, 'n', 1) end`,
+        updatedAt: new Date() } });
+  } catch { /* counting must never stop an email */ }
+}
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-/** A branded email: heading, a few lines, one button. */
-export async function sendEmail(to, { subject, heading, lines = [], button, footer }) {
+/** A branded email: heading, a few lines, an optional list of linked items (bundled deals), one button. */
+export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  const text = [heading, "", ...lines, "", button ? `${button.label}: ${button.url}` : "", "", footer || ""].join("\n").trim();
+  const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || ""].join("\n").trim();
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b0e12;color:#f4f5ef;border-radius:14px">
     <div style="font-weight:800;font-size:18px;letter-spacing:-0.5px;margin-bottom:18px">TCG <span style="color:#d3ff66">BOOGIE</span></div>
     <h2 style="margin:0 0 12px;font-size:22px">${esc(heading)}</h2>
     ${lines.map((l) => `<p style="margin:0 0 8px;color:#c9d1dd;font-size:15px">${esc(l)}</p>`).join("")}
+    ${items.map((i) => `<p style="margin:0 0 10px;font-size:15px"><a href="${esc(i.url)}" style="color:#d3ff66;text-decoration:none">${esc(i.text)} →</a></p>`).join("")}
     ${button ? `<p style="margin:20px 0"><a href="${esc(button.url)}" style="display:inline-block;background:#d3ff66;color:#15200c;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button.label)}</a></p>` : ""}
     ${footer ? `<p style="color:#8f9aa9;font-size:12px;margin-top:22px">${esc(footer)}</p>` : ""}
   </div>`;
   await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text, html });
+  void countEmail();
 }
 
 /** A direct message from BoogieBot. discordUserId is the member's Discord account ID. */

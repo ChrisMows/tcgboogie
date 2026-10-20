@@ -92,12 +92,19 @@ export async function scanSettings() {
   };
 }
 
+// Daily caps per member, so alerts stay useful (and inside the email/text budgets). Deals past a cap still show on
+// the Deals page and by Discord, which is free.
+const EMAIL_CAP = Number(process.env.EMAIL_DEALS_PER_DAY || 25);
+const SMS_CAP = Number(process.env.SMS_DEALS_PER_DAY || 10);
+const PARALLEL = 5; // members alerted at the same time
+
 /**
- * Send live alerts for new deals. Each deal is claimed once (so two calls at the same time can't double-send), then
- * every Premium member whose running filter matches gets it on their channels. Safe to call often.
+ * Send live alerts for new deals. Each deal is claimed once (so two calls at the same time can't double-send).
+ * Every Premium member whose running filters match gets ONE message per channel for the whole batch (several deals
+ * found in the same check arrive bundled), and members are alerted in parallel so nobody waits on anyone else.
  */
 export async function dispatchDeals() {
-  const out = { deals: 0, members: 0, sent: 0, failed: 0 };
+  const out = { deals: 0, members: 0, sent: 0, failed: 0, capped: 0 };
   if (!db) return out;
   const claimed = await db.update(deals).set({ dispatchedAt: new Date() })
     .where(and(isNull(deals.dispatchedAt), gt(deals.endsAt, new Date()))).returning();
@@ -115,71 +122,121 @@ export async function dispatchDeals() {
     .where(and(inArray(accounts.userId, userIds), eq(accounts.provider, "discord")))).map((a) => [a.userId, a.id]));
   const ready = channelsReady();
 
+  // member -> the deals for them, each with the channels its matching filters chose
+  const byMember = new Map();
   for (const row of claimed) {
     const d = toDeal(row);
-    // One alert per member per deal, even if several of their filters match.
-    // If several of a member's filters match, they get one alert, on every channel those filters chose.
-    const who = new Map();
+    const seen = new Map();
     for (const r of live) {
       const f = clampToPlan(r.profile.filters, planFor("premium"));
       if (!matches(f, d)) continue;
-      const w = who.get(r.user.id) || { user: r.user, filter: r.profile.name, channels: new Set() };
-      for (const c of f.channels || ALERT_CHANNELS) w.channels.add(c);
-      who.set(r.user.id, w);
+      const e = seen.get(r.user.id) || { deal: d, filter: r.profile.name, channels: new Set() };
+      for (const c of f.channels || ALERT_CHANNELS) e.channels.add(c);
+      seen.set(r.user.id, e);
     }
-    for (const { user, filter, channels } of who.values()) {
-      out.members++;
-      const r = await alertMember(user, discordIds[user.id], d, filter, ready, channels);
-      out.sent += r.sent; out.failed += r.failed;
+    for (const [uid, e] of seen) {
+      const m = byMember.get(uid) || { user: e.deal && live.find((r) => r.user.id === uid).user, items: [] };
+      m.items.push(e);
+      byMember.set(uid, m);
     }
   }
+  out.members = byMember.size;
+
+  // Today's deal alerts per member and channel, for the caps.
+  const since = new Date(); since.setUTCHours(0, 0, 0, 0);
+  const counts = {};
+  for (const r of await db.select({ userId: alertLog.userId, channel: alertLog.channel, n: sql`count(*)::int` }).from(alertLog)
+    .where(and(inArray(alertLog.userId, [...byMember.keys()]), eq(alertLog.kind, "deal"), eq(alertLog.ok, true), gt(alertLog.sentAt, since)))
+    .groupBy(alertLog.userId, alertLog.channel)) counts[`${r.userId}:${r.channel}`] = r.n;
+
+  const queue = [...byMember.values()];
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
+    for (let m = queue.shift(); m; m = queue.shift()) {
+      const r = await alertMember(m.user, discordIds[m.user.id], m.items, ready, counts);
+      out.sent += r.sent; out.failed += r.failed; out.capped += r.capped;
+    }
+  }));
   await log("alerts", out.failed ? "warn" : "info",
-    `Deal alerts: ${out.deals} new deal${out.deals === 1 ? "" : "s"}, ${out.members} member match${out.members === 1 ? "" : "es"}, ${out.sent} sent${out.failed ? `, ${out.failed} failed` : ""}`, out);
+    `Deal alerts: ${out.deals} new deal${out.deals === 1 ? "" : "s"}, ${out.members} member${out.members === 1 ? "" : "s"}, ${out.sent} sent`
+    + `${out.capped ? `, ${out.capped} over a daily cap` : ""}${out.failed ? `, ${out.failed} failed` : ""}`, out);
   return out;
 }
 
-async function alertMember(user, discordId, d, filterName, ready, chosen = new Set(ALERT_CHANNELS)) {
-  // A channel is used if the plan includes it, the filter chose it, and it's switched on in Settings.
-  const allowed = planFor("premium").watchAlertChannels.filter((c) => chosen.has(c));
-  const grade = d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
-  const title = `⚡ ${d.name} ${grade}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
-  // Every alert opens the deal on TCG Boogie: price check, recent eBay sales, and the eBay button (affiliate-tracked).
-  const dealUrl = d.productId
-    ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
-    : `${SITE}/app/deals`;
-  const lines = [
-    `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${grade}`,
+const gradeOf = (d) => (d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`);
+const dealUrlOf = (d) => (d.productId
+  ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
+  : `${SITE}/app/deals`);
+const titleOf = (d) => `⚡ ${d.name} ${gradeOf(d)}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
+function linesOf(d, filterName) {
+  return [
+    `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${gradeOf(d)}`,
     `${money(d.total)} with shipping. Sells for about ${money(d.marketValue)} (${d.comps || "recent"} sales).`,
     `About ${d.minutesLeft} min left. Matched your filter “${filterName}”.`,
     ...(d.photoCheck === "match" ? ["✓ Photo checked: the listing photos match this card."] : []),
     ...(d.flags?.length ? [`Check first: ${d.flags.join(" · ")}`] : []),
   ];
-  const res = { sent: 0, failed: 0 };
-  const attempt = async (channel, fn) => {
+}
+
+/** One member, one batch of deals: one email, one text, and a Discord message per deal (Discord is free). */
+async function alertMember(user, discordId, items, ready, counts) {
+  const plan = planFor("premium").watchAlertChannels;
+  const res = { sent: 0, failed: 0, capped: 0 };
+  const logRows = async (channel, list, ok, error) => {
+    for (const { deal: d } of list) {
+      await db.insert(alertLog).values({ userId: user.id, dealId: d.id, kind: "deal", channel, title: titleOf(d), price: d.total, target: d.marketValue, ok, error: error ? String(error).slice(0, 300) : null });
+    }
+  };
+  const send = async (channel, list, fn) => {
     try {
       await fn();
       res.sent++;
-      await db.insert(alertLog).values({ userId: user.id, dealId: d.id, kind: "deal", channel, title, price: d.total, target: d.marketValue, ok: true });
+      await logRows(channel, list, true);
     } catch (e) {
       res.failed++;
-      await db.insert(alertLog).values({ userId: user.id, dealId: d.id, kind: "deal", channel, title, price: d.total, target: d.marketValue, ok: false, error: String(e.message).slice(0, 300) });
-      await log("alerts", "error", `Deal alert by ${channel} failed: ${e.message}`, { deal: d.id }, user.id);
+      await logRows(channel, list, false, e.message);
+      await log("alerts", "error", `Deal alert by ${channel} failed: ${e.message}`, { deals: list.map((x) => x.deal.id) }, user.id);
     }
   };
-  if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
-    await attempt("email", () => sendEmail(user.email, {
-      subject: title, heading: title, lines: [...lines, "See recent eBay sales and open the listing from the deal page."],
-      button: { label: "See the deal", url: dealUrl },
-      footer: `Manage your filters: ${SITE}/app/deals`,
+  // Deals for one channel: chosen by the filter, in the plan, switched on in Settings, and within today's cap.
+  const pick = (channel, on, cap) => {
+    if (!on || !plan.includes(channel)) return [];
+    const wanted = items.filter((x) => x.channels.has(channel));
+    if (cap === undefined) return wanted;
+    const left = Math.max(0, cap - (counts[`${user.id}:${channel}`] || 0));
+    res.capped += Math.max(0, wanted.length - left);
+    return wanted.slice(0, left);
+  };
+
+  const email = pick("email", ready.email && user.email && user.alertEmail !== false, EMAIL_CAP);
+  if (email.length === 1) {
+    const { deal: d, filter } = email[0];
+    await send("email", email, () => sendEmail(user.email, {
+      subject: titleOf(d), heading: titleOf(d), lines: [...linesOf(d, filter), "See recent eBay sales and open the listing from the deal page."],
+      button: { label: "See the deal", url: dealUrlOf(d) }, footer: `Manage your filters: ${SITE}/app/deals`,
+    }));
+  } else if (email.length > 1) {
+    const subject = `⚡ ${email.length} new deals for you, up to ${Math.max(...email.map((x) => Math.round(x.deal.discountPct)))}% below`;
+    await send("email", email, () => sendEmail(user.email, {
+      subject, heading: subject,
+      items: email.map(({ deal: d }) => ({ text: `${d.name} ${gradeOf(d)}: ${money(d.total)}, ${Math.round(d.discountPct)}% below ${money(d.marketValue)}, ~${d.minutesLeft} min left${d.photoCheck === "match" ? " · ✓ photo checked" : ""}`, url: dealUrlOf(d) })),
+      button: { label: "See all on your Deals page", url: `${SITE}/app/deals` }, footer: `Manage your filters: ${SITE}/app/deals`,
     }));
   }
-  if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
-    await attempt("discord", () => sendDiscordDM(discordId, {
-      title, url: dealUrl, description: `${lines.join("\n")}\n[See the deal, recent sales and the listing](${dealUrl})`,
+
+  for (const x of pick("discord", ready.discord && discordId && user.alertDiscord)) {
+    const d = x.deal;
+    await send("discord", [x], () => sendDiscordDM(discordId, {
+      title: titleOf(d), url: dealUrlOf(d), description: `${linesOf(d, x.filter).join("\n")}\n[See the deal, recent sales and the listing](${dealUrlOf(d)})`,
     }));
   }
-  if (ready.sms && user.phone && user.phoneVerifiedAt && user.alertSms && allowed.includes("sms")) {
-    await attempt("sms", () => sendSms(user.phone, `TCG Boogie deal: ${d.name} ${grade} ${money(d.total)}, ${Math.round(d.discountPct)}% below, ~${d.minutesLeft} min left. ${dealUrl}  Reply STOP to opt out.`));
+
+  const sms = pick("sms", ready.sms && user.phone && user.phoneVerifiedAt && user.alertSms, SMS_CAP);
+  if (sms.length) {
+    const first = sms[0].deal;
+    const body = sms.length === 1
+      ? `TCG Boogie deal: ${first.name} ${gradeOf(first)} ${money(first.total)}, ${Math.round(first.discountPct)}% below, ~${first.minutesLeft} min left. ${dealUrlOf(first)}  Reply STOP to opt out.`
+      : `TCG Boogie: ${sms.length} new deals, e.g. ${first.name} ${money(first.total)} (${Math.round(first.discountPct)}% below). ${SITE}/app/deals  Reply STOP to opt out.`;
+    await send("sms", sms, () => sendSms(user.phone, body));
   }
   return res;
 }

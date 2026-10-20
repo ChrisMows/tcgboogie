@@ -318,5 +318,24 @@ class DashboardHelpers(unittest.TestCase):
         shutil.rmtree(tmp.parent, ignore_errors=True)
 
 
+class EarlyBidFlagTests(unittest.TestCase):
+    def test_low_bid_with_minutes_left_is_flagged(self):
+        from dealfinder.comps import MarketValue
+        from dealfinder.finder import evaluate
+        from dealfinder.parse import Listing
+        cfg = copy.deepcopy(CFG)
+        cfg["deal"]["min_discount_pct"], cfg["deal"]["max_minutes_left"] = 30, 10
+        card = {"id": 1, "name": "Froslass", "set_name": "", "card_number": "", "variants": "", "language": "english", "grader": "Raw", "grade": "NM"}
+        mv = MarketValue(60.0, comps_used=10)
+        s = summary("v1|77|0", "Mega Froslass ex 275/217", price=3.81, ship=0.0, minutes=5)
+        s["bidCount"] = 1
+        ok, rec = evaluate(Listing(s), card, mv, cfg)
+        self.assertTrue(ok)
+        self.assertTrue(any(f.startswith("Early bid") for f in rec["flags"]))
+        s2 = summary("v1|78|0", "Mega Froslass ex 275/217", price=3.81, ship=0.0, minutes=1)
+        s2["bidCount"] = 1
+        self.assertFalse(any(f.startswith("Early bid") for f in evaluate(Listing(s2), card, mv, cfg)[1]["flags"]))
+
+
 if __name__ == "__main__":
     unittest.main()

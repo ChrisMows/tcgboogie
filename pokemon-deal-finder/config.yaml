@@ -109,6 +109,10 @@ auto:
   price_cache_hours: 20       # how long a card's prices are reused (TCGplayer and eBay data update about daily)
 
 red_flags:
+  early_bid:                  # flag deals whose price is low only because bidding has barely started
+    min_discount_pct: 50
+    max_bids: 2
+    min_minutes_left: 3
   min_seller_feedback_score: 50
   min_seller_feedback_pct: 98.0
   max_shipping: 25.00         # flag unusually high shipping

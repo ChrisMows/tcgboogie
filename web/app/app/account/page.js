@@ -204,7 +204,7 @@ export default async function Account({ searchParams }) {
             <input type="checkbox" name="alertEmail" defaultChecked={user.alertEmail !== false} /> ✉️ Email <span className="muted">· {user.email}</span>
           </label>
           <label className={`check ${premium ? "" : "dim"}`} style={{ marginTop: 6 }}>
-            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!premium} /> 💬 Discord message from BoogieBot
+            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!premium} /> 💬 Discord message from BoogieBot <span className="badge good" style={{ marginLeft: 6 }}>Fastest</span>
             {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
           {premium && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord below to get these.</div>}

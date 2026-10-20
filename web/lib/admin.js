@@ -10,7 +10,7 @@ import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
 import { botStatus } from "@/lib/deals";
 import { log } from "@/lib/log";
-import { channelsReady } from "@/lib/notify";
+import { channelsReady, emailSender } from "@/lib/notify";
 import { getCurrentUser } from "@/lib/session";
 
 const { users, accounts, collectionItems, priceWatches, profiles, alertLog, adminLog, appSettings } = schema;
@@ -91,6 +91,20 @@ export async function systemStatus({ pingPrices = false } = {}) {
       return { ok: true, detail: `Signed in as ${process.env.SMTP_USER}` };
     });
     add("Alerts", "Email (SMTP)", r.ok ? "ok" : "down", r.ok ? `${r.detail} · ${r.ms} ms` : `Couldn't sign in: ${r.detail}`);
+  }
+  if (db) {
+    // Emails sent today vs the daily limit (Hostinger mailbox: about 1,000-3,000 a day by plan; set EMAIL_DAILY_LIMIT).
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "emails_sent")).limit(1).catch(() => []);
+    const today = new Date().toISOString().slice(0, 10);
+    const n = row?.value?.day === today ? Number(row.value.n) : 0;
+    const sender = emailSender();
+    if (sender === "Amazon SES") add("Alerts", "Emails sent today", "ok", `${n.toLocaleString()} through Amazon SES`);
+    else {
+      const limit = Number(process.env.EMAIL_DAILY_LIMIT || 1000);
+      const share = n / limit;
+      add("Alerts", "Emails sent today", share >= 0.9 ? "down" : share >= 0.7 ? "warn" : "ok",
+        `${n.toLocaleString()} of about ${limit.toLocaleString()} (Hostinger mailbox)${share >= 0.7 ? " · time to switch alert emails to Amazon SES" : ""}`);
+    }
   }
 
   if (!ready.discord) add("Alerts", "Discord bot (BoogieBot)", "off", "DISCORD_BOT_TOKEN not added yet");
