@@ -85,7 +85,7 @@ export default async function Account({ searchParams }) {
               {subscribed ? (
                 user.cancelAtPeriodEnd
                   ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
-                  : <>${PLANS.premium.price}/month{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
+                  : <>${PLANS.premium.price}/month + tax{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
               ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
                 : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
@@ -106,7 +106,7 @@ export default async function Account({ searchParams }) {
               <form action={startCheckout}>
                 <button className="btn primary" disabled={!payments}>Upgrade to Premium · ${PLANS.premium.price}/mo</button>
               </form>
-              <div className="hint">{payments ? "Secure checkout by Stripe. Cancel anytime." : "Card payments launch soon."}</div>
+              <div className="hint">{payments ? "Plus applicable sales tax. Secure checkout by Stripe. Cancel anytime." : "Card payments launch soon."}</div>
             </div>
           ) : null}
         </div>

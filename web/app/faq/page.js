@@ -7,7 +7,7 @@ const { free, premium } = PLANS;
 
 const FAQS = [
   ["Is it really free?",
-    `Yes. Free includes the collection tracker, ${free.maxPriceWatches} price alerts and a look at the deals you missed. No card needed. Premium is $${premium.price}/month when you want deals live.`],
+    `Yes. Free includes the collection tracker, ${free.maxPriceWatches} price alerts and a look at the deals you missed. No card needed. Premium is $${premium.price}/month (plus applicable sales tax) when you want deals live.`],
   ["Where do the deals come from?",
     "Public eBay auctions for graded slabs and raw cards. We flag the ones priced well below what the same card has really sold for, before they end."],
   ["How do you know what a card is worth?",

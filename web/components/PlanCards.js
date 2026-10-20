@@ -42,6 +42,7 @@ export default function PlanCards({ signedIn = false }) {
             <span className="badge accent" style={{ flex: "none" }}>Most popular</span>
           </div>
           <div className="price">${premium.price}<small> / month</small></div>
+          <div className="tax-note">Plus applicable sales tax</div>
           <div className="muted">{premium.tagline}</div>
           <ul>
             <li className="plus-all">Everything in Free, plus:</li>
