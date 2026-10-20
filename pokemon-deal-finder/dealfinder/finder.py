@@ -119,7 +119,7 @@ class Finder:
 
     def poll_once(self):
         self.cfg = load_config()  # pick up settings changes without a restart
-        stats = {"listings": 0, "candidates": 0, "alerts": 0, "paused": False, "auto_lookups": 0}
+        stats = {"listings": 0, "candidates": 0, "alerts": 0, "paused": False, "auto_lookups": 0, "paced": 0}
         if db.is_paused(self.conn):
             stats["paused"] = True
             return stats
@@ -142,6 +142,10 @@ class Finder:
         summaries = self.ebay.search_ending_auctions(search_window(self.cfg), self.cfg["poll"]["max_pages"])
         stats["listings"] = len(summaries)
         self._auto_blocked = False
+        self._paused_reason = None
+        # Most valuable listings first: when price-lookup credits are being paced, they get the lookups.
+        summaries = sorted(summaries, key=lambda s: -(Listing(s).price() or 0))
+        min_price = float((self.cfg.get("auto") or {}).get("min_listing_price", 0) or 0)
 
         for s in summaries:
             item_id = s.get("itemId")
@@ -159,8 +163,11 @@ class Finder:
                 continue
             if mins > self.cfg["deal"]["max_minutes_left"] or mins <= 0:
                 continue  # it will come back on a later check once inside the window
-            if Listing(s).price() is None:
+            price = Listing(s).price()
+            if price is None:
                 continue
+            if price + (Listing(s).shipping()[0] or 0) < min_price:
+                continue  # never a real deal; not worth a price lookup
             if is_raw:
                 if ppt and not self._auto_blocked and "raw" in (self.cfg["auto"].get("card_types") or []):
                     self._raw_path(s, mins, ppt, stats)
@@ -170,6 +177,10 @@ class Finder:
                 self._auto_path(s, mins, ppt, stats)
 
         self._prune_cache()
+        if ppt:
+            stats["price_calls"] = getattr(ppt, "network_calls", 0)
+            stats["cache_hits"] = getattr(ppt, "cache_hits", 0)
+            ppt.cache_hits = 0
         db.set_setting(self.conn, "last_check", db.now_iso())
         db.set_setting(self.conn, "last_check_listings", stats["listings"])
         return stats
@@ -281,8 +292,7 @@ class Finder:
                 return skip(mixed, label=f"{card.get('name')} ({card.get('setName')}) {grader} {grade}")
             priced = ppt.card_prices(card["tcgPlayerId"], lang, int(self.cfg["deal"]["comp_lookback_days"]))
         except PPTOutOfCredits as e:
-            self._auto_blocked = True
-            log.warning("Automatic mode paused for now: %s", e)
+            self._note_paused(e, stats)
             return
         except PPTError as e:
             self._auto_blocked = True
@@ -364,8 +374,7 @@ class Finder:
                 return
             priced = ppt.card_prices(card["tcgPlayerId"], lang, int(self.cfg["deal"]["comp_lookback_days"]))
         except PPTOutOfCredits as e:
-            self._auto_blocked = True
-            log.warning("Automatic mode paused for now: %s", e)
+            self._note_paused(e, stats)
             return
         except PPTError as e:
             self._auto_blocked = True
@@ -410,6 +419,13 @@ class Finder:
         why = (f"auto-identified as {card.get('name')} ({card.get('setName')}) #{card.get('cardNumber')}, "
                f"raw {condition} {printing}, {lang}")
         self._finish(listing, ident, mv, why, stats)
+
+    def _note_paused(self, e, stats):
+        """New price lookups are paused (credit pacing or rate limit). Cached lookups carry on; log once per check."""
+        stats["paced"] = stats.get("paced", 0) + 1
+        if self._paused_reason is None:
+            self._paused_reason = str(e)
+            log.info("New price lookups waiting (%s); cached cards are still checked", e)
 
     def _finish(self, listing, card, mv, why, stats):
         qualifies, rec = evaluate(listing, card, mv, self.cfg)

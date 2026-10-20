@@ -10,6 +10,7 @@ import { log } from "@/lib/log";
 
 const PPT = "https://www.pokemonpricetracker.com/api/v2";
 const HOUR = 3600 * 1000;
+const PRICE_TTL = 20 * HOUR; // keep in step with price_cache_hours in the bot's config.yaml
 const img = (id) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_in_200x200.jpg`;
 const r2 = (v) => Math.round(v * 100) / 100;
 const today = new Date();
@@ -98,6 +99,7 @@ function gradedReliable({ sales, lastSale, confidence }) {
 function recordStatus(r) {
   const left = r.headers.get("x-ratelimit-daily-remaining") ?? r.headers.get("x-ratelimit-total-remaining");
   Object.assign(status, { at: new Date().toISOString(), ok: r.ok || r.status === 404, code: r.status, creditsLeft: left === null ? status.creditsLeft : Number(left) });
+  if (left !== null) shareCredits(Number(left));
   if (!status.ok) void log("prices", r.status === 429 ? "warn" : "error", `Price service answered ${r.status}${r.status === 429 ? " (out of credits or rate-limited)" : ""}`, { url: String(r.url || "").replace(/\?.*$/, ""), creditsLeft: status.creditsLeft });
   else if (status.creditsLeft !== null && status.creditsLeft !== undefined && status.creditsLeft < 500 && !status.lowWarned) {
     status.lowWarned = true;
@@ -105,6 +107,17 @@ function recordStatus(r) {
   }
 }
 export const priceServiceStatus = () => ({ ...status });
+
+// The bot uses the same API key, so both write the credits left today to one shared setting (at most once a minute
+// from here). The bot paces its spending against it and always leaves a reserve for the website.
+let lastShared = 0;
+function shareCredits(remaining) {
+  if (!db || !Number.isFinite(remaining) || Date.now() - lastShared < 60000) return;
+  lastShared = Date.now();
+  const value = { remaining, at: new Date().toISOString(), by: "website" };
+  db.insert(schema.appSettings).values({ key: "ppt_credits", value })
+    .onConflictDoUpdate({ target: schema.appSettings.key, set: { value, updatedAt: new Date() } }).catch(() => {});
+}
 
 /** Admin status check: one tiny live request (1 credit). */
 export async function pingPriceService() {
@@ -228,7 +241,8 @@ function fromSealed(s) {
  */
 export async function getProduct(id, { cachedOnly = false } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
-  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { includeHistory: "true", includeEbay: "true", days: "90" }, 12 * HOUR, cachedOnly);
+  // Same request (and cache entry) as the deal bot's price lookups; prices update about once a day.
+  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { includeHistory: "true", includeEbay: "true", days: "90" }, PRICE_TTL, cachedOnly);
   if (card === MISS) return undefined;
   if (card?.data) return fromCard(Array.isArray(card.data) ? card.data[0] : card.data);
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);

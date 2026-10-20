@@ -185,7 +185,39 @@ class AutoPollTests(unittest.TestCase):
         f = self.finder(FakeEbay([s, s], {}), ppt)
         stats = self.poll(f)
         self.assertEqual(stats["alerts"], 0)
-        self.assertTrue(f._auto_blocked)
+        self.assertGreaterEqual(stats["paced"], 1)  # new lookups wait; cached cards would still be checked
+        self.assertIn("used up", f._paused_reason)
+
+    def test_cheap_junk_listings_spend_no_lookups(self):
+        cfg = copy.deepcopy(AUTO_CFG)
+        cfg["auto"]["min_listing_price"] = 2
+        junk = summary("v1|920|0", "Umbreon VMAX 215/203 Evolving Skies PSA 10", price=0.5, ship=1.0, minutes=5)
+        ppt = FakePPT({"215/203": [UMBREON]}, {"246723": priced_card()})
+        f = self.finder(FakeEbay([junk], {}), ppt)
+        f.cfg = cfg
+        prev = fm.load_config
+        fm.load_config = lambda: cfg
+        try:
+            f.poll_once()
+        finally:
+            fm.load_config = prev
+        self.assertEqual(ppt.lookups, [])
+
+
+class PacingTests(unittest.TestCase):
+    def test_spending_is_spread_over_the_day(self):
+        from datetime import datetime, timezone
+        from dealfinder.ppt import allowed_spend
+        cfg = {"auto": {"daily_credits": 20000, "website_reserve": 2000, "pace_burst": 1500}}
+        at = lambda h: allowed_spend(cfg, datetime(2026, 10, 20, h, 0, tzinfo=timezone.utc))
+        self.assertEqual(at(0), 1500)             # only the burst at midnight
+        self.assertEqual(at(12), 9000 + 1500)     # half of the bot's 18,000 by noon
+        self.assertEqual(at(23), 18000)           # never more than daily minus the website's reserve
+
+    def test_cache_keys_match_the_website(self):
+        from dealfinder.ppt import request_key
+        self.assertEqual(request_key("/cards/201333", {"includeHistory": "true", "includeEbay": "true", "days": "90"}),
+                         "https://www.pokemonpricetracker.com/api/v2/cards/201333?includeHistory=true&includeEbay=true&days=90")
 
 
 if __name__ == "__main__":
