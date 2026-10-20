@@ -7,7 +7,7 @@ import CardThumb from "@/components/CardThumb";
 import { DealGrid } from "@/components/DealTile";
 import { cardOptions, createProfile, deleteProfile, saveProfile, setProfileActive } from "@/app/app/actions";
 import { FACETS, activeFacets } from "@/lib/facets";
-import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches } from "@/lib/filters";
+import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches, ALERT_CHANNELS, ALERT_CHANNEL_LABELS } from "@/lib/filters";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 const Lock = ({ children }) => <div className="locked-note">🔒 {children} <Link href="/app/premium?from=filters">Upgrade</Link></div>;
@@ -134,7 +134,7 @@ function CardPicker({ f, set }) {
 }
 
 /** The controls for one facet (used in the pill dropdowns and in the All filters panel). */
-function FacetControl({ k, f, set, toggle, plan, errors, allSets }) {
+function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
   const premium = plan.key === "premium";
   switch (k) {
     case "sets": return <SetPicker f={f} set={set} allSets={allSets} />;
@@ -203,6 +203,18 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets }) {
         <Err msg={errors.languages} />
         {!premium && <Lock>Japanese cards are Premium.</Lock>}
       </>);
+    case "channels":
+      return (<>
+        {ALERT_CHANNELS.map((c) => (
+          <Check key={c} checked={(f.channels || ALERT_CHANNELS).includes(c)} onChange={() => toggle("channels", c)}>
+            {ALERT_CHANNEL_LABELS[c]}
+            {ready && !ready[c] && <span className="small muted"> · not set up yet (<a href="/app/account#alerts">Settings</a>)</span>}
+          </Check>
+        ))}
+        <Err msg={errors.channels} />
+        <div className="hint">How this filter&apos;s live deal alerts reach you. Pick one, two or all three.</div>
+        {!premium && <Lock>Live deal alerts come with Premium. On Free, deals show on this page after they end.</Lock>}
+      </>);
     case "seller":
       return (<>
         <Check checked={f.usOnly} onChange={(e) => set("usOnly", e.target.checked)}>US sellers only</Check>
@@ -218,7 +230,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets }) {
   }
 }
 
-export default function FilterStudio({ profiles: initial, plan, deals, sample, prefill, allSets }) {
+export default function FilterStudio({ profiles: initial, plan, deals, sample, prefill, allSets, ready }) {
   const router = useRouter();
   const defaults = useMemo(() => defaultFilters(plan), [plan]);
   const [profiles, setProfiles] = useState(initial);
@@ -377,7 +389,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                         {on && <button type="button" className="fs-x" aria-label={`Clear ${x.label}`} onClick={() => reset(x)}>✕</button>}
                         {pop === x.key && (
                           <div className={`fs-pop ${wide ? "wide" : ""}`} role="dialog" aria-label={x.label}>
-                            <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} />
+                            <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
                             <div className="fs-pop-foot">
                               <button type="button" className="link-btn small" onClick={() => reset(x)}>Reset</button>
                               <button type="button" className="btn sm primary" onClick={() => setPop(null)}>Done</button>
@@ -441,7 +453,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                   <h3 style={{ flex: "none" }}>{x.label}</h3>
                   {x.active(draft, defaults) && <button type="button" className="link-btn small" style={{ flex: "none" }} onClick={() => reset(x)}>Reset</button>}
                 </div>
-                <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} />
+                <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
               </section>
             ))}
             <div className="fs-drawer-foot">

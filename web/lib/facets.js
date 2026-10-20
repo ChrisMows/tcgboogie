@@ -1,6 +1,6 @@
 // The filter bar: each facet knows whether it's switched on (differs from the defaults), a short label for its
 // pill when it is, and how to reset just that part. Pure functions, used by the filter page.
-import { GRADERS, RAW_CONDITION_LABELS } from "@/lib/filters";
+import { ALERT_CHANNEL_LABELS, ALERT_CHANNELS, GRADERS, RAW_CONDITION_LABELS } from "@/lib/filters";
 
 const same = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
 const firstFew = (a) => (a.length <= 2 ? a.join(", ") : `${a.slice(0, 2).join(", ")} +${a.length - 2}`);
@@ -72,6 +72,12 @@ export const FACETS = [
     active: (f, d) => !same(f.languages, d.languages),
     summary: (f) => f.languages.map((l) => (l === "english" ? "English" : "Japanese")).join(" + "),
     reset: (d) => ({ languages: d.languages }),
+  },
+  {
+    key: "channels", label: "Notification type",
+    active: (f) => !same(f.channels || ALERT_CHANNELS, ALERT_CHANNELS),
+    summary: (f) => (f.channels || ALERT_CHANNELS).map((c) => ALERT_CHANNEL_LABELS[c]).join(" + "),
+    reset: () => ({ channels: [...ALERT_CHANNELS] }),
   },
   {
     key: "seller", label: "Seller",

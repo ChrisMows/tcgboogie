@@ -54,6 +54,11 @@ async function Filters({ user, sp }) {
       sample={found.sample}
       prefill={prefill}
       allSets={sets}
+      ready={{
+        email: Boolean(user.email) && user.alertEmail !== false,
+        discord: Boolean(user.discordConnected && user.alertDiscord),
+        sms: Boolean(user.phoneVerifiedAt && user.alertSms),
+      }}
     />
   );
 }

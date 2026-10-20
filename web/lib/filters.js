@@ -12,6 +12,9 @@ export const RAW_CONDITION_LABELS = {
   HP: "Heavily Played or better",
 };
 export const GRADE_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 8.5, 9, 9.5, 10];
+// How a filter's deal alerts reach you (each also has to be switched on in Settings -> Where alerts go).
+export const ALERT_CHANNELS = ["email", "discord", "sms"];
+export const ALERT_CHANNEL_LABELS = { email: "Email", discord: "Discord", sms: "Text" };
 
 export function defaultFilters(plan) {
   return {
@@ -35,6 +38,7 @@ export function defaultFilters(plan) {
     minSellerFeedback: 0,
     usOnly: false,
     hideFlagged: false,
+    channels: [...ALERT_CHANNELS],
   };
 }
 
@@ -118,6 +122,9 @@ export function validateFilters(input, plan) {
 
   f.usOnly = Boolean(input.usOnly);
   f.hideFlagged = Boolean(input.hideFlagged);
+  const ch = words(input.channels).map((c) => c.toLowerCase()).filter((c) => ALERT_CHANNELS.includes(c));
+  if (input.channels !== undefined && !ch.length) errors.channels = "Pick at least one way to get these alerts.";
+  else f.channels = ch.length ? [...new Set(ch)] : [...ALERT_CHANNELS];
   return { filters: f, errors };
 }
 

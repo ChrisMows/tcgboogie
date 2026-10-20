@@ -3,7 +3,7 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-
 import { effectiveTier } from "@/lib/access";
 import { db, schema } from "@/lib/db";
 import { SAMPLE_DEALS } from "@/lib/demo-deals";
-import { clampToPlan, matches, RAW_CONDITIONS } from "@/lib/filters";
+import { ALERT_CHANNELS, clampToPlan, matches, RAW_CONDITIONS } from "@/lib/filters";
 import { log } from "@/lib/log";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
 import { planFor } from "@/lib/plans";
@@ -118,14 +118,18 @@ export async function dispatchDeals() {
   for (const row of claimed) {
     const d = toDeal(row);
     // One alert per member per deal, even if several of their filters match.
+    // If several of a member's filters match, they get one alert, on every channel those filters chose.
     const who = new Map();
     for (const r of live) {
-      if (who.has(r.user.id)) continue;
-      if (matches(clampToPlan(r.profile.filters, planFor("premium")), d)) who.set(r.user.id, { user: r.user, filter: r.profile.name });
+      const f = clampToPlan(r.profile.filters, planFor("premium"));
+      if (!matches(f, d)) continue;
+      const w = who.get(r.user.id) || { user: r.user, filter: r.profile.name, channels: new Set() };
+      for (const c of f.channels || ALERT_CHANNELS) w.channels.add(c);
+      who.set(r.user.id, w);
     }
-    for (const { user, filter } of who.values()) {
+    for (const { user, filter, channels } of who.values()) {
       out.members++;
-      const r = await alertMember(user, discordIds[user.id], d, filter, ready);
+      const r = await alertMember(user, discordIds[user.id], d, filter, ready, channels);
       out.sent += r.sent; out.failed += r.failed;
     }
   }
@@ -134,8 +138,9 @@ export async function dispatchDeals() {
   return out;
 }
 
-async function alertMember(user, discordId, d, filterName, ready) {
-  const allowed = planFor("premium").watchAlertChannels;
+async function alertMember(user, discordId, d, filterName, ready, chosen = new Set(ALERT_CHANNELS)) {
+  // A channel is used if the plan includes it, the filter chose it, and it's switched on in Settings.
+  const allowed = planFor("premium").watchAlertChannels.filter((c) => chosen.has(c));
   const grade = d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
   const title = `⚡ ${d.name} ${grade}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
   // Every alert opens the deal on TCG Boogie: price check, recent eBay sales, and the eBay button (affiliate-tracked).
