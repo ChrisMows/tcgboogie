@@ -787,7 +787,7 @@ a.cond-link:hover { border-color: var(--accent); }
 .premium-perk { margin: 0; }
 .premium-perk-icon { font-size: 22px; display: block; margin-bottom: 6px; }
 .premium-perk p { margin: 4px 0 0; line-height: 1.45; }
-.premium-compare { max-width: none; margin: 0 0 16px; }
+details.compare-all.premium-compare { max-width: none; margin: 0 0 16px; }
 .premium-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 .premium-grid .panel { margin: 0; }
 .premium-terms { margin: 0; padding-left: 18px; display: grid; gap: 10px; font-size: 14px; line-height: 1.5; color: #c9d1dd; }
