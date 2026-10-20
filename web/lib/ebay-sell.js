@@ -287,20 +287,63 @@ export async function listItem(userId, item, form) {
   for (const f of form.photos.slice(0, 12)) imageUrls.push(await uploadPhoto(userId, f));
 
   const sku = `TCGB-${item.id}-${Date.now().toString(36)}`;
-  await ebay(userId, "PUT", `/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
+  const step = (name, details) => log("admin", "info", `eBay listing step: ${name}`, { sku, ...details }, userId);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // 1. The card record (eBay calls it an inventory item).
+  const put = await ebay(userId, "PUT", `/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
     availability: { shipToLocationAvailability: { quantity: 1 } },
     ...condition(item),
     product: { title: form.title.slice(0, 80), description: form.description, aspects: aspects(item), imageUrls },
-  });
+  }, { raw: true });
+  const putBody = await put.text();
+  if (!put.ok) {
+    const j = (() => { try { return JSON.parse(putBody); } catch { return {}; } })();
+    await step("card record rejected", { status: put.status, errors: j.errors });
+    throw new SellError((j.errors || []).map((e) => e.longMessage || e.message).join(" ") || `eBay said ${put.status} saving the card`);
+  }
+  await step("card record saved", { status: put.status, warnings: putBody ? putBody.slice(0, 500) : null });
+  // eBay can take a moment before a new record can be used: confirm it's there first.
+  for (let i = 0; i < 6; i++) {
+    const r = await ebay(userId, "GET", `/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, null, { raw: true });
+    if (r.ok) break;
+    if (i === 5) {
+      await step("card record never appeared", { status: r.status, body: (await r.text()).slice(0, 500) });
+      throw new SellError("eBay didn't finish saving the card. Please try again in a minute.");
+    }
+    await wait(1500);
+  }
+
+  // 2. The offer (price, format, policies), retried if eBay still says the record isn't there.
   const auction = form.format === "AUCTION";
-  const offer = await ebay(userId, "POST", "/sell/inventory/v1/offer", {
+  const offerBody = {
     sku, marketplaceId: MARKETPLACE, format: auction ? "AUCTION" : "FIXED_PRICE", availableQuantity: 1, categoryId: CATEGORY,
     listingDescription: form.description.replace(/\n/g, "<br>"), merchantLocationKey: LOCATION_KEY,
     listingDuration: auction ? `DAYS_${form.duration || 7}` : "GTC",
     listingPolicies: { fulfillmentPolicyId: form.policies.fulfillment, paymentPolicyId: form.policies.payment, returnPolicyId: form.policies.return },
     pricingSummary: auction ? { auctionStartPrice: { value: form.price.toFixed(2), currency: "USD" } } : { price: { value: form.price.toFixed(2), currency: "USD" } },
-  });
-  const pub = await ebay(userId, "POST", `/sell/inventory/v1/offer/${offer.offerId}/publish`, {});
+  };
+  let offer;
+  for (let i = 0; ; i++) {
+    try {
+      offer = await ebay(userId, "POST", "/sell/inventory/v1/offer", offerBody);
+      break;
+    } catch (e) {
+      await step("offer rejected", { attempt: i + 1, error: e.message, code: e.code });
+      if (i >= 2 || !/could not be found|not available/i.test(e.message)) throw e;
+      await wait(2500);
+    }
+  }
+  await step("offer created", { offerId: offer.offerId });
+
+  // 3. Publish.
+  let pub;
+  try {
+    pub = await ebay(userId, "POST", `/sell/inventory/v1/offer/${offer.offerId}/publish`, {});
+  } catch (e) {
+    await step("publish rejected", { offerId: offer.offerId, error: e.message, code: e.code });
+    throw e;
+  }
   await db.insert(ebayListings).values({ userId, itemId: item.id, sku, offerId: offer.offerId, listingId: pub.listingId,
     format: auction ? "AUCTION" : "FIXED_PRICE", price: form.price, title: form.title.slice(0, 80) });
   await log("admin", "info", `Listed on eBay: ${form.title.slice(0, 80)} (${auction ? "auction" : "Buy It Now"} $${form.price.toFixed(2)})`, { listingId: pub.listingId }, userId);
