@@ -756,7 +756,8 @@ a.cond-link:hover { border-color: var(--accent); }
 /* Collection alerts: one compact row */
 .coll-alerts { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 16px; }
 .coll-alerts h2 { margin: 0; font-size: 16px; flex: none; }
-.coll-alert-opts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1 1 420px; }
+.coll-alert-opts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1 1 auto; }
+.coll-alert-group { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .coll-alert-opt { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
 .coll-alert-opt input { margin: 0; }
 .coll-alert-sep { width: 1px; height: 18px; background: var(--border); margin: 0 8px; }

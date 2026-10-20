@@ -22,6 +22,7 @@ export default function CollectionAlerts({ plan, prefs }) {
     <div className={`panel coll-alerts ${locked ? "is-locked" : ""}`}>
       <h2>Collection alerts</h2>
       <div className="coll-alert-opts">
+        <span className="coll-alert-group">
         <label className="coll-alert-opt">
           <input type="checkbox" checked={Boolean(p.setDeals)} disabled={locked} onChange={(e) => update({ setDeals: e.target.checked })} />
           <b>Deals on cards missing from my sets</b>
@@ -29,7 +30,9 @@ export default function CollectionAlerts({ plan, prefs }) {
         <InfoTip label="About deals on cards missing from your sets">
           When an underpriced eBay listing is a card you still need for a set you&apos;ve started (or one on your wishlist), it comes to you as a deal alert, by Discord and email with your other alerts.
         </InfoTip>
+        </span>
         <span className="coll-alert-sep" aria-hidden="true" />
+        <span className="coll-alert-group">
         <label className="coll-alert-opt">
           <input type="checkbox" checked={Boolean(p.sellHigh)} disabled={locked} onChange={(e) => update({ sellHigh: e.target.checked })} />
           <b>Tell me when to sell high</b>
@@ -40,6 +43,7 @@ export default function CollectionAlerts({ plan, prefs }) {
         <InfoTip label="About sell-high alerts">
           When a card you own climbs {p.sellHighPct}% or more in a week, we tell you, so you can sell while it&apos;s high. Sent by Discord and email with your other alerts.
         </InfoTip>
+        </span>
       </div>
       <div className="coll-alert-end">
         {locked ? <Link href="/app/account#plan" className="btn sm primary">Unlock with Premium</Link>
