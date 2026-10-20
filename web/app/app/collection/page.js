@@ -110,13 +110,14 @@ export default async function CollectionPage({ searchParams }) {
         </div>
       )}
 
+      <CollectionAlerts plan={user.plan} prefs={c.prefs} />
+
       <div className="tabs-row" role="tablist">
         <Link href="/app/collection" role="tab" aria-selected={tab === "owned"} className={tab === "owned" ? "on" : ""}>Collection <span>{c.owned.length}</span></Link>
         <Link href="/app/collection?tab=wishlist" role="tab" aria-selected={tab === "wishlist"} className={tab === "wishlist" ? "on" : ""}>♡ Wishlist <span>{c.wishlist.length}</span></Link>
       </div>
       <CollectionView key={tab} tab={tab} items={list} binders={c.binders} products={c.products} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
 
-      <CollectionAlerts plan={user.plan} prefs={c.prefs} />
     </>
   );
 }
