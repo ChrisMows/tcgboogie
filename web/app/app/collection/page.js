@@ -63,6 +63,8 @@ export default async function CollectionPage({ searchParams }) {
         </div>
       )}
 
+      <CollectionAlerts plan={user.plan} prefs={c.prefs} />
+
       {c.owned.length > 0 && (
         <>
           <div className="panel coll-chart">
@@ -101,8 +103,6 @@ export default async function CollectionPage({ searchParams }) {
           </div>
         </>
       )}
-
-      <CollectionAlerts plan={user.plan} prefs={c.prefs} />
 
       <div className="tabs-row" role="tablist">
         <Link href="/app/collection" role="tab" aria-selected={tab === "owned"} className={tab === "owned" ? "on" : ""}>Collection <span>{c.owned.length}</span></Link>

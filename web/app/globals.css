@@ -745,3 +745,22 @@ a.cond-link:hover { border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 .ebay-note { margin: 6px 0 0; font-size: 11px; }
 @media (max-width: 600px) { .card-title-row { flex-direction: column; gap: 8px; } }
+
+/* ⓘ info tips */
+.info-tip { position: relative; display: inline-flex; vertical-align: middle; }
+.info-tip-btn { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted); background: none; color: var(--muted); font: italic 700 11px/1 Georgia, serif; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.info-tip-btn:hover, .info-tip.open .info-tip-btn, .info-tip-btn:focus-visible { border-color: var(--accent); color: var(--accent); }
+.info-tip-pop { position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: 280px; padding: 10px 12px; border-radius: 8px; background: #1b222c; border: 1px solid #414b5b; box-shadow: 0 10px 30px #0009; color: var(--text); font-size: 13px; line-height: 1.45; font-weight: 400; white-space: normal; visibility: hidden; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.info-tip:hover .info-tip-pop, .info-tip.open .info-tip-pop, .info-tip-btn:focus-visible + .info-tip-pop { visibility: visible; opacity: 1; }
+
+/* Collection alerts: one compact row */
+.coll-alerts { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 16px; }
+.coll-alerts h2 { margin: 0; font-size: 16px; flex: none; }
+.coll-alert-opts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1 1 420px; }
+.coll-alert-opt { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.coll-alert-opt input { margin: 0; }
+.coll-alert-sep { width: 1px; height: 18px; background: var(--border); margin: 0 8px; }
+.coll-alert-pct { width: auto !important; padding: 2px 6px !important; }
+.coll-alert-end { flex: none; margin-left: auto; }
+.coll-alerts.is-locked .coll-alert-opt { opacity: 0.6; cursor: default; }
+@media (max-width: 700px) { .coll-alert-sep { display: none; } .coll-alert-opts { flex-basis: 100%; } }
