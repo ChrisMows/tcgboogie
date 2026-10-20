@@ -26,10 +26,17 @@ export const FACETS = [
     reset: () => ({ cardTypes: ["graded", "raw"] }),
   },
   {
-    key: "grade", label: "Grading company",
-    active: (f, d) => !same(f.graders, d.graders) || f.minGrade !== d.minGrade || f.maxGrade !== d.maxGrade,
-    summary: (f) => `${f.graders.length === GRADERS.length ? "Any grader" : f.graders.join(", ")} ${f.minGrade}${f.maxGrade < 10 ? `–${f.maxGrade}` : "+"}`,
-    reset: (d) => ({ graders: d.graders, minGrade: d.minGrade, maxGrade: d.maxGrade }),
+    key: "grade", label: "Grading Company",
+    active: (f, d) => !same(f.graders, d.graders),
+    summary: (f) => (f.graders.length === GRADERS.length ? "Any" : firstFew(f.graders)),
+    reset: (d) => ({ graders: d.graders }),
+    disabled: (f) => !f.cardTypes.includes("graded"),
+  },
+  {
+    key: "gradeRange", label: "Grade",
+    active: (f, d) => f.minGrade !== d.minGrade || f.maxGrade !== d.maxGrade,
+    summary: (f) => (f.minGrade === f.maxGrade ? `${f.minGrade} only` : `${f.minGrade}${f.maxGrade < 10 ? `–${f.maxGrade}` : "+"}`),
+    reset: (d) => ({ minGrade: d.minGrade, maxGrade: d.maxGrade }),
     disabled: (f) => !f.cardTypes.includes("graded"),
   },
   {
@@ -49,9 +56,9 @@ export const FACETS = [
     reset: (d) => ({ minMarketValue: d.minMarketValue, maxMarketValue: null, maxPrice: null }),
   },
   {
-    key: "discount", label: "Discount",
+    key: "discount", label: "% below market",
     active: (f, d) => f.minDiscountPct !== d.minDiscountPct,
-    summary: (f) => `${f.minDiscountPct}%+ below`,
+    summary: (f) => `${f.minDiscountPct}%+ below market`,
     reset: (d) => ({ minDiscountPct: d.minDiscountPct }),
   },
   {

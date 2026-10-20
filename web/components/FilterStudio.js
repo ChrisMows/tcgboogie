@@ -149,6 +149,9 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets }) {
       return (<>
         {GRADERS.map((g) => <Check key={g} checked={f.graders.includes(g)} onChange={() => toggle("graders", g)}>{g}</Check>)}
         <Err msg={errors.graders} />
+      </>);
+    case "gradeRange":
+      return (<>
         <div className="fs-row">
           <label>From <select value={f.minGrade} onChange={(e) => set("minGrade", Number(e.target.value))}>{GRADE_STEPS.map((g) => <option key={g} value={g}>{g}</option>)}</select></label>
           <label>to <select value={f.maxGrade} onChange={(e) => set("maxGrade", Number(e.target.value))}>{GRADE_STEPS.map((g) => <option key={g} value={g}>{g}</option>)}</select></label>
