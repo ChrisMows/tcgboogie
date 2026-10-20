@@ -26,6 +26,10 @@ const GRADE_LABEL = (key) => {
   return `${grader} ${m[2]}${m[3] ? `.${m[3]}` : ""}`;
 };
 
+// Best to worst: Near Mint first, Damaged last.
+const COND_ORDER = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
+const condRank = (c) => (COND_ORDER.indexOf(c) + 1) || 99;
+
 const saleNote = (g) => {
   const n = g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : "";
   const last = g.lastSale ? `last ${new Date(`${g.lastSale}T12:00:00`).toLocaleDateString("en-US", { month: "short", year: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? undefined : "numeric", day: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? "numeric" : undefined })}` : "";
@@ -141,7 +145,7 @@ export default async function CardPage({ params }) {
                 <div key={printing} style={{ marginBottom: 12 }}>
                   {printings.length > 1 && <div className="small muted" style={{ marginBottom: 4 }}>{printing}</div>}
                   <div className="cond-grid">
-                    {Object.entries(byCond).map(([cond, v]) => (
+                    {Object.entries(byCond).sort(([a], [b]) => condRank(a) - condRank(b)).map(([cond, v]) => (
                       <div key={cond} className="cond-cell"><span className="small muted">{COND_SHORT[cond] || cond}</span><b>{money(v.market)}</b></div>
                     ))}
                   </div>
