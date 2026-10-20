@@ -7,8 +7,8 @@ import { getCurrentUser } from "@/lib/session";
 import "./home.css";
 
 const EXAMPLES = [
-  { name: "Umbreon VMAX", art: "umbreon", meta: "Evolving Skies · Alternate Art", price: "240.00", market: "335.00", off: 28, tag: "GRADED · PSA 10", left: "4m 32s" },
-  { name: "Charizard ex", art: "charizard", meta: "Pokémon 151 · Special Illustration Rare", price: "112.00", market: "150.00", off: 25, tag: "RAW · NEAR MINT", left: "8m 14s" },
+  { name: "Umbreon VMAX", art: "umbreon", meta: "Evolving Skies · Alternate Art", price: "2,180.00", market: "3,750.00", off: 42, tag: "GRADED · PSA 10", left: "4m 32s" },
+  { name: "Charizard ex", art: "charizard", meta: "Pokémon 151 · Special Illustration Rare", price: "259.00", market: "325.00", off: 20, tag: "RAW · NEAR MINT", left: "8m 14s" },
   { name: "Rayquaza Gold Star", art: "rayquaza-star", meta: "EX Deoxys · 107/107", price: "1,075.00", market: "1,450.00", off: 26, tag: "RAW · NEAR MINT", left: "12m 06s" },
 ];
 
@@ -73,7 +73,7 @@ export default async function Home({ searchParams }) {
             </div>
             <div className="float deal-float">
               <div className="frow"><small>YOUR NEXT GREAT FIND</small><small className="sample-tag">SAMPLE</small></div>
-              <div className="frow" style={{ marginTop: 12 }}><strong>$240.00</strong><span className="discount">↓ 28% below market</span></div>
+              <div className="frow" style={{ marginTop: 12 }}><strong>$2,180.00</strong><span className="discount">↓ 42% below market</span></div>
             </div>
           </div>
         </div>

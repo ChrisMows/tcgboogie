@@ -22,9 +22,9 @@ export const PLANS = {
     features: [
       "Collection tracker, unlimited cards",
       "5 price alerts",
-      "See the deals you missed, and what they sold for",
+      "See the deals you missed, after they end",
       "1 deal filter",
-      "Weekly email recap",
+      "Sell your cards on eBay in a minute",
     ],
   },
   premium: {
@@ -50,7 +50,7 @@ export const PLANS = {
       "Instant alerts by text, Discord and email",
       "Unlimited price alerts",
       "15 deal filters, Japanese cards, earlier and deeper deals",
-      "Full collection history, CSV export, set-completion deals",
+      "Full collection history and CSV export",
     ],
   },
 };

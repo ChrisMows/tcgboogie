@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import InfoTip from "@/components/InfoTip";
 import { saveCollectionPrefs } from "@/app/app/collection/actions";
@@ -10,7 +9,7 @@ export default function CollectionAlerts({ plan, prefs }) {
   const [p, setP] = useState(prefs);
   const [saved, setSaved] = useState(null);
   const [pending, start] = useTransition();
-  const locked = !plan.collectionAlerts;
+  const locked = true; // not built yet: shown as "Coming soon" (was !plan.collectionAlerts)
 
   const update = (patch) => {
     const next = { ...p, ...patch };
@@ -20,7 +19,7 @@ export default function CollectionAlerts({ plan, prefs }) {
 
   return (
     <div className={`panel coll-alerts ${locked ? "is-locked" : ""}`}>
-      <h2>Collection alerts</h2>
+      <h2>Collection alerts <span className="badge">Coming soon</span></h2>
       <div className="coll-alert-opts">
         <span className="coll-alert-group">
         <label className="coll-alert-opt">
@@ -46,8 +45,7 @@ export default function CollectionAlerts({ plan, prefs }) {
         </span>
       </div>
       <div className="coll-alert-end">
-        {locked ? <Link href="/app/premium?from=collection-alerts" className="btn sm primary" title="Collection alerts are part of Premium">🔒 Premium</Link>
-          : saved && <span className="small muted">{pending ? "Saving…" : saved}</span>}
+        {saved && <span className="small muted">{pending ? "Saving…" : saved}</span>}
       </div>
     </div>
   );

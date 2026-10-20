@@ -28,6 +28,8 @@ const FAQS = [
     `Premium is $${premium.price} a month plus any sales tax where you live, shown before you pay. It renews monthly until you cancel. Payments go through Stripe; we never see your card number.`],
   ["Can I cancel anytime?",
     "Yes, in one click from Settings → Plan. You keep Premium until the end of the month you paid for, then you're back on Free with your collection and settings intact. Months aren't refunded part-way, and deleting your account cancels your subscription too."],
+  ["Can I sell my cards on eBay from here?",
+    "Yes. Connect your eBay seller account in Settings, then tap Sell on eBay on any card in your collection. We fill in the title, set, number, grade or condition, cert number and a price from recent sales; you add photos and post. We never see your eBay password, and eBay's normal selling fees apply."],
   ["Do you bid or buy for me?",
     "No. We send the alert. You decide whether to bid or buy, and we never touch your eBay or TCGplayer account."],
   ["Are you affiliated with eBay or TCGplayer?",

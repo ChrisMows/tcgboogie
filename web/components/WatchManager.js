@@ -41,7 +41,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   const pickDirection = (up) => { if (up !== rising) { setRising(up); if (!initial) setTarget(suggest(up)); } };
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay: rising ? false : alsoEbay }); }}>
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay: false }); }}>
       {product.type === "card" && (
         <div className="row" style={{ marginBottom: 14 }}>
           <div>
@@ -108,12 +108,9 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
       {!rising && (
         <>
           <label className={`check ${product.type === "card" ? "" : "dim"}`} style={{ marginTop: 14 }}>
-            <input type="checkbox" checked={alsoEbay} disabled={product.type !== "card"} onChange={(e) => setAlsoEbay(e.target.checked)} />
-            Also alert me when this card is listed on eBay at or below this price
+            <input type="checkbox" checked={false} disabled readOnly />
+            Also alert me when this card is listed on eBay at or below this price <span className="badge">Coming soon</span>
           </label>
-          <div className="hint" style={{ marginLeft: 27 }}>
-            {product.type === "card" ? "eBay listings are checked live, around the clock." : "eBay listing alerts cover single cards for now."}
-          </div>
         </>
       )}
       <Err msg={errors?._} />
@@ -180,7 +177,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       <div className="stats">
         <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
         <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>hit their target</span></div>
-        <div className="stat"><b>{watches.filter((w) => w.alsoEbay).length}</b><span>also watching eBay</span></div>
+
       </div>
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
 
@@ -259,7 +256,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                       {w.status === "triggered"
                         ? <span className="badge good" style={{ flex: "none" }}>{up ? "Hit your sell price" : "Hit your buy price"}</span>
                         : <span className="badge" style={{ flex: "none" }}>Watching</span>}
-                      {w.alsoEbay && <span className="badge accent" style={{ flex: "none" }}>+ eBay</span>}
+
                     </div>
                     <div className="small muted">{w.setName}{w.number ? ` · ${w.number}` : ""} · {trackingLabel({ type: w.productType }, w)}</div>
                     <div style={{ marginTop: 6 }}>

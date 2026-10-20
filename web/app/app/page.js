@@ -95,7 +95,7 @@ export default async function Home() {
           <div className="home-tile-head"><span className="home-icon">▦</span><h2>Collection</h2></div>
           <div className="home-big">{money(coll.summary.value, 0)}</div>
           <p className="small muted">
-            {coll.summary.copies} cards & products
+            {coll.summary.copies} {coll.summary.copies === 1 ? "card" : "cards"}
             {today !== null && Math.abs(today) >= 1 ? <> · <span className={today >= 0 ? "up" : "down"}>{today >= 0 ? "+" : ""}{money(today, 0)} today</span></> : null}
             {coll.summary.gain !== null ? <> · <span className={coll.summary.gain >= 0 ? "up" : "down"}>{pct(coll.summary.gainPct)}</span> on what you paid</> : null}
           </p>

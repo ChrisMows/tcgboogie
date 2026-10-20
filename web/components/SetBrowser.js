@@ -29,7 +29,7 @@ export default function SetBrowser({ sets }) {
               <span className="bar"><i style={{ width: `${Math.max(2, pct * 100)}%` }} /></span>
               <span className="small">{s.have}{total ? ` / ${total}` : ""} owned{total ? ` · ${Math.round(pct * 100)}%` : ""}</span>
             </>
-          ) : <span className="small muted">{total ? `${total} cards` : "Tap to browse"}</span>}
+          ) : <span className="small muted">{total ? `${total} ${total === 1 ? "card" : "cards"}` : "Browse"}</span>}
         </span>
       </Link>
     );

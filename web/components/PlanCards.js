@@ -3,23 +3,23 @@ import { billingLive } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
 
 export const PLAN_ROWS = [
-  ["Deals", "After the auction ends, with the sale price", "Live, while you can still bid"],
-  ["Instant alerts by text and Discord", "—", "✓"],
-  ["Price alerts by email", "✓", "✓"],
-  ["Filter profiles", "1", "15"],
-  ["Lowest discount you can set", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],
-  ["How early before the auction ends", `Up to ${PLANS.free.maxWindowMinutes} minutes`, `Up to ${PLANS.premium.maxWindowMinutes} minutes`],
+  ["Deals", "After the auction ends, with the last bid", "Live, while you can still bid"],
+  ["How early you hear about a deal", "—", `Up to ${PLANS.premium.maxWindowMinutes} minutes before it ends`],
+  ["Smallest discount we alert", `${PLANS.free.minDiscountFloor}% below market`, `${PLANS.premium.minDiscountFloor}% below market`],
   ["Card values covered", `$${PLANS.free.minValueFloor}+`, `$${PLANS.premium.minValueFloor}+`],
-  ["TCGplayer price-drop watches", "5", "Unlimited"],
-  ["eBay listing alerts for watched cards", "✓", "✓"],
+  ["Deal filters", String(PLANS.free.maxProfiles), String(PLANS.premium.maxProfiles)],
+  ["Deal alerts by text, Discord and email", "—", "✓"],
+  ["Price alerts (buying or selling)", String(PLANS.free.maxPriceWatches), "Unlimited"],
+  ["Price alerts by email", "✓", "✓"],
+  ["Price alerts by text and Discord", "—", "✓"],
+  ["Photo check on every deal", "✓", "✓"],
   ["Collection tracker (unlimited cards, daily values, sets, wishlist)", "✓", "✓"],
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
   ["Collection CSV export", "—", "✓"],
-  ["Deals on cards missing from your sets, sell-high alerts", "—", "✓"],
+  ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
-  ["Email recap", "Weekly", "Daily"],
-  ["Community Discord", "✓", "✓"],
+  ["Coming soon: eBay listing alerts, set-completion deals, sell-high alerts, email recap", "", ""],
 ];
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */

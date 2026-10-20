@@ -53,7 +53,7 @@ export default async function SetPage({ params }) {
               <span className="bar" style={{ marginTop: 8 }}><i style={{ width: `${cards.length ? Math.max(2, (have / cards.length) * 100) : 0}%` }} /></span>
             </div>
             <div className="stat"><b>{money(ownedValue)}</b><span>what your cards from this set are worth</span></div>
-            <div className="stat"><b>{money(toComplete)}</b><span>to finish the set in Near Mint ({missing.length} cards)</span></div>
+            <div className="stat"><b>{money(toComplete)}</b><span>to finish the set in Near Mint ({missing.length} {missing.length === 1 ? "card" : "cards"})</span></div>
           </div>
           <SetGrid cards={cards.map(slim)} owned={owned} wished={wished} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
         </>

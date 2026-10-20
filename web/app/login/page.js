@@ -4,7 +4,9 @@ import { authEnabled, enabledProviders } from "@/auth";
 import { demoMode, getCurrentUser, safeNext } from "@/lib/session";
 import { signInWith, signInWithEmail } from "./actions";
 
-export const metadata = { title: "Log in" };
+export async function generateMetadata({ searchParams }) {
+  return { title: (await searchParams)?.mode === "signup" ? "Create your account" : "Log in" };
+}
 
 const ERRORS = {
   email: "Enter a valid email address.",
