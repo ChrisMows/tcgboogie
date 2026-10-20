@@ -765,3 +765,10 @@ a.cond-link:hover { border-color: var(--accent); }
 .coll-alert-end { flex: none; margin-left: auto; }
 .coll-alerts.is-locked .coll-alert-opt { opacity: 0.6; cursor: default; }
 @media (max-width: 700px) { .coll-alert-sep { display: none; } .coll-alert-opts { flex-basis: 100%; } }
+
+/* Premium-only buttons for Free members */
+.locked-wrap { position: relative; display: inline-flex; }
+.locked-pop { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; width: 280px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 14px; border-radius: 10px; background: #1b222c; border: 1px solid #414b5b; box-shadow: 0 12px 32px #000a; text-align: left; white-space: normal; }
+.locked-pop .small { line-height: 1.45; }
+#plan { scroll-margin-top: 90px; }
+.notice.accent-note { border-color: rgba(211, 255, 102, 0.4); background: rgba(211, 255, 102, 0.06); }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AddCards from "@/components/AddCards";
 import CardThumb from "@/components/CardThumb";
 import CollectionAlerts from "@/components/CollectionAlerts";
+import LockedButton from "@/components/LockedButton";
 import CollectionView from "@/components/CollectionView";
 import ValueChart from "@/components/ValueChart";
 import { catalogLive, listSets } from "@/lib/catalog";
@@ -49,7 +50,9 @@ export default async function CollectionPage({ searchParams }) {
           <Link href="/app/collection/sets" className="btn">Browse sets</Link>
           {user.plan.collectionExport
             ? <a href="/app/collection/export" className="btn" download>Export CSV</a>
-            : <Link href="/app/account#plan" className="btn" title="CSV export is a Premium feature">Export CSV 🔒</Link>}
+            : <LockedButton label="Export CSV" title="CSV export is part of Premium" upgrade="export">
+                Download your whole collection as a spreadsheet: every copy, condition or grade, what you paid and what it&apos;s worth today.
+              </LockedButton>}
         </div>
       </div>
 
