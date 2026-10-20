@@ -795,7 +795,7 @@ a.cond-link:hover { border-color: var(--accent); }
 .premium-state { display: grid; gap: 6px; justify-items: start; padding-top: 4px; }
 .premium-state form { margin-top: 6px; }
 .premium-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
-.premium-facts > div { display: grid; gap: 4px; font-size: 13px; }
+.premium-facts > div { display: grid; gap: 4px; font-size: 13px; align-content: start; }
 .premium-facts b { font-size: 14px; }
 .premium-facts span { color: var(--muted); line-height: 1.4; }
 .premium-links { text-align: center; }
