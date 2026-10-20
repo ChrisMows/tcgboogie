@@ -46,7 +46,7 @@ export default function CollectionAlerts({ plan, prefs }) {
         </span>
       </div>
       <div className="coll-alert-end">
-        {locked ? <Link href="/app/account#plan" className="btn sm primary">Unlock with Premium</Link>
+        {locked ? <Link href="/app/account#plan" className="btn sm primary" title="Collection alerts are part of Premium">🔒 Premium</Link>
           : saved && <span className="small muted">{pending ? "Saving…" : saved}</span>}
       </div>
     </div>
