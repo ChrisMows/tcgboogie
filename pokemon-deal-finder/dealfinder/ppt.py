@@ -159,10 +159,12 @@ class PPTClient:
         return data
 
     # ----- endpoints -----
-    def cards_by_number(self, query, language, set_filter=None):
-        """All catalog cards matching a card-number query like '199/165'."""
+    def cards_by_number(self, query, language, set_filter=None, wide=False):
+        """Catalog cards matching a card-number query like '199/165'. Costs `limit` credits even when fewer cards
+        come back, so the first search is narrow (search_limit) and `wide` (search_limit_wide) is the rare retry."""
         a = self.cfg["auto"]
-        params = {"search": query, "limit": a["search_limit"], "language": language}
+        limit = a.get("search_limit_wide", 8) if wide else a.get("search_limit", 3)
+        params = {"search": query, "limit": limit, "language": language}
         if set_filter:
             params["set"] = set_filter
         j = self._cached("/cards", params, a["catalog_cache_days"] * 24, a.get("not_found_cache_days", 3) * 24) or {}

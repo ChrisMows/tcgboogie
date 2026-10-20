@@ -102,7 +102,8 @@ auto:
   pace_burst: 1500            # spending is spread over the day; this much may be used ahead of schedule
   max_lookups_per_check: 30   # cap on uncached service calls per eBay check (the plan allows 60 a minute)
   min_listing_price: 2        # listings under this (price + shipping) are never deals; don't spend a lookup
-  search_limit: 5             # cards returned per card-number lookup (each costs 1 credit)
+  search_limit: 3             # cards per card-number search; a search costs this many credits even if fewer come back
+  search_limit_wide: 8        # retry size, used only when a full first page didn't contain the card
   catalog_cache_days: 90      # how long a card-number lookup is reused (the catalog rarely changes)
   not_found_cache_days: 3     # how long "no card with that number" is reused (new sets get added)
   price_cache_hours: 20       # how long a card's prices are reused (TCGplayer and eBay data update about daily)

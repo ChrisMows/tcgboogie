@@ -75,6 +75,24 @@ def evaluate(listing, card, mv, cfg, now=None):
     return True, rec
 
 
+def identify(ppt, listing, queries, lang):
+    """Find the catalog card a listing is for. A number search costs as many credits as its result limit, so search
+    narrow first and widen only when a full page of results didn't contain the card. Returns (card, reason)."""
+    card, reason = None, "no catalog card matched the number + name in the title"
+    narrow = int(((getattr(ppt, "cfg", None) or {}).get("auto") or {}).get("search_limit", 3))
+    for q, set_filter in queries:
+        found = ppt.cards_by_number(q, lang, set_filter)
+        if found:
+            card, reason = pick_card(listing, found)
+            if not card and not reason.startswith("ambiguous") and len(found) >= narrow:
+                wider = ppt.cards_by_number(q, lang, set_filter, wide=True)  # the card may be past the first page
+                if len(wider) > len(found):
+                    card, reason = pick_card(listing, wider)
+            if card or reason.startswith("ambiguous"):
+                break
+    return card, reason
+
+
 def search_window(cfg):
     """Always search a little past the alert window so nothing slips between checks."""
     return max(cfg["poll"]["search_window_minutes"], cfg["deal"]["max_minutes_left"] + 2)
@@ -277,14 +295,7 @@ class Finder:
             if ppt.network_calls >= a["max_lookups_per_check"]:
                 return  # budget for this check used; the listing is seen again next check
             stats["auto_lookups"] += 1
-            card = None
-            reason = "no catalog card matched the number + name in the title"
-            for q, set_filter in queries:
-                found = ppt.cards_by_number(q, lang, set_filter)
-                if found:
-                    card, reason = pick_card(listing, found)
-                    if card or reason.startswith("ambiguous"):
-                        break
+            card, reason = identify(ppt, listing, queries, lang)
             if not card:
                 return skip(reason)
             mixed = mixed_printing_reason(card, listing)
@@ -354,13 +365,7 @@ class Finder:
             if ppt.network_calls >= a["max_lookups_per_check"]:
                 return
             stats["auto_lookups"] += 1
-            card, reason = None, "no catalog card matched the number + name in the title"
-            for q, set_filter in queries:
-                found = ppt.cards_by_number(q, lang, set_filter)
-                if found:
-                    card, reason = pick_card(listing, found)
-                    if card or reason.startswith("ambiguous"):
-                        break
+            card, reason = identify(ppt, listing, queries, lang)
             if not card:
                 return skip(reason)
             printing, why_not = choose_printing(card, listing.variants())

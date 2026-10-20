@@ -124,7 +124,7 @@ class FakePPT:
         self.by_query, self.prices, self.fail = by_query, prices, fail
         self.network_calls, self.cfg, self.lookups = 0, None, []
 
-    def cards_by_number(self, q, lang, set_filter=None):
+    def cards_by_number(self, q, lang, set_filter=None, wide=False):
         if self.fail:
             raise self.fail
         self.lookups.append((q, lang))
@@ -202,6 +202,27 @@ class AutoPollTests(unittest.TestCase):
         finally:
             fm.load_config = prev
         self.assertEqual(ppt.lookups, [])
+
+
+class NarrowSearchTests(unittest.TestCase):
+    def test_widens_only_when_a_full_page_missed_the_card(self):
+        from dealfinder.finder import identify
+        others = [dict(UMBREON, name=n, tcgPlayerId=str(i)) for i, n in enumerate(["Drapion", "Onix", "Golem"])]
+
+        class Narrow:
+            cfg = {"auto": {"search_limit": 3}}
+            def __init__(self):
+                self.calls = []
+            def cards_by_number(self, q, lang, set_filter=None, wide=False):
+                self.calls.append(wide)
+                return others + [UMBREON] if wide else others
+
+        listing = Listing(summary("v1|930|0", "Umbreon VMAX 215/203 Evolving Skies PSA 10"),
+                          detail(aspects={"Card Number": "215/203"}))
+        ppt = Narrow()
+        card, _ = identify(ppt, listing, [("215/203", None)], "english")
+        self.assertEqual(card["tcgPlayerId"], "246723")
+        self.assertEqual(ppt.calls, [False, True])
 
 
 class PacingTests(unittest.TestCase):
