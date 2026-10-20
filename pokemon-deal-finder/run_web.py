@@ -47,13 +47,15 @@ def main():
         log.info("Result: %s", check())
         return
     log.info("Deal finder (website mode) started. Ctrl+C to stop.")
+    per_check = None  # average eBay calls per check, to spread the daily budget evenly
     while True:
         started = time.time()
+        before = db.api_calls_today(finder.conn)
         try:
             stats = check()
-            log.info("Checked %d ending auctions, %d deals | price lookups: %d new, %d reused | eBay calls today: %d",
+            log.info("Checked %d ending auctions, %d deals | price lookups: %d new, %d reused | eBay calls today: %d of %d",
                      stats.get("listings", 0), stats.get("alerts", 0), stats.get("price_calls", 0),
-                     stats.get("cache_hits", 0), db.api_calls_today(finder.conn))
+                     stats.get("cache_hits", 0), db.api_calls_today(finder.conn), finder.cfg["poll"]["daily_call_budget"])
         except EbayError as e:
             log.error("%s", e)
         except KeyboardInterrupt:
@@ -61,7 +63,11 @@ def main():
             return
         except Exception:
             log.exception("Unexpected error during check")
-        time.sleep(max(5, next_interval(finder.cfg, db.api_calls_today(finder.conn)) - (time.time() - started)))
+        used = db.api_calls_today(finder.conn) - before
+        if used > 0:
+            per_check = used if per_check is None else per_check * 0.8 + used * 0.2
+        wait = next_interval(finder.cfg, db.api_calls_today(finder.conn), per_check)
+        time.sleep(max(5, wait - (time.time() - started)))
 
 
 if __name__ == "__main__":

@@ -31,5 +31,19 @@ class DealRecordTests(unittest.TestCase):
         self.assertEqual(half["grade"], 9.5)
 
 
+class EbayPacingTests(unittest.TestCase):
+    def test_checks_spread_to_last_the_day(self):
+        from datetime import datetime, timezone
+        from dealfinder.finder import next_interval
+        cfg = {"poll": {"interval_seconds": 75, "daily_call_budget": 4800}}
+        noon = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+        # 2,400 calls left, 10 per check -> 240 checks for 12 hours -> one every 3 minutes.
+        self.assertAlmostEqual(next_interval(cfg, 2400, 10, noon), 180, delta=1)
+        # Plenty left: never faster than the configured interval.
+        self.assertEqual(next_interval(cfg, 0, 1, noon), 75)
+        # Budget used: wait for the reset.
+        self.assertGreater(next_interval(cfg, 4800, 10, noon), 12 * 3600)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -98,13 +98,26 @@ def search_window(cfg):
     return max(cfg["poll"]["search_window_minutes"], cfg["deal"]["max_minutes_left"] + 2)
 
 
-def next_interval(cfg, calls_today):
-    """Seconds until the next check; slows down near the daily eBay call budget."""
+def next_interval(cfg, calls_today, calls_per_check=None, now=None):
+    """Seconds until the next check. With calls_per_check known, checks are spread so the day's eBay call budget
+    lasts until the counter resets (local midnight, like db.api_calls_today); never faster than poll.interval_seconds."""
     interval = cfg["poll"]["interval_seconds"]
-    if calls_today >= cfg["poll"]["daily_call_budget"] * 0.9:
+    budget = cfg["poll"]["daily_call_budget"]
+    if calls_per_check:
+        now = now or datetime.now()
+        secs_left = 86400 - (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+        checks_left = max(1.0, (budget - calls_today) / calls_per_check)
+        paced = secs_left / checks_left
+        if paced > interval:
+            interval = paced
+    elif calls_today >= budget * 0.9:
         log.warning("Near daily eBay call budget (%d) - slowing checks", calls_today)
         interval *= 4
-    return interval
+    if calls_today >= budget:
+        log.warning("Daily eBay call budget used (%d) - waiting for the reset", calls_today)
+        now = now or datetime.now()
+        interval = max(interval, 86400 - (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() + 30)
+    return min(interval, 86400)
 
 
 class Finder:
