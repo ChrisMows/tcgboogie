@@ -64,7 +64,15 @@ export async function sendEmail(to, { subject, heading, lines = [], items = [], 
     ${button ? `<p style="margin:20px 0"><a href="${esc(button.url)}" style="display:inline-block;background:#d3ff66;color:#15200c;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button.label)}</a></p>` : ""}
     ${footer ? `<p style="color:#8f9aa9;font-size:12px;margin-top:22px">${esc(footer)}</p>` : ""}
   </div>`;
-  await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text, html });
+  // Every alert email can be turned off: a link in the footer, and the standard header mail apps show as "Unsubscribe".
+  const site = process.env.AUTH_URL || "https://tcgboogie.com";
+  const off = `${site}/app/account#alerts`;
+  const fullText = `${text}
+
+Turn off email alerts: ${off}`;
+  const fullHtml = html.replace(/<\/div>\s*$/, `<p style="color:#8f9aa9;font-size:12px;margin-top:10px">Don't want these emails? <a href="${esc(off)}" style="color:#8f9aa9">Turn off email alerts</a>.</p></div>`);
+  await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text: fullText, html: fullHtml,
+    headers: { "List-Unsubscribe": `<${off}>, <mailto:support@tcgboogie.com?subject=unsubscribe>` } });
   void countEmail();
 }
 
