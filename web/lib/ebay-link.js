@@ -21,9 +21,12 @@ export function ebayLink(url, source = "site") {
   return { href: u.toString(), affiliate: true };
 }
 
-/** An eBay search for a card (Pokémon singles category), tracked. */
-export function ebaySearch(query, { sold = false, source = "search" } = {}) {
-  const q = new URLSearchParams({ _nkw: query, _sacat: "183454" });
-  if (sold) { q.set("LH_Sold", "1"); q.set("LH_Complete", "1"); }
+/**
+ * An eBay search, tracked. Cards search the Pokémon singles category; sealed products search all of eBay.
+ * sold: Sold + Completed listings only, most recently ended first.
+ */
+export function ebaySearch(query, { sold = false, sealed = false, source = "search" } = {}) {
+  const q = new URLSearchParams({ _nkw: query, ...(sealed ? {} : { _sacat: "183454" }) });
+  if (sold) { q.set("LH_Sold", "1"); q.set("LH_Complete", "1"); q.set("_sop", "13"); }
   return ebayLink(`https://www.ebay.com/sch/i.html?${q}`, source);
 }

@@ -64,8 +64,10 @@ export default async function CardPage({ params }) {
   const isSealed = p.type === "sealed";
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
   const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}`.trim();
-  const ebay = ebaySearch(ebayQuery, { source: "card-page" });
-  const ebaySold = ebaySearch(ebayQuery, { sold: true, source: "card-page-sold" });
+  const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
+  const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
+  // Sold searches per grade ("… PSA 10"), for the graded cells.
+  const gradeSold = (key) => ebaySearch(`${ebayQuery} ${GRADE_LABEL(key)}`, { sold: true, source: "card-page-sold-graded" });
 
   // One line per source, cheapest highlighted (null price = link only).
   const firstPrinting = Object.keys(p.prices || {})[0];
@@ -106,7 +108,7 @@ export default async function CardPage({ params }) {
             </span>
           </div>
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} filterHref={filterHref} />
+            plan={user.plan} filterHref={filterHref} soldHref={ebaySold.href} soldAffiliate={ebaySold.affiliate} />
         </div>
       </div>
 
@@ -149,10 +151,11 @@ export default async function CardPage({ params }) {
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="cond-grid">
                   {graded.slice(0, 12).map(([key, g]) => (
-                    <div key={key} className="cond-cell" title={saleNote(g)}>
+                    <a key={key} className="cond-cell cond-link" href={gradeSold(key).href} target="_blank"
+                      rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`See ${GRADE_LABEL(key)} sold listings on eBay`}>
                       <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-                      <span className="grade-sales">{saleNote(g)}</span>
-                    </div>
+                      <span className="grade-sales">{saleNote(g)} ↗</span>
+                    </a>
                   ))}
                 </div>
               )}

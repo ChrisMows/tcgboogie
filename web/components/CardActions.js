@@ -9,7 +9,7 @@ import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFr
 import { itemLabel, money, nmPrice, pct, unitValue } from "@/lib/collection";
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it. */
-export default function CardActions({ product, mine, binders, watch, plan, filterHref }) {
+export default function CardActions({ product, mine, binders, watch, plan, filterHref, soldHref, soldAffiliate }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | "watch" | null
   const [editing, setEditing] = useState(null);
@@ -93,6 +93,12 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
           <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Price alert</button>
         )}
         {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
+        {soldHref && (
+          <a href={soldHref} target="_blank" rel={`noopener noreferrer${soldAffiliate ? " sponsored" : ""}`} className="btn"
+            title="eBay sold and completed listings for this card, most recent first">
+            🧾 Sold on eBay ↗{soldAffiliate && <span className="ad-tag">Ad</span>}
+          </a>
+        )}
       </div>
 
       {panel === "add" && !wish && (
