@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { runPriceAlerts } from "@/lib/price-alerts";
+import { recordSealedPrices } from "@/lib/catalog";
 import { runRecaps } from "@/lib/recap";
 import { runSellHigh } from "@/lib/sell-high";
 
@@ -30,6 +31,10 @@ async function handle(req) {
 
   try {
     const summary = await runPriceAlerts();
+    // Sealed price history (ours), before sell-high so today's moves count.
+    try { summary.sealed = await recordSealedPrices(); } catch (e) {
+      await log("prices", "warn", `Sealed price recording failed: ${e.message}`);
+    }
     // Premium sell-high alerts ride along with the daily check (their failure mustn't fail price alerts).
     try { summary.sellHigh = await runSellHigh(); } catch (e) {
       await log("alerts", "error", `Sell-high check crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });

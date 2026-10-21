@@ -27,7 +27,7 @@ export async function runSellHigh() {
   out.members = people.length;
 
   const items = await db.select().from(collectionItems).where(and(inArray(collectionItems.userId, people.map((u) => u.id)),
-    eq(collectionItems.list, "owned"), eq(collectionItems.kind, "raw")));
+    eq(collectionItems.list, "owned"), inArray(collectionItems.kind, ["raw", "sealed"])));
   const products = await loadProducts(items.map((it) => it.productId), MAX_LIVE);
   out.cards = Object.keys(products).length;
 
@@ -83,7 +83,7 @@ async function alertMember(user, discordId, risers, pct, ready) {
       await log("alerts", "error", `Sell-high alert by ${channel} failed: ${e.message}`, null, user.id);
     }
   };
-  const footer = `Raw Near Mint market prices from TCGplayer. You picked ${pct}% in Collection alerts; each card is alerted at most once a week. ${SITE}/app/collection`;
+  const footer = `TCGplayer market prices (raw Near Mint for cards). You picked ${pct}% in Collection alerts; each card is alerted at most once a week. ${SITE}/app/collection`;
 
   if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
     await attempt("email", () => sendEmail(user.email, risers.length === 1

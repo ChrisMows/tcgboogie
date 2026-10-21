@@ -89,7 +89,7 @@ async function buildRecap(user, days, allDeals, now) {
     lines.push(`Your collection: ${money(value)}${delta !== null ? ` (${pct(delta)} ${period === "today" ? "since yesterday" : "this week"})` : ""}, ${owned.reduce((n, it) => n + it.quantity, 0)} cards.`);
 
     // Biggest movers among raw cards, from cached prices only (no credits).
-    const products = await loadProducts([...new Set(owned.filter((it) => it.kind === "raw").map((it) => it.productId))], 0);
+    const products = await loadProducts([...new Set(owned.filter((it) => it.kind === "raw" || it.kind === "sealed").map((it) => it.productId))], 0);
     const movers = Object.values(products).map((p) => ({ p, c: change(p, days) })).filter((x) => x.c !== null && Math.abs(x.c) >= 0.05)
       .sort((a, b) => Math.abs(b.c) - Math.abs(a.c)).slice(0, 3);
     for (const { p, c } of movers) items.push({ text: `${short(p.name)} (${p.setName}): ${pct(c)}`, url: `${SITE}/app/cards/${encodeURIComponent(p.id)}` });

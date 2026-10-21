@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 
@@ -234,6 +234,39 @@ function fromCard(c) {
   };
 }
 
+// Sealed history is ours: today's price is saved on every lookup (once a day per product), and the page gets the
+// last 90 days we've saved. Charts, movers and sell-high alerts then work for sealed like they do for cards.
+const sealedSaved = globalThis.__tcgSealedSaved ?? (globalThis.__tcgSealedSaved = new Set());
+async function withSealedHistory(p) {
+  if (!db) return p;
+  const { sealedPrices } = schema;
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    if (p.prices.market && !sealedSaved.has(`${p.id}:${day}`)) {
+      await db.insert(sealedPrices).values({ productId: p.id, day, price: p.prices.market })
+        .onConflictDoUpdate({ target: [sealedPrices.productId, sealedPrices.day], set: { price: p.prices.market } });
+      sealedSaved.add(`${p.id}:${day}`);
+      if (sealedSaved.size > 20000) sealedSaved.clear();
+    }
+    const since = new Date(Date.now() - 90 * 24 * HOUR).toISOString().slice(0, 10);
+    const rows = await db.select().from(sealedPrices).where(and(eq(sealedPrices.productId, p.id), gte(sealedPrices.day, since))).orderBy(asc(sealedPrices.day));
+    return { ...p, history: rows.map((r) => ({ date: String(r.day).slice(0, 10), price: r.price })) };
+  } catch {
+    return p; // history is a nice-to-have; never fail a page over it
+  }
+}
+
+/** Daily (with the price-alert check): save today's price for every sealed product members own, wishlist or watch. */
+export async function recordSealedPrices(max = 500) {
+  if (!db || !catalogLive()) return { products: 0 };
+  const owned = await db.selectDistinct({ id: schema.collectionItems.productId }).from(schema.collectionItems).where(eq(schema.collectionItems.productType, "sealed"));
+  const watched = await db.selectDistinct({ id: schema.priceWatches.productId }).from(schema.priceWatches).where(eq(schema.priceWatches.productType, "sealed"));
+  const ids = [...new Set([...owned, ...watched].map((r) => r.id))].slice(0, max);
+  let n = 0;
+  for (const id of ids) { try { if (await getProduct(id)) n++; } catch { /* try again tomorrow */ } }
+  return { products: n };
+}
+
 function fromSealed(s) {
   return {
     id: String(s.tcgPlayerId), type: "sealed", name: s.name, setName: s.setName, setId: s.setId ? String(s.setId) : null, number: null,
@@ -261,7 +294,7 @@ export async function getProduct(id, { cachedOnly = false, language = "english" 
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
-  if (s) return fromSealed(s);
+  if (s) return withSealedHistory(fromSealed(s));
   // Not an English card or sealed product: Japanese cards (promos included) are a separate catalog, same IDs.
   return getProduct(id, { cachedOnly, language: "japanese" });
 }
@@ -276,7 +309,7 @@ export async function searchProducts(q) {
   }
   const [cards, sealed, japanese] = await Promise.all([
     ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
-    ppt("/sealed-products", { search: term, limit: "3" }, 7 * 24 * HOUR).catch(() => null),
+    ppt("/sealed-products", { search: term, limit: "5" }, 7 * 24 * HOUR).catch(() => null),
     ppt("/cards", { search: term, limit: "4", language: "japanese" }, 7 * 24 * HOUR).catch(() => null),
   ]);
   return [...(cards?.data || []).map(fromCard), ...(japanese?.data || []).map((c) => ({ ...fromCard(c), language: "japanese" })),

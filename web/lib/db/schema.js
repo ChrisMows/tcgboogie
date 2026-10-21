@@ -141,6 +141,14 @@ export const collectionItems = pgTable("collection_item", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("collection_item_user_idx").on(t.userId)]);
 
+// Sealed product prices, one per product per day. The price service charges ~100 credits for sealed history, so we
+// keep our own (recorded whenever a sealed product is looked up, and daily for sealed products members own or watch).
+export const sealedPrices = pgTable("sealed_price", {
+  productId: text("product_id").notNull(),
+  day: date("day").notNull(),
+  price: doublePrecision("price").notNull(),
+}, (t) => [primaryKey({ columns: [t.productId, t.day] })]);
+
 // Each member's collection value, once a day, for the value-over-time chart.
 export const portfolioSnapshots = pgTable("portfolio_snapshot", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

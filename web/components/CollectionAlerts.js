@@ -40,7 +40,7 @@ export default function CollectionAlerts({ plan, prefs }) {
           {[10, 15, 25, 40, 60, 100].map((n) => <option key={n} value={n}>{n}%</option>)}
         </select>
         <InfoTip label="About sell-high alerts">
-          Once a day we check the raw Near Mint price of every card you own. If one climbed by the percentage you picked (or more) over the past week, we tell you, so you can sell while it&apos;s high. Cards under $5 are skipped, and each card is alerted at most once a week.
+          Once a day we check the price of every raw card (Near Mint) and sealed product you own. If one climbed by the percentage you picked (or more) over the past week, we tell you, so you can sell while it&apos;s high. Cards under $5 are skipped, and each card is alerted at most once a week.
         </InfoTip>
         </span>
       </div>
