@@ -1013,3 +1013,5 @@ details.era > .set-grid { margin-bottom: 14px; }
 .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
 .copy-btn.done { color: var(--accent); border-color: var(--accent); }
 .copy-btn-msg { font-size: 12px; font-weight: 600; font-family: inherit; }
+.report-sale-date { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.report-sale-date input { width: auto; }
