@@ -973,3 +973,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .fs-group .fs-pill { flex-wrap: wrap; row-gap: 1px; text-align: left; }
 .fs-group .fs-pill-v { flex: 1 1 auto; max-width: 100%; }
 .fs-group .fs-x { align-self: center; }
+
+/* Filter card open/close: a clear round + / − button instead of a small triangle */
+.fx-chev { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border-radius: 999px;
+  border: 1.5px solid var(--accent); color: var(--accent); font-size: 20px; font-weight: 600; line-height: 1; transition: background 0.15s, color 0.15s; }
+.fx-head:hover .fx-chev, .fx-chev.open { background: var(--accent); color: var(--accent-ink); }

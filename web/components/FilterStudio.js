@@ -247,7 +247,8 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
   const router = useRouter();
   const defaults = useMemo(() => defaultFilters(plan), [plan]);
   const [profiles, setProfiles] = useState(initial);
-  const [openId, setOpenId] = useState(initial[0]?.id ?? null); // the expanded filter
+  // Filters start closed; arriving from "Get deal alerts" on a card opens the one it was added to.
+  const [openId, setOpenId] = useState(prefill ? initial[0]?.id ?? null : null); // the expanded filter
   const selected = profiles.find((p) => p.id === openId) || null;
   const [draft, setDraft] = useState(() => {
     const f = clampToPlan(initial[0]?.filters, plan);
@@ -327,7 +328,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
       const res = await deleteProfile(selected.id);
       if (!res.ok) return setMessage({ kind: "warn", text: res.error });
       const rest = profiles.filter((p) => p.id !== selected.id);
-      setProfiles(rest); setOpenId(rest[0]?.id ?? null); setDraft(clampToPlan(rest[0]?.filters, plan));
+      setProfiles(rest); setOpenId(null); setDraft(clampToPlan(rest[0]?.filters, plan));
       setMessage({ kind: "good", text: "Filter deleted." });
       router.refresh();
     });
@@ -376,7 +377,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
               <button type="button" className="fx-rest" onClick={() => openBox(p)} tabIndex={-1} aria-hidden="true">
                 {!isOpen && <span className="fx-summary">{applied.length ? applied.map((x) => `${x.label}: ${x.summary(f)}`).join(" · ") : "Every deal over your plan's minimums"}</span>}
                 <span className="fs-count">{results.length} {results.length === 1 ? "deal" : "deals"}</span>
-                <span className="fx-chev">{isOpen ? "▴" : "▾"}</span>
+                <span className={`fx-chev ${isOpen ? "open" : ""}`} title={isOpen ? "Close this filter" : "Open this filter"}>{isOpen ? "−" : "+"}</span>
               </button>
             </div>
 
