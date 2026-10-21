@@ -74,7 +74,7 @@ function DealBox({ deal: d, premium }) {
 export default async function CardPage({ params, searchParams }) {
   const { id } = await params;
   const sp = await searchParams;
-  const language = sp?.lang === "japanese" ? "japanese" : "english";
+  let language = sp?.lang === "japanese" ? "japanese" : "english";
   // Signed out (e.g. tapped a deal alert): sign in, then come straight back to this deal.
   const back = `/app/cards/${encodeURIComponent(id)}${sp?.deal ? `?deal=${encodeURIComponent(sp.deal)}${language === "japanese" ? "&lang=japanese" : ""}${sp?.from === "alert" ? "&from=alert" : ""}` : ""}`;
   const user = await requireUser(back);
@@ -85,6 +85,7 @@ export default async function CardPage({ params, searchParams }) {
   }
   if (product === null) notFound();
   const p = slim(product);
+  if (p.language === "japanese") language = "japanese"; // found in the Japanese catalog without ?lang=
   // Opened from a deal: show that listing on top (only if it's this card).
   const dealId = (await searchParams)?.deal;
   const found = dealId ? await getDeal(dealId).catch(() => null) : null;

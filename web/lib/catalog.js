@@ -252,7 +252,9 @@ export async function getProduct(id, { cachedOnly = false, language = "english" 
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
-  return s ? fromSealed(s) : null;
+  if (s) return fromSealed(s);
+  // Not an English card or sealed product: Japanese cards (promos included) are a separate catalog, same IDs.
+  return getProduct(id, { cachedOnly, language: "japanese" });
 }
 
 /** Search cards and sealed products by name (a few results each, to keep lookups cheap). */
@@ -263,11 +265,13 @@ export async function searchProducts(q) {
     const words = term.toLowerCase().split(/\s+/);
     return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w))).slice(0, 10);
   }
-  const [cards, sealed] = await Promise.all([
+  const [cards, sealed, japanese] = await Promise.all([
     ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
     ppt("/sealed-products", { search: term, limit: "3" }, 7 * 24 * HOUR).catch(() => null),
+    ppt("/cards", { search: term, limit: "4", language: "japanese" }, 7 * 24 * HOUR).catch(() => null),
   ]);
-  return [...(cards?.data || []).map(fromCard), ...(sealed?.data || []).map(fromSealed)];
+  return [...(cards?.data || []).map(fromCard), ...(japanese?.data || []).map((c) => ({ ...fromCard(c), language: "japanese" })),
+    ...(sealed?.data || []).map(fromSealed)];
 }
 
 /** Every English set, newest first. The list rarely changes, so it's cached for a week. */

@@ -80,7 +80,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
             <CardThumb item={picked} width={72} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <b>{picked.name}</b>
-              <div className="small muted">{picked.setName}{picked.number ? ` · ${picked.number}` : ""}</div>
+              <div className="small muted">{picked.setName}{picked.number ? ` · ${picked.number}` : ""}{picked.language === "japanese" ? " · Japanese" : ""}</div>
               <Link href={`/app/cards/${picked.id}`} className="small">Open card page →</Link>
             </div>
             <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>← Back to results</button>
@@ -97,7 +97,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
                   <CardThumb item={p} width={42} />
                   <span className="result-text">
                     <b>{p.name}</b>
-                    <span className="small muted">{p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}</span>
+                    <span className="small muted">{p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}{p.language === "japanese" ? " · Japanese" : ""}</span>
                   </span>
                   {counts[p.id] ? <span className="badge accent">You own {counts[p.id]}</span> : null}
                   <span className="result-price">{money(price)}</span>

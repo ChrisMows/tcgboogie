@@ -214,7 +214,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     <ProductThumb product={p} size={44} />
                     <span style={{ textAlign: "left" }}>
                       <b>{p.name}</b>
-                      <span className="small muted" style={{ display: "block" }}>{p.setName}{p.number ? ` · ${p.number}` : ""} · {p.type === "sealed" ? "Sealed" : "Card"}</span>
+                      <span className="small muted" style={{ display: "block" }}>{p.setName}{p.number ? ` · ${p.number}` : ""} · {p.type === "sealed" ? "Sealed" : p.language === "japanese" ? "Japanese card" : "Card"}</span>
                     </span>
                   </button>
                 ))}
