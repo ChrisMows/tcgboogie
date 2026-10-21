@@ -90,6 +90,23 @@ export async function connect(userId, code) {
   return username;
 }
 
+/** An application token (no member involved), for calls like the Notification API's public keys. */
+let appTok = { value: null, until: 0 };
+export async function appToken() {
+  if (appTok.value && Date.now() < appTok.until) return appTok.value;
+  const t = await tokenRequest({ grant_type: "client_credentials", scope: "https://api.ebay.com/oauth/api_scope" });
+  appTok = { value: t.access_token, until: Date.now() + (t.expires_in - 120) * 1000 };
+  return appTok.value;
+}
+
+/** eBay says this eBay user closed their account (Marketplace Account Deletion): forget their connection. */
+export async function forgetEbayUser(username) {
+  if (!db || !username) return 0;
+  const gone = await db.delete(ebayAccounts).where(eq(ebayAccounts.ebayUsername, String(username))).returning({ userId: ebayAccounts.userId });
+  for (const g of gone) await log("signin", "info", "eBay account closed on eBay: connection removed", null, g.userId);
+  return gone.length;
+}
+
 export async function ebayAccount(userId) {
   if (!db) return null;
   const [a] = await db.select().from(ebayAccounts).where(eq(ebayAccounts.userId, userId)).limit(1);
