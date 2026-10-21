@@ -70,7 +70,7 @@ export const FACETS = [
   {
     key: "discount", group: "Price & timing", label: "% below market",
     active: (f, d) => f.minDiscountPct !== d.minDiscountPct,
-    summary: (f) => `${f.minDiscountPct}%+ below market`,
+    summary: (f) => `${f.minDiscountPct}%+`,
     reset: (d) => ({ minDiscountPct: d.minDiscountPct }),
   },
   {

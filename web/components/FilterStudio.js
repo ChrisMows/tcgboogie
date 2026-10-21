@@ -383,10 +383,10 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
             {isOpen && (
               <div className="fx-body">
                 <div className="fs-bar" ref={barRef}>
-                  <div className={`fs-pill-wrap all ${applied.length ? "has" : ""}`}>
-                    <button type="button" className="fs-pill" onClick={() => { setDrawer(true); setPop(null); }}>
-                      ☰ All filters {applied.length > 0 && <span className="fs-badge">{applied.length}</span>}
-                    </button>
+                  <div className="fs-bar-head">
+                    <span className="small muted">{applied.length ? `${applied.length} filter${applied.length === 1 ? "" : "s"} set` : "No filters set: every deal over your plan's minimums"}</span>
+                    <button type="button" className="link-btn small" onClick={() => { setDrawer(true); setPop(null); }}>All filters</button>
+                    <button type="button" className="link-btn small fs-clear" disabled={!applied.length} onClick={() => setDraft({ ...defaults })}>Clear</button>
                   </div>
                   <div className="fs-groups">
                     {FACET_GROUPS.map((g) => (
@@ -421,7 +421,6 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                       </div>
                     ))}
                   </div>
-                  <button type="button" className="link-btn fs-clear" disabled={!applied.length} onClick={() => setDraft({ ...defaults })}>Clear filter</button>
                 </div>
 
                 <div className="fx-actions">
