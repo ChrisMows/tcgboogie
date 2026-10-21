@@ -897,3 +897,9 @@ a.cond-link:hover { border-color: var(--accent); }
 .photo-name { display: grid; gap: 3px; justify-items: start; min-width: 0; }
 .photo-value { white-space: nowrap; }
 @media (max-width: 700px) { .photo-result { grid-template-columns: 1fr; } .photo-preview { max-height: 220px; object-fit: contain; } }
+
+/* Value chart: what you paid + profit */
+.chart-tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.chart-toggle { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
+.chart-toggle input { margin: 0; }
+.chart-profit { margin-top: 2px; }
