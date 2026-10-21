@@ -30,7 +30,8 @@ async function publicKey(kid) {
   // eBay sends the PEM on one line: put the line breaks back.
   const b64 = String(j.key).replace(/-----(BEGIN|END) PUBLIC KEY-----/g, "").replace(/\s+/g, "");
   const pem = `-----BEGIN PUBLIC KEY-----\n${b64.match(/.{1,64}/g).join("\n")}\n-----END PUBLIC KEY-----\n`;
-  const key = { pem, digest: String(j.digest || "SHA1").toLowerCase() };
+  // eBay's own SDK verifies with SHA-1; its "digest" label isn't a name Node knows, so map it.
+  const key = { pem, digest: /256/.test(String(j.digest)) ? "sha256" : "sha1" };
   keys.set(kid, key);
   return key;
 }
