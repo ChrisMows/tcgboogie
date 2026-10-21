@@ -18,6 +18,7 @@ export const PLAN_ROWS = [
   ["Deal alerts on cards missing from your sets or on your wishlist", "—", "✓"],
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
   ["Collection CSV export", "—", "✓"],
+  ["Grading check: which of your cards are worth grading", "Top 3", "✓"],
   ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],

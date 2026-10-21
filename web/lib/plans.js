@@ -19,6 +19,7 @@ export const PLANS = {
     collectionHistoryDays: 30, // how far back the value chart goes
     collectionExport: false,
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
+    gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
     features: [
       "Collection tracker, unlimited cards",
       "5 price alerts",
@@ -45,6 +46,7 @@ export const PLANS = {
     collectionHistoryDays: null, // all time
     collectionExport: true,
     collectionAlerts: true,
+    gradingCheck: true,
     features: [
       "Every deal live, before the auction ends",
       "Instant alerts by text, Discord and email",

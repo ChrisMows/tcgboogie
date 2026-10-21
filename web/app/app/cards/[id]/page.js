@@ -1,3 +1,4 @@
+import { DEFAULT_GRADING_COST, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardActions, { AddCardButton } from "@/components/CardActions";
@@ -133,6 +134,10 @@ export default async function CardPage({ params, searchParams }) {
   const owned = mine.filter((it) => it.list === "owned").reduce((n, it) => n + it.quantity, 0);
   const wished = mine.some((it) => it.list === "wishlist");
   // Sell on eBay: the copy you own (the first one if you have several; each copy also has its own link below).
+  const gradeIdea = (() => {
+    const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
+    return c ? { ...c, ...gradingMath(c) } : null;
+  })();
   const sellItem = p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
   return (
@@ -172,6 +177,12 @@ export default async function CardPage({ params, searchParams }) {
           </div>
           {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
+          {gradeIdea && gradeIdea.verdict !== "skip" && (
+            <Link href="/app/collection/grading" className="grade-idea">
+              💎 Worth grading? A PSA 10 sells for about {money(gradeIdea.psa10, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after ${DEFAULT_GRADING_COST} grading.
+              {gradeIdea.verdict === "safe" ? " Even a 9 would cover it." : " Only pays if it gets a 10."} →
+            </Link>
+          )}
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
             plan={user.plan} filterHref={filterHref}
             ebayLive={ebay} ebaySold={ebaySold} />

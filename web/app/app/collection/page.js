@@ -48,6 +48,7 @@ export default async function CollectionPage({ searchParams }) {
         <div className="head-actions">
           <Link href={adding ? "/app/collection" : "/app/collection?add=1"} className="btn primary">{adding ? "Done adding" : "+ Add cards"}</Link>
           <Link href="/app/collection/sets" className="btn">Browse sets</Link>
+          <Link href="/app/collection/grading" className="btn" title="Which of your raw cards are worth grading">Grading check</Link>
           {user.plan.collectionExport
             ? <a href="/app/collection/export" className="btn" download>Export CSV</a>
             : <LockedButton label="Export CSV" title="CSV export is part of Premium" upgrade="export">

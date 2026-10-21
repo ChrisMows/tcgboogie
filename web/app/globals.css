@@ -870,3 +870,18 @@ a.cond-link:hover { border-color: var(--accent); }
 .recent-sale { display: grid; grid-template-columns: 56px 70px 70px 1fr; gap: 8px; align-items: baseline; font-size: 14px; }
 .recent-sales > a { margin-top: 4px; }
 
+
+/* Grading check */
+.grading-head { display: grid; gap: 8px; }
+.grading-list { display: grid; gap: 4px; padding: 8px; }
+.grading-row { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; padding: 10px; border-radius: 10px; color: inherit; text-decoration: none; }
+.grading-row:hover { background: rgba(255, 255, 255, 0.04); }
+.grading-name { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.grading-nums { display: grid; gap: 2px; text-align: right; font-size: 14px; }
+.grading-more { padding: 12px 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grade-idea { display: block; margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(211, 255, 102, 0.35); background: rgba(211, 255, 102, 0.05); color: var(--text); text-decoration: none; font-size: 14px; }
+.grade-idea:hover { border-color: var(--accent); }
+@media (max-width: 600px) { .grading-row { grid-template-columns: 44px 1fr; } .grading-nums { grid-column: 1 / -1; text-align: left; } }
+.grading-head .row { flex-wrap: wrap; }
+.grading-head input { width: 90px !important; flex: none; }
+.grading-head .row .small { flex: 1 1 220px; }
