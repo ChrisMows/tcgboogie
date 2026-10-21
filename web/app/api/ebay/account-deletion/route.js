@@ -1,4 +1,7 @@
 import crypto from "node:crypto";
+import { p256 } from "@noble/curves/p256";
+import { sha1 } from "@noble/hashes/legacy";
+import { sha256 } from "@noble/hashes/sha2";
 import { NextResponse } from "next/server";
 import { appToken, forgetEbayUser } from "@/lib/ebay-sell";
 import { log, logError } from "@/lib/log";
@@ -27,11 +30,10 @@ async function publicKey(kid) {
   });
   if (!r.ok) throw new Error(`eBay public key lookup failed (${r.status})`);
   const j = await r.json();
-  // eBay sends the PEM on one line: put the line breaks back.
-  const b64 = String(j.key).replace(/-----(BEGIN|END) PUBLIC KEY-----/g, "").replace(/\s+/g, "");
-  const pem = `-----BEGIN PUBLIC KEY-----\n${b64.match(/.{1,64}/g).join("\n")}\n-----END PUBLIC KEY-----\n`;
-  // eBay's own SDK verifies with SHA-1; its "digest" label isn't a name Node knows, so map it.
-  const key = { pem, digest: /256/.test(String(j.digest)) ? "sha256" : "sha1" };
+  // A P-256 public key (SPKI DER, 91 bytes) ends with the 65-byte point.
+  const der = Buffer.from(String(j.key).replace(/-----(BEGIN|END) PUBLIC KEY-----/g, "").replace(/\s+/g, ""), "base64");
+  if (der.length !== 91) throw new Error(`unexpected eBay key (${der.length} bytes, ${j.algorithm})`);
+  const key = { point: der.subarray(-65), sha256: /256/.test(String(j.digest)) };
   keys.set(kid, key);
   return key;
 }
@@ -42,8 +44,11 @@ async function signatureProblem(raw, header) {
     if (!header) return "no x-ebay-signature header";
     const sig = JSON.parse(Buffer.from(String(header), "base64").toString("utf8"));
     const key = await publicKey(sig.kid);
-    const ok = crypto.verify(key.digest, Buffer.from(raw), { key: key.pem, dsaEncoding: "der" }, Buffer.from(sig.signature, "base64"));
-    return ok ? "" : `signature mismatch (alg ${sig.alg}, digest ${key.digest})`;
+    // eBay signs with ECDSA over SHA-1. The host's OpenSSL refuses SHA-1 signatures, so check it in plain JS.
+    const msg = new TextEncoder().encode(raw);
+    const ok = p256.verify(Buffer.from(sig.signature, "base64"), key.sha256 ? sha256(msg) : sha1(msg), key.point,
+      { prehash: false, lowS: false, format: "der" });
+    return ok ? "" : `signature mismatch (alg ${sig.alg})`;
   } catch (e) {
     return String(e.message || e).slice(0, 200);
   }
