@@ -215,11 +215,13 @@ export default async function Account({ searchParams }) {
           </label>
           {premium && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number below to get texts.</div>}
           <div style={{ maxWidth: 320, marginTop: 16 }}>
-            <label className="field" htmlFor="emailRecap">Email recap <span className="badge">Coming soon</span></label>
-            <select id="emailRecap" disabled defaultValue="off" aria-describedby="recap-soon">
+            <label className="field" htmlFor="emailRecap">Email recap</label>
+            <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">
               <option value="off">Off</option>
+              <option value="weekly">Weekly (Mondays)</option>
+              <option value="daily" disabled={!premium}>Daily{premium ? "" : " (Premium)"}</option>
             </select>
-            <div className="hint" id="recap-soon">A weekly (or, on Premium, daily) summary of deals, price moves and your collection value. On its way.</div>
+            <div className="hint" id="recap-hint">Your collection value and biggest movers, deals that matched your filters, and alerts that hit. Sent early morning.</div>
           </div>
         </div>
         <button className="btn primary" style={{ marginBottom: 16 }}>Save changes</button>

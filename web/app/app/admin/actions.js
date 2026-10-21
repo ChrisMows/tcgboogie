@@ -6,6 +6,7 @@ import { requireAdmin, updateMember } from "@/lib/admin";
 import { setupStripe } from "@/lib/billing";
 import { logError } from "@/lib/log";
 import { sendTestAlert } from "@/lib/price-alerts";
+import { sendRecapPreview } from "@/lib/recap";
 
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
 const back = (id, done) => redirect(`/app/admin?tab=members&user=${encodeURIComponent(id)}&done=${done}#member`);
@@ -76,6 +77,14 @@ export async function testAlert() {
   const code = results.map((r) => `${r.channel}:${r.ok === true ? "ok" : r.ok === false ? "fail" : "off"}`).join(",");
   const why = results.filter((r) => r.ok === false).map((r) => `${r.channel}: ${r.detail}`).join(" | ").slice(0, 300);
   redirect(`/app/admin?test=${encodeURIComponent(code)}${why ? `&why=${encodeURIComponent(why)}` : ""}`);
+}
+
+/** Email the signed-in admin a preview of their recap. */
+export async function testRecap() {
+  const admin = await requireAdmin();
+  let r;
+  try { r = await sendRecapPreview(admin); } catch (e) { r = `fail:${String(e.message).slice(0, 200)}`; }
+  redirect(`/app/admin?recap=${encodeURIComponent(r)}`);
 }
 
 /** Create the Premium price and the payment webhook in Stripe (safe to press again: it updates instead). */

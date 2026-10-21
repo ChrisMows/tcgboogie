@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { runPriceAlerts } from "@/lib/price-alerts";
+import { runRecaps } from "@/lib/recap";
 import { runSellHigh } from "@/lib/sell-high";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
@@ -32,6 +33,9 @@ async function handle(req) {
     // Premium sell-high alerts ride along with the daily check (their failure mustn't fail price alerts).
     try { summary.sellHigh = await runSellHigh(); } catch (e) {
       await log("alerts", "error", `Sell-high check crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });
+    }
+    try { summary.recaps = await runRecaps(); } catch (e) {
+      await log("alerts", "error", `Email recaps crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });
     }
     const value = { at: started.toISOString(), ms: Date.now() - started.getTime(), ...summary };
     await db.update(schema.appSettings).set({ value, updatedAt: new Date() }).where(eq(schema.appSettings.key, KEY));

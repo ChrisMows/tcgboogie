@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert } from "./actions";
+import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
 export const metadata = { title: "Admin", robots: { index: false } };
@@ -42,7 +42,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
-      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} />}
+      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
     </>
@@ -51,7 +51,7 @@ export default async function Admin({ searchParams }) {
 
 const CHANNEL_NAMES = { email: "Email", discord: "Discord DM", sms: "Text" };
 
-async function Status({ ping, test, why, stripe }) {
+async function Status({ ping, test, why, stripe, recap }) {
   const [checks, counts] = await Promise.all([systemStatus({ pingPrices: ping }), memberCounts()]);
   const tested = String(test || "").split(",").filter(Boolean).map((x) => x.split(":"));
   const groups = [...new Set(checks.map((c) => c.group))];
@@ -70,6 +70,11 @@ async function Status({ ping, test, why, stripe }) {
           {why ? <div className="small" style={{ marginTop: 4 }}>{why}</div> : null}
         </div>
       )}
+      {recap && (
+        <div className={`notice ${recap === "sent" ? "good" : recap === "empty" ? "" : "bad"}`}>
+          <b>Recap preview:</b> {recap === "sent" ? "sent to your email." : recap === "empty" ? "nothing to report for you yet (no cards, matched deals or alerts), so no email." : recap.slice(5)}
+        </div>
+      )}
       {stripe && (
         <div className={`notice ${stripe.startsWith("ok") ? "good" : "bad"}`}>
           {stripe.startsWith("ok")
@@ -80,6 +85,7 @@ async function Status({ ping, test, why, stripe }) {
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
         <span className="small muted" style={{ flex: "1 1 260px" }}>Checked just now. Nothing here sends messages or charges anything, except these buttons.</span>
         <form action={testAlert} style={{ flex: "none" }}><button className="btn sm primary" title="Sends a sample alert to you on every channel that's set up">Send me a test alert</button></form>
+        <form action={testRecap} style={{ flex: "none" }}><button className="btn sm" title="Emails you a preview of your recap">Email me a recap preview</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
         {process.env.STRIPE_SECRET_KEY ? <form action={connectStripe} style={{ flex: "none" }}><button className="btn sm" title="Creates the Premium price and the payment webhook in Stripe. Safe to press again.">Set up Stripe</button></form> : null}
       </div>

@@ -22,7 +22,7 @@ export const PLAN_ROWS = [
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
   ["Sell-high alerts when cards you own jump in price", "—", "✓"],
-  ["Coming soon: email recap", "", ""],
+  ["Email recap: collection value, movers, deals and alerts", "Weekly", "Daily or weekly"],
 ];
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */
