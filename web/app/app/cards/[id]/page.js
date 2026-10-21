@@ -139,7 +139,7 @@ export default async function CardPage({ params, searchParams }) {
     <>
       <div className="crumbs">
         <Link href="/app/collection">Collection</Link> /{" "}
-        {p.setName ? <><Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link> / </> : null}
+        {p.setName && language !== "japanese" ? <><Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link> / </> : null}
         {p.name.replace(/\s*\(.*\)$/, "")}
       </div>
 
@@ -158,8 +158,9 @@ export default async function CardPage({ params, searchParams }) {
             </div>
           </div>
           <div className="muted">
-            {p.setName && <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link>}
-            {p.number ? ` · #${p.number}` : ""}{p.rarity ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
+            {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link>)}
+            {p.number ? ` · #${p.number}` : ""}{p.rarity && p.rarity !== "None" ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
+            {language === "japanese" ? " · Japanese" : ""}
           </div>
           <div className="hero-price">
             <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
@@ -171,19 +172,9 @@ export default async function CardPage({ params, searchParams }) {
           </div>
           {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
-{language === "japanese" ? (
-            <div className="card-actions">
-              <div className="action-row">
-                <a href={ebay.href} target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live">Live listings ↗</a>
-                <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold">🧾 Recent sales ↗</a>
-              </div>
-              <p className="hint">Japanese card. Collection tracking and price alerts cover English cards for now.</p>
-            </div>
-          ) : (
-                    <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
+          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
             plan={user.plan} filterHref={filterHref}
             ebayLive={ebay} ebaySold={ebaySold} />
-          )}
         </div>
       </div>
 

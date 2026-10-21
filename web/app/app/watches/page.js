@@ -17,7 +17,7 @@ export default async function WatchesPage() {
   await Promise.all(ids.map(async (id) => {
     try {
       const p = await getProduct(id);
-      if (p) products[id] = { id: p.id, type: p.type, prices: p.prices, history: p.history, name: p.name, setName: p.setName, number: p.number, image: p.image, tcgplayerUrl: p.tcgplayerUrl };
+      if (p) products[id] = { id: p.id, type: p.type, prices: p.prices, history: p.history, name: p.name, setName: p.setName, number: p.number, image: p.image, tcgplayerUrl: p.tcgplayerUrl, language: p.language || "english" };
     } catch { /* show the saved snapshot if the price service is unavailable */ }
   }));
 

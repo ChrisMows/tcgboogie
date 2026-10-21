@@ -156,7 +156,7 @@ export async function watchProduct(productId, input = {}) {
   const selling = input.mode === "above" || input.mode === "rise";
   const target = input.targetPrice ?? (now ? Math.round(now * (selling ? 1.15 : 0.85) * 100) / 100 : null);
   if (!target) return { ok: false, error: "There's no current price for this product yet, so set a target on the Price alerts page." };
-  const { watch, errors } = validateWatch({ priceType: "market", mode: "below", condition: "Near Mint", targetPrice: target, alsoEbay: product.type === "card", ...input }, product);
+  const { watch, errors } = validateWatch({ priceType: "market", mode: "below", condition: "Near Mint", targetPrice: target, alsoEbay: product.type === "card" && product.language !== "japanese", ...input }, product);
   if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0] };
   const price = currentPrice(product, watch);
   await store.createWatch(user.id, {

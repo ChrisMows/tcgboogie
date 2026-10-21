@@ -35,7 +35,8 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   const suggest = (up) => (now ? (up ? Math.ceil(now * 1.15) : Math.floor(now * 0.85)) : "");
   const [target, setTarget] = useState(initial?.targetPrice ?? suggest(isRising(initial || {})));
   const [dropPct, setDropPct] = useState(initial?.dropPct ?? 15);
-  const [alsoEbay, setAlsoEbay] = useState(product.type === "card" ? initial?.alsoEbay ?? true : false);
+  const ebayOk = product.type === "card" && product.language !== "japanese";
+  const [alsoEbay, setAlsoEbay] = useState(ebayOk ? initial?.alsoEbay ?? true : false);
   const fires = byPct ? (now ? now * (rising ? 1 + dropPct / 100 : 1 - dropPct / 100) : null) : Number(target) || null;
   const already = fires && now ? (rising ? now >= fires : now <= fires) : false;
   const pickDirection = (up) => { if (up !== rising) { setRising(up); if (!initial) setTarget(suggest(up)); } };
@@ -107,12 +108,12 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
 
       {!rising && (
         <>
-          <label className={`check ${product.type === "card" ? "" : "dim"}`} style={{ marginTop: 14 }}>
-            <input type="checkbox" checked={alsoEbay} disabled={product.type !== "card"} onChange={(e) => setAlsoEbay(e.target.checked)} />
+          <label className={`check ${ebayOk ? "" : "dim"}`} style={{ marginTop: 14 }}>
+            <input type="checkbox" checked={alsoEbay} disabled={!ebayOk} onChange={(e) => setAlsoEbay(e.target.checked)} />
             Also alert me when this card is listed on eBay at or below this price
           </label>
           <div className="hint" style={{ marginLeft: 27 }}>
-            {product.type === "card" ? "Buy It Now listings of this exact card (raw), photo-checked, a few times an hour." : "eBay listing alerts cover single cards for now."}
+            {ebayOk ? "Buy It Now listings of this exact card (raw), photo-checked, a few times an hour." : "eBay listing alerts cover English single cards for now."}
           </div>
         </>
       )}
