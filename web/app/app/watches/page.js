@@ -1,5 +1,6 @@
 import AlertChannels from "@/components/AlertChannels";
 import WatchManager from "@/components/WatchManager";
+import { listingsByWatch } from "@/lib/watch-listings";
 import { getProduct } from "@/lib/catalog";
 import { ownedCounts } from "@/lib/collection";
 import { requireUser } from "@/lib/session";
@@ -35,6 +36,7 @@ export default async function WatchesPage() {
         plan={user.plan}
         isDemo={user.demo}
         owned={ownedCounts(await store.listItems(user.id))}
+        listings={user.demo ? {} : await listingsByWatch(user.id)}
       />
     </>
   );

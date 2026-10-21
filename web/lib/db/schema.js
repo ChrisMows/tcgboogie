@@ -1,5 +1,5 @@
 // Database tables (PostgreSQL on Neon). The four auth tables follow the Auth.js Drizzle adapter layout.
-import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("user", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -257,3 +257,19 @@ export const ebayListings = pgTable("ebay_listing", {
   title: text("title"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("ebay_listing_user_idx").on(t.userId)]);
+
+// eBay listings that met a price alert with "also alert me when it's listed on eBay" (found by the deal bot).
+// The website alerts the member once per listing (notifiedAt).
+export const watchListings = pgTable("watch_listing", {
+  id: serial("id").primaryKey(),
+  watchId: integer("watch_id").notNull().references(() => priceWatches.id, { onDelete: "cascade" }),
+  itemId: text("item_id").notNull(), // eBay item id
+  title: text("title").notNull(),
+  price: doublePrecision("price").notNull(), // with shipping
+  url: text("url").notNull(),
+  image: text("image"),
+  photoCheck: text("photo_check"), // match / unclear / skipped
+  flags: jsonb("flags"),
+  foundAt: timestamp("found_at", { mode: "date" }).notNull().defaultNow(),
+  notifiedAt: timestamp("notified_at", { mode: "date" }),
+}, (t) => [uniqueIndex("watch_listing_unique").on(t.watchId, t.itemId), index("watch_listing_found_idx").on(t.foundAt)]);

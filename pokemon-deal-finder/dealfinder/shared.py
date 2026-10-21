@@ -140,3 +140,36 @@ def log_event(source, level, message, details=None):
     """A line in the website's Logs page (Admin -> Logs), like web/lib/log.js writes."""
     _run("INSERT INTO system_log (source, level, message, details) VALUES (%s, %s, %s, %s)",
          (source, level, str(message)[:500], Jsonb(details) if details else None))
+
+
+# ----- price alerts that also watch eBay (web: price_watch, watch_listing) -----
+def ebay_watches():
+    """Buying price alerts on cards with "also alert me when it's listed on eBay" on.
+    Returns [{id, product_id, name, set_name, number, target}] (target worked out like web/lib/watches.js)."""
+    conn = _db()
+    if conn is None:
+        return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, product_id, name, set_name, number, mode, target_price, drop_pct, base_price FROM price_watch "
+                        "WHERE also_ebay AND product_type = 'card' AND mode IN ('below', 'drop')")
+            rows = cur.fetchall()
+    except Exception as e:  # noqa: BLE001
+        log.warning("Couldn't read price alerts (%s)", type(e).__name__)
+        return []
+    out = []
+    for wid, pid, name, set_name, number, mode, target, drop, base in rows:
+        if mode == "drop":
+            target = round(base * (1 - (drop or 0) / 100), 2) if base else None
+        if target and target > 0:
+            out.append({"id": wid, "product_id": pid, "name": name, "set_name": set_name or "", "number": number or "", "target": float(target)})
+    return out
+
+
+def save_watch_listing(watch_id, item):
+    """Remember an eBay listing that meets a price alert. Returns True if it's new (so it gets alerted once)."""
+    row = _run("INSERT INTO watch_listing (watch_id, item_id, title, price, url, image, photo_check, flags) "
+               "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (watch_id, item_id) DO NOTHING RETURNING id",
+               (watch_id, item["item_id"], item["title"][:300], item["price"], item["url"], item.get("image"),
+                item.get("photo_check"), Jsonb(item.get("flags") or [])), fetch=True)
+    return bool(row and row is not True)

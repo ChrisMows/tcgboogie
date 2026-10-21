@@ -41,7 +41,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   const pickDirection = (up) => { if (up !== rising) { setRising(up); if (!initial) setTarget(suggest(up)); } };
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay: false }); }}>
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ printing, condition, priceType, mode, targetPrice: target, dropPct, alsoEbay: rising ? false : alsoEbay }); }}>
       {product.type === "card" && (
         <div className="row" style={{ marginBottom: 14 }}>
           <div>
@@ -108,9 +108,12 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
       {!rising && (
         <>
           <label className={`check ${product.type === "card" ? "" : "dim"}`} style={{ marginTop: 14 }}>
-            <input type="checkbox" checked={false} disabled readOnly />
-            Also alert me when this card is listed on eBay at or below this price <span className="badge">Coming soon</span>
+            <input type="checkbox" checked={alsoEbay} disabled={product.type !== "card"} onChange={(e) => setAlsoEbay(e.target.checked)} />
+            Also alert me when this card is listed on eBay at or below this price
           </label>
+          <div className="hint" style={{ marginLeft: 27 }}>
+            {product.type === "card" ? "Buy It Now listings of this exact card (raw), photo-checked, a few times an hour." : "eBay listing alerts cover single cards for now."}
+          </div>
         </>
       )}
       <Err msg={errors?._} />
@@ -121,7 +124,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   );
 }
 
-export default function WatchManager({ watches, products, plan, isDemo, owned = {} }) {
+export default function WatchManager({ watches, products, plan, isDemo, owned = {}, listings = {} }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -177,6 +180,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       <div className="stats">
         <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
         <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>hit their target</span></div>
+        <div className="stat"><b>{watches.filter((w) => w.alsoEbay && !isRising(w)).length}</b><span>also watching eBay</span></div>
 
       </div>
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
@@ -256,6 +260,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                       {w.status === "triggered"
                         ? <span className="badge good" style={{ flex: "none" }}>{up ? "Hit your sell price" : "Hit your buy price"}</span>
                         : <span className="badge" style={{ flex: "none" }}>Watching</span>}
+                      {w.alsoEbay && !up && <span className="badge accent" style={{ flex: "none" }} title="Also alerts you when it's listed on eBay at or under your price">+ eBay</span>}
 
                     </div>
                     <div className="small muted">{w.setName}{w.number ? ` · ${w.number}` : ""} · {trackingLabel({ type: w.productType }, w)}</div>
@@ -267,6 +272,17 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                   </div>
                   <Sparkline points={product.history} target={fires} />
                 </div>
+                {(listings[w.id] || []).length > 0 && (
+                  <div className="watch-listings">
+                    <div className="small muted">Listed on eBay at or under your price:</div>
+                    {listings[w.id].map((l) => (
+                      <a key={l.id} href={l.href} target="_blank" rel="noopener noreferrer sponsored" className="watch-listing">
+                        <b>{money(l.price)}</b> <span className="small">{l.title}</span>
+                        {l.photoCheck === "match" && <span className="badge good">✓ Photo checked</span>} ↗
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                   <a className="btn sm" href={w.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">TCGplayer</a>
                   <button type="button" className="btn sm" onClick={() => { setErrors({}); setEditing(editing === w.id ? null : w.id); }}>

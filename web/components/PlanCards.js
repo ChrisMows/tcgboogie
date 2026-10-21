@@ -12,6 +12,7 @@ export const PLAN_ROWS = [
   ["Price alerts (buying or selling)", String(PLANS.free.maxPriceWatches), "Unlimited"],
   ["Price alerts by email", "✓", "✓"],
   ["Price alerts by text and Discord", "—", "✓"],
+  ["eBay listing alerts: when a watched card is listed at or under your price", "✓", "✓"],
   ["Photo check on every deal", "✓", "✓"],
   ["Collection tracker (unlimited cards, daily values, sets, wishlist)", "✓", "✓"],
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
@@ -19,7 +20,7 @@ export const PLAN_ROWS = [
   ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
-  ["Coming soon: eBay listing alerts, set-completion deals, sell-high alerts, email recap", "", ""],
+  ["Coming soon: set-completion deals, sell-high alerts, email recap", "", ""],
 ];
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */

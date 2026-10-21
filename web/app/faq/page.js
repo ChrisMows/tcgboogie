@@ -17,7 +17,7 @@ const FAQS = [
   ["Can I check sold prices myself?",
     "Yes. Every card page has Recent eBay Sales (sold listings, newest first) and Live listings buttons, and each condition price opens that condition's listings on TCGplayer."],
   ["What's a price alert?",
-    "Pick any card or sealed product and your price. Buying? We tell you when it drops to your price. Selling? We tell you when it climbs to it."],
+    "Pick any card or sealed product and your price. Buying? We tell you when it drops to your price, and (for cards) when someone lists it on eBay at or under your price. Selling? We tell you when it climbs to it."],
   ["What does the collection tracker do?",
     "Keeps every card you own in one place with what it's worth, updated daily, and charts its value over time. Add cards by search, or open a set and tap the ones you have."],
   ["What's the difference between Free and Premium?",

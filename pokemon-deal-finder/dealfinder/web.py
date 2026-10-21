@@ -199,6 +199,14 @@ class WebLink:
             self.new_deals = 0
         self.heartbeat(stats, ppt)
 
+    def notify_watch_listings(self):
+        """Ask the website to alert members about new eBay listings that meet their price alerts."""
+        try:
+            r = self.session.post(f"{self.site}/api/watches/dispatch", timeout=60)
+            log.info("Website price-alert listings: %s", r.json() if r.ok else f"HTTP {r.status_code}")
+        except (requests.RequestException, ValueError) as e:
+            log.warning("Couldn't reach the website for listing alerts (%s); they'll go out on the next round", type(e).__name__)
+
     def heartbeat(self, stats, ppt=None):
         shared.heartbeat({
             "listings": stats.get("listings", 0), "candidates": stats.get("candidates", 0),

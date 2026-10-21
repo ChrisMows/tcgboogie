@@ -184,6 +184,10 @@ red_flags:
 website:
   url: https://tcgboogie.com
   scan_refresh_seconds: 120   # how often to re-ask the website how wide to scan
+  ebay_watch:                 # price alerts with "also alert me when it's listed on eBay"
+    daily_calls: 1000         # eBay searches a day for these, spread over every watched card
+    min_interval_minutes: 30  # never search the same card more often than this
+    max_per_check: 8          # searches per bot check
 
 # Photo check: before a deal goes out, Claude compares the listing photos with the official image of the card we priced
 # (and other versions of it), and drops deals whose photos show a different card. Needs ANTHROPIC_API_KEY in .env.

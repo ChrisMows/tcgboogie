@@ -122,5 +122,21 @@ class EbayClient:
                 break
         return items
 
+    def search_listings(self, query, max_price, raw=True, limit=50):
+        """Buy It Now listings matching a card search, at or under max_price (item price), newest first.
+        Used for price alerts' "also alert me when it's listed on eBay"."""
+        e = self.cfg["ebay"]
+        filters = [
+            "buyingOptions:{FIXED_PRICE}",
+            f"conditionIds:{{{'4000' if raw else '2750'}}}",  # 4000 = Ungraded, 2750 = Graded
+            f"price:[..{max(0.0, float(max_price)):.2f}],priceCurrency:USD",
+            "deliveryCountry:US",
+        ]
+        params = {"q": query, "category_ids": e["category_id"], "filter": ",".join(filters), "sort": "newlyListed", "limit": limit}
+        if e.get("aspect_filter"):
+            params["aspect_filter"] = e["aspect_filter"]
+        j = self._get(SEARCH_URL, params)
+        return j.get("itemSummaries", []) or []
+
     def get_item(self, item_id):
         return self._get(ITEM_URL.format(quote(item_id, safe="")))

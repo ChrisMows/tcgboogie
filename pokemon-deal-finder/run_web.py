@@ -16,6 +16,7 @@ from dealfinder import db, shared
 from dealfinder.config import load_config
 from dealfinder.ebay import EbayError
 from dealfinder.finder import Finder, next_interval
+from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
 
 
@@ -33,6 +34,7 @@ def main():
     try:
         finder = Finder(on_deal=link.on_deal, scan_fn=link.scan_fn, on_listings=link.on_listings)
         link.finder = finder
+    watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
     except EbayError as e:
         log.error("%s", e)
         sys.exit(1)
@@ -42,6 +44,16 @@ def main():
         if stats.get("listings", 0) == 0 and not stats.get("paused"):
             stats["idle"] = True
         link.after_check(stats, finder.ppt)
+        # Price alerts that also watch eBay: search the cards that are due, then let the website alert members.
+        watcher.cfg = finder.cfg
+        try:
+            found = watcher.run()
+        except EbayError as e:
+            log.warning("eBay watch round skipped: %s", e)
+            found = 0
+        if found:
+            link.notify_watch_listings()
+        stats["watch_listings"] = found
         return stats
 
     if args.once:
