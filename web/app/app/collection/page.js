@@ -62,7 +62,8 @@ export default async function CollectionPage({ searchParams }) {
           <h2>Add cards</h2>
           <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus />
           <p className="hint" style={{ marginBottom: 0 }}>
-            Adding a lot from one set? <Link href="/app/collection/sets">Open the set</Link> and tap every card you own. It&apos;s much faster.
+            Adding a lot from one set? <Link href="/app/collection/sets">Open the set</Link> and tap every card you own. Or{" "}
+            <Link href="/app/collection/photo">📷 snap a photo</Link> of your cards and we&apos;ll find them for you.
           </p>
         </div>
       )}

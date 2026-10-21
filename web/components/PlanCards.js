@@ -19,6 +19,7 @@ export const PLAN_ROWS = [
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
   ["Collection CSV export", "—", "✓"],
   ["Grading check: which of your cards are worth grading", "Top 3", "✓"],
+  ["Photo appraiser: snap your cards, get names and values, add them in one tap", "—", "✓"],
   ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],

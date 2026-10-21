@@ -20,6 +20,7 @@ export const PLANS = {
     collectionExport: false,
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
+    photoAppraiser: false, // snap a photo of cards: identify, price, add
     features: [
       "Collection tracker, unlimited cards",
       "5 price alerts",
@@ -47,6 +48,7 @@ export const PLANS = {
     collectionExport: true,
     collectionAlerts: true,
     gradingCheck: true,
+    photoAppraiser: true,
     features: [
       "Every deal live, before the auction ends",
       "Instant alerts by text, Discord and email",

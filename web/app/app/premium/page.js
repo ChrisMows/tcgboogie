@@ -17,6 +17,7 @@ const FROM = {
   watches: "Unlimited price alerts are part of Premium.",
   deals: "Live deals are part of Premium.",
   grading: "The full grading check is part of Premium.",
+  photo: "The photo appraiser is part of Premium.",
 };
 
 // The five things that matter, in a few words each.
@@ -25,7 +26,7 @@ const PERKS = [
   ["Text & Discord alerts", "plus email"],
   ["Unlimited price alerts", `Free has ${PLANS.free.maxPriceWatches}`],
   [`${PLANS.premium.maxProfiles} deal filters`, "Japanese cards, earlier and deeper deals"],
-  ["Full collection tools", "grading check, set-completion deals, all-time history"],
+  ["Full collection tools", "photo appraiser, grading check, set-completion deals"],
 ];
 
 export default async function Premium({ searchParams }) {

@@ -11,6 +11,7 @@ export const LIMITS = {
   smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000 }, // "text me a code" requests
   ebayList: { max: 30, windowMs: 60 * 60 * 1000 }, // eBay listings created
   billing: { max: 20, windowMs: 60 * 60 * 1000 }, // opening Stripe checkout / billing pages
+  appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000 }, // photo appraiser photos (about a cent each, plus price lookups)
 };
 
 /** Count one use of `bucket` by `key`. Returns true if allowed, false if over the limit. */

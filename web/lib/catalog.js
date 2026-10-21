@@ -282,6 +282,27 @@ export async function searchProducts(q) {
     ...(sealed?.data || []).map(fromSealed)];
 }
 
+/**
+ * One card from what's printed on it (photo appraiser): a small search by name and number (3 credits, cached a week),
+ * preferring the result whose number matches. Returns the product (with prices) or null.
+ */
+export async function findCard({ name, number, language = "english" }) {
+  if (!catalogLive()) {
+    const n = String(name || "").toLowerCase();
+    return SAMPLE.find((p) => p.type === "card" && p.name.toLowerCase().includes(n) && (!number || p.number === number)) || null;
+  }
+  const japanese = language === "japanese";
+  const num = String(number || "").trim();
+  // Printed symbols the catalog spells out: Gold Star "☆" is "Star"; the δ (Delta Species) mark isn't in names.
+  const printed = String(name || "").replace(/\s*\(.*\)$/, "").replace(/[☆★]/g, " Star").replace(/δ/g, "").replace(/\s+/g, " ").trim();
+  const term = `${printed} ${num.split("/")[0]}`.trim().slice(0, 80);
+  if (term.length < 2) return null;
+  const j = await ppt("/cards", { search: term, limit: "3", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
+  const found = (j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) }));
+  const bare = (s) => String(s || "").toUpperCase().replace(/^0+/, "").replace(/\s/g, "");
+  return found.find((p) => num && bare(p.number) === bare(num)) || found.find((p) => num && bare(p.number).split("/")[0] === bare(num).split("/")[0]) || found[0] || null;
+}
+
 /** Every English set, newest first. The list rarely changes, so it's cached for a week. */
 export async function listSets() {
   if (!catalogLive()) return SAMPLE_SETS.map((s) => ({ ...s, total: sampleCards[s.name].length }));

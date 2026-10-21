@@ -885,3 +885,15 @@ a.cond-link:hover { border-color: var(--accent); }
 .grading-head .row { flex-wrap: wrap; }
 .grading-head input { width: 90px !important; flex: none; }
 .grading-head .row .small { flex: 1 1 220px; }
+
+/* Photo appraiser */
+.photo-drop { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.photo-result { display: grid; grid-template-columns: minmax(0, 280px) 1fr; gap: 16px; align-items: start; }
+.photo-preview { width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+.photo-list { display: grid; gap: 2px; margin-top: 10px; }
+.photo-row { display: grid; grid-template-columns: auto 44px 1fr auto auto; gap: 12px; align-items: center; padding: 8px; border-radius: 10px; cursor: pointer; }
+.photo-row:hover { background: rgba(255, 255, 255, 0.04); }
+.photo-row.dim { opacity: 0.6; cursor: default; }
+.photo-name { display: grid; gap: 3px; justify-items: start; min-width: 0; }
+.photo-value { white-space: nowrap; }
+@media (max-width: 700px) { .photo-result { grid-template-columns: 1fr; } .photo-preview { max-height: 220px; object-fit: contain; } }
