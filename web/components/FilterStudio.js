@@ -6,7 +6,7 @@ import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
 import { DealGrid } from "@/components/DealTile";
 import { cardOptions, createProfile, deleteProfile, saveProfile, setProfileActive } from "@/app/app/actions";
-import { FACETS, activeFacets, hasCards } from "@/lib/facets";
+import { FACET_GROUPS, FACETS, activeFacets, hasCards } from "@/lib/facets";
 import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches, ALERT_CHANNELS, ALERT_CHANNEL_LABELS } from "@/lib/filters";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
@@ -180,7 +180,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
     case "value":
       return (<>
         <div className="fs-row">
-          <label>Card worth $<input type="number" min={plan.minValueFloor} value={f.minMarketValue} onChange={(e) => set("minMarketValue", e.target.value === "" ? "" : Number(e.target.value))} /></label>
+          <label>Market value $<input type="number" min={plan.minValueFloor} value={f.minMarketValue} onChange={(e) => set("minMarketValue", e.target.value === "" ? "" : Number(e.target.value))} /></label>
           <label>to $<input type="number" min={0} placeholder="Any" value={f.maxMarketValue ?? ""} onChange={(e) => set("maxMarketValue", e.target.value === "" ? null : Number(e.target.value))} /></label>
         </div>
         <Err msg={errors.minMarketValue || errors.maxMarketValue} />
@@ -388,30 +388,39 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                       ☰ All filters {applied.length > 0 && <span className="fs-badge">{applied.length}</span>}
                     </button>
                   </div>
-                  {FACETS.map((x) => {
-                    const off = x.disabled?.(draft);
-                    const on = !off && x.active(draft, defaults);
-                    const wide = x.key === "cards" || x.key === "sets";
-                    return (
-                      <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
-                        <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
-                          onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
-                          {on ? <><span className="fs-pill-k">{x.label}:</span> {x.summary(draft)}</> : x.label}
-                          {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
-                        </button>
-                        {on && <button type="button" className="fs-x" aria-label={`Clear ${x.label}`} onClick={() => reset(x)}>✕</button>}
-                        {pop === x.key && (
-                          <div className={`fs-pop ${wide ? "wide" : ""}`} role="dialog" aria-label={x.label}>
-                            <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
-                            <div className="fs-pop-foot">
-                              <button type="button" className="link-btn small" onClick={() => reset(x)}>Reset</button>
-                              <button type="button" className="btn sm primary" onClick={() => setPop(null)}>Done</button>
+                  <div className="fs-groups">
+                    {FACET_GROUPS.map((g) => (
+                      <div key={g} className="fs-group">
+                        <span className="fs-group-label">{g}</span>
+                        <div className="fs-group-pills">
+                        {FACETS.filter((x) => x.group === g).map((x) => {
+                          const off = x.disabled?.(draft);
+                          const on = !off && x.active(draft, defaults);
+                          const wide = x.key === "cards" || x.key === "sets";
+                          return (
+                            <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
+                              <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
+                                onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
+                                {on ? <><span className="fs-pill-k">{x.label}:</span> {x.summary(draft)}</> : x.label}
+                                {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
+                              </button>
+                              {on && <button type="button" className="fs-x" aria-label={`Clear ${x.label}`} onClick={() => reset(x)}>✕</button>}
+                              {pop === x.key && (
+                                <div className={`fs-pop ${wide ? "wide" : ""}`} role="dialog" aria-label={x.label}>
+                                  <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
+                                  <div className="fs-pop-foot">
+                                    <button type="button" className="link-btn small" onClick={() => reset(x)}>Reset</button>
+                                    <button type="button" className="btn sm primary" onClick={() => setPop(null)}>Done</button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })}
+                        </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                   <button type="button" className="link-btn fs-clear" disabled={!applied.length} onClick={() => setDraft({ ...defaults })}>Clear filter</button>
                 </div>
 
@@ -460,8 +469,9 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                 )) : <span className="small muted">Nothing yet. Every deal over your plan&apos;s minimums is included.</span>}
               </div>
             </div>
-            {FACETS.map((x) => (
+            {FACETS.map((x, i) => (
               <section key={x.key} className={`fs-section ${x.disabled?.(draft) ? "dim" : ""}`}>
+                {(i === 0 || FACETS[i - 1].group !== x.group) && <div className="fs-group-label fs-drawer-group">{x.group}</div>}
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <h3 style={{ flex: "none" }}>{x.label}</h3>
                   {x.active(draft, defaults) && <button type="button" className="link-btn small" style={{ flex: "none" }} onClick={() => reset(x)}>Reset</button>}
