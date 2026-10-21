@@ -281,38 +281,45 @@ function weightedMedian(points) {
 }
 
 /**
- * Merge our own verified eBay sales into a card's graded values. For each grade with any of our sales in the last
- * 90 days, the value becomes the recency-weighted median of every known sale (the service's and ours, one sale
- * counted once), with the range and the number of sales behind it. Grades without our sales keep the service's value.
+ * Graded values from every known sale in the last 90 days: the price service's (by day) plus real eBay sales we
+ * verified ourselves (`sale`), each sale counted once and newer sales counting more. With 3+ sales the value is the
+ * weighted median; with 1-2 it's the weighted average (a median of two sales would just pick one of them). Every
+ * grade with a recent sale gets a value; `sales` says how many it rests on. Grades with no recent sales keep the
+ * service's own figure (and its reliability rule).
  */
 async function withOurSales(p) {
   const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 10) });
-  if (!db || p.type !== "card") return trim(p);
+  if (p.type !== "card") return trim(p);
   let rows = [];
-  try {
-    rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), eq(schema.sales.kind, "graded"),
-      gte(schema.sales.soldAt, new Date(Date.now() - 90 * DAY_MS))));
-  } catch { return trim(p); }
-  if (!rows.length) return trim(p);
+  if (db) {
+    try {
+      rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), eq(schema.sales.kind, "graded"),
+        gte(schema.sales.soldAt, new Date(Date.now() - 90 * DAY_MS))));
+    } catch { rows = []; }
+  }
   const graded = { ...p.graded };
   const recent = [...(p.recentSales || [])];
-  const byKey = {};
-  for (const r of rows) (byKey[gradeKeyOf(r.grader, r.grade)] ||= []).push(r);
-  for (const [key, ours] of Object.entries(byKey)) {
+  const ours = {};
+  for (const r of rows) (ours[gradeKeyOf(r.grader, r.grade)] ||= []).push(r);
+  const keys = new Set([...recent.map((d) => d.grade), ...Object.keys(ours)]);
+  const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS)); // a month old counts half
+  for (const key of keys) {
+    if (p.graded?.[key] === undefined && !ours[key]) continue; // the service flagged this grade's data as unreliable
     const service = recent.filter((d) => d.grade === key);
-    const mine = ours.filter((r) => {
+    const mine = (ours[key] || []).filter((r) => {
       const day = r.soldAt.toISOString().slice(0, 10);
       return !service.some((d) => d.date === day && d.count === 1 && Math.abs(d.price - r.price) < 1); // already counted
     }).map((r) => ({ date: r.soldAt.toISOString().slice(0, 10), grade: key, price: r.price, count: 1, source: "ebay", url: r.url }));
     const all = [...service, ...mine];
-    const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS)); // a month old counts half
-    const value = weightedMedian(all.map((d) => ({ price: d.price, w: (d.count || 1) * ageW(d) })));
-    if (!value) continue;
+    if (!all.length) continue;
+    const pts = all.map((d) => ({ price: d.price, w: (d.count || 1) * ageW(d) }));
     const sales = all.reduce((n, d) => n + (d.count || 1), 0);
-    const lastSale = all.map((d) => d.date).sort().pop();
+    const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
+    if (!value) continue;
     graded[key] = {
-      price: r2(value), sales, lastSale, low: r2(Math.min(...all.map((d) => d.price))), high: r2(Math.max(...all.map((d) => d.price))),
-      confidence: sales >= 5 ? "medium" : "low", reliable: gradedReliable({ sales, lastSale, confidence: null }), ourSales: mine.length,
+      price: r2(value), sales, lastSale: all.map((d) => d.date).sort().pop(),
+      low: r2(Math.min(...all.map((d) => d.price))), high: r2(Math.max(...all.map((d) => d.price))),
+      confidence: sales >= 5 ? "medium" : "low", reliable: true, few: sales < 3, ourSales: mine.length,
     };
     recent.push(...mine);
   }

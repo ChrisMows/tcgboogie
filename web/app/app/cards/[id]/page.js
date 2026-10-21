@@ -163,6 +163,12 @@ export default async function CardPage({ params, searchParams }) {
                   <Source name="ebay" className="src-sm" /> Sell on eBay
                 </Link>
               )}
+              {!isSealed && (
+                <span className="price-wrong">
+                  <a href="#report-sale" className="btn price-wrong-btn">✎ Price wrong?</a>
+                  <span className="price-wrong-tip">Seen it sell for more or less? Show us the sale and we&apos;ll update the value.</span>
+                </span>
+              )}
             </div>
           </div>
           <div className="muted">
@@ -220,9 +226,10 @@ export default async function CardPage({ params, searchParams }) {
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="cond-grid">
                   {graded.slice(0, 12).map(([key, g]) => (
-                    <a key={key} className="cond-cell cond-link" href={gradeSold(key).href} target="_blank"
+                    <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
                       rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`See ${GRADE_LABEL(key)} sold listings on eBay`}>
                       <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
+                      {g.few && <span className="few-tag" title="Based on only one or two recent sales: a rough guide">Few sales</span>}
                       <span className="grade-sales">{saleNote(g)} ↗</span>
                     </a>
                   ))}
@@ -230,8 +237,8 @@ export default async function CardPage({ params, searchParams }) {
               )}
               {thinGraded.length > 0 && (
                 <details className="thin-grades">
-                  <summary>Not enough data: {thinGraded.map(([k]) => GRADE_LABEL(k)).join(", ")}</summary>
-                  <p className="small muted" style={{ margin: "6px 0 8px" }}>Too few or too old sales to call a value. Shown for reference only, and not used for your collection value.</p>
+                  <summary>No sales in the last 90 days: {thinGraded.map(([k]) => GRADE_LABEL(k)).join(", ")}</summary>
+                  <p className="small muted" style={{ margin: "6px 0 8px" }}>These grades haven&apos;t sold recently, so their old figures are shown for reference only and aren&apos;t used for your collection value.</p>
                   <div className="cond-grid">
                     {thinGraded.map(([key, g]) => (
                       <div key={key} className="cond-cell thin">

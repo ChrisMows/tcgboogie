@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { reportSaleAction } from "@/app/app/cards/[id]/actions";
 
@@ -11,9 +11,24 @@ export default function ReportSale({ productId, language }) {
   const [result, setResult] = useState(null);
   const [pending, start] = useTransition();
   const router = useRouter();
+  // The "Price wrong?" button at the top of the page links here (#report-sale) and opens the form.
+  useEffect(() => {
+    const show = () => {
+      setOpen(true);
+      setTimeout(() => document.getElementById("report-sale")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    };
+    if (window.location.hash === "#report-sale") show();
+    const onClick = (e) => { if (e.target.closest?.('a[href="#report-sale"]')) { e.preventDefault(); show(); } };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
 
   if (!open) {
-    return <button type="button" className="link-btn small report-sale-open" onClick={() => setOpen(true)}>Saw a sale we&apos;re missing? Report it</button>;
+    return (
+      <div id="report-sale">
+        <button type="button" className="btn sm report-sale-open" onClick={() => setOpen(true)}>✎ Report a sale we&apos;re missing</button>
+      </div>
+    );
   }
   const submit = (e) => {
     e.preventDefault();
@@ -24,10 +39,10 @@ export default function ReportSale({ productId, language }) {
     });
   };
   return (
-    <form className="report-sale" onSubmit={submit}>
+    <form className="report-sale" id="report-sale" onSubmit={submit}>
       <label className="small" htmlFor="sale-link">Paste the eBay link of a sold listing for this card (graded)</label>
       <div className="row" style={{ gap: 8 }}>
-        <input id="sale-link" type="url" inputMode="url" placeholder="https://www.ebay.com/itm/…" value={link} onChange={(e) => setLink(e.target.value)} required />
+        <input id="sale-link" autoFocus type="url" inputMode="url" placeholder="https://www.ebay.com/itm/…" value={link} onChange={(e) => setLink(e.target.value)} required />
         <button className="btn sm primary" style={{ flex: "none" }} disabled={pending}>{pending ? "Checking…" : "Add sale"}</button>
       </div>
       {result && <div className={`small ${result.ok ? "good" : "muted"}`} style={{ marginTop: 6 }}>{result.message}</div>}

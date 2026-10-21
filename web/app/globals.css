@@ -982,3 +982,27 @@ details.era > .set-grid { margin-bottom: 14px; }
 /* Card page: report a missing sale */
 .report-sale-open { margin-top: 10px; display: inline-block; }
 .report-sale { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 6px; }
+
+/* Card page: "Price wrong?" + few-sales grades */
+.price-wrong { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: 230px; }
+.price-wrong-btn { border-color: var(--accent); color: var(--accent); }
+.price-wrong-btn:hover { background: var(--accent-soft); }
+.price-wrong-tip { font-size: 11.5px; line-height: 1.35; color: var(--muted); text-align: right; }
+.report-sale-open { margin-top: 12px; border-color: var(--accent); color: var(--accent); }
+.report-sale-open:hover { background: var(--accent-soft); }
+#report-sale { scroll-margin-top: 90px; }
+.cond-cell.few { border-style: dashed; }
+.few-tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--warn, #e3b341); }
+@media (max-width: 700px) { .price-wrong { align-items: flex-start; max-width: none; } .price-wrong-tip { text-align: left; } }
+/* Card page header: the button column sits beside the title, set line and price (instead of pushing them down) */
+@media (min-width: 601px) {
+  .card-hero-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 18px; align-content: start; }
+  .card-hero-info > * { grid-column: 1 / -1; }
+  .card-hero-info > .card-title-row { display: contents; }
+  .card-hero-info > .card-title-row > h1 { grid-column: 1; grid-row: 1; }
+  .card-hero-info > .card-title-row > .card-title-actions { grid-column: 2; grid-row: 1 / span 3; }
+  .card-hero-info > .muted { grid-column: 1; grid-row: 2; }
+  .card-hero-info > .hero-price { grid-column: 1; grid-row: 3; }
+}
+.price-wrong { align-items: stretch; }
+.price-wrong-btn { justify-content: center; text-align: center; }
