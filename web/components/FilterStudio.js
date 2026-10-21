@@ -6,7 +6,7 @@ import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
 import { DealGrid } from "@/components/DealTile";
 import { cardOptions, createProfile, deleteProfile, saveProfile, setProfileActive } from "@/app/app/actions";
-import { FACETS, activeFacets } from "@/lib/facets";
+import { FACETS, activeFacets, hasCards } from "@/lib/facets";
 import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches, ALERT_CHANNELS, ALERT_CHANNEL_LABELS } from "@/lib/filters";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
@@ -139,11 +139,23 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
   switch (k) {
     case "sets": return <SetPicker f={f} set={set} allSets={allSets} />;
     case "cards": return <CardPicker f={f} set={set} />;
+    case "product": {
+      const cards = hasCards(f);
+      const sealed = f.cardTypes.includes("sealed");
+      return (<>
+        <Check checked={cards} onChange={() => set("cardTypes", cards ? f.cardTypes.filter((t) => t === "sealed") : ["graded", "raw", ...(sealed ? ["sealed"] : [])])}>
+          Cards <span className="small muted">(graded slabs and raw cards)</span>
+        </Check>
+        <Check checked={sealed} onChange={() => toggle("cardTypes", "sealed")}>
+          Sealed products <span className="small muted">(booster boxes, ETBs, bundles, tins, packs)</span>
+        </Check>
+        <Err msg={errors.cardTypes} />
+      </>);
+    }
     case "type":
       return (<>
         <Check checked={f.cardTypes.includes("graded")} onChange={() => toggle("cardTypes", "graded")}>Graded slabs</Check>
         <Check checked={f.cardTypes.includes("raw")} onChange={() => toggle("cardTypes", "raw")}>Raw cards</Check>
-        <Check checked={f.cardTypes.includes("sealed")} onChange={() => toggle("cardTypes", "sealed")}>Sealed products (boxes, ETBs, bundles…)</Check>
         <Err msg={errors.cardTypes} />
       </>);
     case "grade":
@@ -266,7 +278,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
   const dirty = Boolean(selected) && JSON.stringify(draft) !== JSON.stringify(saved);
   const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }));
   const toggle = (key, value) => setDraft((d) => ({ ...d, [key]: d[key].includes(value) ? d[key].filter((x) => x !== value) : [...d[key], value] }));
-  const reset = (facet) => setDraft((d) => ({ ...d, ...facet.reset(defaults) }));
+  const reset = (facet) => setDraft((d) => ({ ...d, ...facet.reset(defaults, d) }));
   const premium = plan.key === "premium";
   const atLimit = profiles.length >= plan.maxProfiles;
   const filtersOf = (p) => (p.id === openId ? draft : clampToPlan(p.filters, plan));
@@ -383,7 +395,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                     return (
                       <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
                         <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
-                          onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? `Not used with ${draft.cardTypes.join(" and ")} only` : ""}>
+                          onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
                           {on ? <><span className="fs-pill-k">{x.label}:</span> {x.summary(draft)}</> : x.label}
                           {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
                         </button>

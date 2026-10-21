@@ -5,8 +5,15 @@ import { ALERT_CHANNEL_LABELS, ALERT_CHANNELS, GRADERS, RAW_CONDITION_LABELS } f
 const same = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
 const firstFew = (a) => (a.length <= 2 ? a.join(", ") : `${a.slice(0, 2).join(", ")} +${a.length - 2}`);
 const usd = (v) => `$${Number(v).toLocaleString()}`;
+export const hasCards = (f) => f.cardTypes.includes("graded") || f.cardTypes.includes("raw");
 
 export const FACETS = [
+  {
+    key: "product", label: "Product type",
+    active: (f) => !(hasCards(f) && f.cardTypes.includes("sealed")),
+    summary: (f) => (hasCards(f) ? "Cards only" : "Sealed only"),
+    reset: () => ({ cardTypes: ["graded", "raw", "sealed"] }),
+  },
   {
     key: "sets", label: "Set",
     active: (f) => f.sets.length > 0,
@@ -21,9 +28,11 @@ export const FACETS = [
   },
   {
     key: "type", label: "Card type",
-    active: (f) => f.cardTypes.length < 3,
-    summary: (f) => f.cardTypes.map((t) => ({ graded: "Graded", raw: "Raw", sealed: "Sealed" })[t]).join(" + "),
-    reset: () => ({ cardTypes: ["graded", "raw", "sealed"] }),
+    active: (f) => hasCards(f) && !(f.cardTypes.includes("graded") && f.cardTypes.includes("raw")),
+    summary: (f) => (f.cardTypes.includes("graded") ? "Graded only" : "Raw only"),
+    // Back to graded + raw, leaving the sealed choice (Product type) as it was.
+    reset: (d, f) => ({ cardTypes: ["graded", "raw", ...(f?.cardTypes.includes("sealed") ? ["sealed"] : [])] }),
+    disabled: (f) => !hasCards(f),
   },
   {
     key: "grade", label: "Grading Company",
