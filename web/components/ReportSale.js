@@ -15,7 +15,10 @@ export default function ReportSale({ productId, language }) {
   useEffect(() => {
     const show = () => {
       setOpen(true);
-      setTimeout(() => document.getElementById("report-sale")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+      setTimeout(() => {
+        document.getElementById("report-sale")?.scrollIntoView({ block: "center" });
+        document.getElementById("sale-link")?.focus({ preventScroll: true });
+      }, 60);
     };
     if (window.location.hash === "#report-sale") show();
     const onClick = (e) => { if (e.target.closest?.('a[href="#report-sale"]')) { e.preventDefault(); show(); } };
