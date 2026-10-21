@@ -1,3 +1,4 @@
+import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
 import { setLabel } from "@/lib/sets";
 import { DEFAULT_GRADING_COST, gradingCandidates, gradingMath } from "@/lib/grading";
@@ -155,7 +156,7 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
         <div className="card-hero-info">
           <div className="card-title-row">
-            <h1>{p.name}</h1>
+            <h1>{p.name} <CopyButton text={p.name} label="Copy card name" /></h1>
             <div className="card-title-actions">
               {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
               {sellItem && (

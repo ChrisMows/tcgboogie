@@ -1006,3 +1006,10 @@ details.era > .set-grid { margin-bottom: 14px; }
 }
 .price-wrong { align-items: stretch; }
 .price-wrong-btn { justify-content: center; text-align: center; }
+
+/* Copy-to-clipboard icon (card titles) */
+.copy-btn { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; margin-left: 6px; padding: 5px; border: 1px solid var(--border-strong);
+  border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; line-height: 1; transition: color 0.15s, border-color 0.15s; }
+.copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.copy-btn.done { color: var(--accent); border-color: var(--accent); }
+.copy-btn-msg { font-size: 12px; font-weight: 600; font-family: inherit; }
