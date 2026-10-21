@@ -41,7 +41,7 @@ def main():
         sys.exit(1)
     watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
     sealed = SealedScanner(finder)
-    tracker = SaleTracker(finder.cfg, finder.ebay)
+    tracker = SaleTracker(finder.cfg, finder.ebay, finder.conn)
     finder.on_identified = tracker.remember
 
     def check():

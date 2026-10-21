@@ -53,3 +53,22 @@ class TrackerTests(unittest.TestCase):
                 mock.patch.object(sales.shared, "save_sale", return_value=True) as save:
             self.assertEqual(self.t.run(now=self.now), 0)
         save.assert_not_called()
+
+
+class PersistenceTests(unittest.TestCase):
+    def test_waiting_list_survives_a_restart(self):
+        import tempfile
+        from pathlib import Path
+
+        from dealfinder import db
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        conn = db.connect(Path(tmp.name) / "bot.db")
+        self.addCleanup(conn.close)
+        ebay = mock.Mock()
+        t = SaleTracker({"sales": {}}, ebay, conn)
+        end = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+        t.remember({"itemId": "v1|9|0", "itemEndDate": end, "title": "x"}, {"product_id": "1", "kind": "graded"})
+        with mock.patch.object(sales.shared, "enabled", return_value=True):
+            t.run()
+        self.assertIn("v1|9|0", SaleTracker({"sales": {}}, ebay, conn).pending)

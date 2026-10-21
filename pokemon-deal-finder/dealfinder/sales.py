@@ -6,10 +6,11 @@ sold. So every graded auction the bot identifies (card + grade, whatever its pri
 after it ends we look it up once: if it sold, its final price goes into the website's `sale` table, where the
 website merges it with the price service's sales. Official API, one call per auction, no scraping.
 """
+import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from . import shared
+from . import db, shared
 
 log = logging.getLogger("dealfinder.sales")
 
@@ -41,11 +42,26 @@ def final_sale(item):
 
 
 class SaleTracker:
-    def __init__(self, cfg, ebay):
-        self.cfg, self.ebay = cfg, ebay
+    def __init__(self, cfg, ebay, conn=None):
+        self.cfg, self.ebay, self.conn = cfg, ebay, conn
         self.pending = {}  # item_id -> {"ends": datetime, "ident": {...}, "title", "url"}
         self.day, self.used = date.today(), 0
         self.saved = 0
+        self._load()
+
+    # The waiting list survives restarts (kept in the bot's local database).
+    def _load(self):
+        if not self.conn:
+            return
+        try:
+            raw = json.loads(db.get_setting(self.conn, "sales_pending") or "{}")
+            self.pending = {k: {**v, "ends": datetime.fromisoformat(v["ends"])} for k, v in raw.items()}
+        except (ValueError, KeyError, TypeError):
+            self.pending = {}
+
+    def _save(self):
+        if self.conn:
+            db.set_setting(self.conn, "sales_pending", json.dumps({k: {**v, "ends": v["ends"].isoformat()} for k, v in self.pending.items()}))
 
     def settings(self):
         s = self.cfg.get("sales") or {}
@@ -102,6 +118,7 @@ class SaleTracker:
             }):
                 saved += 1
         self.saved += saved
-        if saved:
-            log.info("Recorded %d real eBay sale%s (final prices of auctions we identified)", saved, "" if saved == 1 else "s")
+        self._save()
+        log.info("Final prices: %d auctions waiting, %d looked up, %d sold and recorded (%d lookups today)",
+                 len(self.pending), min(len(due), per_check), saved, self.used)
         return saved
