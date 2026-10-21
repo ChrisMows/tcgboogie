@@ -21,7 +21,8 @@ export const PLAN_ROWS = [
   ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
-  ["Coming soon: sell-high alerts, email recap", "", ""],
+  ["Sell-high alerts when cards you own jump in price", "—", "✓"],
+  ["Coming soon: email recap", "", ""],
 ];
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */

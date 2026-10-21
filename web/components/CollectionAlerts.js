@@ -10,7 +10,6 @@ export default function CollectionAlerts({ plan, prefs }) {
   const [saved, setSaved] = useState(null);
   const [pending, start] = useTransition();
   const locked = !plan.collectionAlerts;
-  const sellLocked = true; // sell-high alerts aren't built yet: shown as "Coming soon"
 
   const update = (patch) => {
     const next = { ...p, ...patch };
@@ -32,18 +31,17 @@ export default function CollectionAlerts({ plan, prefs }) {
         </InfoTip>
         </span>
         <span className="coll-alert-sep" aria-hidden="true" />
-        <span className="coll-alert-group is-soon">
+        <span className="coll-alert-group">
         <label className="coll-alert-opt">
-          <input type="checkbox" checked={Boolean(p.sellHigh)} disabled={sellLocked} onChange={(e) => update({ sellHigh: e.target.checked })} />
+          <input type="checkbox" checked={Boolean(p.sellHigh)} disabled={locked} onChange={(e) => update({ sellHigh: e.target.checked })} />
           <b>Tell me when to sell high</b>
         </label>
-        <select value={p.sellHighPct} onChange={(e) => (sellLocked ? setP({ ...p, sellHighPct: Number(e.target.value) }) : update({ sellHighPct: Number(e.target.value) }))} aria-label="Alert when a card climbs this much in a week" className="coll-alert-pct">
+        <select value={p.sellHighPct} onChange={(e) => (locked ? setP({ ...p, sellHighPct: Number(e.target.value) }) : update({ sellHighPct: Number(e.target.value) }))} aria-label="Alert when a card climbs this much in a week" className="coll-alert-pct">
           {[10, 15, 25, 40, 60, 100].map((n) => <option key={n} value={n}>{n}%</option>)}
         </select>
         <InfoTip label="About sell-high alerts">
-          When a card you own climbs by the percentage you picked (or more) within a week, we tell you, so you can sell while it&apos;s high. Sent by Discord and email with your other alerts.
+          Once a day we check the raw Near Mint price of every card you own. If one climbed by the percentage you picked (or more) over the past week, we tell you, so you can sell while it&apos;s high. Cards under $5 are skipped, and each card is alerted at most once a week.
         </InfoTip>
-        <span className="badge">Coming soon</span>
         </span>
       </div>
       <div className="coll-alert-end">
