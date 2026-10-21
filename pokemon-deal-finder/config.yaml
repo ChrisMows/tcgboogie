@@ -189,6 +189,13 @@ website:
     min_interval_minutes: 30  # never search the same card more often than this
     max_per_check: 8          # searches per bot check
 
+# Sealed products (booster boxes, ETBs, bundles, tins, collections, packs): scanned on every Nth check so cards keep
+# most of the eBay call budget. Only runs while some member's filter includes sealed. See dealfinder/sealed.py.
+sealed:
+  enabled: true
+  every_n_checks: 3
+  categories: [261044, 183456]   # eBay "CCG Sealed Boxes" and "CCG Sealed Packs" (one search each)
+
 # Photo check: before a deal goes out, Claude compares the listing photos with the official image of the card we priced
 # (and other versions of it), and drops deals whose photos show a different card. Needs ANTHROPIC_API_KEY in .env.
 vision:

@@ -28,8 +28,9 @@ TCG_IMG = "https://tcgplayer-cdn.tcgplayer.com/product/{}_in_200x200.jpg"
 def deal_record(rec, card):
     """A finder deal -> the website's deal shape (see web/lib/demo-deals.js)."""
     raw = card.get("kind") == "raw"
+    sealed = card.get("kind") == "sealed"
     grade = None
-    if not raw:
+    if not raw and not sealed:
         try:
             grade = float(str(card.get("grade") or "").split()[0])
         except ValueError:
@@ -37,13 +38,13 @@ def deal_record(rec, card):
     reason = rec.get("reason") or {}
     pid = card.get("product_id")
     return {
-        "kind": "raw" if raw else "graded",
+        "kind": "sealed" if sealed else "raw" if raw else "graded",
         "name": card.get("name") or "",
         "setName": card.get("set_name") or "",
         "number": card.get("card_number") or "",
         "printing": card.get("variants") or "",
         "language": card.get("language") or "english",
-        **({"condition": card.get("grade")} if raw else {"grader": card.get("grader"), "grade": grade}),
+        **({} if sealed else {"condition": card.get("grade")} if raw else {"grader": card.get("grader"), "grade": grade}),
         "total": rec.get("total"),
         "marketValue": rec.get("market_value"),
         "discountPct": round(rec.get("discount_pct") or 0),
@@ -134,6 +135,8 @@ class WebLink:
         """Check the listing photos against the card we priced. Returns False to drop the deal."""
         if rec["item_id"] in self.tracked:
             return True  # already checked when first found
+        if card.get("kind") == "sealed":
+            return self.photo_check_sealed(rec, card, data)
         looks = self.lookalikes(card, rec)
         total = rec.get("total") or 0
         # A cheaper version worth about what this listing costs is the classic wrong-set listing.
@@ -158,6 +161,24 @@ class WebLink:
             return False
         if result["verdict"] == "unclear":
             data["flags"] = [f"Photo check unclear: {result.get('reason', 'confirm the set symbol and number')}"] + data["flags"]
+        return True
+
+    def photo_check_sealed(self, rec, card, data):
+        """Sealed: do the photos show this exact product, factory sealed (not a different box, a single pack, or opened)?"""
+        claimed = f"{card.get('name')} ({card.get('set_name')}), factory sealed"
+        result = self.photos.check(rec["item_id"], claimed, card.get("product_id"), rec.get("images") or [], sealed=True)
+        if result is None:
+            data["flags"] = ["Photo not checked: confirm it's this exact product and the shrink wrap is intact."] + data["flags"]
+            data["photoCheck"] = "skipped"
+            return True
+        data["photoCheck"] = result["verdict"]
+        if result["verdict"] == "different_card":
+            self.held += 1
+            shared.log_event("alerts", "info", f"Sealed deal held back: the photos don't show {claimed}. {result.get('reason', '')}",
+                             {"item": rec["item_id"], "url": rec.get("url"), "model": result.get("model")})
+            return False
+        if result["verdict"] == "unclear":
+            data["flags"] = [f"Photo check unclear: {result.get('reason', 'confirm the product and the shrink wrap')}"] + data["flags"]
         return True
 
     def on_deal(self, rec, card):

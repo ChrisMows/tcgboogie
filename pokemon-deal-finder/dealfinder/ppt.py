@@ -197,6 +197,18 @@ class PPTClient:
         window = ((j.get("metadata") or {}).get("historyWindow") or {}).get("days", int(params["days"]))
         return {"card": card, "history_days": window}
 
+    def sets(self):
+        """Every English set, newest first - the website's exact request (cached a week, shared)."""
+        j = self._cached("/sets", {"sortBy": "releaseDate", "sortOrder": "desc", "limit": "500"}, 7 * 24) or {}
+        d = j.get("data") or []
+        return d if isinstance(d, list) else []
+
+    def sealed_in_set(self, set_name):
+        """A set's sealed products with prices - the website's set-page request (50 credits, cached 3 days, shared)."""
+        j = self._cached("/sealed-products", {"set": set_name, "limit": "50"}, 72, 24) or {}
+        d = j.get("data") or []
+        return d if isinstance(d, list) else []
+
 
 def _is_empty(data):
     if not data:

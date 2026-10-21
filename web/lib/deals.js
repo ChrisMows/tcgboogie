@@ -200,7 +200,7 @@ async function setCollectors() {
   });
 }
 
-const gradeOf = (d) => (d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`);
+const gradeOf = (d) => (d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`);
 const dealUrlOf = (d) => (d.productId
   ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
   : `${SITE}/app/deals`);

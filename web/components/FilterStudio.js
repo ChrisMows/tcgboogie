@@ -143,6 +143,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
       return (<>
         <Check checked={f.cardTypes.includes("graded")} onChange={() => toggle("cardTypes", "graded")}>Graded slabs</Check>
         <Check checked={f.cardTypes.includes("raw")} onChange={() => toggle("cardTypes", "raw")}>Raw cards</Check>
+        <Check checked={f.cardTypes.includes("sealed")} onChange={() => toggle("cardTypes", "sealed")}>Sealed products (boxes, ETBs, bundles…)</Check>
         <Err msg={errors.cardTypes} />
       </>);
     case "grade":
@@ -382,7 +383,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                     return (
                       <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
                         <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
-                          onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? `Not used with ${draft.cardTypes[0]} cards only` : ""}>
+                          onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? `Not used with ${draft.cardTypes.join(" and ")} only` : ""}>
                           {on ? <><span className="fs-pill-k">{x.label}:</span> {x.summary(draft)}</> : x.label}
                           {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
                         </button>

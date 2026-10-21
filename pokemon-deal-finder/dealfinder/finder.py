@@ -63,7 +63,7 @@ def evaluate(listing, card, mv, cfg, now=None):
     rec["discount_pct"] = round(disc, 1)
     if disc < deal["min_discount_pct"]:
         return False, {**rec, "skip": f"only {disc:.0f}% below market (need {deal['min_discount_pct']}%)"}
-    rec["flags"] = red_flags(listing, cfg)
+    rec["flags"] = red_flags(listing, cfg, sealed=card.get("kind") == "sealed") + list(card.get("extra_flags") or [])
     # A huge discount with almost no bids and minutes still to go usually means bidding hasn't started yet.
     eb = (cfg.get("red_flags") or {}).get("early_bid") or {}
     bids = listing.bid_count or 0

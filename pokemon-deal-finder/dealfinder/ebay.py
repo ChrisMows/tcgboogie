@@ -122,6 +122,16 @@ class EbayClient:
                 break
         return items
 
+    def search_ending_sealed(self, category_id, window_minutes):
+        """Pokemon sealed-product auctions (boxes, ETBs, packs...) in one eBay category ending within the window."""
+        end = datetime.now(timezone.utc) + timedelta(minutes=window_minutes)
+        params = {
+            "q": "pokemon", "category_ids": str(category_id), "sort": "endingSoonest", "limit": 200,
+            "filter": ",".join(["buyingOptions:{AUCTION}", f"itemEndDate:[..{iso_z(end)}]", "deliveryCountry:US"]),
+        }
+        j = self._get(SEARCH_URL, params)
+        return j.get("itemSummaries", []) or []
+
     def search_listings(self, query, max_price, raw=True, limit=50):
         """Buy It Now listings matching a card search, at or under max_price (item price), newest first.
         Used for price alerts' "also alert me when it's listed on eBay"."""

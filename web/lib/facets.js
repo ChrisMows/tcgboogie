@@ -21,9 +21,9 @@ export const FACETS = [
   },
   {
     key: "type", label: "Card type",
-    active: (f) => f.cardTypes.length === 1,
-    summary: (f) => (f.cardTypes[0] === "graded" ? "Graded only" : "Raw only"),
-    reset: () => ({ cardTypes: ["graded", "raw"] }),
+    active: (f) => f.cardTypes.length < 3,
+    summary: (f) => f.cardTypes.map((t) => ({ graded: "Graded", raw: "Raw", sealed: "Sealed" })[t]).join(" + "),
+    reset: () => ({ cardTypes: ["graded", "raw", "sealed"] }),
   },
   {
     key: "grade", label: "Grading Company",

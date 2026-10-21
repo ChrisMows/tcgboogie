@@ -345,7 +345,7 @@ def match_card(listing, card, cfg):
     return True, f"matched {grader} {grade}, #{card['card_number']}, {card['set_name']}, variants {sorted(want_v) or 'none'}, {lang}"
 
 
-def red_flags(listing, cfg):
+def red_flags(listing, cfg, sealed=False):
     """Warnings shown in the alert (they don't block it)."""
     rf = cfg["red_flags"]
     flags = []
@@ -355,7 +355,10 @@ def red_flags(listing, cfg):
         flags.append(f"Seller positive feedback only {listing.feedback_pct:.1f}%")
     if listing.country and listing.country != "US":
         flags.append(f"Ships from {listing.country} (international)")
-    if listing.is_raw():
+    if sealed:
+        if listing.feedback_score < 100:
+            flags.append("Newer seller: resealed boxes are a known scam, so check the shrink wrap in the photos")
+    elif listing.is_raw():
         flags.append("Raw card: condition is the seller's own description")
     else:
         if listing.condition_id and listing.condition_id != "2750":

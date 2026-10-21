@@ -16,6 +16,7 @@ from dealfinder import db, shared
 from dealfinder.config import load_config
 from dealfinder.ebay import EbayError
 from dealfinder.finder import Finder, next_interval
+from dealfinder.sealed import SealedScanner
 from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
 
@@ -38,11 +39,18 @@ def main():
         log.error("%s", e)
         sys.exit(1)
     watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
+    sealed = SealedScanner(finder)
 
     def check():
         stats = finder.poll_once()
         if stats.get("listings", 0) == 0 and not stats.get("paused"):
             stats["idle"] = True
+        # Sealed products (every few checks, see config sealed.every_n_checks), before the website sends alerts.
+        if not stats.get("idle"):
+            try:
+                sealed.run(stats)
+            except EbayError as e:
+                log.warning("Sealed round skipped: %s", e)
         link.after_check(stats, finder.ppt)
         # Price alerts that also watch eBay: search the cards that are due, then let the website alert members.
         watcher.cfg = finder.cfg

@@ -44,7 +44,7 @@ const saleNote = (g) => {
 /** The eBay listing this page was opened from: price, time left, warnings, and the way to the listing. */
 function DealBox({ deal: d, premium }) {
   const link = ebayLink(d.url, "card-page-deal");
-  const grade = d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
+  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
   const live = !d.ended;
   return (
     <div className={`deal-box ${live ? "live" : "ended"}`}>
@@ -121,7 +121,7 @@ export default async function CardPage({ params, searchParams }) {
   // Arrived from a deal alert and the auction is still open: the quick-check pop-up (listing + recent sales).
   const quick = deal && !deal.ended && sp?.from === "alert" ? {
     listing: ebayLink(deal.url, "deal-quick-listing"),
-    sold: ebaySearch(`${ebayQuery}${deal.kind === "raw" ? "" : ` ${deal.grader} ${deal.grade}`}`, { sold: true, source: "deal-quick-sold" }),
+    sold: ebaySearch(`${ebayQuery}${deal.kind === "graded" ? ` ${deal.grader} ${deal.grade}` : ""}`, { sold: true, source: "deal-quick-sold" }),
   } : null;
 
   // Raw condition prices link to that condition's live listings on TCGplayer.

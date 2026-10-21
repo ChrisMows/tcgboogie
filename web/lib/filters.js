@@ -3,7 +3,7 @@
 
 export const GRADERS = ["PSA", "BGS", "CGC", "SGC", "TAG"];
 export const LANGUAGES = ["english", "japanese"];
-export const CARD_TYPES = ["graded", "raw"];
+export const CARD_TYPES = ["graded", "raw", "sealed"];
 export const RAW_CONDITIONS = ["NM", "LP", "MP", "HP"];
 export const RAW_CONDITION_LABELS = {
   NM: "Near Mint only",
@@ -23,7 +23,7 @@ export function defaultFilters(plan) {
     minMarketValue: Math.max(30, plan.minValueFloor),
     maxMarketValue: null,
     maxPrice: null,
-    cardTypes: ["graded", "raw"],
+    cardTypes: ["graded", "raw", "sealed"],
     minRawCondition: "LP",
     graders: [...GRADERS],
     minGrade: 7,
@@ -87,7 +87,7 @@ export function validateFilters(input, plan) {
     errors.maxMarketValue = "Max card value can't be below the minimum.";
 
   const types = words(input.cardTypes).filter((t) => CARD_TYPES.includes(t));
-  if (!types.length) errors.cardTypes = "Pick graded, raw, or both.";
+  if (!types.length) errors.cardTypes = "Pick at least one: graded slabs, raw cards or sealed products.";
   else f.cardTypes = types;
   f.minRawCondition = RAW_CONDITIONS.includes(input.minRawCondition) ? input.minRawCondition : base.minRawCondition;
 
@@ -151,6 +151,7 @@ export function describe(f) {
   const parts = [];
   if (f.cardTypes.includes("graded")) parts.push(`slabs graded ${f.graders.join("/")} ${f.minGrade}${f.maxGrade < 10 ? `–${f.maxGrade}` : "+"}`);
   if (f.cardTypes.includes("raw")) parts.push(`raw cards in ${RAW_CONDITION_LABELS[f.minRawCondition].toLowerCase()} condition`);
+  if (f.cardTypes.includes("sealed")) parts.push("sealed products");
   let s = `${what}${f.sets.length ? ` from ${list(f.sets)}` : ""}: ${parts.join(" and ")}`;
   s += `, worth ${money(f.minMarketValue)}${f.maxMarketValue ? ` to ${money(f.maxMarketValue)}` : "+"}`;
   if (f.maxPrice) s += `, costing up to ${money(f.maxPrice)}`;
@@ -186,7 +187,7 @@ export function matches(f, deal) {
   if (!f.cardTypes.includes(deal.kind)) return false;
   if (deal.kind === "raw") {
     if (RAW_CONDITIONS.indexOf(deal.condition) > RAW_CONDITIONS.indexOf(f.minRawCondition)) return false;
-  } else {
+  } else if (deal.kind === "graded") {
     if (!f.graders.includes(deal.grader)) return false;
     if (deal.grade < f.minGrade || deal.grade > f.maxGrade) return false;
   }
@@ -204,7 +205,7 @@ export function matches(f, deal) {
   if (f.excludePokemon.some((p) => hasPhrase(nameText, p))) return false;
   if (f.sets.length && !f.sets.some((p) => hasPhrase(setText, p))) return false;
   if (f.excludeSets.some((p) => hasPhrase(setText, p))) return false;
-  if (deal.comps < f.minComps) return false;
+  if (deal.kind !== "sealed" && deal.comps < f.minComps) return false; // sealed is valued from TCGplayer, not a sales count
   if (deal.sellerFeedback < f.minSellerFeedback) return false;
   if (f.usOnly && deal.country && deal.country !== "US") return false;
   if (f.hideFlagged && deal.flags?.length) return false;

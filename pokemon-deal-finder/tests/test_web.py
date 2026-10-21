@@ -13,6 +13,14 @@ class DealRecordTests(unittest.TestCase):
         base.update(kw)
         return base
 
+    def test_sealed(self):
+        card = {"kind": "sealed", "name": "151 Elite Trainer Box", "set_name": "SV: Scarlet & Violet 151", "card_number": "",
+                "language": "english", "grader": "Sealed", "grade": "product", "product_id": "503313"}
+        d = deal_record(self.rec(title="Pokemon 151 Elite Trainer Box sealed"), card)
+        self.assertEqual((d["kind"], d["productId"], d["number"]), ("sealed", "503313", ""))
+        self.assertNotIn("grader", d)
+        self.assertNotIn("condition", d)
+
     def test_graded(self):
         card = {"kind": "graded", "name": "Umbreon VMAX", "set_name": "SWSH07: Evolving Skies", "card_number": "215/203",
                 "language": "english", "grader": "PSA", "grade": "10", "product_id": "246723"}

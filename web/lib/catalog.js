@@ -375,10 +375,10 @@ export async function getSetCards(setName) {
   return cards;
 }
 
-/** A set's sealed products (booster boxes, ETBs, tins...), priced. Up to 30, cached 3 days and shared (30 credits). */
+/** A set's sealed products (booster boxes, ETBs, tins...), priced. Up to 50, cached 3 days and shared (50 credits). */
 export async function getSetSealed(setName) {
   if (!catalogLive()) return SAMPLE.filter((p) => p.type === "sealed" && p.setName === setName);
-  const j = await ppt("/sealed-products", { set: setName, limit: "30" }, 3 * 24 * HOUR);
+  const j = await ppt("/sealed-products", { set: setName, limit: "50" }, 3 * 24 * HOUR);
   return (j?.data || []).map(fromSealed).sort((a, b) => (b.prices.market ?? 0) - (a.prices.market ?? 0));
 }
 

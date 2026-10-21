@@ -50,6 +50,22 @@ is similar.
 Set "shown" to the letter you see, or "none"."""
 
 
+SEALED_PROMPT = """You check eBay sealed Pokemon TCG product listings before a deal alert goes out to collectors.
+
+The seller says this listing is: {claimed}.
+Reference A is the official image of that product. After it come the seller's own listing photos.
+
+Do the listing photos show this same product (same set, same kind of product: booster box vs Elite Trainer Box vs
+bundle vs single pack vs case, same Pokemon on special collections), and does it look factory sealed?
+
+- "match": the photos clearly show this product, sealed.
+- "different_card": the photos show a different product (another set, a different box type, a single pack, a case or a
+  lot), or it is clearly opened, empty or missing its shrink wrap.
+- "unclear": the photos are a stock image, too small or too blurry to tell.
+
+Set "shown" to "A" for a match, else "none"."""
+
+
 def enabled():
     return bool(anthropic and os.getenv("ANTHROPIC_API_KEY"))
 
@@ -68,7 +84,7 @@ class PhotoChecker:
         self.client = anthropic.Anthropic() if enabled() else None
         self.done = {}  # item_id -> result, so an auction seen on several checks is only checked once
 
-    def check(self, item_id, claimed, reference_id, listing_photos, lookalikes=()):
+    def check(self, item_id, claimed, reference_id, listing_photos, lookalikes=(), sealed=False):
         """Returns {"verdict", "shown", "reason", "model"} or None when the check couldn't run."""
         if not self.client or not reference_id or not listing_photos:
             return None
@@ -76,7 +92,7 @@ class PhotoChecker:
             return self.done[item_id]
         refs = [("A", claimed, reference_id)] + [(chr(66 + i), label, pid) for i, (label, pid) in enumerate(lookalikes[:3])]
         others = ("Other versions of this card that exist: " + "; ".join(f"Reference {k} is {label}" for k, label, _ in refs[1:]) + ".") if len(refs) > 1 else ""
-        content = [{"type": "text", "text": PROMPT.format(claimed=claimed, others=others)}]
+        content = [{"type": "text", "text": (SEALED_PROMPT.format(claimed=claimed) if sealed else PROMPT.format(claimed=claimed, others=others))}]
         for key, label, pid in refs:
             content += [{"type": "text", "text": f"Reference {key}: {label}"},
                         {"type": "image", "source": {"type": "url", "url": TCG_IMG.format(pid)}}]

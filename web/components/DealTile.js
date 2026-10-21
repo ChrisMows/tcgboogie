@@ -5,7 +5,7 @@ import CardThumb from "@/components/CardThumb";
 const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 export function gradeLabel(d) {
-  return d.kind === "raw" ? `Raw · ${d.condition}` : `${d.grader} ${d.grade}`;
+  return d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw · ${d.condition}` : `${d.grader} ${d.grade}`;
 }
 
 export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false, cardHref = null }) {
