@@ -952,3 +952,24 @@ details.era > .set-grid { margin-bottom: 14px; }
 .fs-group .fs-pill-wrap { display: flex; width: 100%; min-width: 0; }
 .fs-group .fs-pill-k { flex: none; }
 .fs-pill-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Filter groups: fixed columns by the bar's own width, with a subtle divider between them */
+.fs-bar { container-type: inline-size; }
+.fs-groups { grid-template-columns: minmax(0, 1fr); gap: 12px 0; }
+.fs-group + .fs-group { border-top: 1px solid var(--border); padding-top: 12px; }
+@container (min-width: 440px) {
+  .fs-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fs-group + .fs-group { border-top: 0; padding-top: 0; }
+  .fs-group:nth-child(even) { border-left: 1px solid var(--border); padding-left: 16px; }
+  .fs-group:nth-child(odd) { padding-right: 16px; }
+  .fs-group:nth-child(n + 3) { border-top: 1px solid var(--border); padding-top: 12px; }
+}
+@container (min-width: 760px) {
+  .fs-groups { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .fs-group:nth-child(n) { border-top: 0; padding-top: 0; padding-right: 14px; }
+  .fs-group + .fs-group { border-left: 1px solid var(--border); padding-left: 14px; }
+  .fs-group:last-child { padding-right: 0; }
+}
+/* A value that doesn't fit beside its label wraps under it (only very long ones get "…") */
+.fs-group .fs-pill { flex-wrap: wrap; row-gap: 1px; text-align: left; }
+.fs-group .fs-pill-v { flex: 1 1 auto; max-width: 100%; }
+.fs-group .fs-x { align-self: center; }
