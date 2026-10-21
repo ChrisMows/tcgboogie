@@ -17,6 +17,7 @@ export const PLAN_ROWS = [
   ["Collection tracker (unlimited cards, daily values, sets, wishlist)", "✓", "✓"],
   ["Deal alerts on cards missing from your sets or on your wishlist", "—", "✓"],
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
+  ["Collection import from CSV (TCGplayer, Collectr, PriceCharting)", "✓", "✓"],
   ["Collection CSV export", "—", "✓"],
   ["Grading check: which of your cards are worth grading", "Top 3", "✓"],
   ["Photo appraiser: snap your cards, get names and values, add them in one tap", "—", "✓"],
