@@ -35,20 +35,24 @@ async function publicKey(kid) {
   return key;
 }
 
-async function verified(raw, header) {
+/** "" when eBay's signature checks out, else why not. */
+async function signatureProblem(raw, header) {
   try {
-    const sig = JSON.parse(Buffer.from(String(header || ""), "base64").toString("utf8"));
+    if (!header) return "no x-ebay-signature header";
+    const sig = JSON.parse(Buffer.from(String(header), "base64").toString("utf8"));
     const key = await publicKey(sig.kid);
-    return crypto.verify(key.digest, Buffer.from(raw), { key: key.pem, dsaEncoding: "der" }, Buffer.from(sig.signature, "base64"));
-  } catch {
-    return false;
+    const ok = crypto.verify(key.digest, Buffer.from(raw), { key: key.pem, dsaEncoding: "der" }, Buffer.from(sig.signature, "base64"));
+    return ok ? "" : `signature mismatch (alg ${sig.alg}, digest ${key.digest})`;
+  } catch (e) {
+    return String(e.message || e).slice(0, 200);
   }
 }
 
 export async function POST(req) {
   const raw = await req.text();
-  if (!(await verified(raw, req.headers.get("x-ebay-signature")))) {
-    await log("signin", "warn", "eBay account-deletion notice with a bad signature: ignored");
+  const problem = await signatureProblem(raw, req.headers.get("x-ebay-signature"));
+  if (problem) {
+    await log("signin", "warn", `eBay account-deletion notice not verified: ${problem}`);
     return new NextResponse(null, { status: 412 });
   }
   try {
