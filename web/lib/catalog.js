@@ -204,11 +204,18 @@ function fromCard(c) {
   }
   for (const k of Object.keys(prices)) if (!Object.keys(prices[k]).length) delete prices[k];
   const graded = {};
+  // Graded sales by day (last 90 days): { psa10: { "2026-08-31": { average, count } } }. salesByGrade.count is all-time,
+  // so the recent count (what the 90-day price is based on) comes from here.
+  const byDay = c.ebay?.priceHistory || {};
+  const recentSales = [];
   for (const [key, g] of Object.entries(c.ebay?.salesByGrade || {})) {
     if (c.ebay?.smartPriceOutlierByGrade?.[key]) continue; // flagged as unreliable by the service
     const price = g?.smartMarketPrice?.price ?? g?.averagePrice ?? g?.medianPrice ?? null;
     if (!price) continue;
-    const sales = g?.count ?? g?.totalSales ?? null;
+    const days = Object.entries(byDay[key] || {}).map(([date, d]) => ({ date: date.slice(0, 10), grade: key, price: r2(d?.average), count: d?.count || 1 }))
+      .filter((d) => d.price > 0 && Date.now() - new Date(d.date).getTime() < 90 * 24 * HOUR);
+    recentSales.push(...days);
+    const sales = byDay[key] ? days.reduce((n, d) => n + d.count, 0) : g?.count ?? g?.totalSales ?? null;
     const lastSale = g?.lastSaleDate ? String(g.lastSaleDate).slice(0, 10) : null;
     const confidence = g?.smartMarketPrice?.confidence || null;
     graded[key] = { price: r2(price), sales, lastSale, confidence, reliable: gradedReliable({ sales, lastSale, confidence }) };
@@ -222,7 +229,8 @@ function fromCard(c) {
     number: c.cardNumber, rarity: c.rarity || null,
     image: c.imageCdnUrl400 || c.imageCdnUrl200 || c.imageCdnUrl || null,
     tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
-    prices, graded, history: cleanHistory(hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market }))),
+    prices, graded, recentSales: recentSales.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8),
+    history: cleanHistory(hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market }))),
   };
 }
 

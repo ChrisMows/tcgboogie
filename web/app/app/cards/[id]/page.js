@@ -34,7 +34,7 @@ const COND_ORDER = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily
 const condRank = (c) => (COND_ORDER.indexOf(c) + 1) || 99;
 
 const saleNote = (g) => {
-  const n = g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : "";
+  const n = g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"} in 90 days` : "";
   const last = g.lastSale ? `last ${new Date(`${g.lastSale}T12:00:00`).toLocaleDateString("en-US", { month: "short", year: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? undefined : "numeric", day: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? "numeric" : undefined })}` : "";
   return [n, last].filter(Boolean).join(" · ");
 };
@@ -228,10 +228,24 @@ export default async function CardPage({ params, searchParams }) {
                   </div>
                 </details>
               )}
+              {(p.recentSales || []).length > 0 && (
+                <div className="recent-sales">
+                  <div className="small muted">Latest graded sales (eBay and Fanatics Collect)</div>
+                  {p.recentSales.map((s) => (
+                    <div key={`${s.grade}-${s.date}`} className="recent-sale">
+                      <span className="muted">{new Date(`${s.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                      <span>{GRADE_LABEL(s.grade)}</span>
+                      <b>{money(s.price, 0)}</b>
+                      <span className="small muted">{s.count > 1 ? `avg of ${s.count} sales` : ""}</span>
+                    </div>
+                  ))}
+                  <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="small">All sold listings on eBay ↗</a>
+                </div>
+              )}
             </>
           )}
           <p className="hint" style={{ marginBottom: 0 }}>
-            Raw prices from TCGplayer, graded values from recent eBay sales. Updated about once a day.{" "}
+            Raw prices from TCGplayer, graded values from the last 90 days of sales on eBay and Fanatics Collect. Updated about once a day.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>
           </p>
         </div>

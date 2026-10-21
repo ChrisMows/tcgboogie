@@ -11,7 +11,7 @@ const STALE_MS = 20 * 3600 * 1000;
 /** A product trimmed to what pages and client components need. */
 export const slim = (p) => p && {
   id: p.id, type: p.type, name: p.name, setName: p.setName, setId: p.setId || null, number: p.number, rarity: p.rarity || null,
-  image: p.image, tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, graded: p.graded || {}, history: p.history || [],
+  image: p.image, tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, graded: p.graded || {}, recentSales: p.recentSales || [], history: p.history || [],
   ...(p.language === "japanese" ? { language: "japanese" } : {}),
 };
 

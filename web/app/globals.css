@@ -864,3 +864,8 @@ a.cond-link:hover { border-color: var(--accent); }
 .watch-listings { margin-top: 10px; padding: 10px 12px; border: 1px solid rgba(211, 255, 102, 0.35); border-radius: 10px; background: rgba(211, 255, 102, 0.05); display: grid; gap: 6px; }
 .watch-listing { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; color: var(--text); text-decoration: none; }
 .watch-listing:hover { color: var(--accent); }
+
+/* Card page: latest graded sales feed */
+.recent-sales { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08)); display: grid; gap: 4px; }
+.recent-sale { display: grid; grid-template-columns: 56px 70px 70px 1fr; gap: 8px; align-items: baseline; font-size: 14px; }
+.recent-sales > a { margin-top: 4px; }
