@@ -10,7 +10,7 @@ import { planFor } from "@/lib/plans";
 
 // Real deals from the deal bot (see the `deal` table). Until the bot has found any, pages show the sample deals,
 // clearly labeled as examples.
-const { deals, profiles, users, accounts, alertLog } = schema;
+const { deals, profiles, users, accounts, alertLog, collectionItems } = schema;
 const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
 const DAY = 86400000;
 const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -116,8 +116,9 @@ export async function dispatchDeals() {
   const rows = await db.select({ profile: profiles, user: users }).from(profiles)
     .innerJoin(users, eq(users.id, profiles.userId)).where(eq(profiles.active, true));
   const live = rows.filter((r) => effectiveTier(r.user) === "premium"); // Free members see deals after they end
-  if (!live.length) return out;
-  const userIds = [...new Set(live.map((r) => r.user.id))];
+  const collectors = await setCollectors();
+  if (!live.length && !collectors.length) return out;
+  const userIds = [...new Set([...live.map((r) => r.user.id), ...collectors.map((c) => c.user.id)])];
   const discordIds = Object.fromEntries((await db.select({ userId: accounts.userId, id: accounts.providerAccountId }).from(accounts)
     .where(and(inArray(accounts.userId, userIds), eq(accounts.provider, "discord")))).map((a) => [a.userId, a.id]));
   const ready = channelsReady();
@@ -130,12 +131,21 @@ export async function dispatchDeals() {
     for (const r of live) {
       const f = clampToPlan(r.profile.filters, planFor("premium"));
       if (!matches(f, d)) continue;
-      const e = seen.get(r.user.id) || { deal: d, filter: r.profile.name, channels: new Set() };
+      const e = seen.get(r.user.id) || { deal: d, why: `Matched your filter “${r.profile.name}”.`, user: r.user, channels: new Set() };
       for (const c of f.channels || ALERT_CHANNELS) e.channels.add(c);
       seen.set(r.user.id, e);
     }
+    // Collection alerts: a card missing from a set you've started, or on your wishlist (every channel you have on).
+    for (const c of collectors) {
+      const why = c.wants(d);
+      if (!why) continue;
+      const e = seen.get(c.user.id) || { deal: d, user: c.user, channels: new Set() };
+      e.why = e.why ? `${e.why} ${why}` : why;
+      for (const ch of ALERT_CHANNELS) e.channels.add(ch);
+      seen.set(c.user.id, e);
+    }
     for (const [uid, e] of seen) {
-      const m = byMember.get(uid) || { user: e.deal && live.find((r) => r.user.id === uid).user, items: [] };
+      const m = byMember.get(uid) || { user: e.user, items: [] };
       m.items.push(e);
       byMember.set(uid, m);
     }
@@ -162,16 +172,44 @@ export async function dispatchDeals() {
   return out;
 }
 
+/**
+ * Premium members with "Deals on cards missing from my sets" on, each with wants(deal): why this deal is for them
+ * (a card they don't own from a set they've started, or one on their wishlist), else null.
+ */
+async function setCollectors() {
+  const people = (await db.select().from(users).where(sql`(${users.collectionPrefs}->>'setDeals')::boolean is true`))
+    .filter((u) => effectiveTier(u) === "premium");
+  if (!people.length) return [];
+  const items = await db.select({ userId: collectionItems.userId, list: collectionItems.list, productId: collectionItems.productId,
+    productType: collectionItems.productType, setName: collectionItems.setName })
+    .from(collectionItems).where(inArray(collectionItems.userId, people.map((u) => u.id)));
+  return people.map((user) => {
+    const mine = items.filter((it) => it.userId === user.id && it.productType === "card");
+    const owned = new Set(mine.filter((it) => it.list === "owned").map((it) => it.productId));
+    const wished = new Set(mine.filter((it) => it.list === "wishlist").map((it) => it.productId));
+    const started = new Set(mine.filter((it) => it.list === "owned" && it.setName).map((it) => it.setName));
+    return {
+      user,
+      wants: (d) => {
+        const pid = d.productId ? String(d.productId) : null;
+        if (!pid || owned.has(pid)) return null;
+        if (wished.has(pid)) return "It's on your wishlist.";
+        return d.setName && started.has(d.setName) ? `You're missing it from your ${d.setName} set.` : null;
+      },
+    };
+  });
+}
+
 const gradeOf = (d) => (d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`);
 const dealUrlOf = (d) => (d.productId
   ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
   : `${SITE}/app/deals`);
 const titleOf = (d) => `⚡ ${d.name} ${gradeOf(d)}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
-function linesOf(d, filterName) {
+function linesOf(d, why) {
   return [
     `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${gradeOf(d)}`,
     `${money(d.total)} with shipping. Sells for about ${money(d.marketValue)} (${d.comps || "recent"} sales).`,
-    `About ${d.minutesLeft} min left. Matched your filter “${filterName}”.`,
+    `About ${d.minutesLeft} min left. ${why}`,
     ...(d.photoCheck === "match" ? ["✓ Photo checked: the listing photos match this card."] : []),
     ...(d.flags?.length ? [`Check first: ${d.flags.join(" · ")}`] : []),
   ];
@@ -209,9 +247,9 @@ async function alertMember(user, discordId, items, ready, counts) {
 
   const email = pick("email", ready.email && user.email && user.alertEmail !== false, EMAIL_CAP);
   if (email.length === 1) {
-    const { deal: d, filter } = email[0];
+    const { deal: d, why } = email[0];
     await send("email", email, () => sendEmail(user.email, {
-      subject: titleOf(d), heading: titleOf(d), lines: [...linesOf(d, filter), "See recent eBay sales and open the listing from the deal page."],
+      subject: titleOf(d), heading: titleOf(d), lines: [...linesOf(d, why), "See recent eBay sales and open the listing from the deal page."],
       button: { label: "See the deal", url: dealUrlOf(d) }, footer: `Manage your filters: ${SITE}/app/deals`,
     }));
   } else if (email.length > 1) {
@@ -226,7 +264,7 @@ async function alertMember(user, discordId, items, ready, counts) {
   for (const x of pick("discord", ready.discord && discordId && user.alertDiscord)) {
     const d = x.deal;
     await send("discord", [x], () => sendDiscordDM(discordId, {
-      title: titleOf(d), url: dealUrlOf(d), description: `${linesOf(d, x.filter).join("\n")}\n[See the deal, recent sales and the listing](${dealUrlOf(d)})`,
+      title: titleOf(d), url: dealUrlOf(d), description: `${linesOf(d, x.why).join("\n")}\n[See the deal, recent sales and the listing](${dealUrlOf(d)})`,
     }));
   }
 

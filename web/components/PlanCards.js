@@ -15,12 +15,13 @@ export const PLAN_ROWS = [
   ["eBay listing alerts: when a watched card is listed at or under your price", "✓", "✓"],
   ["Photo check on every deal", "✓", "✓"],
   ["Collection tracker (unlimited cards, daily values, sets, wishlist)", "✓", "✓"],
+  ["Deal alerts on cards missing from your sets or on your wishlist", "—", "✓"],
   ["Collection value history", `Last ${PLANS.free.collectionHistoryDays} days`, "All time"],
   ["Collection CSV export", "—", "✓"],
   ["Sell on eBay from your collection", "✓", "✓"],
   ["Graded and raw cards", "✓", "✓"],
   ["Japanese cards", "—", "✓"],
-  ["Coming soon: set-completion deals, sell-high alerts, email recap", "", ""],
+  ["Coming soon: sell-high alerts, email recap", "", ""],
 ];
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */

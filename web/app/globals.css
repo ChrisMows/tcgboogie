@@ -869,3 +869,5 @@ a.cond-link:hover { border-color: var(--accent); }
 .recent-sales { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08)); display: grid; gap: 4px; }
 .recent-sale { display: grid; grid-template-columns: 56px 70px 70px 1fr; gap: 8px; align-items: baseline; font-size: 14px; }
 .recent-sales > a { margin-top: 4px; }
+
+.coll-alert-group.is-soon .coll-alert-opt { opacity: 0.6; cursor: default; }
