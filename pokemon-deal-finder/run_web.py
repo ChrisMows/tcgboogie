@@ -34,10 +34,10 @@ def main():
     try:
         finder = Finder(on_deal=link.on_deal, scan_fn=link.scan_fn, on_listings=link.on_listings)
         link.finder = finder
-    watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
     except EbayError as e:
         log.error("%s", e)
         sys.exit(1)
+    watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
 
     def check():
         stats = finder.poll_once()
