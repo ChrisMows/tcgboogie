@@ -401,7 +401,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                             <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
                               <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
                                 onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
-                                {on ? <><span className="fs-pill-k">{x.label}:</span> {x.summary(draft)}</> : x.label}
+                                {on ? <><span className="fs-pill-k">{x.label}:</span> <span className="fs-pill-v" title={x.summary(draft)}>{x.summary(draft)}</span></> : x.label}
                                 {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
                               </button>
                               {on && <button type="button" className="fs-x" aria-label={`Clear ${x.label}`} onClick={() => reset(x)}>✕</button>}

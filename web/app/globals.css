@@ -947,3 +947,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .fs-group .fs-x { border-left: 0; opacity: 0; padding: 0 8px; }
 .fs-group .fs-pill-wrap:hover .fs-x, .fs-group .fs-x:focus-visible { opacity: 1; }
 @media (hover: none) { .fs-group .fs-x { opacity: 1; } }
+.fs-group { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.fs-group-pills { min-width: 0; }
+.fs-group .fs-pill-wrap { display: flex; width: 100%; min-width: 0; }
+.fs-group .fs-pill-k { flex: none; }
+.fs-pill-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
