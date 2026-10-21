@@ -239,7 +239,8 @@ function fromSealed(s) {
     id: String(s.tcgPlayerId), type: "sealed", name: s.name, setName: s.setName, setId: s.setId ? String(s.setId) : null, number: null,
     image: s.imageCdnUrl400 || s.imageCdnUrl200 || s.imageCdnUrl || null,
     tcgplayerUrl: s.tcgPlayerUrl || `https://www.tcgplayer.com/product/${s.tcgPlayerId}`,
-    prices: { market: s.prices?.market ?? s.marketPrice ?? null, low: s.prices?.low ?? s.lowPrice ?? null }, graded: {}, history: [],
+    // The service reports a sealed product's price as `unopenedPrice` (older responses used prices.market).
+    prices: { market: s.prices?.market ?? s.marketPrice ?? s.unopenedPrice ?? null, low: s.prices?.low ?? s.lowPrice ?? null }, graded: {}, history: [],
   };
 }
 
@@ -339,6 +340,13 @@ export async function getSetCards(setName) {
   const cards = (j?.data || []).map(fromCard);
   void rememberCount(setName, cards.length);
   return cards;
+}
+
+/** A set's sealed products (booster boxes, ETBs, tins...), priced. Up to 30, cached 3 days and shared (30 credits). */
+export async function getSetSealed(setName) {
+  if (!catalogLive()) return SAMPLE.filter((p) => p.type === "sealed" && p.setName === setName);
+  const j = await ppt("/sealed-products", { set: setName, limit: "30" }, 3 * 24 * HOUR);
+  return (j?.data || []).map(fromSealed).sort((a, b) => (b.prices.market ?? 0) - (a.prices.market ?? 0));
 }
 
 export const sampleIds = () => SAMPLE.map((p) => p.id);

@@ -2,7 +2,8 @@ import { eraOf, setLabel } from "@/lib/sets";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SetGrid from "@/components/SetGrid";
-import { getSetCards, listSets } from "@/lib/catalog";
+import CardThumb from "@/components/CardThumb";
+import { getSetCards, getSetSealed, listSets } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { money, nmPrice, ownedCounts, unitValue } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }) {
   return { title: setLabel(decodeURIComponent((await params).set)).name.slice(0, 80) };
 }
 
-export default async function SetPage({ params }) {
+export default async function SetPage({ params, searchParams }) {
   const user = await requireUser();
   const name = decodeURIComponent((await params).set).slice(0, 120);
   // Only real set names get looked up (a made-up name in the address must not reach the price service).
@@ -32,6 +33,10 @@ export default async function SetPage({ params }) {
   const missing = (cards || []).filter((c) => !owned[c.id]);
   const toComplete = missing.reduce((s, c) => s + (nmPrice(c) ?? 0), 0);
   const have = (cards || []).length - missing.length;
+  // Sealed products load on request (they cost credits the first time anyone opens them for this set).
+  const showSealed = (await searchParams)?.sealed === "1";
+  const sealed = showSealed ? await getSetSealed(name).catch(() => null) : null;
+  const ownedSealed = new Set(items.filter((it) => it.list === "owned" && it.productType === "sealed").map((it) => it.productId));
 
   return (
     <>
@@ -57,6 +62,27 @@ export default async function SetPage({ params }) {
             <div className="stat"><b>{money(toComplete)}</b><span>to finish the set in Near Mint ({missing.length} {missing.length === 1 ? "card" : "cards"})</span></div>
           </div>
           <SetGrid cards={cards.map(slim)} owned={owned} wished={wished} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
+          <div className="panel" id="sealed" style={{ marginTop: 18 }}>
+            <h2 style={{ marginTop: 0 }}>Sealed products</h2>
+            {!showSealed ? (
+              <Link href={`/app/collection/sets/${encodeURIComponent(name)}?sealed=1#sealed`} className="btn">Show sealed products from this set</Link>
+            ) : sealed === null ? (
+              <p className="muted" style={{ margin: 0 }}>Sealed products didn&apos;t load. Please try again in a minute.</p>
+            ) : sealed.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>No sealed products listed for this set.</p>
+            ) : (
+              <div className="sealed-list">
+                {sealed.map((p) => (
+                  <Link key={p.id} href={`/app/cards/${encodeURIComponent(p.id)}`} className="sealed-row">
+                    <CardThumb item={p} width={52} />
+                    <span className="sealed-name"><b>{p.name}</b>{ownedSealed.has(p.id) && <span className="badge good">You own it</span>}</span>
+                    <b>{p.prices.market ? money(p.prices.market) : "—"}</b>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <p className="hint" style={{ marginBottom: 0 }}>Open a product to add it to your collection, wishlist it, or set a price alert.</p>
+          </div>
         </>
       )}
     </>
