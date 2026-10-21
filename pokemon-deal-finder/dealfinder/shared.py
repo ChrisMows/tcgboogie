@@ -173,3 +173,15 @@ def save_watch_listing(watch_id, item):
                (watch_id, item["item_id"], item["title"][:300], item["price"], item["url"], item.get("image"),
                 item.get("photo_check"), Jsonb(item.get("flags") or [])), fetch=True)
     return bool(row and row is not True)
+
+
+# ----- our own sales history (web: sale) -----
+def save_sale(sale):
+    """A real eBay sale (an auction we identified, looked up after it ended). Returns True if it's new."""
+    row = _run("INSERT INTO sale (item_id, product_id, kind, grader, grade, condition, language, price, shipping, sold_at, "
+               "title, url, source) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'tracked') "
+               "ON CONFLICT (item_id) DO NOTHING RETURNING id",
+               (sale["item_id"], sale["product_id"], sale["kind"], sale.get("grader"), sale.get("grade"), sale.get("condition"),
+                sale.get("language") or "english", sale["price"], sale.get("shipping"), sale["sold_at"], sale.get("title"),
+                sale.get("url")), fetch=True)
+    return bool(row and row is not True)

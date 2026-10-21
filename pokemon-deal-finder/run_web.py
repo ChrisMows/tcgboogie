@@ -16,6 +16,7 @@ from dealfinder import db, shared
 from dealfinder.config import load_config
 from dealfinder.ebay import EbayError
 from dealfinder.finder import Finder, next_interval
+from dealfinder.sales import SaleTracker
 from dealfinder.sealed import SealedScanner
 from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
@@ -40,6 +41,8 @@ def main():
         sys.exit(1)
     watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
     sealed = SealedScanner(finder)
+    tracker = SaleTracker(finder.cfg, finder.ebay)
+    finder.on_identified = tracker.remember
 
     def check():
         stats = finder.poll_once()
@@ -52,6 +55,12 @@ def main():
             except EbayError as e:
                 log.warning("Sealed round skipped: %s", e)
         link.after_check(stats, finder.ppt)
+        # Our own sales history: final prices of auctions we identified that have since ended.
+        tracker.cfg = finder.cfg
+        try:
+            stats["sales_recorded"] = tracker.run()
+        except EbayError as e:
+            log.warning("Final-price round skipped: %s", e)
         # Price alerts that also watch eBay: search the cards that are due, then let the website alert members.
         watcher.cfg = finder.cfg
         try:

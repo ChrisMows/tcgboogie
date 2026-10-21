@@ -141,6 +141,27 @@ export const collectionItems = pgTable("collection_item", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("collection_item_user_idx").on(t.userId)]);
 
+// Real eBay sales we verified ourselves through eBay's API (never scraped): auctions the deal bot saw end
+// ("tracked") and sales members reported ("member"). Merged with the price service's sales for card values.
+export const sales = pgTable("sale", {
+  id: serial("id").primaryKey(),
+  itemId: text("item_id").notNull().unique(), // eBay legacy item number
+  productId: text("product_id").notNull(),
+  kind: text("kind").notNull(), // graded / raw / sealed
+  grader: text("grader"),
+  grade: text("grade"),
+  condition: text("condition"),
+  language: text("language").notNull().default("english"),
+  price: doublePrecision("price").notNull(), // final price, without shipping
+  shipping: doublePrecision("shipping"),
+  soldAt: timestamp("sold_at", { mode: "date" }).notNull(),
+  title: text("title"),
+  url: text("url"),
+  source: text("source").notNull(), // tracked / member
+  reportedBy: text("reported_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("sale_product_idx").on(t.productId)]);
+
 // Sealed product prices, one per product per day. The price service charges ~100 credits for sealed history, so we
 // keep our own (recorded whenever a sealed product is looked up, and daily for sealed products members own or watch).
 export const sealedPrices = pgTable("sealed_price", {

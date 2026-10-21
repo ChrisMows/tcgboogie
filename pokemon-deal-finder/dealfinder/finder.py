@@ -142,6 +142,7 @@ class Finder:
         self.scan_fn = scan_fn
         self.on_listings = on_listings  # on_listings(summaries): every ending auction seen this check
         self.after_check = after_check  # after_check(stats): once each check is done
+        self.on_identified = None  # on_identified(summary, ident): every auction identified (for our sales history)
         self.detail_cache = {}  # item_id -> (fetched_at, detail json)
         self.ppt = None
         self._auto_blocked = False
@@ -340,6 +341,8 @@ class Finder:
         ident = {"id": None, "kind": "graded", "name": _base_name(card.get("name", "")), "set_name": card.get("setName", ""),
                  "card_number": card.get("cardNumber", ""), "variants": ", ".join(sorted(listing.variants())),
                  "language": lang, "grader": grader, "grade": grade, "product_id": card.get("tcgPlayerId")}
+        if getattr(self, "on_identified", None):
+            self.on_identified(s, ident)  # whatever its price: we want how every identified slab sells
         mv = auto_market_value(priced.get("card"), int(priced.get("history_days") or 0), grader, grade, self.cfg)
         if not mv.ok:
             return skip(mv.reason, label=card_label(ident), mv=mv)

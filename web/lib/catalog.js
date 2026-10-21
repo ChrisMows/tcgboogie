@@ -229,7 +229,7 @@ function fromCard(c) {
     number: c.cardNumber, rarity: c.rarity || null,
     image: c.imageCdnUrl400 || c.imageCdnUrl200 || c.imageCdnUrl || null,
     tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
-    prices, graded, recentSales: recentSales.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8),
+    prices, graded, recentSales: recentSales.sort((a, b) => b.date.localeCompare(a.date)), // trimmed in withOurSales
     history: cleanHistory(hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market }))),
   };
 }
@@ -267,6 +267,58 @@ export async function recordSealedPrices(max = 500) {
   return { products: n };
 }
 
+// ---------- graded values: the price service's sales + real eBay sales we verified ourselves (see `sale`) ----------
+const DAY_MS = 24 * HOUR;
+const gradeKeyOf = (grader, grade) => `${String(grader || "").toLowerCase()}${String(grade || "").replace(".", "_")}`;
+
+/** Median where each sale counts by weight (newer sales and days with several sales count more). */
+function weightedMedian(points) {
+  const pts = points.filter((p) => p.price > 0 && p.w > 0).sort((a, b) => a.price - b.price);
+  const total = pts.reduce((s, p) => s + p.w, 0);
+  let run = 0;
+  for (const p of pts) { run += p.w; if (run >= total / 2) return p.price; }
+  return null;
+}
+
+/**
+ * Merge our own verified eBay sales into a card's graded values. For each grade with any of our sales in the last
+ * 90 days, the value becomes the recency-weighted median of every known sale (the service's and ours, one sale
+ * counted once), with the range and the number of sales behind it. Grades without our sales keep the service's value.
+ */
+async function withOurSales(p) {
+  const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 10) });
+  if (!db || p.type !== "card") return trim(p);
+  let rows = [];
+  try {
+    rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), eq(schema.sales.kind, "graded"),
+      gte(schema.sales.soldAt, new Date(Date.now() - 90 * DAY_MS))));
+  } catch { return trim(p); }
+  if (!rows.length) return trim(p);
+  const graded = { ...p.graded };
+  const recent = [...(p.recentSales || [])];
+  const byKey = {};
+  for (const r of rows) (byKey[gradeKeyOf(r.grader, r.grade)] ||= []).push(r);
+  for (const [key, ours] of Object.entries(byKey)) {
+    const service = recent.filter((d) => d.grade === key);
+    const mine = ours.filter((r) => {
+      const day = r.soldAt.toISOString().slice(0, 10);
+      return !service.some((d) => d.date === day && d.count === 1 && Math.abs(d.price - r.price) < 1); // already counted
+    }).map((r) => ({ date: r.soldAt.toISOString().slice(0, 10), grade: key, price: r.price, count: 1, source: "ebay", url: r.url }));
+    const all = [...service, ...mine];
+    const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS)); // a month old counts half
+    const value = weightedMedian(all.map((d) => ({ price: d.price, w: (d.count || 1) * ageW(d) })));
+    if (!value) continue;
+    const sales = all.reduce((n, d) => n + (d.count || 1), 0);
+    const lastSale = all.map((d) => d.date).sort().pop();
+    graded[key] = {
+      price: r2(value), sales, lastSale, low: r2(Math.min(...all.map((d) => d.price))), high: r2(Math.max(...all.map((d) => d.price))),
+      confidence: sales >= 5 ? "medium" : "low", reliable: gradedReliable({ sales, lastSale, confidence: null }), ourSales: mine.length,
+    };
+    recent.push(...mine);
+  }
+  return trim({ ...p, graded, recentSales: recent.sort((a, b) => b.date.localeCompare(a.date)) });
+}
+
 function fromSealed(s) {
   return {
     id: String(s.tcgPlayerId), type: "sealed", name: s.name, setName: s.setName, setId: s.setId ? String(s.setId) : null, number: null,
@@ -289,7 +341,7 @@ export async function getProduct(id, { cachedOnly = false, language = "english" 
   const card = await ppt(`/cards/${encodeURIComponent(id)}`,
     { includeHistory: "true", includeEbay: "true", days: "90", ...(japanese ? { language: "japanese" } : {}) }, PRICE_TTL, cachedOnly);
   if (card === MISS) return undefined;
-  if (card?.data) return { ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) };
+  if (card?.data) return withOurSales({ ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) });
   if (japanese) return null;
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
