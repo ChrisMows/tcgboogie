@@ -1,3 +1,4 @@
+import { setLabel } from "@/lib/sets";
 import { DEFAULT_GRADING_COST, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -144,7 +145,7 @@ export default async function CardPage({ params, searchParams }) {
     <>
       <div className="crumbs">
         <Link href="/app/collection">Collection</Link> /{" "}
-        {p.setName && language !== "japanese" ? <><Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link> / </> : null}
+        {p.setName && language !== "japanese" ? <><Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link> / </> : null}
         {p.name.replace(/\s*\(.*\)$/, "")}
       </div>
 
@@ -163,7 +164,7 @@ export default async function CardPage({ params, searchParams }) {
             </div>
           </div>
           <div className="muted">
-            {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{p.setName}</Link>)}
+            {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}
             {p.number ? ` · #${p.number}` : ""}{p.rarity && p.rarity !== "None" ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
             {language === "japanese" ? " · Japanese" : ""}
           </div>

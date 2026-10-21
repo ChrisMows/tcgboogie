@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { logError } from "@/lib/log";
 import { ebayAccount, ebaySellReady } from "@/lib/ebay-sell";
 import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
-import { changeRenewal, connectProvider, deleteAccount, disconnectEbay, openBillingPortal, disconnectProvider, refreshPicture, removePhone, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
+import { changeRenewal, connectProvider, deleteAccount, disconnectEbay, openBillingPortal, disconnectProvider, refreshPicture, removePhone, saveName, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
@@ -78,7 +78,7 @@ export default async function Account({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Settings</h1>
-          <p>Your plan, profile, sign-ins and how alerts reach you.</p>
+          <p>Your plan, how alerts reach you, connected accounts and your profile.</p>
         </div>
       </div>
 
@@ -134,72 +134,10 @@ export default async function Account({ searchParams }) {
           <ul className="plan-perks">{PLANS.premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
         )}
       </div>
-      {params?.saved && <div className="notice good">{params.saved === "avatar" ? "Profile picture updated." : "Saved."}</div>}
-      {params?.refreshed && (
-        <div className={`notice ${params.refreshed === "failed" ? "warn" : "good"}`}>
-          {params.refreshed === "failed"
-            ? "We couldn't reach Discord just now. Try again in a minute, or disconnect and reconnect Discord."
-            : `Picture refreshed from ${params.refreshed === "google" ? "Google" : "Discord"}.`}
-        </div>
-      )}
-
-      <div className="panel" id="picture">
-        <h2>Profile picture</h2>
-        <form action={setAvatar}>
-          <div className="avatar-choice" role="radiogroup" aria-label="Profile picture">
-            {Object.entries(AVATAR_SOURCES).map(([key, label]) => {
-              const url = key === "initials" ? null : pictures[key];
-              const usable = key === "initials" || Boolean(url);
-              return (
-                <label key={key} className={usable ? "" : "disabled"}>
-                  <input type="radio" name="avatar" value={key} defaultChecked={current.source === key} disabled={!usable} />
-                  <span className="avatar-btn lg" aria-hidden="true">
-                    {url
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={url} alt="" referrerPolicy="no-referrer" />
-                      : <span>{key === "initials" ? initials(user) : "?"}</span>}
-                  </span>
-                  {label}
-                  {!usable && <span className="hint" style={{ margin: 0 }}>{user.providers.includes(key) ? "Sign in with it once" : "Not connected"}</span>}
-                </label>
-              );
-            })}
-          </div>
-          <button className="btn sm primary" style={{ marginTop: 14 }}>Use this picture</button>
-        </form>
-        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap", justifyContent: "flex-start" }}>
-          {user.providers.includes("google") && (
-            <form action={refreshPicture.bind(null, "google")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Google</button></form>
-          )}
-          {user.providers.includes("discord") && (
-            <form action={refreshPicture.bind(null, "discord")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Discord</button></form>
-          )}
-        </div>
-        <p className="hint" style={{ marginBottom: 0 }}>
-          Changed your picture on Google or Discord? Discord pictures update on their own about once a day, and Google
-          pictures each time you sign in with Google. Use Refresh to pick up a change right away.
-        </p>
-      </div>
-
       <form action={savePreferences} key={`${user.phoneVerifiedAt ? "sms" : "no-sms"}-${user.alertSms ? 1 : 0}-${user.tier}`}>
-        <div className="panel">
-          <h2>Profile</h2>
-          <div className="form-grid">
-            <div>
-              <label className="field" htmlFor="name">Name</label>
-              <input id="name" name="name" type="text" defaultValue={user.name || ""} maxLength={60} />
-            </div>
-            <div>
-              <label className="field" htmlFor="email">Email</label>
-              <input id="email" type="email" value={user.email || ""} readOnly />
-              <div className="hint">Your email comes from how you signed in.</div>
-            </div>
-          </div>
-        </div>
-
         <div className="panel" id="alerts">
-          <h2>Where alerts go</h2>
-          <p className="small muted" style={{ marginTop: -6 }}>Price alerts and deal alerts reach you on every channel you turn on.</p>
+          <h2>How we reach you</h2>
+          <p className="small muted" style={{ marginTop: -6 }}>Deal alerts, price alerts and collection alerts come to every channel you turn on here.</p>
           <label className="check">
             <input type="checkbox" name="alertEmail" defaultChecked={user.alertEmail !== false} /> ✉️ Email <span className="muted">· {user.email}</span>
           </label>
@@ -207,13 +145,13 @@ export default async function Account({ searchParams }) {
             <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!premium} /> 💬 Discord message from BoogieBot <span className="badge good" style={{ marginLeft: 6 }}>Fastest</span>
             {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
-          {premium && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord below to get these.</div>}
+          {premium && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts to get these.</div>}
           <label className={`check ${premium && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
             <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!premium || !user.phoneVerifiedAt} /> 📱 Text message
             {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
             {premium && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
           </label>
-          {premium && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number below to get texts.</div>}
+          {premium && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">
@@ -223,8 +161,9 @@ export default async function Account({ searchParams }) {
             </select>
             <div className="hint" id="recap-hint">Your collection value and biggest movers, deals that matched your filters, and alerts that hit. Sent early morning.</div>
           </div>
+          <button className="btn primary" style={{ marginTop: 16 }}>Save alert settings</button>
+          {params?.saved === "alerts" && <span className="small good" style={{ marginLeft: 10 }}>Saved.</span>}
         </div>
-        <button className="btn primary" style={{ marginBottom: 16 }}>Save changes</button>
       </form>
 
       {premium && (
@@ -263,7 +202,8 @@ export default async function Account({ searchParams }) {
       )}
 
       <div className="panel" id="connections">
-        <h2>Sign-in methods and connections</h2>
+        <h2>Connected accounts</h2>
+        <p className="small muted" style={{ marginTop: -6 }}>Ways to sign in, Discord for alerts, and eBay for selling.</p>
         {params?.linked && <div className="notice good">{PROVIDER_LABELS[params.linked] || "Account"} connected.{params.linked === "discord" ? " You can now sign in with Discord, and Discord alerts can reach you." : ""}</div>}
         {params?.unlinked && <div className="notice good">{PROVIDER_LABELS[params.unlinked] || "Account"} disconnected.</div>}
         {params?.link === "last" && <div className="notice warn">That&apos;s your only way to sign in, so it can&apos;t be disconnected. Connect another method first.</div>}
@@ -321,6 +261,70 @@ export default async function Account({ searchParams }) {
           </li>
         </ul>
         {EBAY_NOTES[params?.ebay] && <div className={`notice ${EBAY_NOTES[params.ebay][0]}`} style={{ marginTop: 10 }}>{EBAY_NOTES[params.ebay][1]}</div>}
+      </div>
+
+      {params?.saved === "avatar" && <div className="notice good">Profile picture updated.</div>}
+      {params?.refreshed && (
+        <div className={`notice ${params.refreshed === "failed" ? "warn" : "good"}`}>
+          {params.refreshed === "failed"
+            ? "We couldn't reach Discord just now. Try again in a minute, or disconnect and reconnect Discord."
+            : `Picture refreshed from ${params.refreshed === "google" ? "Google" : "Discord"}.`}
+        </div>
+      )}
+
+      <div className="panel" id="profile">
+        <h2>Profile</h2>
+        <form action={saveName}>
+
+          <div className="form-grid">
+            <div>
+              <label className="field" htmlFor="name">Name</label>
+              <input id="name" name="name" type="text" defaultValue={user.name || ""} maxLength={60} />
+            </div>
+            <div>
+              <label className="field" htmlFor="email">Email</label>
+              <input id="email" type="email" value={user.email || ""} readOnly />
+              <div className="hint">Your email comes from how you signed in.</div>
+            </div>
+          </div>
+                  <button className="btn sm primary">Save name</button>
+          {params?.saved === "profile" && <span className="small good" style={{ marginLeft: 10 }}>Saved.</span>}
+        </form>
+        <h3 id="picture" style={{ marginTop: 22 }}>Profile picture</h3>
+        <form action={setAvatar}>
+          <div className="avatar-choice" role="radiogroup" aria-label="Profile picture">
+            {Object.entries(AVATAR_SOURCES).map(([key, label]) => {
+              const url = key === "initials" ? null : pictures[key];
+              const usable = key === "initials" || Boolean(url);
+              return (
+                <label key={key} className={usable ? "" : "disabled"}>
+                  <input type="radio" name="avatar" value={key} defaultChecked={current.source === key} disabled={!usable} />
+                  <span className="avatar-btn lg" aria-hidden="true">
+                    {url
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={url} alt="" referrerPolicy="no-referrer" />
+                      : <span>{key === "initials" ? initials(user) : "?"}</span>}
+                  </span>
+                  {label}
+                  {!usable && <span className="hint" style={{ margin: 0 }}>{user.providers.includes(key) ? "Sign in with it once" : "Not connected"}</span>}
+                </label>
+              );
+            })}
+          </div>
+          <button className="btn sm primary" style={{ marginTop: 14 }}>Use this picture</button>
+        </form>
+        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap", justifyContent: "flex-start" }}>
+          {user.providers.includes("google") && (
+            <form action={refreshPicture.bind(null, "google")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Google</button></form>
+          )}
+          {user.providers.includes("discord") && (
+            <form action={refreshPicture.bind(null, "discord")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Discord</button></form>
+          )}
+        </div>
+        <p className="hint" style={{ marginBottom: 0 }}>
+          Changed your picture on Google or Discord? Discord pictures update on their own about once a day, and Google
+          pictures each time you sign in with Google. Use Refresh to pick up a change right away.
+        </p>
       </div>
 
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>

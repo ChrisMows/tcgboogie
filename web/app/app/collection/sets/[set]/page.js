@@ -1,3 +1,4 @@
+import { eraOf, setLabel } from "@/lib/sets";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SetGrid from "@/components/SetGrid";
@@ -9,7 +10,7 @@ import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
 export async function generateMetadata({ params }) {
-  return { title: decodeURIComponent((await params).set).slice(0, 80) };
+  return { title: setLabel(decodeURIComponent((await params).set)).name.slice(0, 80) };
 }
 
 export default async function SetPage({ params }) {
@@ -36,9 +37,9 @@ export default async function SetPage({ params }) {
     <>
       <div className="page-head">
         <div>
-          <div className="crumbs"><Link href="/app/collection">Collection</Link> / <Link href="/app/collection/sets">Sets</Link> / {name}</div>
-          <h1>{name}</h1>
-          <p>{[set?.series, set?.releaseDate ? `Released ${new Date(`${set.releaseDate.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : null].filter(Boolean).join(" · ") || "Tap a card to add it to your collection."}</p>
+          <div className="crumbs"><Link href="/app/collection">Collection</Link> / <Link href="/app/collection/sets">Sets</Link> / {setLabel(name).name}</div>
+          <h1>{setLabel(name).name}</h1>
+          <p>{[setLabel(name).code, eraOf(set) + " era", set?.releaseDate ? `Released ${new Date(`${set.releaseDate.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : null].filter(Boolean).join(" · ") || "Tap a card to add it to your collection."}</p>
         </div>
       </div>
 

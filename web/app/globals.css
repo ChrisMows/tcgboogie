@@ -903,3 +903,12 @@ a.cond-link:hover { border-color: var(--accent); }
 .chart-toggle { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
 .chart-toggle input { margin: 0; }
 .chart-profit { margin-top: 2px; }
+
+/* Sets grouped by era */
+details.era { margin-bottom: 8px; }
+details.era > summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; padding: 6px 0; }
+details.era > summary::-webkit-details-marker { display: none; }
+details.era > summary::before { content: "▸"; color: var(--muted); transition: transform 0.15s; display: inline-block; }
+details.era[open] > summary::before { transform: rotate(90deg); }
+details.era > summary .section-label { margin: 0; }
+details.era > .set-grid { margin-bottom: 14px; }

@@ -70,9 +70,15 @@ export async function savePreferences(formData) {
     alertSms: formData.get("alertSms") === "on" && Boolean(user.phoneVerifiedAt) && user.plan.watchAlertChannels.includes("sms"),
     emailRecap,
   });
+  revalidatePath("/app", "layout");
+  redirect("/app/account?saved=alerts#alerts");
+}
+
+export async function saveName(formData) {
+  const user = await requireUser();
   await store.updateName(user.id, formData.get("name"));
   revalidatePath("/app", "layout");
-  redirect("/app/account?saved=1");
+  redirect("/app/account?saved=profile#profile");
 }
 
 export async function deleteAccount(formData) {

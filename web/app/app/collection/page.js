@@ -1,3 +1,4 @@
+import { setLabel } from "@/lib/sets";
 import Link from "next/link";
 import AddCards from "@/components/AddCards";
 import CardThumb from "@/components/CardThumb";
@@ -92,7 +93,7 @@ export default async function CollectionPage({ searchParams }) {
               <h2>Your sets</h2>
               {started.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Add a card to start tracking a set.</p> : started.map((s) => (
                 <Link key={s.name} href={`/app/collection/sets/${encodeURIComponent(s.name)}`} className="set-progress">
-                  <span className="row" style={{ justifyContent: "space-between" }}><b style={{ flex: "none" }}>{s.name}</b><span className="small muted" style={{ flex: "none" }}>{s.have}{s.total ? ` / ${s.total}` : ""}</span></span>
+                  <span className="row" style={{ justifyContent: "space-between" }}><b style={{ flex: "none" }}>{setLabel(s.name).name}</b><span className="small muted" style={{ flex: "none" }}>{s.have}{s.total ? ` / ${s.total}` : ""}</span></span>
                   <span className="bar"><i style={{ width: `${Math.max(2, (s.pct ?? 0) * 100)}%` }} /></span>
                 </Link>
               ))}

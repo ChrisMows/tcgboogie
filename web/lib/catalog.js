@@ -303,13 +303,31 @@ export async function findCard({ name, number, language = "english" }) {
   return found.find((p) => num && bare(p.number) === bare(num)) || found.find((p) => num && bare(p.number).split("/")[0] === bare(num).split("/")[0]) || found[0] || null;
 }
 
+// The set list's card counts can be off by one from the cards a set actually has, so once a set's cards have been
+// loaded we remember that count and show it everywhere (set list, "Your sets", the set page).
+const SET_COUNTS = "set_card_counts";
+let setCounts = globalThis.__tcgSetCounts ?? null;
+async function loadedCounts() {
+  if (setCounts || !db) return setCounts || {};
+  const [row] = await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, SET_COUNTS)).limit(1).catch(() => []);
+  setCounts = globalThis.__tcgSetCounts = row?.value || {};
+  return setCounts;
+}
+async function rememberCount(name, n) {
+  const counts = await loadedCounts();
+  if (!db || !n || counts[name] === n) return;
+  counts[name] = n;
+  await db.insert(schema.appSettings).values({ key: SET_COUNTS, value: counts })
+    .onConflictDoUpdate({ target: schema.appSettings.key, set: { value: counts, updatedAt: new Date() } }).catch(() => {});
+}
+
 /** Every English set, newest first. The list rarely changes, so it's cached for a week. */
 export async function listSets() {
   if (!catalogLive()) return SAMPLE_SETS.map((s) => ({ ...s, total: sampleCards[s.name].length }));
-  const j = await ppt("/sets", { sortBy: "releaseDate", sortOrder: "desc", limit: "500" }, 7 * 24 * HOUR);
+  const [j, counts] = await Promise.all([ppt("/sets", { sortBy: "releaseDate", sortOrder: "desc", limit: "500" }, 7 * 24 * HOUR), loadedCounts()]);
   return (j?.data || []).map((s) => ({
     id: String(s.id ?? s.tcgPlayerId ?? s.name), name: s.name, series: s.series || null, releaseDate: s.releaseDate || null,
-    printedTotal: s.printedTotal ?? s.cardCount ?? null, total: s.totalCards ?? s.cardCount ?? null,
+    printedTotal: s.printedTotal ?? s.cardCount ?? null, total: counts[s.name] || (s.totalCards ?? s.cardCount ?? null),
     image: s.imageCdnUrl || s.logoUrl || s.image || null,
   }));
 }
@@ -318,7 +336,9 @@ export async function listSets() {
 export async function getSetCards(setName) {
   if (!catalogLive()) return SAMPLE.filter((p) => p.type === "card" && p.setName === setName);
   const j = await ppt("/cards", { set: setName, fetchAllInSet: "true" }, 3 * 24 * HOUR);
-  return (j?.data || []).map(fromCard);
+  const cards = (j?.data || []).map(fromCard);
+  void rememberCount(setName, cards.length);
+  return cards;
 }
 
 export const sampleIds = () => SAMPLE.map((p) => p.id);
