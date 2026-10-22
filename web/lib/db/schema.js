@@ -354,6 +354,13 @@ export const memberCards = pgTable("member_card", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("member_card_source_idx").on(t.sourceUrl)]);
 
+// Daily rate limits that must survive deploys (lib/rate-limit.js): one row per bucket, member and day window.
+export const rateLimits = pgTable("rate_limit", {
+  id: text("id").primaryKey(), // "<bucket>:<member>:<window start ms>"
+  count: integer("count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+}, (t) => [index("rate_limit_expires_idx").on(t.expiresAt)]);
+
 // "Notify me" votes for games we don't cover yet (homepage). One per member per game; tells us which game to add next
 // and who to tell when it's live.
 export const gameInterest = pgTable("game_interest", {

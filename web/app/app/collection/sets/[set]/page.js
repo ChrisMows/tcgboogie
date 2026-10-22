@@ -23,7 +23,7 @@ export default async function SetPage({ params, searchParams }) {
   const sets = await listSets().catch(() => []);
   const set = sets.find((s) => s.name === name);
   if (!set) notFound();
-  if (!allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
+  if (!await allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
   const [serviceCards, items, watches, added] = await Promise.all([
     getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id), memberCardsInSet(name),
   ]);

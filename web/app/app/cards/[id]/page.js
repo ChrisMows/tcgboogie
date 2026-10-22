@@ -89,7 +89,7 @@ export default async function CardPage({ params, searchParams }) {
   const user = await requireUser(back);
   let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
   if (product === undefined) {
-    if (!allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
+    if (!await allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
     try { product = await getProduct(id, { language }); } catch { product = null; }
   }
   if (product === null) notFound();

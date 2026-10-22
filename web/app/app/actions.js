@@ -124,7 +124,7 @@ export async function startCheckout(formData) {
   if (user.demo || !billingLive()) billingError("off");
   // The Premium page asks members to agree to the terms before paying; keep a record of who agreed to which version.
   if (formData?.get("agree") !== "on") redirect("/app/premium?agree=missing#enroll");
-  if (!allow("billing", user.id)) billingError("slow");
+  if (!await allow("billing", user.id)) billingError("slow");
   if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription
   let url;
   await log("payments", "info", `Agreed to the Terms of Service (version ${TERMS_VERSION}) and started checkout`, { terms: TERMS_VERSION }, user.id);
@@ -136,7 +136,7 @@ export async function startCheckout(formData) {
 export async function openBillingPortal() {
   const user = await requireUser();
   if (user.demo || !billingLive() || !user.stripeCustomerId) billingError("off");
-  if (!allow("billing", user.id)) billingError("slow");
+  if (!await allow("billing", user.id)) billingError("slow");
   let url;
   try { url = await portalUrl(user); } catch (e) { await logError("payments", "Billing page couldn't open", e, {}, user.id); billingError("error"); }
   redirect(url);
@@ -146,7 +146,7 @@ export async function openBillingPortal() {
 export async function changeRenewal(formData) {
   const user = await requireUser();
   if (user.demo || !billingLive() || !user.stripeSubscriptionId) billingError("off");
-  if (!allow("billing", user.id)) billingError("slow");
+  if (!await allow("billing", user.id)) billingError("slow");
   const cancel = formData.get("renew") !== "on";
   try { await setCancelAtPeriodEnd(user, cancel); } catch (e) { await logError("payments", "Renewal change failed", e, { cancel }, user.id); billingError("error"); }
   revalidatePath("/app", "layout");
@@ -164,14 +164,14 @@ export async function logOut() {
  */
 export async function cardOptions(query, sets = []) {
   const user = await requireUser();
-  if (!allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
   const q = String(query || "").trim().toLowerCase().slice(0, 60);
   const known = new Set((await listSets().catch(() => [])).map((s) => s.name));
   const chosen = (Array.isArray(sets) ? sets : []).map(String).filter((s) => known.has(s)).slice(0, 5); // real sets only
   let cards = [];
   try {
     if (chosen.length) {
-      if (!allow("setLoad", user.id)) return { ok: false, error: SLOW_DOWN };
+      if (!await allow("setLoad", user.id)) return { ok: false, error: SLOW_DOWN };
       for (const s of chosen) cards.push(...(await getSetCards(s)));
     } else if (q.length >= 2) {
       cards = (await searchProducts(q)).filter((p) => p.type === "card");
@@ -205,7 +205,7 @@ export async function sendPhoneCode(formData) {
   if (formData.get("consent") !== "on") redirect("/app/account?sms=consent#alerts");
   const phone = normalizePhone(formData.get("phone"));
   if (!phone || !phone.startsWith("+1")) redirect("/app/account?sms=badnumber#alerts"); // US & Canada only
-  if (!allow("smsCode", user.id)) redirect("/app/account?sms=toomany#alerts");
+  if (!await allow("smsCode", user.id)) redirect("/app/account?sms=toomany#alerts");
   const pending = await store.getPhoneCode(user.id);
   if (pending.smsCodeExpires && new Date(pending.smsCodeExpires).getTime() - 9 * 60 * 1000 > Date.now()) {
     redirect("/app/account?sms=wait#alerts"); // one code a minute

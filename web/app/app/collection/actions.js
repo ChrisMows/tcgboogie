@@ -25,7 +25,7 @@ const snapshotFields = (p) => ({
 /** Search by name, card number, or a pasted TCGplayer link. */
 export async function searchCatalog(query) {
   const user = await requireUser();
-  if (!allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
   const id = parseTcgplayerInput(query);
   try {
     if (id) {
@@ -54,7 +54,7 @@ export async function searchByPhoto(formData) {
   const user = await requireUser();
   if (!user.plan.photoSearch) return { ok: false, error: "Search by picture is part of Premium." };
   if (!appraiserReady()) return { ok: false, error: "Search by picture isn't switched on yet." };
-  if (!allow("photoSearch", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("photoSearch", user.id)) return { ok: false, error: SLOW_DOWN };
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { ok: false, error: "Pick a photo first." };
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { ok: false, error: "That photo format isn't supported. Try a JPEG or PNG (a screenshot works too)." };
@@ -81,7 +81,7 @@ export async function searchByPhoto(formData) {
 export async function requestCard(query, link, kind = "card") {
   const user = await requireUser();
   if (user.demo) return { status: "declined", message: "Requests aren't saved in the demo." };
-  if (!allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
+  if (!await allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
   return submitRequest(user, { query, link, kind });
 }
 

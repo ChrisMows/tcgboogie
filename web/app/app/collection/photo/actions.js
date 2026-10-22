@@ -14,7 +14,7 @@ export async function appraise(formData) {
   const user = await requireUser();
   if (!user.plan.photoAppraiser) return { ok: false, error: "The photo appraiser is part of Premium." };
   if (!appraiserReady()) return { ok: false, error: "The photo appraiser isn't switched on yet." };
-  if (!allow("appraise", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("appraise", user.id)) return { ok: false, error: SLOW_DOWN };
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { ok: false, error: "Pick a photo first." };
   if (!TYPES.includes(file.type)) return { ok: false, error: "That photo format isn't supported. Try a JPEG or PNG (a screenshot works too)." };

@@ -2,7 +2,7 @@
 
 On 2026-10-22 the host wiped the website's settings during a redeploy: the site stayed "up" but couldn't reach the
 database or sign anyone in, and nobody knew until the admin looked. Every few minutes this asks the site's
-/api/health (yes/no answers only). Two failures in a row send the admin a Discord message from BoogieBot; the site
+/api/health (yes/no answers only; the details need DISPATCH_SECRET, the same value the website has). Two failures in a row send the admin a Discord message from BoogieBot; the site
 recovering sends another. The bot reads the database directly, so it can still find the admin's Discord account
 when the website itself can't.
 """
@@ -55,7 +55,8 @@ class SiteHealth:
             return None
         self.next_at = now + every * 60
         try:
-            r = requests.get(url, timeout=20)
+            secret = os.environ.get("DISPATCH_SECRET", "").strip()
+            r = requests.get(url, timeout=20, headers={"Authorization": f"Bearer {secret}"} if secret else {})
             try:
                 body = r.json()
             except ValueError:

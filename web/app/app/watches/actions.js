@@ -23,7 +23,7 @@ const notFound = (how) => (!catalogLive()
 /** Find a product from a pasted TCGplayer link/ID, or search by name. */
 export async function findProducts(query) {
   const user = await requireUser();
-  if (!allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
   const id = parseTcgplayerInput(query);
   try {
     if (id) {

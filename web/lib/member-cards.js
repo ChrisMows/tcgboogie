@@ -1,5 +1,7 @@
 import "server-only";
 import dns from "node:dns/promises";
+import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 import Anthropic from "@anthropic-ai/sdk";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -158,35 +160,54 @@ function privateIp(ip) {
   return s === "::" || s === "::1" || /^f[cd]/.test(s) || s.startsWith("fe80");
 }
 
-async function isPublic(url) {
-  if (!/^https?:$/.test(url.protocol) || !["", "80", "443"].includes(url.port) || url.username || url.password) return false;
+/** The public address to connect to for a link ({ address, family }), or null if any of its addresses is private. */
+async function publicAddress(url) {
+  if (!/^https?:$/.test(url.protocol) || !["", "80", "443"].includes(url.port) || url.username || url.password) return null;
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (/^localhost$|\.local$|\.internal$/i.test(host)) return false;
+  if (/^localhost$|\.local$|\.internal$/i.test(host)) return null;
   try {
-    const addrs = net.isIP(host) ? [{ address: host }] : await dns.lookup(host, { all: true });
-    return addrs.length > 0 && addrs.every((a) => !privateIp(a.address));
-  } catch { return false; }
+    const addrs = net.isIP(host) ? [{ address: host, family: net.isIP(host) }] : await dns.lookup(host, { all: true });
+    if (!addrs.length || addrs.some((a) => privateIp(a.address))) return null;
+    return { address: addrs[0].address, family: addrs[0].family };
+  } catch { return null; }
 }
 
-/** The page at a member's link (public web addresses only, up to 4 redirects, 8 seconds, 600 KB). */
+const MAX_PAGE = 600_000;
+
+/**
+ * GET a URL, connecting to exactly the address we checked (the lookup isn't repeated, so a name can't switch to a
+ * private address between the check and the request). 8 seconds, first 600 KB. Resolves { status, headers, body }.
+ */
+function getPinned(url, { address, family }) {
+  return new Promise((resolve, reject) => {
+    const lookup = (_host, opts, cb) => (opts?.all ? cb(null, [{ address, family }]) : cb(null, address, family));
+    const req = (url.protocol === "https:" ? https : http).request(url, {
+      method: "GET", headers: { "User-Agent": UA, Accept: "text/html" }, timeout: 8000, lookup,
+    }, (res) => {
+      const chunks = [];
+      let size = 0, done = false;
+      const finish = () => { if (!done) { done = true; resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }); } };
+      res.on("data", (c) => { size += c.length; if (size <= MAX_PAGE) chunks.push(c); else { finish(); res.destroy(); } });
+      res.on("end", finish);
+      res.on("close", finish);
+      res.on("error", (e) => (done ? null : reject(e)));
+    });
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+/** The page at a member's link (public web addresses only, checked again at every redirect, up to 4 redirects). */
 async function fetchPage(href) {
   let url = new URL(href);
   for (let hop = 0; hop < 5; hop++) {
-    if (!(await isPublic(url))) return null;
-    const r = await fetch(url, { redirect: "manual", headers: { "User-Agent": UA, Accept: "text/html" }, signal: AbortSignal.timeout(8000), cache: "no-store" });
-    const next = r.status >= 300 && r.status < 400 && r.headers.get("location");
-    if (next) { url = new URL(next, url); continue; }
-    if (!r.ok || !/html/i.test(r.headers.get("content-type") || "") || !r.body) return null;
-    const reader = r.body.getReader();
-    const chunks = [];
-    for (let size = 0; size < 600_000;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      size += value.length;
-    }
-    reader.cancel().catch(() => {});
-    return { url, html: Buffer.concat(chunks).toString("utf8") };
+    const target = await publicAddress(url);
+    if (!target) return null;
+    const r = await getPinned(url, target);
+    if (r.status >= 300 && r.status < 400 && r.headers.location) { url = new URL(r.headers.location, url); continue; }
+    if (r.status < 200 || r.status >= 300 || !/html/i.test(r.headers["content-type"] || "")) return null;
+    return { url, html: r.body.toString("utf8") };
   }
   return null;
 }

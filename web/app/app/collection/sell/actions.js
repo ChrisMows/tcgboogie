@@ -12,7 +12,7 @@ export async function listOnEbay(itemId, formData) {
   const user = await requireUser();
   if (!user.plan.sellOnEbay) return { ok: false, error: "Sell on eBay isn't part of your plan." };
   if (user.demo) return { ok: false, error: "Not available in the demo." };
-  if (!allow("ebayList", user.id)) return { ok: false, error: "Too many listings in a short time. Please wait a few minutes." };
+  if (!await allow("ebayList", user.id)) return { ok: false, error: "Too many listings in a short time. Please wait a few minutes." };
   const item = await store.getItem(user.id, itemId);
   if (!item || item.list !== "owned" || item.kind === "sealed") return { ok: false, error: "That card isn't in your collection." };
   const price = Number(String(formData.get("price") || "").replace(/[$,]/g, ""));
@@ -47,7 +47,7 @@ export async function createPolicies(itemId, formData) {
   const back = `/app/collection/sell/${Number(itemId)}`;
   if (!user.plan.sellOnEbay) redirect(back);
   if (user.demo) redirect(back);
-  if (!allow("ebayList", user.id)) redirect(`${back}?setup=${encodeURIComponent("Too many tries. Please wait a few minutes.")}`);
+  if (!await allow("ebayList", user.id)) redirect(`${back}?setup=${encodeURIComponent("Too many tries. Please wait a few minutes.")}`);
   let err = null;
   try {
     await setupPolicies(user.id, {

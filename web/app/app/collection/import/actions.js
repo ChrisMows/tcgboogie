@@ -61,7 +61,7 @@ export async function guessColumns(fileName, firstRows) {
     .map((r) => (Array.isArray(r) ? r : []).slice(0, 30).map((c) => String(c ?? "").slice(0, 60)));
   if (!rows.length) return { columns: {}, hasHeader: true };
   let guess = null;
-  if (process.env.ANTHROPIC_API_KEY && !user.demo && allow("importColumns", user.id)) {
+  if (process.env.ANTHROPIC_API_KEY && !user.demo && await allow("importColumns", user.id)) {
     try {
       const response = await new Anthropic().messages.create({
         model: "claude-haiku-5-5",
@@ -91,7 +91,7 @@ export async function matchRows(rows) {
   if (!user.plan.collectionImport) return { ok: false, error: "CSV import isn't part of your plan.", results: [] };
   const out = [];
   for (const row of (Array.isArray(rows) ? rows : []).slice(0, 25)) {
-    if (!allow("importMatch", user.id)) return { ok: false, error: "That's the most cards we can look up today. Import these, then come back tomorrow for the rest.", results: out };
+    if (!await allow("importMatch", user.id)) return { ok: false, error: "That's the most cards we can look up today. Import these, then come back tomorrow for the rest.", results: out };
     const p = await productFor(row);
     if (p) remember(p);
     const value = p ? (p.type === "sealed" ? p.prices?.market ?? null
@@ -106,7 +106,7 @@ export async function matchRows(rows) {
 export async function importRows(rows) {
   const user = await requireUser();
   if (!user.plan.collectionImport) return { ok: false, error: "CSV import isn't part of your plan." };
-  if (!allow("importAdd", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allow("importAdd", user.id)) return { ok: false, error: SLOW_DOWN };
   let added = 0;
   const failed = [];
   for (const r of (Array.isArray(rows) ? rows : []).slice(0, 50)) {

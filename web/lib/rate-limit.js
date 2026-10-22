@@ -1,27 +1,31 @@
 import "server-only";
+import { lt, sql } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
 
-// Simple per-member limits, kept in memory (the site runs as one server process). They stop one account from
-// burning price-service credits or texting strangers; normal use never gets near them.
+// Per-member limits. They stop one account from burning price-service and AI credits or texting strangers; normal
+// use never gets near them. Every limit is counted in memory (fast). The daily ones that cost money (`persist`) are
+// also counted in the database, so a deploy or restart doesn't hand out a fresh allowance.
 const hits = globalThis.__tcgRateLimit ?? (globalThis.__tcgRateLimit = new Map());
+const { rateLimits } = schema;
 
 export const LIMITS = {
   search: { max: 120, windowMs: 10 * 60 * 1000 }, // card/product searches and link lookups
   cardPage: { max: 300, windowMs: 60 * 60 * 1000 }, // card pages opened
   setLoad: { max: 40, windowMs: 60 * 60 * 1000 }, // whole-set card lists (the expensive one)
-  smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000 }, // "text me a code" requests
+  smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "text me a code" requests
   ebayList: { max: 30, windowMs: 60 * 60 * 1000 }, // eBay listings created
   billing: { max: 20, windowMs: 60 * 60 * 1000 }, // opening Stripe checkout / billing pages
-  cardRequest: { max: 20, windowMs: 24 * 60 * 60 * 1000 }, // "Request a card" (one price lookup each)
-  reportSale: { max: 15, windowMs: 24 * 60 * 60 * 1000 }, // "Report a sale" lookups (one eBay call each)
-  importMatch: { max: 400, windowMs: 24 * 60 * 60 * 1000 }, // collection import: rows looked up (3 credits each, unless cached)
+  cardRequest: { max: 20, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "Request a card" (one price lookup each)
+  reportSale: { max: 15, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "Report a sale" lookups (one eBay call each)
+  importMatch: { max: 400, windowMs: 24 * 60 * 60 * 1000, persist: true }, // collection import: rows looked up (3 credits each, unless cached)
   importAdd: { max: 100, windowMs: 60 * 60 * 1000 }, // collection import: batches added
-  importColumns: { max: 20, windowMs: 24 * 60 * 60 * 1000 }, // collection import: unfamiliar files read by Claude
-  photoSearch: { max: 60, windowMs: 24 * 60 * 60 * 1000 }, // Add cards: search by picture (one photo read each)
-  appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000 }, // photo appraiser photos (about a cent each, plus price lookups)
+  importColumns: { max: 20, windowMs: 24 * 60 * 60 * 1000, persist: true }, // collection import: unfamiliar files read by Claude
+  photoSearch: { max: 60, windowMs: 24 * 60 * 60 * 1000, persist: true }, // Add cards: search by picture (one photo read each)
+  appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000, persist: true }, // photo appraiser photos (about a cent each, plus price lookups)
 };
 
-/** Count one use of `bucket` by `key`. Returns true if allowed, false if over the limit. */
-export function allow(bucket, key) {
+/** In memory: a sliding window per bucket and member. */
+function allowInMemory(bucket, key) {
   const { max, windowMs } = LIMITS[bucket];
   const id = `${bucket}:${key}`;
   const now = Date.now();
@@ -34,3 +38,23 @@ export function allow(bucket, key) {
 }
 
 export const SLOW_DOWN = "You're going a little fast. Give it a minute and try again.";
+
+/**
+ * Count one use of `bucket` by `key`. Resolves true if allowed, false if over the limit. Always `await` it.
+ * Daily limits marked `persist` are also counted per day in the database (if it's down, the memory limit still holds).
+ */
+export async function allow(bucket, key) {
+  if (!allowInMemory(bucket, key)) return false;
+  const { max, windowMs, persist } = LIMITS[bucket];
+  if (!persist || !db) return true;
+  const start = Math.floor(Date.now() / windowMs) * windowMs;
+  try {
+    const [row] = await db.insert(rateLimits).values({ id: `${bucket}:${key}:${start}`, count: 1, expiresAt: new Date(start + windowMs) })
+      .onConflictDoUpdate({ target: rateLimits.id, set: { count: sql`${rateLimits.count} + 1` } })
+      .returning({ count: rateLimits.count });
+    if (Math.random() < 0.01) db.delete(rateLimits).where(lt(rateLimits.expiresAt, new Date())).catch(() => {}); // tidy old windows
+    return (row?.count ?? 1) <= max;
+  } catch {
+    return true;
+  }
+}
