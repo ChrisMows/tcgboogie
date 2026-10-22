@@ -331,7 +331,12 @@ async function Requests({ ok, err, show, kind: rawKind }) {
               {r.card?.name && (
                 <form action={approveReadCard.bind(null, r.id)} className="req-read">
                   <span className="small">We read: <b>{r.card.name}</b>{r.card.setName ? ` · ${r.card.setName}` : ""}{r.card.number ? ` · ${r.card.number}` : ""} · {r.card.language}{r.card.type === "sealed" ? " · sealed" : ""}</span>
-                  <button className="btn sm primary" style={{ flex: "none" }}>Add as read</button>
+                  {r.existing && (
+                    <span className="badge good req-existing">
+                      Already in the catalog: <Link href={`/app/cards/${encodeURIComponent(r.existing.id)}`}>{r.existing.name}{r.existing.number ? ` ${r.existing.number}` : ""}</Link>
+                    </span>
+                  )}
+                  <button className="btn sm primary" style={{ flex: "none" }}>{r.existing ? "Link to it" : "Add as read"}</button>
                 </form>
               )}
               <form action={approveCardRequest.bind(null, r.id)} className="row" style={{ gap: 6 }}>

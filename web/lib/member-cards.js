@@ -2,7 +2,7 @@ import "server-only";
 import dns from "node:dns/promises";
 import net from "node:net";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { appToken } from "@/lib/ebay-sell";
 import { POKEMON_NAMES } from "@/lib/pokemon-names";
@@ -72,16 +72,42 @@ export async function memberCardsInSet(setName) {
   } catch { return []; }
 }
 
-/** Save a new member card, or return the one already saved for the same product, link or card. */
+// Duplicate check: names and numbers compared without case, spaces, punctuation or leading zeros, and "&" = "and",
+// so "040/M-P" matches "40/MP" and "Mega Lopunny & Jigglypuff GX" matches "mega lopunny and jigglypuff-gx".
+// The same rule runs in the database (normSql) and here (normKey).
+const normKey = (s) => String(s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/^0+/, "");
+const normSql = (col) => sql`regexp_replace(regexp_replace(lower(replace(coalesce(${col}, ''), '&', 'and')), '[^a-z0-9]', '', 'g'), '^0+', '')`;
+
+/**
+ * The member-added card that is the same as this one, if any (not hidden): the same TCGplayer product, or the same
+ * name, number, language and type. Without a number: the same name, set, language and type (or the same link).
+ */
+export async function findExisting(card) {
+  if (!db || !card?.name) return null;
+  const visible = eq(memberCards.hidden, false);
+  if (card.productId) {
+    const [byId] = await db.select().from(memberCards).where(and(eq(memberCards.productId, String(card.productId)), visible)).limit(1);
+    if (byId) return byId;
+  }
+  const base = [visible, eq(memberCards.language, card.language || "english"), eq(memberCards.type, card.type === "sealed" ? "sealed" : "card"),
+    sql`${normSql(memberCards.name)} = ${normKey(card.name)}`];
+  const match = card.number
+    ? and(...base, sql`${normSql(memberCards.number)} = ${normKey(card.number)}`)
+    : card.setName
+      ? and(...base, sql`${normSql(memberCards.setName)} = ${normKey(card.setName)}`)
+      : and(...base, eq(memberCards.sourceUrl, card.sourceUrl || ""));
+  const [row] = await db.select().from(memberCards).where(match).limit(1);
+  return row || null;
+}
+
+/** For Admin → Requests: the catalog card a held request would duplicate, as a product (or null). */
+export async function existingFor(card) {
+  try { const row = await findExisting(card); return row ? toProduct(row) : null; } catch { return null; }
+}
+
+/** Save a new member card, or return the one already saved for the same product or card (see findExisting). */
 async function save(card) {
-  const same = card.productId
-    ? eq(memberCards.productId, card.productId)
-    : card.number
-      ? and(ilike(memberCards.name, card.name), eq(memberCards.number, card.number), eq(memberCards.language, card.language))
-      : card.type === "sealed"
-        ? and(ilike(memberCards.name, card.name), eq(memberCards.type, "sealed"), eq(memberCards.language, card.language))
-        : eq(memberCards.sourceUrl, card.sourceUrl);
-  const [existing] = await db.select().from(memberCards).where(and(same, eq(memberCards.hidden, false))).limit(1);
+  const existing = await findExisting(card);
   if (existing) return { product: toProduct(existing), created: false };
   const productId = card.productId || `m-${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
   const [row] = await db.insert(memberCards).values({ ...card, productId }).onConflictDoNothing().returning();

@@ -445,6 +445,7 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .add-chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .add-chip span { font-size: 14px; }
 .req-read { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.req-existing a { color: inherit; text-decoration: underline; }
 
 /* Add cards: search by picture (camera / upload) */
 .photo-search-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px;

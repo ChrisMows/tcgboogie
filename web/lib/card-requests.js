@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
-import { addFromPage, addFromTcgplayer, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
+import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -171,7 +171,10 @@ export async function listRequests({ status = "pending", kind = "all", limit = 1
     .leftJoin(schema.users, eq(schema.users.id, cardRequests.userId))
     .leftJoin(schema.memberCards, and(eq(schema.memberCards.productId, cardRequests.productId), eq(schema.memberCards.hidden, false)))
     .where(where).orderBy(desc(cardRequests.createdAt)).limit(limit);
-  return rows.map(({ r, email, memberCard }) => ({ ...r, email, memberCard: Boolean(memberCard) }));
+  const out = rows.map(({ r, email, memberCard }) => ({ ...r, email, memberCard: Boolean(memberCard) }));
+  // Held requests: is that card already in the catalog (added from another request)? Then approving just links to it.
+  for (const r of out) if (r.status === "pending" && r.card?.name) r.existing = await existingFor(r.card);
+  return out;
 }
 
 export async function pendingCount() {
