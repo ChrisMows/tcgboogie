@@ -302,3 +302,30 @@ export const watchListings = pgTable("watch_listing", {
   foundAt: timestamp("found_at", { mode: "date" }).notNull().defaultNow(),
   notifiedAt: timestamp("notified_at", { mode: "date" }),
 }, (t) => [uniqueIndex("watch_listing_unique").on(t.watchId, t.itemId), index("watch_listing_found_idx").on(t.foundAt)]);
+
+// "Can't find a card? Request it": what a member searched for and the link they sent. A TCGplayer link to a product
+// our price service has is added at once (status "added"); anything else waits for an admin (Admin → Requests).
+export const cardRequests = pgTable("card_request", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  query: text("query").notNull(), // what they searched for
+  link: text("link").notNull(),
+  note: text("note"),
+  status: text("status").notNull(), // added / pending / declined
+  productId: text("product_id"),
+  language: text("language"),
+  reason: text("reason"), // why it was added, held for review or declined (shown to admins)
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("card_request_status_idx").on(t.status, t.createdAt)]);
+
+// Search words that should find a product the price service's search misses (learned from approved requests).
+export const searchAliases = pgTable("search_alias", {
+  id: serial("id").primaryKey(),
+  term: text("term").notNull(), // normalized: lowercase words, single spaces
+  productId: text("product_id").notNull(),
+  language: text("language").notNull().default("english"),
+  requestId: integer("request_id"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("search_alias_unique").on(t.term, t.productId, t.language)]);

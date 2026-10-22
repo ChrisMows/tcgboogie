@@ -1,5 +1,6 @@
 "use client";
 
+import CardRequest from "@/components/CardRequest";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -81,6 +82,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       </div>
       {isDemo && !q && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
       {error && <div className="hint">{error}</div>}
+      {q.trim().length >= 2 && !searching && <CardRequest query={q} />}
 
       {picked ? (
         <div className="picked">

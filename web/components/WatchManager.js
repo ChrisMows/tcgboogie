@@ -1,5 +1,6 @@
 "use client";
 
+import CardRequest from "@/components/CardRequest";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -200,6 +201,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                 <button className="btn" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>
               </form>
               {findError && <div className="notice bad" style={{ marginTop: 12 }}>{findError}</div>}
+              {(results || findError) && <CardRequest query={query} />}
               {results && results.length > 1 && !picked && (
                 <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
                   {results.map((p) => (

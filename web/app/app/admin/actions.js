@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
+import { approveRequest, declineRequests } from "@/lib/card-requests";
 import { currentFeatures, saveFeatures } from "@/lib/features";
 import { FEATURES } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
@@ -13,6 +14,21 @@ import { sendRecapPreview } from "@/lib/recap";
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
 const back = (id, done) => redirect(`/app/admin?tab=members&user=${encodeURIComponent(id)}&done=${done}#member`);
 const DAY = 86400000;
+
+/** Admin → Requests: approve a card request with a TCGplayer link (search learns the member's words), or decline. */
+export async function approveCardRequest(id, formData) {
+  const admin = await requireAdmin();
+  const err = await approveRequest(admin, id, formData.get("tcgplayer"));
+  if (!err) await logAdminAction(admin, "card_request", { id, result: "approved" });
+  redirect(`/app/admin?tab=requests&${err ? `err=${encodeURIComponent(err)}` : "ok=approved"}`);
+}
+
+export async function declineCardRequest(id) {
+  const admin = await requireAdmin();
+  await declineRequests(admin, id, "Declined by an admin");
+  await logAdminAction(admin, "card_request", { id, result: "declined" });
+  redirect("/app/admin?tab=requests&ok=declined");
+}
 
 /** Admin → Features: which plan gets each feature. On for Free always means on for Premium too. */
 export async function saveFeatureChoices(formData) {

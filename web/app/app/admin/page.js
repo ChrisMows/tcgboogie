@@ -2,6 +2,8 @@ import Link from "next/link";
 import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
 import AdminFeatures from "@/components/AdminFeatures";
 import { currentFeatures } from "@/lib/features";
+import { listRequests, pendingCount } from "@/lib/card-requests";
+import { approveCardRequest, declineCardRequest } from "./actions";
 import { FEATURES } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -20,7 +22,7 @@ const DONE = {
   missing: ["bad", "That member no longer exists."],
 };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
-const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features" };
+const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features", card_request: "Card request" };
 
 function PlanBadge({ m, compact }) {
   if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">Premium</span> : <span className="badge">Free</span>;
@@ -31,7 +33,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -46,11 +48,13 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin" className={tab === "status" ? "on" : ""} role="tab" aria-selected={tab === "status"}>Status</Link>
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Features</Link>
+        <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
+      {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} />}
       {tab === "features" && <AdminFeatures features={FEATURES.map(({ key, group, label, help }) => ({ key, group, label, help: help || null }))}
         choices={await currentFeatures()} saved={sp?.saved} />}
     </>
@@ -260,6 +264,40 @@ async function Members({ q, userId, done }) {
   );
 }
 
+async function Requests({ ok, err, show }) {
+  const status = show === "all" ? "all" : "pending";
+  const rows = await listRequests({ status });
+  return (
+    <>
+      {ok && <div className="notice good">{ok === "approved" ? "Approved: the card is searchable by the member's words now." : "Declined."}</div>}
+      {err && <div className="notice bad">{err}</div>}
+      <p className="small muted" style={{ marginTop: 0 }}>
+        Members ask for cards they couldn&apos;t find. TCGplayer links to cards our price service has are added automatically; these
+        are the rest. Approve with the card&apos;s TCGplayer link, or decline. <Link href={status === "all" ? "/app/admin?tab=requests" : "/app/admin?tab=requests&show=all"}>{status === "all" ? "Show waiting only" : "Show all recent requests"}</Link>
+      </p>
+      {rows.length === 0 ? <div className="panel muted">{status === "all" ? "No requests yet." : "Nothing waiting. 🎉"}</div> : rows.map((r) => (
+        <div key={r.id} className="panel req-row">
+          <div className="req-main">
+            <b>“{r.query}”</b> <span className={`badge ${r.status === "added" ? "good" : r.status === "declined" ? "" : "warn"}`}>{r.status}</span>
+            <div className="small muted">{r.email || "member"} · {ago(r.createdAt)}{r.reason ? ` · ${r.reason}` : ""}</div>
+            <a href={r.link} target="_blank" rel="noopener noreferrer nofollow" className="small req-link">{r.link}</a>
+            {r.productId && <div className="small"><Link href={`/app/cards/${encodeURIComponent(r.productId)}${r.language === "japanese" ? "?lang=japanese" : ""}`}>Open the card →</Link></div>}
+          </div>
+          {r.status === "pending" && (
+            <div className="req-actions">
+              <form action={approveCardRequest.bind(null, r.id)} className="row" style={{ gap: 6 }}>
+                <input name="tcgplayer" placeholder="TCGplayer link or number" required />
+                <button className="btn sm primary" style={{ flex: "none" }}>Approve</button>
+              </form>
+              <form action={declineCardRequest.bind(null, r.id)}><button className="btn sm ghost">Decline</button></form>
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 async function Log() {
   const log = await recentAdminLog(50);
   return (
@@ -274,7 +312,7 @@ async function Log() {
                   <td className="muted">{ago(l.at)}</td>
                   <td>{l.adminEmail}</td>
                   <td>{l.targetUserId ? <Link href={`/app/admin?tab=members&user=${l.targetUserId}#member`}>{l.targetEmail}</Link> : <span className="muted">—</span>}</td>
-                  <td>{ACTIONS[l.action] || l.action}{l.details?.until ? ` (${l.details.until === "unlimited" ? "unlimited" : `to ${fmtDate(l.details.until)}`})` : ""}{l.details?.tier ? ` → ${l.details.tier}` : ""}{l.details?.changed ? `: ${l.details.changed.join("; ")}` : ""}</td>
+                  <td>{ACTIONS[l.action] || l.action}{l.details?.until ? ` (${l.details.until === "unlimited" ? "unlimited" : `to ${fmtDate(l.details.until)}`})` : ""}{l.details?.tier ? ` → ${l.details.tier}` : ""}{l.details?.changed ? `: ${l.details.changed.join("; ")}` : ""}{l.details?.result ? ` #${l.details.id} ${l.details.result}` : ""}</td>
                 </tr>
               ))}
             </tbody>

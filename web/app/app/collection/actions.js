@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { catalogLive, getProduct, searchProducts } from "@/lib/catalog";
+import { catalogLive, getProduct } from "@/lib/catalog";
+import { searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
@@ -29,7 +30,7 @@ export async function searchCatalog(query) {
       const p = await getProduct(id);
       return p ? { ok: true, results: [slim(p)] } : { ok: false, error: catalogLive() ? "We couldn't find that TCGplayer product." : "Our live card catalog isn't connected yet, so only sample cards can be added right now. Every TCGplayer card will work once it's switched on." };
     }
-    const results = (await searchProducts(query)).map(slim);
+    const results = (await searchWithRequests(query)).map(slim);
     if (results.length) return { ok: true, results };
     return {
       ok: false,
@@ -40,6 +41,14 @@ export async function searchCatalog(query) {
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
   }
+}
+
+/** "Can't find a card? Request it": what they searched for and a link to the card. */
+export async function requestCard(query, link, note) {
+  const user = await requireUser();
+  if (user.demo) return { status: "declined", message: "Requests aren't saved in the demo." };
+  if (!allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
+  return submitRequest(user, { query, link, note });
 }
 
 /** Full details of a product picked from search results (search results don't carry graded sales). */

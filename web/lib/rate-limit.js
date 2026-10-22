@@ -11,6 +11,7 @@ export const LIMITS = {
   smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000 }, // "text me a code" requests
   ebayList: { max: 30, windowMs: 60 * 60 * 1000 }, // eBay listings created
   billing: { max: 20, windowMs: 60 * 60 * 1000 }, // opening Stripe checkout / billing pages
+  cardRequest: { max: 20, windowMs: 24 * 60 * 60 * 1000 }, // "Request a card" (one price lookup each)
   reportSale: { max: 15, windowMs: 24 * 60 * 60 * 1000 }, // "Report a sale" lookups (one eBay call each)
   importMatch: { max: 400, windowMs: 24 * 60 * 60 * 1000 }, // collection import: rows looked up (3 credits each, unless cached)
   importAdd: { max: 100, windowMs: 60 * 60 * 1000 }, // collection import: batches added

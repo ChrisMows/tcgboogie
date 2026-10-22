@@ -1,5 +1,6 @@
 "use client";
 
+import CardRequest from "@/components/CardRequest";
 import { useEffect, useRef, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { productDetails, searchCatalog } from "@/app/app/collection/actions";
@@ -61,6 +62,7 @@ function Search({ onPick, isDemo }) {
         {searching && <span className="small muted">Searching…</span>}
       </div>
       {error && <div className="hint">{error}</div>}
+      {q.trim().length >= 2 && !searching && <CardRequest query={q} />}
       {results && results.length > 0 && (
         <ul className="results trade-results">
           {results.slice(0, 8).map((p) => (

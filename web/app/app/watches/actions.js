@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { catalogLive, getProduct, searchProducts } from "@/lib/catalog";
+import { catalogLive, getProduct } from "@/lib/catalog";
+import { searchWithRequests } from "@/lib/card-requests";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -27,7 +28,7 @@ export async function findProducts(query) {
       const p = await getProduct(id);
       return p ? { ok: true, results: [publicProduct(p)] } : { ok: false, error: notFound("link") };
     }
-    const results = (await searchProducts(query)).map(publicProduct);
+    const results = (await searchWithRequests(query)).map(publicProduct);
     return results.length ? { ok: true, results } : { ok: false, error: notFound("search") };
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
