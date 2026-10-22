@@ -1052,7 +1052,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .coll-action.primary .coll-action-icon { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-size: 24px; font-weight: 700; }
 .coll-action.on .coll-action-icon { border-color: var(--accent); background: var(--accent-soft); }
 .coll-action.on { color: var(--text); }
-.coll-action-label { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.coll-action-label { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.25; }
 @media (max-width: 600px) {
   .coll-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; }
   .coll-action { width: auto; }
