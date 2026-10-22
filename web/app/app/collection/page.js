@@ -4,8 +4,6 @@ import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
 import { catalogLive } from "@/lib/catalog";
 import { chartSeries, itemLabel, ownedCounts, unitValue } from "@/lib/collection";
-import { dealsFor } from "@/lib/deals";
-import { clampToPlan, matches } from "@/lib/filters";
 import { loadCollection } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -18,7 +16,7 @@ export default async function CollectionPage({ searchParams }) {
   const tab = sp?.tab === "wishlist" ? "wishlist" : "owned";
   const adding = sp?.add === "1";
   const c = await loadCollection(user);
-  const [watches, profiles, found] = await Promise.all([store.listWatches(user.id), store.listProfiles(user.id), dealsFor(user)]);
+  const [watches, profiles] = await Promise.all([store.listWatches(user.id), store.listProfiles(user.id)]);
   const { summary } = c;
 
   const movers = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
@@ -39,9 +37,6 @@ export default async function CollectionPage({ searchParams }) {
     ["Set a price alert", watches.length > 0, "/app/watches"],
   ];
   const hit = watches.filter((w) => w.status === "triggered").length;
-  const running = profiles.filter((p) => p.active).slice(0, user.plan.maxProfiles);
-  const deals = found.sample ? [] : found.deals.filter((d) => running.some((p) => matches(clampToPlan(p.filters, user.plan), d)));
-  const bestDeal = deals.reduce((m, d) => Math.max(m, d.discountPct || 0), 0);
 
   return (
     <>
@@ -50,6 +45,11 @@ export default async function CollectionPage({ searchParams }) {
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
 
+      {hit > 0 && (
+        <Link href="/app/watches" className="notice coll-alert-hit">
+          🔔 <b>{hit} price {hit === 1 ? "alert" : "alerts"}</b> hit your price. See {hit === 1 ? "it" : "them"} →
+        </Link>
+      )}
       {steps.some((s) => !s[1]) && (
         <div className="start-here">
           <b>Get set up</b>
@@ -63,32 +63,6 @@ export default async function CollectionPage({ searchParams }) {
           </ol>
         </div>
       )}
-      <div className="coll-links">
-        <Link href="/app/deals" className="coll-link">
-          <span className="coll-link-icon" aria-hidden="true">⚡</span>
-          <span className="coll-link-text">
-            <b>My deals</b>
-            <span className="small muted">
-              {found.sample ? "Deals that match your filters show up here"
-                : deals.length ? `${deals.length} ${deals.length === 1 ? "deal matches" : "deals match"} your filters · best ${Math.round(bestDeal)}% below market`
-                : "No matches right now. Widen a filter to catch more"}
-            </span>
-          </span>
-          <span className="coll-link-go" aria-hidden="true">→</span>
-        </Link>
-        <Link href="/app/watches" className={`coll-link ${hit ? "hot" : ""}`}>
-          <span className="coll-link-icon" aria-hidden="true">🔔</span>
-          <span className="coll-link-text">
-            <b>My price alerts</b>
-            <span className="small muted">
-              {hit ? <><span className="up">{hit} hit your price</span> · {watches.length} watched</>
-                : watches.length ? `${watches.length} ${watches.length === 1 ? "card" : "cards"} watched · none hit yet`
-                : "Pick a card and a price, we'll tell you when it gets there"}
-            </span>
-          </span>
-          <span className="coll-link-go" aria-hidden="true">→</span>
-        </Link>
-      </div>
 
       {adding && (
         <div className="panel">

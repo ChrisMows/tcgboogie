@@ -76,6 +76,8 @@ export default async function RootLayout({ children }) {
             <Brand />
             <nav className="main" aria-label="Main">
               {user && <Link href="/app/collection">My collection</Link>}
+              {user && <Link href="/app/deals">My deals</Link>}
+              {user && <Link href="/app/watches">My price alerts</Link>}
               <Link href="/#deals">Explore deals</Link>
               <Link href="/how-it-works">How it works</Link>
               <Link href="/#pricing">Pricing</Link>

@@ -45,8 +45,8 @@ footer .brand-card { height: 40px; }
 footer .brand-word { height: 20px; }
 .logo-full { display: block; width: min(300px, 70%); height: auto; margin: 0 auto 18px; filter: drop-shadow(0 12px 30px #0009); }
 .brand:hover { text-decoration: none; }
-nav.main { display: flex; align-items: center; gap: 30px; }
-nav.main a { color: #a1a8b3; font-size: 12px; }
+nav.main { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 30px); }
+nav.main a { color: #a1a8b3; font-size: 12px; white-space: nowrap; }
 nav.main a:hover { color: var(--text); text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 24px; font-size: 12px; }
 .login-link { color: var(--text); }
@@ -1099,16 +1099,8 @@ details.era > .set-grid { margin-bottom: 14px; }
   .trade-swap { justify-self: center; transform: rotate(90deg); }
 }
 
-.coll-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
-.coll-link { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; color: var(--text); min-width: 0; transition: border-color 0.2s; }
-.coll-link:hover { text-decoration: none; border-color: var(--accent); }
-.coll-link.hot { border-color: rgba(63, 185, 80, 0.5); }
-.coll-link-icon { width: 38px; height: 38px; flex: none; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); font-size: 17px; }
-.coll-link-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.coll-link-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coll-link-go { color: var(--muted); }
-.coll-link:hover .coll-link-go { color: var(--accent); }
-@media (max-width: 700px) { .coll-links { grid-template-columns: minmax(0, 1fr); } }
+.coll-alert-hit { display: block; color: var(--text); text-align: center; }
+.coll-alert-hit:hover { text-decoration: none; border-color: var(--accent); }
 
 /* Worth grading? */
 .gr-hero { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
