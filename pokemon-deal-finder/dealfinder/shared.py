@@ -176,6 +176,13 @@ def save_watch_listing(watch_id, item):
 
 
 # ----- our own sales history (web: sale) -----
+def discord_id_for(email):
+    """The Discord user ID connected to the member with this email, or None."""
+    row = _run('SELECT a."providerAccountId" FROM account a JOIN "user" u ON u.id = a."userId" '
+               "WHERE a.provider = 'discord' AND lower(u.email) = lower(%s) LIMIT 1", (email,), fetch=True)
+    return row[0] if row else None
+
+
 def save_sale(sale):
     """A real eBay sale (an auction we identified, looked up after it ended). Returns True if it's new."""
     row = _run("INSERT INTO sale (item_id, product_id, kind, grader, grade, condition, language, price, shipping, sold_at, "

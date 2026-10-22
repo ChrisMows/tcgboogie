@@ -16,6 +16,7 @@ from dealfinder import db, shared
 from dealfinder.config import load_config
 from dealfinder.ebay import EbayError
 from dealfinder.finder import Finder, next_interval
+from dealfinder.health import SiteHealth
 from dealfinder.sales import SaleTracker
 from dealfinder.sealed import SealedScanner
 from dealfinder.watch_ebay import EbayWatcher
@@ -43,6 +44,7 @@ def main():
     sealed = SealedScanner(finder)
     tracker = SaleTracker(finder.cfg, finder.ebay, finder.conn)
     finder.on_identified = tracker.remember
+    site = SiteHealth(finder.cfg)
 
     def check():
         stats = finder.poll_once()
@@ -95,6 +97,12 @@ def main():
             return
         except Exception:
             log.exception("Unexpected error during check")
+        # Is the website itself healthy? (Messages the admin on Discord if it breaks.)
+        site.cfg = finder.cfg
+        try:
+            site.tick()
+        except Exception:  # noqa: BLE001 - watching the site must never stop the deal finder
+            log.exception("Website health check crashed")
         used = db.api_calls_today(finder.conn) - before
         if used > 0:
             per_check = used if per_check is None else per_check * 0.8 + used * 0.2

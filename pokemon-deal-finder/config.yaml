@@ -198,6 +198,14 @@ sealed:
 
 # Our own sales history: shortly after an identified graded auction ends, one eBay lookup records its final price
 # (if it sold) in the website's sale table. Official Browse API, no scraping. See dealfinder/sales.py.
+# Website watch: every few minutes the bot asks tcgboogie.com/api/health and messages the admin on Discord
+# (BoogieBot DM) when it fails twice in a row, e.g. if the host wipes the website's settings. And again when fixed.
+health:
+  enabled: true
+  url: https://tcgboogie.com/api/health
+  every_minutes: 5
+  admin_email: riggsc96@gmail.com
+
 sales:
   enabled: true
   daily_calls: 800     # lookups a day (they come out of the same eBay budget as deal searches)

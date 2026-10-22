@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
+import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
 export const metadata = { title: "Admin", robots: { index: false } };
@@ -43,7 +44,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
-      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} />}
+      {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
     </>
@@ -52,7 +53,8 @@ export default async function Admin({ searchParams }) {
 
 const CHANNEL_NAMES = { email: "Email", discord: "Discord DM", sms: "Text" };
 
-async function Status({ ping, test, why, stripe, recap }) {
+async function Status({ ping, test, why, stripe, recap, backup }) {
+  const settings = settingsSummary();
   const [checks, counts] = await Promise.all([systemStatus({ pingPrices: ping }), memberCounts()]);
   const tested = String(test || "").split(",").filter(Boolean).map((x) => x.split(":"));
   const groups = [...new Set(checks.map((c) => c.group))];
@@ -89,6 +91,25 @@ async function Status({ ping, test, why, stripe, recap }) {
         <form action={testRecap} style={{ flex: "none" }}><button className="btn sm" title="Emails you a preview of your recap">Email me a recap preview</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
         {process.env.STRIPE_SECRET_KEY ? <form action={connectStripe} style={{ flex: "none" }}><button className="btn sm" title="Creates the Premium price and the payment webhook in Stripe. Safe to press again.">Set up Stripe</button></form> : null}
+      </div>
+      <div className={`panel settings-backup ${settings.missingEssential.length ? "warn" : ""}`}>
+        <h2>Settings backup</h2>
+        <p className="small muted" style={{ marginTop: 0 }}>
+          The site runs on {settings.set.length} settings stored at Hostinger (database, sign-in, email, eBay, Stripe and more). Hostinger
+          has wiped them once during a redeploy. Download a copy whenever you change one and keep it in your password manager; to
+          restore, open Hostinger → Environment variables → <b>Import .env</b> and pick the file.
+        </p>
+        {settings.missingEssential.length > 0 && (
+          <div className="notice warn">Missing right now: {settings.missingEssential.join(", ")}. Add them in Hostinger → Environment variables.</div>
+        )}
+        {backup === "confirm" && <div className="notice warn">Tick the box first, then download.</div>}
+        <form method="post" action="/app/admin/settings-backup" className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <label className="small" style={{ display: "flex", gap: 8, alignItems: "center", flex: "1 1 300px" }}>
+            <input type="checkbox" name="confirm" value="yes" required />
+            I understand this file holds every password and key for the site, and I&apos;ll keep it private.
+          </label>
+          <button className="btn sm primary" style={{ flex: "none" }}>Download settings backup</button>
+        </form>
       </div>
       {groups.map((g) => (
         <div key={g} className="panel status-group">
