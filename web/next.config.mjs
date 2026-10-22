@@ -17,6 +17,9 @@ const CSP = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Each build gets its own ID, so a page left open across a deploy is reloaded quietly instead of erroring when it
+  // talks to the new server (the ID is baked into the build, including the standalone server Hostinger runs).
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID || `b${Date.now().toString(36)}`,
   poweredByHeader: false,
   // "Sell on eBay" sends card photos with the form (up to 6 photos, resized in the browser first).
   experimental: { serverActions: { bodySizeLimit: "25mb" } },

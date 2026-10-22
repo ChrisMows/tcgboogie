@@ -75,7 +75,7 @@ export default async function CollectionPage({ searchParams }) {
       {c.owned.length > 0 && (
         <>
           <div className="panel coll-chart">
-            <ValueChart points={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} profit={summary} />
+            <ValueChart points={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} profit={summary} hideable />
             {summary.unpriced > 0 && <p className="hint" style={{ marginBottom: 0 }}>{summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market value yet, so {summary.unpriced === 1 ? "it isn't" : "they aren't"} counted. You can set your own value from Edit.</p>}
           </div>
           <div className="coll-cards">

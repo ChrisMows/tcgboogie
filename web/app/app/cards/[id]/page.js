@@ -27,9 +27,10 @@ export async function generateMetadata({ params, searchParams }) {
 }
 
 const GRADE_LABEL = (key) => {
-  const m = key.match(/^([a-z]+)(\d+)(?:_(\d))?$/);
+  const m = key.match(/^([a-z]+)(\d+)(?:_(\d|pristine))?$/);
   if (!m) return key;
   const grader = GRADERS.find((g) => g.toLowerCase() === m[1]) || m[1].toUpperCase();
+  if (m[3] === "pristine") return `${grader} ${m[2]} Pristine`;
   return `${grader} ${m[2]}${m[3] ? `.${m[3]}` : ""}`;
 };
 
@@ -107,8 +108,10 @@ export default async function CardPage({ params, searchParams }) {
   // Graded: PSA, then CGC, BGS, SGC, TAG; highest grade first. Thin/stale data goes in its own, clearly marked group.
   const gradeSort = ([a], [b]) => {
     const order = ["psa", "cgc", "bgs", "sgc", "tag"];
-    const [ga, na] = [a.replace(/[\d_]+$/, ""), Number(a.replace(/^\D+/, "").replace("_", "."))];
-    const [gb, nb] = [b.replace(/[\d_]+$/, ""), Number(b.replace(/^\D+/, "").replace("_", "."))];
+    // "cgc10_pristine" sorts just above "cgc10".
+    const num = (k) => (k.endsWith("_pristine") ? Number(k.replace(/^\D+/, "").replace("_pristine", "")) + 0.25 : Number(k.replace(/^\D+/, "").replace("_", ".")));
+    const [ga, na] = [a.replace(/[\d_]+(pristine)?$/, ""), num(a)];
+    const [gb, nb] = [b.replace(/[\d_]+(pristine)?$/, ""), num(b)];
     return (order.indexOf(ga) + 1 || 9) - (order.indexOf(gb) + 1 || 9) || nb - na;
   };
   const allGraded = Object.entries(p.graded || {}).sort(gradeSort);

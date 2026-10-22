@@ -55,6 +55,16 @@ class TrackerTests(unittest.TestCase):
         save.assert_not_called()
 
 
+class PristineTests(unittest.TestCase):
+    def test_cgc_pristine_10_is_its_own_grade(self):
+        t = SaleTracker({"sales": {}}, mock.Mock())
+        end = "2030-01-01T00:00:00Z"
+        t.remember({"itemId": "v1|1|0", "itemEndDate": end, "title": "Umbreon VMAX CGC 10 PRISTINE"}, {"product_id": "1", "grader": "CGC", "grade": "10"})
+        t.remember({"itemId": "v1|2|0", "itemEndDate": end, "title": "Umbreon VMAX CGC 10 Gem Mint"}, {"product_id": "1", "grader": "CGC", "grade": "10"})
+        self.assertEqual(t.pending["v1|1|0"]["ident"]["grade"], "10 Pristine")
+        self.assertEqual(t.pending["v1|2|0"]["ident"]["grade"], "10")
+
+
 class PersistenceTests(unittest.TestCase):
     def test_waiting_list_survives_a_restart(self):
         import tempfile

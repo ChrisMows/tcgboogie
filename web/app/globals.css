@@ -1015,3 +1015,13 @@ details.era > .set-grid { margin-bottom: 14px; }
 .copy-btn-msg { font-size: 12px; font-weight: 600; font-family: inherit; }
 .report-sale-date { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .report-sale-date input { width: auto; }
+
+/* Hide collection value (eye toggle): totals become a grey block, remembered per device */
+.hide-values .sensitive { color: transparent !important; background: var(--panel-2); border-radius: 6px; user-select: none; }
+.hide-values .sensitive * { color: transparent !important; }
+.hide-values .coll-chart svg.chart-svg { visibility: hidden; }
+.chart-value-row { display: flex; align-items: center; gap: 10px; }
+.hide-values-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--border-strong); border-radius: 999px;
+  background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.hide-values-btn:hover { color: var(--accent); border-color: var(--accent); }
+.home-tile-head .hide-values-btn { margin-left: auto; }

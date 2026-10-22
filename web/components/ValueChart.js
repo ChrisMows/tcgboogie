@@ -1,5 +1,6 @@
 "use client";
 
+import HideValues from "@/components/HideValues";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { money, pct } from "@/lib/collection";
@@ -10,7 +11,7 @@ const RANGES = [["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["All", null]]
  * Collection value over time. `points` are { day, value, cost? }. Ranges past the plan's history are shown locked.
  * With `profit` ({ cost, gain, gainPct } from summarize()) and cost data, it also draws what you paid and your profit.
  */
-export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null }) {
+export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false }) {
   const [range, setRange] = useState(30);
   const hasCost = Boolean(profit?.cost) && points.some((p) => p.cost > 0);
   const [showCost, setShowCost] = useState(true);
@@ -39,13 +40,13 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
       <div className="chart-head">
         <div>
           <div className="small muted">{at ? new Date(`${at.day}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : label}</div>
-          <div className="chart-value">{money(at ? at.value : last)}</div>
+          <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : last)}</div>{hideable && <HideValues />}</div>
           {!at && delta !== null && shown.length > 1 && (
-            <div className={`small ${up ? "up" : "down"}`}>{up ? "▲" : "▼"} {money(Math.abs(last - first))} ({pct(delta)}) {range ? `in ${range} days` : "all time"}</div>
+            <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>{up ? "▲" : "▼"} {money(Math.abs(last - first))} ({pct(delta)}) {range ? `in ${range} days` : "all time"}</div>
           )}
-          {at && costOn && at.cost > 0 && <div className="small muted">Paid {money(at.cost)}</div>}
+          {at && costOn && at.cost > 0 && <div className={`small muted ${hideable ? "sensitive" : ""}`}>Paid {money(at.cost)}</div>}
           {!at && hasCost && (
-            <div className="small chart-profit">
+            <div className={`small chart-profit ${hideable ? "sensitive" : ""}`}>
               Paid {money(profit.cost)} ·{" "}
               <span className={profit.gain >= 0 ? "up" : "down"}>{profit.gain >= 0 ? "+" : "−"}{money(Math.abs(profit.gain))} profit ({pct(profit.gainPct)})</span>
               <span className="muted"> on cards with a price paid</span>

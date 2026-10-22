@@ -42,6 +42,17 @@ export async function searchCatalog(query) {
   }
 }
 
+/** Full details of a product picked from search results (search results don't carry graded sales). */
+export async function productDetails(productId, language) {
+  await requireUser();
+  try {
+    const p = await getProduct(String(productId), { language: language === "japanese" ? "japanese" : "english" });
+    return p ? slim(p) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Add a card or sealed product with full details (condition or grade, quantity, what you paid...). */
 export async function addItem(productId, input) {
   const user = await requireUser();

@@ -269,7 +269,7 @@ export async function recordSealedPrices(max = 500) {
 
 // ---------- graded values: the price service's sales + real eBay sales we verified ourselves (see `sale`) ----------
 const DAY_MS = 24 * HOUR;
-const gradeKeyOf = (grader, grade) => `${String(grader || "").toLowerCase()}${String(grade || "").replace(".", "_")}`;
+const gradeKeyOf = (grader, grade) => `${String(grader || "").toLowerCase()}${String(grade || "").replace(" Pristine", "_pristine").replace(".", "_")}`;
 
 /** Median where each sale counts by weight (newer sales and days with several sales count more). */
 function weightedMedian(points) {

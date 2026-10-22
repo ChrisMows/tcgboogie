@@ -38,6 +38,10 @@ export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
   return (
     <html lang="en" className={`${body.variable} ${head.variable}`}>
+      <head>
+        {/* Before the page draws: keep collection values hidden if the member chose that (no flash of the total). */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('tcgb-hide-values')==='1')document.documentElement.classList.add('hide-values')}catch(e){}" }} />
+      </head>
       <body>
         {demoMode && (
           <div className="demo-bar">

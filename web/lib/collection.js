@@ -7,10 +7,14 @@ export const KINDS = { raw: "Raw", graded: "Graded", sealed: "Sealed" };
 export const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
 export const COND_SHORT = { "Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP", "Heavily Played": "HP", Damaged: "DMG" };
 export const GRADES = ["10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1"];
+// CGC's top grade comes in two labels that sell very differently: Pristine 10 above Gem Mint 10.
+export const PRISTINE = "10 Pristine";
+export const gradesFor = (grader) => (grader === "CGC" ? [PRISTINE, ...GRADES] : GRADES);
 export const SORTS = { value: "Value (high to low)", gain: "Gain (best first)", change: "7-day change", name: "Name", added: "Recently added" };
 
 /** ('PSA', '9.5') -> 'psa9_5', the key slab prices are stored under (same as the bot's grade_key). */
-export const gradeKey = (grader, grade) => (grader && grade ? `${grader.toLowerCase()}${String(grade).replace(".", "_")}` : null);
+export const gradeKey = (grader, grade) => (grader && grade
+  ? `${grader.toLowerCase()}${String(grade).replace(" Pristine", "_pristine").replace(".", "_")}` : null);
 
 export const money = (v, digits = 2) =>
   v === null || v === undefined || !Number.isFinite(Number(v))
@@ -108,7 +112,7 @@ export function validateItem(input, product) {
   if (kind === "raw") item.condition = CONDITIONS.includes(input.condition) ? input.condition : "Near Mint";
   if (kind === "graded") {
     item.grader = GRADERS.includes(input.grader) ? input.grader : null;
-    item.grade = GRADES.includes(String(input.grade)) ? String(input.grade) : null;
+    item.grade = gradesFor(item.grader).includes(String(input.grade)) ? String(input.grade) : null;
     if (!item.grader || !item.grade) errors.grade = "Pick the grading company and grade.";
     item.certNumber = String(input.certNumber || "").replace(/[^0-9A-Za-z-]/g, "").slice(0, 20) || null;
   }

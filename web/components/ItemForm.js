@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CONDITIONS, GRADERS, GRADES, gradeKey, marketValue, money } from "@/lib/collection";
+import { CONDITIONS, GRADERS, gradeKey, gradesFor, marketValue, money } from "@/lib/collection";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 
@@ -68,14 +68,14 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
           <>
             <div>
               <label className="field" htmlFor="if-grader">Graded by</label>
-              <select id="if-grader" value={grader} onChange={(e) => setGrader(e.target.value)}>
+              <select id="if-grader" value={grader} onChange={(e) => { setGrader(e.target.value); if (e.target.value !== "CGC" && grade === "10 Pristine") setGrade("10"); }}>
                 {GRADERS.map((g) => <option key={g}>{g}</option>)}
               </select>
             </div>
             <div>
               <label className="field" htmlFor="if-grade">Grade</label>
               <select id="if-grade" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                {GRADES.map((g) => <option key={g} value={g}>{g}{gradedKeys.includes(gradeKey(grader, g)) ? "" : " (no recent sales)"}</option>)}
+                {gradesFor(grader).map((g) => <option key={g} value={g}>{g === "10" && grader === "CGC" ? "10 Gem Mint" : g}{product.detailsLoading || gradedKeys.includes(gradeKey(grader, g)) ? "" : " (no recent sales)"}</option>)}
               </select>
             </div>
           </>

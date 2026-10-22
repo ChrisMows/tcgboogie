@@ -35,9 +35,11 @@ function gradeOf(item) {
   const graderText = norm(aspect("professional grader"));
   const grader = Object.entries(GRADERS).find(([k]) => graderText.includes(k))?.[1];
   const grade = aspect("grade").match(/\d+(?:\.5)?/)?.[0];
-  if (grader && grade) return { grader, grade };
-  const m = String(item.title || "").match(/\b(PSA|CGC|BGS|SGC|TAG)\s*(?:GEM\s*(?:MINT|MT)\s*)?(\d{1,2}(?:\.5)?)\b/i);
-  return m ? { grader: m[1].toUpperCase(), grade: m[2] } : null;
+  // CGC 10 comes as Pristine (worth more) or Gem Mint: keep them apart.
+  const pristine = (g) => (g.grader === "CGC" && g.grade === "10" && /pristine/i.test(`${item.title} ${aspect("grade")}`) ? { ...g, grade: "10 Pristine" } : g);
+  if (grader && grade) return pristine({ grader, grade });
+  const m = String(item.title || "").match(/\b(PSA|CGC|BGS|SGC|TAG)\s*(?:GEM\s*(?:MINT|MT)\s*|PRISTINE\s*)?(\d{1,2}(?:\.5)?)\b/i);
+  return m ? pristine({ grader: m[1].toUpperCase(), grade: m[2] }) : null;
 }
 
 /** Check and save a reported sale. Returns { ok, message }. */

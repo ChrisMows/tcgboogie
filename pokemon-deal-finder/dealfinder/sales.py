@@ -79,7 +79,11 @@ class SaleTracker:
             return
         if len(self.pending) >= 5000:
             return
-        self.pending[item_id] = {"ends": ends, "ident": dict(ident), "title": summary.get("title", ""),
+        ident = dict(ident)
+        # CGC's 10 is two grades that sell very differently: Pristine 10 (worth more) and Gem Mint 10.
+        if str(ident.get("grader")).upper() == "CGC" and str(ident.get("grade")) == "10" and "pristine" in summary.get("title", "").lower():
+            ident["grade"] = "10 Pristine"
+        self.pending[item_id] = {"ends": ends, "ident": ident, "title": summary.get("title", ""),
                                  "url": summary.get("itemWebUrl") or ""}
 
     def run(self, now=None):

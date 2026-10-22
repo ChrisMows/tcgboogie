@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import CardThumb from "@/components/CardThumb";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
-import { addItem, quickAdd, searchCatalog } from "@/app/app/collection/actions";
+import { addItem, productDetails, quickAdd, searchCatalog } from "@/app/app/collection/actions";
 import { money, nmPrice } from "@/lib/collection";
 
 /** Search-as-you-type to add cards and sealed products. Quick "+" adds a Near Mint copy; picking a result opens details. */
@@ -16,6 +16,14 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [picked, setPicked] = useState(null);
+  // Search results don't carry graded sales: show the form at once, then fill in the card's full details.
+  const pick = (p) => {
+    setPicked({ ...p, detailsLoading: p.type === "card" });
+    if (p.type !== "card") return;
+    productDetails(p.id, p.language).then((full) => {
+      setPicked((cur) => (cur?.id === p.id ? { ...cur, ...(full || {}), detailsLoading: false } : cur));
+    });
+  };
   const [errors, setErrors] = useState({});
   const [counts, setCounts] = useState(owned);
   const [searching, setSearching] = useState(false);
@@ -93,7 +101,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
             const price = p.type === "sealed" ? p.prices?.market : nmPrice(p);
             return (
               <li key={p.id}>
-                <button type="button" className="result-main" onClick={() => { setErrors({}); setPicked(p); }}>
+                <button type="button" className="result-main" onClick={() => { setErrors({}); pick(p); }}>
                   <CardThumb item={p} width={42} />
                   <span className="result-text">
                     <b>{p.name}</b>
