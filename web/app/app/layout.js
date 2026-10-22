@@ -2,7 +2,7 @@ import SideNav from "@/components/SideNav";
 import { catalogLive } from "@/lib/catalog";
 import { requireUser } from "@/lib/session";
 
-export const metadata = { title: "Home", robots: { index: false } };
+export const metadata = { title: "My collection", robots: { index: false } };
 
 export default async function MemberLayout({ children }) {
   const user = await requireUser();

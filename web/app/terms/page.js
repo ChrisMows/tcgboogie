@@ -51,7 +51,8 @@ export default function Terms() {
       <h2 id="alerts">5. Alerts and messages</h2>
       <p>
         Alerts go to the channels you turn on (email, Discord direct message, and text message on Premium). Text messages
-        need your consent and a confirmed number; reply STOP to any text to stop them. Message and data rates may apply.
+        need your consent and a confirmed number; message frequency depends on your alerts, message and data rates may
+        apply, reply STOP to any text to stop them and HELP for help. Every alert and recap email has a one-click unsubscribe link.
         Alerts can arrive late or not at all (for example if a marketplace or messaging service is down), so don&apos;t rely
         on them for anything time-critical.
       </p>
@@ -63,21 +64,28 @@ export default function Terms() {
         <li>Some links to eBay and other sites are affiliate links, which means we may earn a commission if you buy. It doesn&apos;t change your price.</li>
       </ul>
 
-      <h2 id="use">7. Fair use</h2>
+      <h2 id="tools">7. Estimates and tools</h2>
+      <ul>
+        <li>The grading check, trade analyzer, photo appraiser and collection values are estimates to help you decide. A grade is never guaranteed, grading fees and turnaround change, and the photo appraiser (which uses AI) can misidentify a card. Check before you act on them.</li>
+        <li><b>Selling on eBay.</b> When you list a card through TCG Boogie, the listing is yours: you&apos;re responsible for it, for the item, and for following eBay&apos;s rules and fees. We only fill in the listing for you to review and post.</li>
+        <li><b>What you give us.</b> When you report a sale or upload a photo, you let us use it to run TCG Boogie, for example to value that card for every member. Only report real eBay sales; we may remove reports and limit accounts that abuse it.</li>
+      </ul>
+
+      <h2 id="use">8. Fair use</h2>
       <p>
         Don&apos;t misuse TCG Boogie: no scraping or reselling our data, no automated access beyond normal use, no attempts
         to break or overload the site, and no sharing accounts to get around plan limits. We may suspend or close accounts
         that do. If we close a paid account for reasons other than misuse, we&apos;ll refund the unused part of your current month.
       </p>
 
-      <h2 id="changes">8. Changes to TCG Boogie and these terms</h2>
+      <h2 id="changes">9. Changes to TCG Boogie and these terms</h2>
       <p>
         We may add, change or remove features. If we change these terms in a way that matters, we&apos;ll update the date
         above and tell you by email or on the site before the change takes effect. Continuing to use TCG Boogie after that
         means you accept the new terms.
       </p>
 
-      <h2 id="liability">9. Disclaimers and limits</h2>
+      <h2 id="liability">10. Disclaimers and limits</h2>
       <p>
         TCG Boogie is provided &quot;as is&quot;. We do our best to keep it accurate and running, but we can&apos;t promise it will
         be error-free or always available. To the fullest extent the law allows, we aren&apos;t liable for indirect or
@@ -85,16 +93,16 @@ export default function Terms() {
         limited to what you paid us in the 12 months before the claim.
       </p>
 
-      <h2 id="law">10. Governing law</h2>
-      <p>These terms are governed by the laws of the State of Ohio, USA.</p>
+      <h2 id="law">11. Governing law</h2>
+      <p>These terms are governed by the laws of the State of Ohio, USA, and disputes go to the state or federal courts in Ohio, unless the law where you live gives you the right to bring them locally.</p>
 
-      <h2 id="trademarks">11. Trademarks</h2>
+      <h2 id="trademarks">12. Trademarks</h2>
       <p>
         TCG Boogie is independent and not affiliated with or endorsed by eBay, TCGplayer, Nintendo, The Pokémon Company,
         or any grading company. All trademarks belong to their owners.
       </p>
 
-      <h2 id="contact">12. Contact</h2>
+      <h2 id="contact">13. Contact</h2>
       <p>
         Questions about these terms or your subscription: <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a>.
         See also our <Link href="/privacy">Privacy policy</Link>.

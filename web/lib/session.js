@@ -50,7 +50,7 @@ export async function getCurrentUser() {
 
 /**
  * Where to go after signing in: only pages inside the member area (no other sites, no "//evil.com" tricks).
- * Anything else falls back to the dashboard.
+ * Anything else falls back to the member area (which opens on Collection).
  */
 export function safeNext(path) {
   const p = String(path || "");

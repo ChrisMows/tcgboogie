@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+*credentials*.csv
+*.pem
 
 # Bot runtime data
 pokemon-deal-finder/data/
