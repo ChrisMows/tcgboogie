@@ -25,7 +25,7 @@ export const metadata = {
 
 function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="TCG Boogie home">
+    <Link href="/?home=1" className="brand" aria-label="TCG Boogie home">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="brand-card" src="/brand/card.webp" alt="" width={144} height={160} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -75,9 +75,10 @@ export default async function RootLayout({ children }) {
           <div className="wrap">
             <Brand />
             <nav className="main" aria-label="Main">
-              {user && <Link href="/app/collection">My collection</Link>}
-              {user && <Link href="/app/deals">My deals</Link>}
-              {user && <Link href="/app/watches">My price alerts</Link>}
+              {/* Always shown; signed-out visitors go to sign in, then straight to the page they picked. */}
+              <Link href={user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection"}>My collection</Link>
+              <Link href={user ? "/app/deals" : "/login?next=%2Fapp%2Fdeals"}>My deals</Link>
+              <Link href={user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches"}>My price alerts</Link>
               <Link href="/?home=1#deals">Explore deals</Link>
               <Link href="/how-it-works">How it works</Link>
               <Link href="/?home=1#pricing">Pricing</Link>
