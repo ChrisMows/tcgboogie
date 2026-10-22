@@ -51,6 +51,7 @@
 .home .games small { font-size: 9px; color: #6e7c8c; letter-spacing: 1px; line-height: 1.8; }
 .home .game { font: 700 23px var(--font-head); color: #aeb6c2; }
 .home .game.soon { opacity: 0.55; }
+.home .game-live .game-vote-tag.live { display: none; } /* phones only (see max-width: 600px) */
 .home .game-vote { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; transition: opacity 0.15s; }
 .home .game-vote:hover, .home .game-vote:focus-visible { opacity: 1; color: #fff; }
 .home .game-vote.italic { font-style: italic; }
@@ -238,6 +239,15 @@
   .home .cta h2 { font-size: 35px; }
   .home .cta { padding: 45px 15px; }
   .home .game { font-size: 19px; }
+  /* Phones: one game per row, name on the left and its status or "Notify me" on the right. */
+  .home .games .wrap { flex-direction: column; align-items: stretch; gap: 0; }
+  .home .games .game, .home .games .game-vote { display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+    padding: 13px 4px; border-bottom: 1px solid var(--border); opacity: 1; }
+  .home .games .game.soon .game-label, .home .games .game-vote { color: #8b97a6; }
+  .home .games .game-live { color: #fff; }
+  .home .game-live .game-vote-tag.live { display: inline; color: var(--accent); }
+  .home .games .game-vote-tag { font-size: 11px; }
+  .home .games-mobile-note { margin-top: 12px; }
   .home section.content { padding: 55px 0; }
   .home h2 { font-size: 31px; }
   .home .art { height: 245px; }

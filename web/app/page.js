@@ -40,7 +40,7 @@ const TOOLS = [
 const LANGS = [
   { lang: "English", flag: "EN", set: "Cosmic Eclipse", number: "158/236", image: "https://tcgplayer-cdn.tcgplayer.com/product/201208_in_400x400.jpg" },
   { lang: "Japanese", flag: "JP", set: "Alter Genesis", number: "066/095", image: "https://tcgplayer-cdn.tcgplayer.com/product/572203_in_400x400.jpg" },
-  { lang: "Chinese", flag: "CN", set: "Striking Competition", number: "037/061", image: null },
+  { lang: "Chinese", flag: "CN", set: "Striking Competition", number: "037/061", image: "/cards/naganadel-guzzlord-gx-037-061-chinese.jpg" },
 ];
 
 const COMPARE = [
@@ -143,7 +143,7 @@ export default async function Home({ searchParams }) {
       <div className="games" id="games">
         <div className="wrap">
           <small>ONE HOBBY.<br />EVERY UNIVERSE.</small>
-          <span className="game">Pokémon</span>
+          <span className="game game-live">Pokémon<span className="game-vote-tag live">● Live now</span></span>
           {/* Coming soon: each is a "Notify me" vote (plain links, so they're never prefetched). */}
           {[["magic", "MAGIC", "magic"], ["lorcana", "LORCANA", "lorcana"], ["onepiece", "ONE PIECE", "italic"], ["yugioh", "Yu-Gi-Oh!", ""]].map(([key, label, cls]) => (
             <a key={key} href={`/app/notify?game=${key}`} className={`game soon game-vote ${cls}`} title={`Tell me when ${GAMES[key]} is live`}>
@@ -153,7 +153,7 @@ export default async function Home({ searchParams }) {
           ))}
           <span className="more"><b className="lime">Live: Pokémon.</b><br />Tap a game to vote for it next.</span>
         </div>
-        <p className="games-mobile-note">Live: Pokémon. Tap a game to vote for it next.</p>
+        <p className="games-mobile-note">Tap a game to vote for it next.</p>
         {voted && <div className="wrap game-voted">Thanks! We&apos;ll email you when {GAMES[voted]} is live. The games with the most votes come first.</div>}
       </div>
 
