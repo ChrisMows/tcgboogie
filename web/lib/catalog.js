@@ -288,7 +288,7 @@ function weightedMedian(points) {
  * service's own figure (and its reliability rule).
  */
 async function withOurSales(p) {
-  const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 10) });
+  const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 40) }); // the card page filters these by grade
   if (p.type !== "card") return trim(p);
   let rows = [];
   if (db) {

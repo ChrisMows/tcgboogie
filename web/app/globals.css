@@ -1062,3 +1062,8 @@ details.era > .set-grid { margin-bottom: 14px; }
   .info-tip-pop, .fs-pop { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
 }
 @media (max-width: 600px) { .side .tabbar a, .side .tabbar a.on { background: none; padding: 4px 2px; } }
+
+/* Card page: filter the latest sales by grade */
+.sale-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.sale-chips button { border: 1px solid var(--border-strong); background: transparent; color: var(--text); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.sale-chips button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }

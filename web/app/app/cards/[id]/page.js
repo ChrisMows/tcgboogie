@@ -1,3 +1,4 @@
+import RecentSales from "@/components/RecentSales";
 import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
 import { setLabel } from "@/lib/sets";
@@ -91,6 +92,9 @@ export default async function CardPage({ params, searchParams }) {
   }
   if (product === null) notFound();
   const p = slim(product);
+  // "Charizard ex 199/165 · Scarlet & Violet 151" (the number isn't repeated when the name already has it).
+  const copyText = [p.number && !p.name.includes(p.number) ? `${p.name} ${p.number}` : p.name, p.setName && setLabel(p.setName).name]
+    .filter(Boolean).join(" · ");
   if (p.language === "japanese") language = "japanese"; // found in the Japanese catalog without ?lang=
   // Opened from a deal: show that listing on top (only if it's this card).
   const dealId = (await searchParams)?.deal;
@@ -159,7 +163,7 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
         <div className="card-hero-info">
           <div className="card-title-row">
-            <h1>{p.name} <CopyButton text={p.name} label="Copy card name" /></h1>
+            <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
             <div className="card-title-actions">
               {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
               {sellItem && (
@@ -254,22 +258,11 @@ export default async function CardPage({ params, searchParams }) {
                 </details>
               )}
               {(p.recentSales || []).length > 0 && (
-                <div className="recent-sales">
-                  <div className="small muted">Latest graded sales (eBay and Fanatics Collect)</div>
-                  {p.recentSales.map((s) => (
-                    <div key={`${s.grade}-${s.date}-${s.price}`} className="recent-sale">
-                      <span className="muted">{new Date(`${s.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      <span>{GRADE_LABEL(s.grade)}</span>
-                      <b>{money(s.price, 0)}</b>
-                      <span className="small muted">
-                        {s.source === "ebay" && s.url
-                          ? <a href={ebayLink(s.url, "card-page-sale").href} target="_blank" rel="noopener noreferrer sponsored">eBay sale ↗</a>
-                          : s.count > 1 ? `avg of ${s.count} sales` : ""}
-                      </span>
-                    </div>
-                  ))}
-                  <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="small">All sold listings on eBay ↗</a>
-                </div>
+                <RecentSales soldHref={ebaySold.href} soldAffiliate={ebaySold.affiliate}
+                  sales={p.recentSales.map((s) => ({
+                    key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
+                    href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
+                  }))} />
               )}
               <ReportSale productId={p.id} language={language} />
             </>
