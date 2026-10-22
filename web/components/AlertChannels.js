@@ -21,7 +21,7 @@ export default function AlertChannels({ user }) {
     },
     {
       key: "sms", icon: "📱", label: "Text",
-      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add number", href: "/app/account#phone" }
+      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add", href: "/app/account#phone" }
         : { state: "ready", note: user.phone }),
     },
   ];
@@ -45,12 +45,9 @@ export default function AlertChannels({ user }) {
       </div>
       <div className="ac-list">
         {channels.map((c) => (
-          <div key={c.key} className={`ac-option ${c.state === "ready" && on[c.key] ? "on" : ""} ${c.state}`}>
+          <div key={c.key} className={`ac-option ${c.state === "ready" && on[c.key] ? "on" : ""} ${c.state}`} title={c.note || undefined}>
             <span className="ac-icon" aria-hidden="true">{c.icon}</span>
-            <span className="ac-text">
-              <b>{c.label}</b>
-              {c.note && <span className="small muted">{c.note}</span>}
-            </span>
+            <b className="ac-label">{c.label}</b>
             {c.state === "ready" && (
               <button type="button" role="switch" aria-checked={on[c.key]} aria-label={`${c.label} alerts`} className="ac-switch" disabled={pending} onClick={() => flip(c.key)}>
                 <i />
