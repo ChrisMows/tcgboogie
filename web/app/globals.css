@@ -1143,3 +1143,19 @@ details.era > .set-grid { margin-bottom: 14px; }
   .gr-grid { grid-template-columns: minmax(0, 1fr); }
   .gr-hero-num { font-size: 28px; }
 }
+
+/* Price alerts → Performance */
+.wp-list { display: grid; }
+.wp-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); color: inherit; min-width: 0; }
+.wp-row:first-child { border-top: 0; }
+.wp-row:hover { text-decoration: none; }
+.wp-row:hover .wp-name { color: var(--accent); }
+.wp-main { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.wp-top { display: flex; justify-content: space-between; gap: 10px; min-width: 0; }
+.wp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp-top .small { flex: none; }
+.wp-bar { height: 8px; border-radius: 999px; background: var(--panel-3); overflow: hidden; }
+.wp-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.wp-bar.hit i { background: var(--good); }
+.wp-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .wp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

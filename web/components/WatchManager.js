@@ -178,12 +178,6 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
 
   return (
     <>
-      <div className="stats">
-        <div className="stat"><b>{watches.length}{limit !== null ? ` / ${limit}` : ""}</b><span>price alerts {limit === null ? "(unlimited)" : "used"}</span></div>
-        <div className="stat"><b>{watches.filter((w) => w.status === "triggered").length}</b><span>hit their target</span></div>
-        <div className="stat"><b>{watches.filter((w) => w.alsoEbay && !isRising(w)).length}</b><span>also watching eBay</span></div>
-
-      </div>
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
 
       <div className="panel">
@@ -239,7 +233,9 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         )}
       </div>
 
-      <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>Your price alerts</h2>
+      <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>
+        Your price alerts {limit !== null && <span className="small muted" style={{ fontWeight: 400 }}>· {watches.length} of {limit} used</span>}
+      </h2>
       {watches.length === 0 ? (
         <div className="panel muted">No alerts yet. Find a card above, then choose buying or selling.</div>
       ) : (
