@@ -78,9 +78,9 @@ export default async function RootLayout({ children }) {
               {user && <Link href="/app/collection">My collection</Link>}
               {user && <Link href="/app/deals">My deals</Link>}
               {user && <Link href="/app/watches">My price alerts</Link>}
-              <Link href="/#deals">Explore deals</Link>
+              <Link href="/?home=1#deals">Explore deals</Link>
               <Link href="/how-it-works">How it works</Link>
-              <Link href="/#pricing">Pricing</Link>
+              <Link href="/?home=1#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
             </nav>
             <div className="header-actions">
@@ -108,7 +108,7 @@ export default async function RootLayout({ children }) {
             </div>
             <nav aria-label="Footer">
               <Link href="/how-it-works">How it works</Link>
-              <Link href="/#pricing">Pricing</Link>
+              <Link href="/?home=1#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>

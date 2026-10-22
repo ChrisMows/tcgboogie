@@ -3,6 +3,7 @@ import CardArt from "@/components/CardArt";
 import DealTabs from "@/components/DealTabs";
 import PlanCards from "@/components/PlanCards";
 import Source from "@/components/Source";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import "./home.css";
 
@@ -33,7 +34,11 @@ const COMPARE = [
 
 export default async function Home({ searchParams }) {
   const user = await getCurrentUser();
-  const deleted = (await searchParams)?.deleted;
+  const sp = await searchParams;
+  const deleted = sp?.deleted;
+  // Signed-in members go straight to their collection. Links to the homepage's own sections (Explore deals,
+  // Pricing) carry ?home=1 so members can still read them.
+  if (user && sp?.home !== "1") redirect("/app/collection");
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
   );
