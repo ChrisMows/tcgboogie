@@ -36,6 +36,7 @@ export default async function Admin({ searchParams }) {
           <h1>Admin</h1>
           <p>Signed in as {admin.email}. Only admins can see this page.</p>
         </div>
+        <div className="head-actions"><Link href="/app/logs" className="btn sm">📜 Logs</Link></div>
       </div>
       <div className="tabs-row" role="tablist">
         <Link href="/app/admin" className={tab === "status" ? "on" : ""} role="tab" aria-selected={tab === "status"}>Status</Link>

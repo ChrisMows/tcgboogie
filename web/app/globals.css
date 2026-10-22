@@ -1025,3 +1025,40 @@ details.era > .set-grid { margin-bottom: 14px; }
   background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .hide-values-btn:hover { color: var(--accent); border-color: var(--accent); }
 .home-tile-head .hide-values-btn { margin-left: auto; }
+/* Info tips: a hidden tip takes no space (it was widening phone pages); on phones an open tip sits at the bottom of the screen */
+.info-tip-pop { display: none; }
+.info-tip:hover .info-tip-pop, .info-tip.open .info-tip-pop, .info-tip-btn:focus-visible + .info-tip-pop { display: block; }
+@media (max-width: 600px) {
+  .info-tip-pop { position: fixed; left: 16px; right: 16px; bottom: 16px; top: auto; transform: none; width: auto; max-width: none; }
+}
+@media (max-width: 600px) {
+  .card-title-actions { flex-wrap: wrap; }
+  .card-title-actions > .btn, .card-title-actions > * { flex: 1 1 auto; }
+  .price-wrong { flex: 1 1 100%; flex-direction: row; align-items: center; gap: 10px; }
+  .price-wrong-btn { flex: none; }
+  .price-wrong-tip { flex: 1; text-align: left; }
+}
+/* Phones: a smaller, centered card picture so the name, price and buttons show on the first screen */
+.card-hero-art .thumb { min-width: 0 !important; }
+@media (max-width: 600px) {
+  .card-hero-art { max-width: 190px; margin: 0 auto; }
+}
+
+/* Phones: bottom tab bar instead of the sideways-scrolling strip */
+.side nav.tabbar { display: none; }
+@media (max-width: 600px) {
+  .side nav:not(.tabbar) { display: none; }
+  .side nav.tabbar { display: flex; position: fixed; top: auto; height: auto; flex-direction: row; overflow: visible; gap: 0; left: 0; right: 0; bottom: 0; z-index: 60; justify-content: space-around;
+    background: rgba(11, 14, 18, 0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border-radius: 10px;
+    color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 600; min-width: 0; }
+  .tabbar a.on { color: var(--accent); }
+  .tabbar a.on .tabbar-icon { background: var(--accent-soft); }
+  .tabbar-icon { font-size: 18px; line-height: 1; padding: 4px 12px; border-radius: 999px; }
+  .tabbar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  /* the bottom-of-screen info tip and filter popovers sit above the tab bar */
+  .info-tip-pop, .fs-pop { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 600px) { .side .tabbar a, .side .tabbar a.on { background: none; padding: 4px 2px; } }

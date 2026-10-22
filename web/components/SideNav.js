@@ -17,6 +17,15 @@ const BOTTOM = [
   ["/app/account", "Settings", "⚙", false],
 ];
 
+const TABS = [
+  { href: "/app", label: "Home", icon: "⌂", isOn: (p) => p === "/app" },
+  { href: "/app/collection", label: "Collection", icon: "▦", isOn: (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards") },
+  { href: "/app/deals", label: "Deals", icon: "⚡", isOn: (p) => p.startsWith("/app/deals") },
+  { href: "/app/watches", label: "Alerts", icon: "🔔", isOn: (p) => p.startsWith("/app/watches") },
+  { href: "/app/admin", label: "Admin", icon: "🛡", isOn: (p) => p.startsWith("/app/admin") || p.startsWith("/app/logs"), adminOnly: true },
+  { href: "/app/account", label: "Settings", icon: "⚙", isOn: (p) => p.startsWith("/app/account") || p.startsWith("/app/premium") },
+];
+
 export default function SideNav({ planLabel, premium, isAdmin }) {
   const path = usePathname();
   return (
@@ -40,6 +49,18 @@ export default function SideNav({ planLabel, premium, isAdmin }) {
           </Link>
         )}
         {premium && <div className="plan-chip"><span className="badge accent">{planLabel} plan</span></div>}
+      </nav>
+      {/* Phones: the same places as a tab bar fixed to the bottom of the screen, always in reach. */}
+      <nav className="tabbar" aria-label="Member (mobile)">
+        {TABS.filter((t) => isAdmin || !t.adminOnly).map((t) => {
+          const on = t.isOn(path);
+          return (
+            <Link key={t.href} href={t.href} className={on ? "on" : ""} aria-current={on ? "page" : undefined}>
+              <span className="tabbar-icon" aria-hidden="true">{t.icon}</span>
+              <span className="tabbar-label">{t.label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );
