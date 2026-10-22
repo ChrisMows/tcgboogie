@@ -24,8 +24,8 @@ const SCHEMA = {
         additionalProperties: false,
         required: ["name", "number", "set_hint", "language", "graded", "grader", "grade", "confidence"],
         properties: {
-          name: { type: "string", description: "Card name exactly as printed, e.g. 'Charizard ex' or 'Umbreon VMAX'" },
-          number: { type: "string", description: "Collector number as printed, e.g. '199/165', 'SWSH180', 'TG01/TG30'; empty if not readable" },
+          name: { type: "string", description: "The card's English name, e.g. 'Charizard ex' or 'Umbreon VMAX'. For Japanese or other-language cards, give the English card name (ブラックキュレム -> 'Black Kyurem'), never the printed script" },
+          number: { type: "string", description: "Collector number as printed, with the set total, e.g. '199/165', '020/027', 'SWSH180', 'TG01/TG30'; empty if not readable" },
           set_hint: { type: "string", description: "Set name if you can tell (set symbol, slab label), else empty" },
           language: { type: "string", enum: ["english", "japanese", "other"] },
           graded: { type: "boolean", description: "true if the card is in a grading slab" },

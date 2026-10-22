@@ -372,26 +372,34 @@ async function pricedProduct(id, { cachedOnly = false, language = "english" } = 
   return pricedProduct(id, { cachedOnly, language: "japanese" });
 }
 
-/** Search cards and sealed products by name (a few results each, to keep lookups cheap). */
+/**
+ * Search cards and sealed products by name (a few results each, to keep lookups cheap). Language words ("japanese",
+ * "jp", "english") pick the catalog instead of being searched as part of the name: "black kyurem japanese" searches
+ * "black kyurem" in the Japanese catalog, with more Japanese results.
+ */
 export async function searchProducts(q) {
-  const term = String(q || "").trim().slice(0, 80);
+  const raw = String(q || "").trim().slice(0, 80);
+  const wantsJapanese = /\b(japanese|japan|jp|jpn)\b/i.test(raw);
+  const term = raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ").replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
   if (!catalogLive()) {
     const words = term.toLowerCase().split(/\s+/);
     return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w))).slice(0, 10);
   }
   const [cards, sealed, japanese] = await Promise.all([
-    ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
-    ppt("/sealed-products", { search: term, limit: "5" }, 7 * 24 * HOUR).catch(() => null),
-    ppt("/cards", { search: term, limit: "4", language: "japanese" }, 7 * 24 * HOUR).catch(() => null),
+    wantsJapanese ? null : ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
+    wantsJapanese ? null : ppt("/sealed-products", { search: term, limit: "5" }, 7 * 24 * HOUR).catch(() => null),
+    ppt("/cards", { search: term, limit: wantsJapanese ? "12" : "4", language: "japanese" }, 7 * 24 * HOUR).catch(() => null),
   ]);
-  return [...(cards?.data || []).map(fromCard), ...(japanese?.data || []).map((c) => ({ ...fromCard(c), language: "japanese" })),
-    ...(sealed?.data || []).map(fromSealed)];
+  const jp = (japanese?.data || []).map((c) => ({ ...fromCard(c), language: "japanese" }));
+  return wantsJapanese ? jp : [...(cards?.data || []).map(fromCard), ...jp, ...(sealed?.data || []).map(fromSealed)];
 }
 
 /**
- * One card from what's printed on it (photo appraiser): a small search by name and number (3 credits, cached a week),
- * preferring the result whose number matches. Returns the product (with prices) or null.
+ * One card from what's printed on it (photo appraiser, imports, card requests): small searches by name and number
+ * (cached a week), trying the full number first ("Black Kyurem 020/027"), then the number before the slash, then the
+ * name alone. A result only counts if its name shares a word with the card's and, when a number was read, its number
+ * matches. Never "the closest result": no match returns null, so a wrong card is never added.
  */
 export async function findCard({ name, number, language = "english" }) {
   if (!catalogLive()) {
@@ -399,15 +407,27 @@ export async function findCard({ name, number, language = "english" }) {
     return SAMPLE.find((p) => p.type === "card" && p.name.toLowerCase().includes(n) && (!number || p.number === number)) || null;
   }
   const japanese = language === "japanese";
-  const num = String(number || "").trim();
+  const num = String(number || "").trim().replace(/\s+/g, "");
   // Printed symbols the catalog spells out: Gold Star "☆" is "Star"; the δ (Delta Species) mark isn't in names.
   const printed = String(name || "").replace(/\s*\(.*\)$/, "").replace(/[☆★]/g, " Star").replace(/δ/g, "").replace(/\s+/g, " ").trim();
-  const term = `${printed} ${num.split("/")[0]}`.trim().slice(0, 80);
-  if (term.length < 2) return null;
-  const j = await ppt("/cards", { search: term, limit: "3", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
-  const found = (j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) }));
-  const bare = (s) => String(s || "").toUpperCase().replace(/^0+/, "").replace(/\s/g, "");
-  return found.find((p) => num && bare(p.number) === bare(num)) || found.find((p) => num && bare(p.number).split("/")[0] === bare(num).split("/")[0]) || found[0] || null;
+  if (printed.length < 2) return null;
+  const bare = (s) => String(s || "").toUpperCase().replace(/\s/g, "").replace(/^0+(?=\w)/, "");
+  const head = (s) => bare(s).split("/")[0].replace(/^0+(?=\w)/, "");
+  const SUFFIX = new Set(["ex", "gx", "v", "vmax", "vstar", "lv", "x", "break", "prime", "star", "the", "of"]);
+  const words = (s) => String(s || "").toLowerCase().replace(/\(.*?\)|-\s*[\w/]+$/g, " ").split(/[^a-z0-9']+/).filter((w) => w.length > 1 && !SUFFIX.has(w));
+  const want = new Set(words(printed));
+  const sameName = (p) => want.size > 0 && words(p.name).some((w) => want.has(w));
+  // No usable name (e.g. read in Japanese script): only the exact full number (with the set total) counts.
+  const pick = (found) => found.find((p) => (sameName(p) || (!want.size && num.includes("/"))) && num && bare(p.number) === bare(num))
+    || found.find((p) => sameName(p) && num && head(p.number) === head(num))
+    || (!num ? found.find(sameName) : null);
+  const tries = [...new Set([num && `${printed} ${num}`, num.includes("/") && `${printed} ${num.split("/")[0]}`, printed].filter(Boolean))];
+  for (const term of tries) {
+    const j = await ppt("/cards", { search: term.slice(0, 80), limit: "5", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
+    const p = pick((j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) })));
+    if (p) return p;
+  }
+  return null;
 }
 
 // The set list's card counts can be off by one from the cards a set actually has, so once a set's cards have been

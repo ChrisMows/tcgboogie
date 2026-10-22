@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import CardThumb from "@/components/CardThumb";
+import CardRequest from "@/components/CardRequest";
 import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
 
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -96,10 +97,15 @@ export default function PhotoAppraiser({ allowed }) {
                     {c.read.confidence === "low" && <span className="badge warn">Hard to read: check it</span>}
                   </span>
                   <b className="photo-value">{c.value ? money(c.value) : "—"}</b>
-                  {c.product && <Link href={`/app/cards/${encodeURIComponent(c.product.id)}`} className="small" onClick={(e) => e.stopPropagation()}>View</Link>}
+                  {c.product && <Link href={`/app/cards/${encodeURIComponent(c.product.id)}${c.product.language === "japanese" ? "?lang=japanese" : ""}`} className="small" onClick={(e) => e.stopPropagation()}>View</Link>}
                 </label>
               ))}
             </div>
+            {/* Cards we read but couldn't find: request them right here (a link to the card adds it). */}
+            {result.cards.filter((c) => !c.product && c.read.name).slice(0, 3).map((c, i) => (
+              <CardRequest key={i} query={`${c.read.name}${c.read.number ? ` ${c.read.number}` : ""}${c.read.language === "japanese" ? " Japanese" : ""}`}
+                label={`Can’t find ${c.read.name}${c.read.number ? ` ${c.read.number}` : ""}? Request it →`} />
+            ))}
             {chosen.length > 0 && !done && (
               <button type="button" className="btn primary" disabled={pending} onClick={add} style={{ marginTop: 12 }}>
                 {pending ? "Adding…" : `Add ${chosen.length} to my collection`}
