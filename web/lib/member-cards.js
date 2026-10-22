@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { appToken } from "@/lib/ebay-sell";
+import { POKEMON_NAMES } from "@/lib/pokemon-names";
 import { itemIdFromLink } from "@/lib/report-sale";
 
 // Cards (and sealed products) our price service doesn't carry, added automatically from "Request a card" links (see lib/card-requests.js).
@@ -238,7 +239,8 @@ async function ebayDetails(link) {
     if (!r.ok) return null;
     const item = await r.json();
     const specifics = (item.localizedAspects || []).map((a) => `${a.name}: ${a.value}`).join("; ");
-    return { url: new URL(`https://www.ebay.com/itm/${id}`), details: {
+    const game = (item.localizedAspects || []).find((a) => /^game$/i.test(String(a.name || "").trim()))?.value || "";
+    return { url: new URL(`https://www.ebay.com/itm/${id}`), via: "ebay", game: String(game).slice(0, 80), details: {
       title: String(item.title || ""), description: specifics.slice(0, 1500), image: item.image?.imageUrl || "",
       text: String(item.shortDescription || "").slice(0, 1000),
     } };
@@ -255,7 +257,7 @@ export async function readCardPage(link, query, want = "card") {
   if (!page) {
     try {
       const fetched = await fetchPage(link);
-      if (fetched) page = { url: fetched.url, details: pageDetails(fetched.html, fetched.url) };
+      if (fetched) page = { url: fetched.url, via: "page", details: pageDetails(fetched.html, fetched.url) };
     } catch { page = null; }
   }
   if (!page) return null;
@@ -268,16 +270,45 @@ export async function readCardPage(link, query, want = "card") {
   try { image = details.image && IMAGE_HOSTS.test(new URL(details.image).hostname) ? details.image.replace(/^http:/, "https:") : null; } catch { image = null; }
   const sealed = card.kind === "sealed";
   return {
+    via: page.via, game: page.game || null, // where it was read from (for the auto-add check, see reviewReason)
     type: sealed ? "sealed" : "card", name: clean(card.name), setName: clean(card.set_name),
     number: sealed ? null : clean(card.number, 30), rarity: sealed ? null : clean(card.rarity, 60),
     language: LANGUAGES.includes(card.language) ? card.language : "other", image,
   };
 }
 
+// Every Pokémon's name, plus the bare "nidoran" (cards print Nidoran♀ / Nidoran♂).
+const NAME_SET = new Set([...POKEMON_NAMES, "nidoran"]);
+const normName = (s) => ` ${String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+/** Does a card name contain a real Pokémon's name? ("Mega Lopunny & Jigglypuff GX" yes; "Professor's Research" no.) */
+export function hasPokemonName(name) {
+  const n = normName(name);
+  for (const p of NAME_SET) if (n.includes(` ${p} `)) return true;
+  return false;
+}
+
+/**
+ * Can a card read from a link be added to the shared catalog straight away? Only from sources we can trust:
+ *   - an eBay listing whose "Game" item detail says Pokémon (eBay's own field, set by the seller and moderated by eBay);
+ *   - any other site only when the card's name contains a real Pokémon's name, so a page someone wrote can't add an
+ *     arbitrary name. (TCGplayer links never come here: they use TCGplayer's own product data.)
+ * Returns null when it can be added, otherwise why it waits for an admin.
+ */
+export function reviewReason(card) {
+  if (!card) return "couldn't read the card";
+  if (card.via === "ebay") {
+    if (!card.game) return "the eBay listing has no Game detail";
+    return /pok[eé]mon/i.test(card.game) ? null : `the eBay listing's Game is "${card.game}"`;
+  }
+  return hasPokemonName(card.name) ? null : "the name doesn't contain a Pokémon's name";
+}
+
 /** Save a card read from a page (see readCardPage). Returns { product, created } or null. */
 export async function addFromPage(card, { link, userId, requestId } = {}) {
   if (!db || !card) return null;
-  return save({ ...card, productId: null, sourceUrl: link, source: "page", addedBy: userId || null, requestId: requestId || null });
+  const { via, game, ...fields } = card; // eslint-disable-line no-unused-vars
+  return save({ ...fields, productId: null, sourceUrl: link, source: via === "ebay" ? "ebay" : "page", addedBy: userId || null, requestId: requestId || null });
 }
 
 // ---------- Admin → Requests ----------

@@ -316,6 +316,7 @@ export const cardRequests = pgTable("card_request", {
   productId: text("product_id"),
   language: text("language"),
   reason: text("reason"), // why it was added, held for review or declined (shown to admins)
+  card: jsonb("card"), // what we read from the link when it's held for review (Admin → Requests: "Add as read")
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),

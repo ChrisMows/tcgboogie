@@ -3,7 +3,7 @@ import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, 
 import AdminFeatures from "@/components/AdminFeatures";
 import { currentFeatures } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
+import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
 import { gameTotals } from "@/lib/game-interest";
 import { FEATURES } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
@@ -328,6 +328,12 @@ async function Requests({ ok, err, show, kind: rawKind }) {
           )}
           {r.status === "pending" && r.kind !== "import" && (
             <div className="req-actions">
+              {r.card?.name && (
+                <form action={approveReadCard.bind(null, r.id)} className="req-read">
+                  <span className="small">We read: <b>{r.card.name}</b>{r.card.setName ? ` · ${r.card.setName}` : ""}{r.card.number ? ` · ${r.card.number}` : ""} · {r.card.language}{r.card.type === "sealed" ? " · sealed" : ""}</span>
+                  <button className="btn sm primary" style={{ flex: "none" }}>Add as read</button>
+                </form>
+              )}
               <form action={approveCardRequest.bind(null, r.id)} className="row" style={{ gap: 6 }}>
                 <input name="tcgplayer" placeholder="TCGplayer link or number" required />
                 <button className="btn sm primary" style={{ flex: "none" }}>Approve</button>

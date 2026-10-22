@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
-import { approveRequest, declineRequests, markRequestDone } from "@/lib/card-requests";
+import { approveAsRead, approveRequest, declineRequests, markRequestDone } from "@/lib/card-requests";
 import { hideMemberCard } from "@/lib/member-cards";
 import { currentFeatures, saveFeatures } from "@/lib/features";
 import { FEATURES } from "@/lib/plans";
@@ -21,6 +21,14 @@ export async function approveCardRequest(id, formData) {
   const admin = await requireAdmin();
   const err = await approveRequest(admin, id, formData.get("tcgplayer"));
   if (!err) await logAdminAction(admin, "card_request", { id, result: "approved" });
+  redirect(`/app/admin?tab=requests&${err ? `err=${encodeURIComponent(err)}` : "ok=approved"}`);
+}
+
+/** Admin → Requests: add a held card exactly as we read it from the member's link. */
+export async function approveReadCard(id) {
+  const admin = await requireAdmin();
+  const err = await approveAsRead(admin, id);
+  if (!err) await logAdminAction(admin, "card_request", { id, result: "added as read" });
   redirect(`/app/admin?tab=requests&${err ? `err=${encodeURIComponent(err)}` : "ok=approved"}`);
 }
 

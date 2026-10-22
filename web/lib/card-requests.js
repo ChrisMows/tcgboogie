@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
-import { addFromPage, addFromTcgplayer, readCardPage, searchMemberCards } from "@/lib/member-cards";
+import { addFromPage, addFromTcgplayer, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -15,7 +15,9 @@ import { parseTcgplayerInput } from "@/lib/watches";
 //     prices ("No pricing data available"), so the catalog grows one requested card at a time (lib/member-cards.js).
 //   - Any other link (eBay, PriceCharting, a Korean card site...) is read and Claude says which card it is. If the
 //     price service has that card (same number), that's the one; otherwise it's added as a member card.
-//   - Only links we can't read or that aren't about one Pokémon card wait for an admin (Admin → Requests).
+//   - Only from trusted sources, though (see reviewReason): an eBay listing whose Game detail says Pokémon, or another
+//     site when the name contains a real Pokémon's name. Anything else waits for an admin with what we read, and
+//     links we can't read or that aren't about one Pokémon card wait too (Admin → Requests).
 const { cardRequests, searchAliases } = schema;
 const TRUSTED = /(^|\.)tcgplayer\.com$/i;
 const STOP = new Set(["the", "and", "of", "card", "pokemon", "pokémon", "tcg", "holo", "rare", "psa", "cgc", "bgs", "sgc", "tag"]);
@@ -96,8 +98,15 @@ export async function submitRequest(user, { query, link, note, kind }) {
     const p = await findCard({ name: card.name, number: card.number, language: card.language }).catch(() => null);
     if (p && bare(p.number) === bare(card.number)) return found(user, q, url, p, `read from ${url.hostname}; found in the price service`, requestId);
   }
+  // Not a source we trust enough to add it for everyone at once: keep what we read for a one-click admin approval.
+  const hold = reviewReason(card);
+  if (hold) {
+    if (requestId) await db.update(cardRequests).set({ reason: `read from ${url.hostname}, but ${hold}: waiting for review`, card }).where(eq(cardRequests.id, requestId));
+    await log("catalog", "info", `Card request held for review: "${card.name}" from ${url.hostname} (${hold})`, { link: url.href }, user.id);
+    return { status: "pending", message: `Thanks! We read it as ${card.name}${card.number ? ` ${card.number}` : ""}. We'll double-check it and add it soon.` };
+  }
   const added = await addFromPage(card, { link: url.href, userId: user.id, requestId }).catch(() => null);
-  if (added) return addedWithoutPrices(user, q, url, added, requestId, `read from ${url.hostname}; not in the price service, added without prices`);
+  if (added) return addedWithoutPrices(user, q, url, added, requestId, `read from ${url.hostname}${card.via === "ebay" ? ` (eBay Game: ${card.game})` : ""}; not in the price service, added without prices`);
   return { status: "pending", message: "Thanks! We'll review it and add it if we can." };
 }
 
@@ -188,6 +197,19 @@ export async function approveRequest(admin, id, tcgplayer) {
 export async function markRequestDone(admin, id) {
   await db.update(cardRequests).set({ status: "done", reviewedBy: admin.email, reviewedAt: new Date() })
     .where(and(eq(cardRequests.id, Number(id)), eq(cardRequests.status, "pending")));
+}
+
+/** Admin: add a held card exactly as we read it from the member's link (and teach search the member's words). */
+export async function approveAsRead(admin, id) {
+  const [req] = await db.select().from(cardRequests).where(eq(cardRequests.id, Number(id))).limit(1);
+  if (!req) return "That request is gone.";
+  if (!req.card?.name) return "We didn't keep what we read for this request. Approve it with a TCGplayer link instead.";
+  const added = await addFromPage(req.card, { link: req.link, userId: req.userId, requestId: req.id });
+  if (!added) return "Couldn't add that card (it may have been removed before).";
+  await db.update(cardRequests).set({ status: "added", productId: String(added.product.id), language: added.product.language || "english",
+    reason: `Added as read, approved by ${admin.email}`, reviewedBy: admin.email, reviewedAt: new Date() }).where(eq(cardRequests.id, req.id));
+  if (describes(req.query, added.product)) await addAlias(normTerm(req.query), added.product, req.id);
+  return null;
 }
 
 export async function declineRequests(admin, ids, reason) {
