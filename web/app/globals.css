@@ -653,9 +653,11 @@ td.num { text-align: right; font-weight: 600; }
 
 /* Price alerts page: "Add a price alert" with "Alerts go to" beside it */
 .watch-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; margin-bottom: 16px; }
-.watch-top > .panel { margin-bottom: 0; min-width: 0; }
+.watch-top > .panel { margin-bottom: 0; min-width: 0; padding: 14px 18px; }
+.watch-add form.row input { padding-top: 9px; padding-bottom: 9px; }
+.watch-add form.row .btn { padding-top: 9px; padding-bottom: 9px; }
 @media (max-width: 1000px) { .watch-top { grid-template-columns: minmax(0, 1fr); } }
-.alert-channels { display: flex; flex-direction: column; gap: 12px; }
+.alert-channels { display: flex; flex-direction: column; gap: 10px; }
 .alert-channels.none { border-color: rgba(210, 153, 34, 0.5); }
 .ac-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .ac-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -1170,5 +1172,5 @@ details.era > .set-grid { margin-bottom: 14px; }
 @media (max-width: 1000px) { .wp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .watch-add form.row > div { flex: 1; min-width: 0; }
 .watch-add form.row input { width: 100%; }
-.watch-top h2 { margin: 0 0 12px; }
+.watch-top h2 { margin: 0 0 10px; }
 .alert-channels .ac-head h2 { margin: 0; }
