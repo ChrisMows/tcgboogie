@@ -6,7 +6,30 @@ import CardThumb from "@/components/CardThumb";
 import { productDetails, searchCatalog } from "@/app/app/collection/actions";
 import { CONDITIONS, GRADERS, gradesFor, marketValue, money, nmPrice } from "@/lib/collection";
 
-const FAIR = 0.05; // within 5% either way counts as a fair trade
+/**
+ * How fair a trade is, 0-10, the same whichever side you're on: from the smaller side's value over the larger one's.
+ * Within 2% is a perfect 10; then it falls on a curve (95% -> 9.3, 80% -> 7.2, 60% -> 4.6, 50% -> 3.5, 2:1+ -> 0-3).
+ */
+export function tradeGrade(a, b) {
+  const hi = Math.max(a, b), lo = Math.min(a, b);
+  if (!hi) return null;
+  const share = lo / hi;
+  return share >= 0.98 ? 10 : Math.round(10 * share ** 1.5 * 10) / 10;
+}
+const GRADE_BANDS = [[9, "fair", "Fair trade"], [7, "close", "Close"], [4, "uneven", "Uneven"], [0, "lopsided", "Lopsided"]];
+
+/** The grade as a ring that fills to the score. */
+function GradeRing({ score, cls }) {
+  const r = 52, c = 2 * Math.PI * r;
+  return (
+    <svg className={`grade-ring ${cls}`} viewBox="0 0 120 120" role="img" aria-label={`Trade grade ${score} out of 10`}>
+      <circle cx="60" cy="60" r={r} className="track" />
+      <circle cx="60" cy="60" r={r} className="fill" strokeDasharray={c} strokeDashoffset={c * (1 - score / 10)} transform="rotate(-90 60 60)" />
+      <text x="60" y="62" className="score">{score === 10 ? "10" : score.toFixed(1)}</text>
+      <text x="60" y="84" className="of">/ 10</text>
+    </svg>
+  );
+}
 let seq = 0;
 const short = (name) => name.replace(/\s*\(.*\)$/, "");
 
@@ -245,20 +268,13 @@ export default function TradeAnalyzer({ mine, isDemo }) {
   const out = sideTotal(give, giveCash);
   const inn = sideTotal(get, getCash);
   const diff = inn - out;
-  const base = Math.max(out, inn);
-  const ratio = base ? diff / base : 0;
   const unpriced = [...give, ...get].filter((e) => !e.loading && copyValue(e) === null).length;
   const started = out > 0 || inn > 0;
 
-  let verdict = null;
-  if (started && out > 0 && inn > 0) {
-    const cents = Math.round((inn / out) * 100);
-    if (Math.abs(ratio) <= FAIR) verdict = { cls: "fair", title: "Fair trade", text: `Within ${money(Math.abs(diff))} of even.` };
-    else if (diff > 0) verdict = { cls: "up", title: `You come out ahead by ${money(diff)}`, text: `You get $${(inn / out).toFixed(2)} in value for every $1 you give.` };
-    else verdict = { cls: "down", title: `You'd give up ${money(-diff)}`, text: `You get back ${cents}¢ for every $1 you give. Ask for ${money(-diff, 0)} more in cash or cards to even it out.` };
-  } else if (started) {
-    verdict = { cls: "", title: out > 0 ? "Now add what you'd get" : "Now add what you'd give", text: "Both sides need something to compare." };
-  }
+  const score = started && out > 0 && inn > 0 ? tradeGrade(out, inn) : null;
+  const [, cls, label] = score === null ? [] : GRADE_BANDS.find(([min]) => score >= min);
+  // Where the balance tips: 50% is even; the marker leans toward the side worth more.
+  const lean = out + inn ? (inn / (out + inn)) * 100 : 50;
 
   return (
     <>
@@ -268,16 +284,27 @@ export default function TradeAnalyzer({ mine, isDemo }) {
         <Side title="You get" hint="Search any card or sealed product" entries={get} setEntries={setGet} cash={getCash} setCash={setGetCash} total={inn} isDemo={isDemo} />
       </div>
 
-      {verdict && (
-        <div className={`panel trade-verdict ${verdict.cls}`}>
-          <div className="trade-bar" aria-hidden="true">
-            <i className="give" style={{ flexGrow: out || 0.0001 }} />
-            <i className="get" style={{ flexGrow: inn || 0.0001 }} />
+      {started && score === null && (
+        <div className="panel trade-verdict muted">Now add what you&apos;d {out > 0 ? "get" : "give"} to grade the trade.</div>
+      )}
+      {score !== null && (
+        <div className={`panel trade-verdict ${cls}`}>
+          <GradeRing score={score} cls={cls} />
+          <div className="trade-verdict-body">
+            <div className="trade-verdict-head">
+              <h2>{label}</h2>
+              {Math.abs(diff) >= 0.01 && <span className="trade-gap">{money(Math.abs(diff), 0)} apart</span>}
+            </div>
+            <div className="trade-scale" aria-hidden="true">
+              <span className="trade-scale-even" />
+              <span className="trade-scale-dot" style={{ left: `${Math.min(97, Math.max(3, lean))}%` }} />
+            </div>
+            <div className="trade-bar-legend small">
+              <span><b>{money(out)}</b> given</span>
+              <span><b>{money(inn)}</b> received</span>
+            </div>
+            {unpriced > 0 && <p className="hint" style={{ marginBottom: 0 }}>{unpriced} {unpriced === 1 ? "card has" : "cards have"} no market value yet and {unpriced === 1 ? "counts" : "count"} as $0. Type a value on {unpriced === 1 ? "it" : "them"} to include {unpriced === 1 ? "it" : "them"}.</p>}
           </div>
-          <div className="trade-bar-legend small"><span>You give {money(out)}</span><span>You get {money(inn)}</span></div>
-          <h2>{verdict.title}</h2>
-          <p className="small muted" style={{ margin: 0 }}>{verdict.text}</p>
-          {unpriced > 0 && <p className="hint" style={{ marginBottom: 0 }}>{unpriced} {unpriced === 1 ? "card has" : "cards have"} no market value yet and {unpriced === 1 ? "counts" : "count"} as $0. Type a value on {unpriced === 1 ? "it" : "them"} to include {unpriced === 1 ? "it" : "them"}.</p>}
         </div>
       )}
       <p className="hint">Values are today&apos;s market prices for the condition or grade you pick (raw by printing and condition, slabs from recent graded sales). Nothing here changes your collection.</p>
