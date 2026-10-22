@@ -42,8 +42,12 @@ export default async function WatchesPage({ searchParams }) {
         <WatchPerformance watches={watches} listings={listings} plan={user.plan} />
       ) : (
         <>
-          <AlertChannels user={user} />
           <WatchManager
+            side={<AlertChannels user={{
+              email: user.email, alertEmail: user.alertEmail, alertDiscord: user.alertDiscord, alertSms: user.alertSms, phone: user.phone,
+              phoneVerifiedAt: Boolean(user.phoneVerifiedAt), discordConnected: Boolean(user.discordConnected),
+              plan: { watchAlertChannels: user.plan.watchAlertChannels },
+            }} />}
             watches={watches.map((w) => ({ ...w, createdAt: String(w.createdAt), lastCheckedAt: w.lastCheckedAt ? String(w.lastCheckedAt) : null, triggeredAt: w.triggeredAt ? String(w.triggeredAt) : null }))}
             products={products}
             plan={user.plan}

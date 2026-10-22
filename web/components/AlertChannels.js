@@ -1,42 +1,67 @@
-import Link from "next/link";
+"use client";
 
-/** "Alerts go to: ✉️ Email · 💬 Discord · 📱 Text" with what's on, what needs setting up, and a Change button. */
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toggleAlertChannel } from "@/app/app/actions";
+
+/** "Alerts go to": Email, Discord and Text as on/off switches, or a link to set one up (or unlock it). */
 export default function AlertChannels({ user }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
   const premium = user.plan.watchAlertChannels.includes("sms");
+  const [on, setOn] = useState({ email: user.alertEmail !== false, discord: Boolean(user.alertDiscord), sms: Boolean(user.alertSms) });
+
   const channels = [
-    {
-      key: "email", icon: "✉️", label: "Email",
-      state: user.alertEmail === false ? "off" : "on", note: user.alertEmail === false ? "off" : user.email,
-    },
+    { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
     {
       key: "discord", icon: "💬", label: "Discord",
-      ...(!premium ? { state: "locked", note: "Premium" }
-        : !user.discordConnected ? { state: "todo", note: "connect Discord", href: "/app/account#connections" }
-        : { state: user.alertDiscord ? "on" : "off", note: user.alertDiscord ? "DM from BoogieBot" : "off" }),
+      ...(!premium ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect", href: "/app/account#connections" }
+        : { state: "ready", note: "DM from BoogieBot" }),
     },
     {
       key: "sms", icon: "📱", label: "Text",
-      ...(!premium ? { state: "locked", note: "Premium" }
-        : !user.phoneVerifiedAt ? { state: "todo", note: "add your number", href: "/app/account#phone" }
-        : { state: user.alertSms ? "on" : "off", note: user.alertSms ? user.phone : "off" }),
+      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add number", href: "/app/account#phone" }
+        : { state: "ready", note: user.phone }),
     },
   ];
-  const on = channels.filter((c) => c.state === "on").length;
+  const any = channels.some((c) => c.state === "ready" && on[c.key]);
+
+  function flip(key) {
+    const next = !on[key];
+    setOn((o) => ({ ...o, [key]: next }));
+    start(async () => {
+      const res = await toggleAlertChannel(key, next);
+      if (!res?.ok) setOn((o) => ({ ...o, [key]: !next }));
+      router.refresh();
+    });
+  }
 
   return (
-    <div className={`alert-channels ${on ? "" : "none"}`}>
-      <span className="ac-title">Alerts go to</span>
+    <section className={`panel alert-channels ${any ? "" : "none"}`}>
+      <div className="ac-head">
+        <h2>Alerts go to</h2>
+        <Link href="/app/account#alerts" className="small">Settings</Link>
+      </div>
       <div className="ac-list">
         {channels.map((c) => (
-          <Link key={c.key} href={c.state === "locked" ? "/app/premium?from=alerts" : c.href || "/app/account#alerts"} className={`ac-chip ${c.state}`}
-            title={c.state === "on" ? `${c.label} alerts are on` : c.state === "off" ? `${c.label} alerts are off` : c.note}>
-            <span aria-hidden="true">{c.icon}</span> {c.label}
-            <span className="ac-note">{c.state === "on" ? "✓" : c.state === "locked" ? "🔒" : c.state === "todo" ? `· ${c.note}` : "· off"}</span>
-          </Link>
+          <div key={c.key} className={`ac-option ${c.state === "ready" && on[c.key] ? "on" : ""} ${c.state}`}>
+            <span className="ac-icon" aria-hidden="true">{c.icon}</span>
+            <span className="ac-text">
+              <b>{c.label}</b>
+              {c.note && <span className="small muted">{c.note}</span>}
+            </span>
+            {c.state === "ready" && (
+              <button type="button" role="switch" aria-checked={on[c.key]} aria-label={`${c.label} alerts`} className="ac-switch" disabled={pending} onClick={() => flip(c.key)}>
+                <i />
+              </button>
+            )}
+            {c.state === "todo" && <Link href={c.href} className="btn sm">{c.action}</Link>}
+            {c.state === "locked" && <Link href="/app/premium?from=alerts" className="ac-lock small">🔒 Premium</Link>}
+          </div>
         ))}
       </div>
-      <Link href="/app/account#alerts" className="btn sm">{on ? "Change" : "Turn alerts on"}</Link>
-      {!on && <div className="ac-warn">No channel is on, so you won&apos;t hear about these alerts.</div>}
-    </div>
+      {!any && <div className="ac-warn">Nothing is switched on, so you won&apos;t hear about these alerts.</div>}
+    </section>
   );
 }

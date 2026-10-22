@@ -125,7 +125,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   );
 }
 
-export default function WatchManager({ watches, products, plan, isDemo, owned = {}, listings = {} }) {
+export default function WatchManager({ watches, products, plan, isDemo, owned = {}, listings = {}, side = null }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
@@ -180,57 +180,60 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
     <>
       {message && <div className={`notice ${message.kind}`}>{message.text}</div>}
 
-      <div className="panel">
-        <h2>Add a price alert</h2>
-        {full ? (
-          <div className="notice warn" style={{ marginBottom: 0 }}>
-            You're using all {limit} price alerts. Remove one below to add another, or{" "}
-            <Link href="/app/premium?from=watches">upgrade to Premium</Link> for unlimited alerts.
-          </div>
-        ) : (
-          <>
-            <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }}>
-              <div>
-                <label className="sr-only" htmlFor="q">TCGplayer link or card name</label>
-                <input id="q" type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Paste a TCGplayer link, or search: Umbreon VMAX Evolving Skies" />
-                <div className="hint">
-                  {isDemo ? "Demo: try “Charizard”, “Umbreon”, “Evolving Skies”, or https://www.tcgplayer.com/product/517045" : "Cards and sealed products. Prices come from TCGplayer and update about once a day."}
-                </div>
-              </div>
-              <button className="btn" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>
-            </form>
-            {findError && <div className="notice bad" style={{ marginTop: 12 }}>{findError}</div>}
-            {results && results.length > 1 && !picked && (
-              <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-                {results.map((p) => (
-                  <button key={p.id} type="button" className="deal" style={{ display: "flex", gap: 12, alignItems: "center", cursor: "pointer", font: "inherit", color: "inherit" }}
-                    onClick={() => setPicked(p)}>
-                    <ProductThumb product={p} size={44} />
-                    <span style={{ textAlign: "left" }}>
-                      <b>{p.name}</b>
-                      <span className="small muted" style={{ display: "block" }}>{p.setName}{p.number ? ` · ${p.number}` : ""} · {p.type === "sealed" ? "Sealed" : p.language === "japanese" ? "Japanese card" : "Card"}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {picked && (
-              <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-                <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-                  <ProductThumb product={picked} size={72} />
-                  <div style={{ flex: 1, minWidth: 180 }}>
-                    <b>{picked.name}</b>
-                    <div className="small muted">{picked.setName}{picked.number ? ` · ${picked.number}` : ""} · <a href={picked.tcgplayerUrl} target="_blank" rel="noopener noreferrer">View on TCGplayer</a></div>
+      <div className="watch-top">
+        <div className="panel watch-add">
+          <h2>Add a price alert</h2>
+          {full ? (
+            <div className="notice warn" style={{ marginBottom: 0 }}>
+              You're using all {limit} price alerts. Remove one below to add another, or{" "}
+              <Link href="/app/premium?from=watches">upgrade to Premium</Link> for unlimited alerts.
+            </div>
+          ) : (
+            <>
+              <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }}>
+                <div>
+                  <label className="sr-only" htmlFor="q">TCGplayer link or card name</label>
+                  <input id="q" type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Paste a TCGplayer link, or search: Umbreon VMAX Evolving Skies" />
+                  <div className="hint">
+                    {isDemo ? "Demo: try “Charizard”, “Umbreon”, “Evolving Skies”, or https://www.tcgplayer.com/product/517045" : "Cards and sealed products. Prices come from TCGplayer and update about once a day."}
                   </div>
-                  <Sparkline points={picked.history} width={180} />
-                  <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>Change</button>
                 </div>
-                <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} />
-              </div>
-            )}
-          </>
-        )}
+                <button className="btn" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>
+              </form>
+              {findError && <div className="notice bad" style={{ marginTop: 12 }}>{findError}</div>}
+              {results && results.length > 1 && !picked && (
+                <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+                  {results.map((p) => (
+                    <button key={p.id} type="button" className="deal" style={{ display: "flex", gap: 12, alignItems: "center", cursor: "pointer", font: "inherit", color: "inherit" }}
+                      onClick={() => setPicked(p)}>
+                      <ProductThumb product={p} size={44} />
+                      <span style={{ textAlign: "left" }}>
+                        <b>{p.name}</b>
+                        <span className="small muted" style={{ display: "block" }}>{p.setName}{p.number ? ` · ${p.number}` : ""} · {p.type === "sealed" ? "Sealed" : p.language === "japanese" ? "Japanese card" : "Card"}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {picked && (
+                <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                    <ProductThumb product={picked} size={72} />
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <b>{picked.name}</b>
+                      <div className="small muted">{picked.setName}{picked.number ? ` · ${picked.number}` : ""} · <a href={picked.tcgplayerUrl} target="_blank" rel="noopener noreferrer">View on TCGplayer</a></div>
+                    </div>
+                    <Sparkline points={picked.history} width={180} />
+                    <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>Change</button>
+                  </div>
+                  <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {side}
       </div>
 
       <h2 style={{ fontSize: 17, margin: "24px 0 12px" }}>

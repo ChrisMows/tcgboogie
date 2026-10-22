@@ -156,6 +156,13 @@ export async function updatePrefs(userId, prefs) {
   await db.update(users).set(clean).where(eq(users.id, userId));
 }
 
+/** Turn one alert channel on or off ("alertEmail", "alertDiscord" or "alertSms"), leaving the other settings alone. */
+export async function setAlertChannel(userId, field, on) {
+  if (!["alertEmail", "alertDiscord", "alertSms"].includes(field)) return;
+  if (isDemo(userId)) { demo().prefs[field] = Boolean(on); return; }
+  await db.update(users).set({ [field]: Boolean(on) }).where(eq(users.id, userId));
+}
+
 export async function updateName(userId, name) {
   const clean = String(name || "").trim().slice(0, 60);
   if (isDemo(userId)) return;
