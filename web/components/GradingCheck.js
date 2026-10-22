@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { GRADING_COMPANIES, gradingMath } from "@/lib/grading";
+import { DEFAULT_SHIPPING, GRADING_COMPANIES, gradingMath } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const FREE_ROWS = 3;
 const GRADERS = Object.keys(GRADING_COMPANIES);
-const cheapest = (g) => GRADING_COMPANIES[g].tiers[0][1];
 
-const run = (candidates, grader, cost) => candidates.map((c) => {
-  const m = gradingMath(c, cost, grader);
+const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
+const run = (candidates, grader, tier, opts) => candidates.map((c) => {
+  const m = gradingMath(c, grader, tier, opts);
   return m && { ...c, ...m };
 }).filter(Boolean).sort((a, b) => b.profit10 - a.profit10);
 
@@ -33,6 +33,7 @@ function Tile({ c, dim }) {
           <span><i>{top}</i>{money(c.top)}</span>
           {c.next !== null && <span className="gr-nine"><i>{next}</i>{money(c.next)}</span>}
         </div>
+        <span className="small muted gr-cost-note">{c.tier ? `${c.tier.name} ${fee(c.tier.fee)}` : "Your price"} + shipping{c.bumped ? ` · its value needs ${c.tier.name}` : ""}</span>
         {c.verdict === "safe" && <span className="badge good" title={`Even a ${next} covers the cost`}>✓ Safe bet</span>}
         {c.verdict === "needs10" && <span className="badge warn" title={`Only pays off if it gets a ${top}`}>Needs a {co.top}</span>}
         {c.verdict === "skip" && <span className="badge">Not worth it</span>}
@@ -54,21 +55,24 @@ function AddPrompt({ children }) {
 /** "Worth grading?": which raw Near Mint cards you own would pay off graded, at the grader and cost you pick. */
 export default function GradingCheck({ candidates, rawCards, ownedCards, full }) {
   const [grader, setGrader] = useState("PSA");
-  const [cost, setCost] = useState(cheapest("PSA"));
+  const [tier, setTier] = useState(0); // the cheapest service level
+  const [own, setOwn] = useState(null); // the member's own fee per card, instead of a service level
+  const [shipping, setShipping] = useState(DEFAULT_SHIPPING);
   const [showSkip, setShowSkip] = useState(false);
   const co = GRADING_COMPANIES[grader];
-  const all = useMemo(() => run(candidates, grader, cost), [candidates, grader, cost]);
-  // How many cards each grader would be worth it for (other graders at their cheapest tier), shown on the picker.
+  const all = useMemo(() => run(candidates, grader, tier, { own, shipping }), [candidates, grader, tier, own, shipping]);
+  // How many cards each grader would be worth it for (other graders at their cheapest level), shown on the picker.
   const counts = useMemo(() => Object.fromEntries(GRADERS.map((g) => [g,
-    run(candidates, g, g === grader ? cost : cheapest(g)).filter((c) => c.verdict !== "skip").length])), [candidates, grader, cost]);
+    run(candidates, g, g === grader ? tier : 0, g === grader ? { own, shipping } : { shipping }).filter((c) => c.verdict !== "skip").length])), [candidates, grader, tier, own, shipping]);
   const worth = all.filter((c) => c.verdict !== "skip");
   const skip = all.filter((c) => c.verdict === "skip");
   const shown = full ? worth : worth.slice(0, FREE_ROWS);
   const best = worth.reduce((s, c) => s + c.profit10 * c.copies, 0);
-  const custom = !co.tiers.some(([, v]) => v === cost);
+  const level = own !== null ? null : co.tiers[tier];
+  const costLabel = own !== null ? fee(own) : fee(level.fee);
   const unchecked = rawCards - all.length;
   const elsewhere = GRADERS.filter((g) => g !== grader && counts[g] > 0);
-  const pick = (g) => { setGrader(g); setCost(cheapest(g)); setShowSkip(false); };
+  const pick = (g) => { setGrader(g); setTier(0); setOwn(null); setShowSkip(false); };
 
   if (rawCards === 0) {
     return (
@@ -95,7 +99,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
             <>
               <div className="gr-hero-num">None yet</div>
               <div className="muted">
-                {all.length ? `We checked ${all.length} of your raw ${all.length === 1 ? "card" : "cards"}: none would pay off with ${grader} at ${money(cost)} a card.`
+                {all.length ? `We checked ${all.length} of your raw ${all.length === 1 ? "card" : "cards"}: none would pay off with ${grader} at ${costLabel} a card plus shipping.`
                   : `None of your raw Near Mint cards have enough recent ${grader} sales to check yet.`}
                 {elsewhere.length > 0 && <> Try {elsewhere.map((g, i) => <span key={g}>{i ? " or " : ""}<button type="button" className="link-btn" onClick={() => pick(g)}>{g}</button></span>)}.</>}
               </div>
@@ -114,18 +118,28 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
             </div>
           </div>
           <div className="gr-cost">
-            <div className="small muted">{grader} cost per card, with shipping</div>
             <div className="gr-cost-row">
-              <div className="seg" role="group" aria-label="Grading cost per card">
-                {co.tiers.map(([label, v]) => (
-                  <button key={label} type="button" className={cost === v ? "on" : ""} onClick={() => setCost(v)}>
-                    {label} <span className="muted">${v}</span>
-                  </button>
-                ))}
-              </div>
-              <label className={`gr-cost-custom ${custom ? "on" : ""}`}>
-                <span className="muted">$</span>
-                <input type="number" min="0" max="999" step="1" value={cost} onChange={(e) => setCost(Math.max(0, Number(e.target.value) || 0))} aria-label="Your own cost per card" />
+              <label className="gr-field">
+                <span className="small muted">{grader} service level</span>
+                <select value={own !== null ? "own" : String(tier)} onChange={(e) => {
+                  if (e.target.value === "own") setOwn(level ? level.fee : 0);
+                  else { setOwn(null); setTier(Number(e.target.value)); }
+                }}>
+                  {co.tiers.map((t, i) => (
+                    <option key={t.name} value={i}>{t.name} · {fee(t.fee)}{t.days ? ` · ~${t.days} days` : ""}{t.max ? ` · cards up to $${t.max.toLocaleString("en-US")}` : ""}{t.min ? ` · ${t.min}-card minimum` : ""}</option>
+                  ))}
+                  <option value="own">My own price…</option>
+                </select>
+              </label>
+              {own !== null && (
+                <label className="gr-field gr-small">
+                  <span className="small muted">Fee per card</span>
+                  <span className="gr-money"><span className="muted">$</span><input type="number" min="0" max="9999" step="1" value={own} onChange={(e) => setOwn(Math.max(0, Number(e.target.value) || 0))} /></span>
+                </label>
+              )}
+              <label className="gr-field gr-small">
+                <span className="small muted">Shipping per card</span>
+                <span className="gr-money"><span className="muted">$</span><input type="number" min="0" max="999" step="1" value={shipping} onChange={(e) => setShipping(Math.max(0, Number(e.target.value) || 0))} /></span>
               </label>
             </div>
           </div>
@@ -134,7 +148,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       {all.length > 0 && (
         <div className="gr-legend small muted" aria-hidden="true">
-          <span className="gr-eq"><b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{money(cost)} grading</b> = <b className="up">profit</b></span>
+          <span className="gr-eq"><b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{costLabel} grading + shipping</b> = <b className="up">profit</b></span>
           <span><span className="badge good">✓ Safe bet</span> a {co.next} still pays</span>
           <span><span className="badge warn">Needs a {co.top}</span> riskier</span>
         </div>
@@ -171,7 +185,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       <p className="hint">
         {unchecked > 0 && <>{unchecked} of your raw cards {unchecked === 1 ? "has" : "have"} too few recent {grader} sales to check. </>}
-        Costs are rough, so type your own if you know it. Prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
+        Grading prices are the graders&apos; published prices as of October 2026; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
       </p>
     </>
   );

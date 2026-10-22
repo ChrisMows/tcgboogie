@@ -149,7 +149,7 @@ export default async function CardPage({ params, searchParams }) {
     // The grader that pays best at its cheapest tier.
     const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
     if (!c) return null;
-    const options = Object.entries(GRADING_COMPANIES).map(([g, co]) => ({ cost: co.tiers[0][1], grade: co.top, ...gradingMath(c, co.tiers[0][1], g) }))
+    const options = Object.entries(GRADING_COMPANIES).map(([g, co]) => ({ grade: co.top, ...gradingMath(c, g, 0) }))
       .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
     return options[0] || null;
   })();
@@ -200,7 +200,7 @@ export default async function CardPage({ params, searchParams }) {
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
           {gradeIdea && gradeIdea.verdict !== "skip" && (
             <Link href="/app/collection/grading" className="grade-idea">
-              💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after ${gradeIdea.cost} grading.
+              💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
               {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
             </Link>
           )}

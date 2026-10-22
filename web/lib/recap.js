@@ -48,7 +48,7 @@ export async function runRecaps(now = new Date()) {
       const daily = user.emailRecap === "daily" && planFor(effectiveTier(user)).emailRecap === "daily";
       const email = await buildRecap(user, daily ? 1 : 7, deals, now);
       if (!email) { out.skipped++; continue; }
-      await sendEmail(user.email, email);
+      await sendEmail(user.email, email, { userId: user.id, kind: "recap" });
       await db.insert(alertLog).values({ userId: user.id, kind: "recap", channel: "email", title: email.subject, ok: true });
       out.sent++;
     } catch (e) {
@@ -66,7 +66,7 @@ export async function sendRecapPreview(user) {
   const daily = user.emailRecap === "daily" && planFor(effectiveTier(user)).emailRecap === "daily";
   const email = await buildRecap(user, daily ? 1 : 7, await recentDeals({ days: 7, limit: 1000 }), new Date());
   if (!email) return "empty";
-  await sendEmail(user.email, { ...email, subject: `[Preview] ${email.subject}` });
+  await sendEmail(user.email, { ...email, subject: `[Preview] ${email.subject}` }, { userId: user.id, kind: "recap" });
   return "sent";
 }
 

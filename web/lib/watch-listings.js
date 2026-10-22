@@ -62,7 +62,7 @@ export async function dispatchWatchListings() {
       await attempt("email", () => sendEmail(user.email, {
         subject: title, heading: title, lines, button: { label: "Open the listing on eBay", url: link.href },
         footer: `${link.affiliate ? "eBay links may earn us a commission. " : ""}Manage price alerts: ${SITE}/app/watches`,
-      }));
+      }, { userId: user.id, kind: "alerts" }));
     }
     if (ready.discord && discordIds[user.id] && user.alertDiscord && allowed.includes("discord")) {
       await attempt("discord", () => sendDiscordDM(discordIds[user.id], { title, url: link.href, description: lines.join("\n") }));

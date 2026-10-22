@@ -88,7 +88,7 @@ async function alertMember(user, discordId, risers, pct, ready) {
   if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
     await attempt("email", () => sendEmail(user.email, risers.length === 1
       ? { subject: title, heading: title, lines: [lineOf(top), "It could be a good time to sell."], button: { label: "Open the card", url: cardUrl(top.p) }, footer }
-      : { subject: title, heading: title, items: risers.map((x) => ({ text: lineOf(x), url: cardUrl(x.p) })), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }));
+      : { subject: title, heading: title, items: risers.map((x) => ({ text: lineOf(x), url: cardUrl(x.p) })), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }, { userId: user.id, kind: "alerts" }));
   }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {

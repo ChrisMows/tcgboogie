@@ -104,7 +104,7 @@ async function notify(user, discordId, w, price, ready) {
       lines: [`${w.name}${w.setName ? ` · ${w.setName}` : ""}${w.number ? ` · ${w.number}` : ""}`, `${what} · TCGplayer ${w.priceType === "low" ? "lowest listing" : "market price"}`, line],
       button: { label: "Open the card", url: cardUrl },
       footer: `${quiet} Manage alerts: ${SITE}/app/watches`,
-    }));
+    }, { userId: user.id, kind: "alerts" }));
   }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {

@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 
 // Sending alerts. Each channel switches on when its settings exist (Hostinger environment variables):
 //   Email:   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM   (the tcgboogie.com mailbox)
@@ -52,8 +53,11 @@ async function countEmail() {
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-/** A branded email: heading, a few lines, an optional list of linked items (bundled deals), one button. */
-export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }) {
+/**
+ * A branded email: heading, a few lines, an optional list of linked items (bundled deals), one button.
+ * unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header.
+ */
+export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }, unsub = null) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
   const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || ""].join("\n").trim();
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b0e12;color:#f4f5ef;border-radius:14px">
@@ -64,15 +68,17 @@ export async function sendEmail(to, { subject, heading, lines = [], items = [], 
     ${button ? `<p style="margin:20px 0"><a href="${esc(button.url)}" style="display:inline-block;background:#d3ff66;color:#15200c;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button.label)}</a></p>` : ""}
     ${footer ? `<p style="color:#8f9aa9;font-size:12px;margin-top:22px">${esc(footer)}</p>` : ""}
   </div>`;
-  // Every alert email can be turned off: a link in the footer, and the standard header mail apps show as "Unsubscribe".
+  // Every member email can be turned off in one click: a link in the footer, and the standard headers mail apps show
+  // as "Unsubscribe" (RFC 8058 one-click). Without a member (e.g. a test) the link opens Settings instead.
   const site = process.env.AUTH_URL || "https://tcgboogie.com";
-  const off = `${site}/app/account#alerts`;
+  const off = unsub ? unsubscribeUrl(unsub.userId, unsub.kind) : `${site}/app/account#alerts`;
+  const offLabel = unsub ? `Unsubscribe from ${KINDS[unsub.kind]}` : "Turn off email alerts";
   const fullText = `${text}
 
-Turn off email alerts: ${off}`;
-  const fullHtml = html.replace(/<\/div>\s*$/, `<p style="color:#8f9aa9;font-size:12px;margin-top:10px">Don't want these emails? <a href="${esc(off)}" style="color:#8f9aa9">Turn off email alerts</a>.</p></div>`);
-  await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text: fullText, html: fullHtml,
-    headers: { "List-Unsubscribe": `<${off}>, <mailto:support@tcgboogie.com?subject=unsubscribe>` } });
+${offLabel}: ${off}`;
+  const fullHtml = html.replace(/<\/div>\s*$/, `<p style="color:#8f9aa9;font-size:12px;margin-top:10px">Don't want these emails? <a href="${esc(off)}" style="color:#8f9aa9">${esc(offLabel)}</a>.</p></div>`);
+  const headers = unsub ? { "List-Unsubscribe": `<${off}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : { "List-Unsubscribe": `<${off}>` };
+  await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text: fullText, html: fullHtml, headers });
   void countEmail();
 }
 

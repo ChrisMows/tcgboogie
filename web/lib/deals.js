@@ -251,14 +251,14 @@ async function alertMember(user, discordId, items, ready, counts) {
     await send("email", email, () => sendEmail(user.email, {
       subject: titleOf(d), heading: titleOf(d), lines: [...linesOf(d, why), "See recent eBay sales and open the listing from the deal page."],
       button: { label: "See the deal", url: dealUrlOf(d) }, footer: `Manage your filters: ${SITE}/app/deals`,
-    }));
+    }, { userId: user.id, kind: "alerts" }));
   } else if (email.length > 1) {
     const subject = `⚡ ${email.length} new deals for you, up to ${Math.max(...email.map((x) => Math.round(x.deal.discountPct)))}% below`;
     await send("email", email, () => sendEmail(user.email, {
       subject, heading: subject,
       items: email.map(({ deal: d }) => ({ text: `${d.name} ${gradeOf(d)}: ${money(d.total)}, ${Math.round(d.discountPct)}% below ${money(d.marketValue)}, ~${d.minutesLeft} min left${d.photoCheck === "match" ? " · ✓ photo checked" : ""}`, url: dealUrlOf(d) })),
       button: { label: "See all on your Deals page", url: `${SITE}/app/deals` }, footer: `Manage your filters: ${SITE}/app/deals`,
-    }));
+    }, { userId: user.id, kind: "alerts" }));
   }
 
   for (const x of pick("discord", ready.discord && discordId && user.alertDiscord)) {
