@@ -391,6 +391,21 @@ const numHead = (s) => numBare(s).split("/")[0].replace(/^0+(?=\w)/, "");
 const NAME_SKIP = new Set(["ex", "gx", "v", "the", "of"]);
 const nameWords = (s) => String(s || "").toLowerCase().replace(/\(.*?\)|\s-\s.*$/g, " ").split(/[^a-z0-9']+/).filter((w) => w.length > 1 && !NAME_SKIP.has(w));
 
+/** Edit distance between two short words (for typos like "nagandel" -> "naganadel"). */
+function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+/** A typed word matches a name word: the same, the start of it (still typing), or a small typo in a longer word. */
+const wordMatches = (typed, word) => typed === word || word.startsWith(typed)
+  || (typed.length >= 5 && editDistance(typed, word) <= (typed.length >= 8 ? 2 : 1));
+
 /**
  * How well a product matches what was typed: the number counts most (exact, then the part before the slash, then a
  * number still being typed), then how many of the name's words it has. A card with the right number but another
@@ -399,7 +414,7 @@ const nameWords = (s) => String(s || "").toLowerCase().replace(/\(.*?\)|\s-\s.*$
 function matchScore(p, { name, number }) {
   const want = nameWords(name);
   const have = new Set(nameWords(p.name));
-  const nameScore = want.length ? want.filter((w) => have.has(w) || [...have].some((h) => h.startsWith(w))).length / want.length : 0;
+  const nameScore = want.length ? want.filter((w) => [...have].some((h) => wordMatches(w, h))).length / want.length : 0;
   let numScore = 0;
   if (number && p.number) {
     if (number.includes("/") && numBare(p.number) === numBare(number)) numScore = 3;
@@ -456,8 +471,13 @@ export async function searchProducts(q) {
     const k = `${p.id}:${p.language || "english"}`;
     return seen.has(k) ? false : seen.add(k);
   });
-  // Best match first; otherwise keep the service's order (English before Japanese for the same score).
-  return all.map((p, i) => ({ p, i, s: matchScore(p, parsed) })).sort((x, y) => y.s - x.s || x.i - y.i).map((x) => x.p).slice(0, 24);
+  // Best match first. Equal matches alternate English and Japanese (each in the service's order), so both
+  // languages show on the first page instead of every English result coming first.
+  const pos = { english: 0, japanese: 0 };
+  return all.map((p) => {
+    const lang = p.language === "japanese" ? "japanese" : "english";
+    return { p, s: matchScore(p, parsed), at: pos[lang]++, jp: lang === "japanese" ? 1 : 0 };
+  }).sort((x, y) => y.s - x.s || x.at - y.at || x.jp - y.jp).map((x) => x.p).slice(0, 24);
 }
 
 /**
