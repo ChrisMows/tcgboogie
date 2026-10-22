@@ -1,13 +1,9 @@
-import { setLabel } from "@/lib/sets";
 import Link from "next/link";
 import AddCards from "@/components/AddCards";
-import CardThumb from "@/components/CardThumb";
-import CollectionAlerts from "@/components/CollectionAlerts";
-import LockedButton from "@/components/LockedButton";
+import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
-import ValueChart from "@/components/ValueChart";
-import { catalogLive, listSets } from "@/lib/catalog";
-import { chartSeries, itemLabel, money, ownedCounts, pct, unitValue } from "@/lib/collection";
+import { catalogLive } from "@/lib/catalog";
+import { chartSeries, itemLabel, ownedCounts, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -21,42 +17,25 @@ export default async function CollectionPage({ searchParams }) {
   const adding = sp?.add === "1";
   const c = await loadCollection(user);
   const watches = await store.listWatches(user.id);
-  const sets = await listSets().catch(() => []);
   const { summary } = c;
 
-
-  // Sets you've started, by how much of each you own (set sizes come from the set list, so this costs nothing).
-  const bySet = {};
-  for (const it of c.owned) if (it.productType === "card") (bySet[it.setName] ||= new Set()).add(it.productId);
-  const started = Object.entries(bySet).map(([name, ids]) => {
-    const s = sets.find((x) => x.name === name);
-    const total = s?.total || s?.printedTotal || null;
-    return { name, have: ids.size, total, pct: total ? Math.min(1, ids.size / total) : null };
-  }).sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0)).slice(0, 4);
-
   const movers = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
-    .sort((a, b) => Math.abs(b.change7 * unitValue(b) * b.quantity) - Math.abs(a.change7 * unitValue(a) * a.quantity)).slice(0, 4);
+    .sort((a, b) => Math.abs(b.change7 * unitValue(b) * b.quantity) - Math.abs(a.change7 * unitValue(a) * a.quantity)).slice(0, 5)
+    .map((it) => ({ id: it.id, productId: it.productId, image: it.image, number: it.number, productType: it.productType,
+      name: it.name.replace(/\s*\(.*\)$/, ""), label: itemLabel(it), change7: it.change7 }));
   const list = tab === "wishlist" ? c.wishlist : c.owned;
-  const wishValue = c.wishlist.reduce((s, it) => s + (unitValue(it) ?? 0), 0);
+
+  // This week's change: today's total against the last snapshot from at least 7 days ago.
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const then = [...c.snapshots].filter((p) => String(p.day) <= weekAgo).pop();
+  const week = then && then.value > 0 ? { change: summary.value - then.value, pct: (summary.value - then.value) / then.value } : null;
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Collection</h1>
-          <p>What you own, what it&apos;s worth, updated daily.</p>
-        </div>
-        <div className="head-actions">
-          <Link href={adding ? "/app/collection" : "/app/collection?add=1"} className="btn primary">{adding ? "Done adding" : "+ Add cards"}</Link>
-          <Link href="/app/collection/sets" className="btn">Browse sets</Link>
-          <Link href="/app/collection/grading" className="btn" title="Which of your raw cards are worth grading">Grading check</Link>
-          {user.plan.collectionExport
-            ? <a href="/app/collection/export" className="btn" download>Export CSV</a>
-            : <LockedButton label="Export CSV" title="CSV export is part of Premium" upgrade="export">
-                Download your whole collection as a spreadsheet: every copy, condition or grade, what you paid and what it&apos;s worth today.
-              </LockedButton>}
-        </div>
-      </div>
+      <h1 className="sr-only">Collection</h1>
+      <CollectionHero summary={summary} week={week} adding={adding} exportAllowed={!!user.plan.collectionExport} movers={movers}
+        chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
+        hasCards={c.owned.length > 0} />
 
       {adding && (
         <div className="panel">
@@ -68,47 +47,6 @@ export default async function CollectionPage({ searchParams }) {
             <Link href="/app/collection/import">Import a CSV</Link>.
           </p>
         </div>
-      )}
-
-      <CollectionAlerts plan={user.plan} prefs={c.prefs} />
-
-      {c.owned.length > 0 && (
-        <>
-          <div className="panel coll-chart">
-            <ValueChart points={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} profit={summary} hideable />
-            {summary.unpriced > 0 && <p className="hint" style={{ marginBottom: 0 }}>{summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market value yet, so {summary.unpriced === 1 ? "it isn't" : "they aren't"} counted. You can set your own value from Edit.</p>}
-          </div>
-          <div className="coll-cards">
-            <div className="panel" style={{ marginBottom: 0 }}>
-              <h2>Biggest movers · 7 days</h2>
-              {movers.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No big moves this week.</p> : movers.map((it) => (
-                <Link key={it.id} href={`/app/cards/${it.productId}`} className="mini-row">
-                  <CardThumb item={it} width={30} />
-                  <span className="mini-text"><b>{it.name.replace(/\s*\(.*\)$/, "")}</b><span className="small muted">{itemLabel(it)}</span></span>
-                  <span className={`small ${it.change7 >= 0 ? "up" : "down"}`}>{it.change7 >= 0 ? "▲" : "▼"} {pct(it.change7)}</span>
-                </Link>
-              ))}
-            </div>
-            <div className="panel" style={{ marginBottom: 0 }}>
-              <h2>Your sets</h2>
-              {started.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Add a card to start tracking a set.</p> : started.map((s) => (
-                <Link key={s.name} href={`/app/collection/sets/${encodeURIComponent(s.name)}`} className="set-progress">
-                  <span className="row" style={{ justifyContent: "space-between" }}><b style={{ flex: "none" }}>{setLabel(s.name).name}</b><span className="small muted" style={{ flex: "none" }}>{s.have}{s.total ? ` / ${s.total}` : ""}</span></span>
-                  <span className="bar"><i style={{ width: `${Math.max(2, (s.pct ?? 0) * 100)}%` }} /></span>
-                </Link>
-              ))}
-              <Link href="/app/collection/sets" className="small">All sets →</Link>
-            </div>
-            <div className="panel" style={{ marginBottom: 0 }}>
-              <h2>Wishlist</h2>
-              <p className="small muted" style={{ margin: "0 0 8px" }}>
-                {c.wishlist.length === 0 ? "Nothing on it yet. Tap ♡ Wishlist on any card page."
-                  : `${c.wishlist.length} ${c.wishlist.length === 1 ? "card" : "cards"} · ${money(wishValue, 0)} to get them all`}
-              </p>
-              <Link href="/app/collection?tab=wishlist" className="small">Open wishlist →</Link>
-            </div>
-          </div>
-        </>
       )}
 
       <div className="tabs-row" role="tablist">
