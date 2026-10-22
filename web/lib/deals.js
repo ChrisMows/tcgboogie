@@ -1,4 +1,5 @@
 import "server-only";
+import { refreshFeatures } from "@/lib/features";
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { db, schema } from "@/lib/db";
@@ -53,8 +54,7 @@ export async function recentDeals({ days = 7, limit = 300 } = {}) {
 export async function dealsFor(user) {
   const all = user?.demo ? [] : await recentDeals();
   if (!all.length) return { deals: SAMPLE_DEALS, sample: true };
-  const premium = user.tier === "premium";
-  return { deals: premium ? all : all.filter((d) => d.ended), sample: false };
+  return { deals: user.plan.liveFeed ? all : all.filter((d) => d.ended), sample: false };
 }
 
 /** The deals we alerted this member about, newest first (Premium "History"). */
@@ -72,6 +72,7 @@ export async function sentDeals(userId, limit = 60) {
  * The bot asks for this before its checks, so it never spends eBay calls or price credits on deals nobody gets.
  */
 export async function scanSettings() {
+  await refreshFeatures(); // Admin → Features choices
   if (!db) return { profiles: 0 };
   const rows = await db.select({ filters: profiles.filters, user: users }).from(profiles)
     .innerJoin(users, eq(users.id, profiles.userId)).where(eq(profiles.active, true));
@@ -104,6 +105,7 @@ const PARALLEL = 5; // members alerted at the same time
  * found in the same check arrive bundled), and members are alerted in parallel so nobody waits on anyone else.
  */
 export async function dispatchDeals() {
+  await refreshFeatures(); // Admin → Features choices
   const out = { deals: 0, members: 0, sent: 0, failed: 0, capped: 0 };
   if (!db) return out;
   const claimed = await db.update(deals).set({ dispatchedAt: new Date() })
@@ -115,7 +117,7 @@ export async function dispatchDeals() {
 
   const rows = await db.select({ profile: profiles, user: users }).from(profiles)
     .innerJoin(users, eq(users.id, profiles.userId)).where(eq(profiles.active, true));
-  const live = rows.filter((r) => effectiveTier(r.user) === "premium"); // Free members see deals after they end
+  const live = rows.filter((r) => planFor(effectiveTier(r.user)).liveFeed); // others see deals after they end (Admin → Features)
   const collectors = await setCollectors();
   if (!live.length && !collectors.length) return out;
   const userIds = [...new Set([...live.map((r) => r.user.id), ...collectors.map((c) => c.user.id)])];
@@ -178,7 +180,7 @@ export async function dispatchDeals() {
  */
 async function setCollectors() {
   const people = (await db.select().from(users).where(sql`(${users.collectionPrefs}->>'setDeals')::boolean is true`))
-    .filter((u) => effectiveTier(u) === "premium");
+    .filter((u) => planFor(effectiveTier(u)).collectionAlerts);
   if (!people.length) return [];
   const items = await db.select({ userId: collectionItems.userId, list: collectionItems.list, productId: collectionItems.productId,
     productType: collectionItems.productType, setName: collectionItems.setName })

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FeatureLocked from "@/components/FeatureLocked";
 import TradeAnalyzer from "@/components/TradeAnalyzer";
 import { catalogLive } from "@/lib/catalog";
 import { itemLabel, unitValue } from "@/lib/collection";
@@ -13,6 +14,9 @@ const lean = (p) => p && { id: p.id, type: p.type, name: p.name, setName: p.setN
 
 export default async function TradePage() {
   const user = await requireUser("/app/collection/trade");
+  if (!user.plan.tradeAnalyzer) {
+    return <><div className="crumbs"><Link href="/app/collection">Collection</Link> / Trade analyzer</div><FeatureLocked name="The trade analyzer" flag="tradeAnalyzer" from="trade" /></>;
+  }
   const c = await loadCollection(user);
   const mine = c.owned.map((it) => ({
     id: it.id, productId: it.productId, name: it.name, setName: it.setName, number: it.number, image: it.image, productType: it.productType,

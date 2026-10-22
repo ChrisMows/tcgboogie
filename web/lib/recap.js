@@ -1,4 +1,5 @@
 import "server-only";
+import { refreshFeatures } from "@/lib/features";
 import { and, desc, eq, gt, inArray, lte } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { change, unitValue } from "@/lib/collection";
@@ -21,6 +22,7 @@ const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
 const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
 
 export async function runRecaps(now = new Date()) {
+  await refreshFeatures(); // Admin → Features choices
   const out = { due: 0, sent: 0, skipped: 0, failed: 0 };
   if (!db || !channelsReady().email) return out;
   const people = (await db.select().from(users).where(inArray(users.emailRecap, ["weekly", "daily"]))).filter((u) => u.email);

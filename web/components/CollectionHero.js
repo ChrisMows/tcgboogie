@@ -14,7 +14,7 @@ const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
  * Collection page top: the total, front and center, then a row of round actions. Movers, alerts and the value
  * chart open in a panel right under the row (one at a time), so the page itself stays simple.
  */
-export default function CollectionHero({ summary, week, adding, exportAllowed, movers, chart, historyDays, plan, prefs, hasCards }) {
+export default function CollectionHero({ summary, week, adding, exportAllowed, tradeAllowed = true, movers, chart, historyDays, plan, prefs, hasCards }) {
   const [open, setOpen] = useState(null); // "movers" | "alerts" | "chart"
   const toggle = (k) => setOpen((o) => (o === k ? null : k));
 
@@ -23,7 +23,7 @@ export default function CollectionHero({ summary, week, adding, exportAllowed, m
     { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
     { key: "movers", label: "Movers", icon: "📈", panel: true },
     { key: "grading", label: "Worth Grading?", icon: "💎", href: "/app/collection/grading" },
-    { key: "trade", label: "Trade", icon: "⇄", href: "/app/collection/trade" },
+    { key: "trade", label: "Trade", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
     { key: "alerts", label: "Alerts", icon: "🔔", panel: true },
     { key: "chart", label: "Chart", icon: "📊", panel: true },
     exportAllowed

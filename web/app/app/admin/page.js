@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
+import AdminFeatures from "@/components/AdminFeatures";
+import { currentFeatures } from "@/lib/features";
+import { FEATURES } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
@@ -17,7 +20,7 @@ const DONE = {
   missing: ["bad", "That member no longer exists."],
 };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
-const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number" };
+const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features" };
 
 function PlanBadge({ m, compact }) {
   if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">Premium</span> : <span className="badge">Free</span>;
@@ -28,7 +31,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = ["members", "log"].includes(sp?.tab) || sp?.user ? (sp?.tab === "log" ? "log" : "members") : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -42,11 +45,14 @@ export default async function Admin({ searchParams }) {
       <div className="tabs-row" role="tablist">
         <Link href="/app/admin" className={tab === "status" ? "on" : ""} role="tab" aria-selected={tab === "status"}>Status</Link>
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
+        <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Features</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
+      {tab === "features" && <AdminFeatures features={FEATURES.map(({ key, group, label, help }) => ({ key, group, label, help: help || null }))}
+        choices={await currentFeatures()} saved={sp?.saved} />}
     </>
   );
 }
@@ -267,8 +273,8 @@ async function Log() {
                 <tr key={l.id}>
                   <td className="muted">{ago(l.at)}</td>
                   <td>{l.adminEmail}</td>
-                  <td><Link href={`/app/admin?tab=members&user=${l.targetUserId}#member`}>{l.targetEmail}</Link></td>
-                  <td>{ACTIONS[l.action] || l.action}{l.details?.until ? ` (${l.details.until === "unlimited" ? "unlimited" : `to ${fmtDate(l.details.until)}`})` : ""}{l.details?.tier ? ` → ${l.details.tier}` : ""}</td>
+                  <td>{l.targetUserId ? <Link href={`/app/admin?tab=members&user=${l.targetUserId}#member`}>{l.targetEmail}</Link> : <span className="muted">—</span>}</td>
+                  <td>{ACTIONS[l.action] || l.action}{l.details?.until ? ` (${l.details.until === "unlimited" ? "unlimited" : `to ${fmtDate(l.details.until)}`})` : ""}{l.details?.tier ? ` → ${l.details.tier}` : ""}{l.details?.changed ? `: ${l.details.changed.join("; ")}` : ""}</td>
                 </tr>
               ))}
             </tbody>

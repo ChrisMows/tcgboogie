@@ -41,7 +41,7 @@ export default async function CollectionPage({ searchParams }) {
   return (
     <>
       <h1 className="sr-only">Collection</h1>
-      <CollectionHero summary={summary} week={week} adding={adding} exportAllowed={!!user.plan.collectionExport} movers={movers}
+      <CollectionHero summary={summary} week={week} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer} movers={movers}
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
 
@@ -70,8 +70,8 @@ export default async function CollectionPage({ searchParams }) {
           <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus />
           <p className="hint" style={{ marginBottom: 0 }}>
             Adding a lot from one set? <Link href="/app/collection/sets">Open the set</Link> and tap every card you own. Or{" "}
-            <Link href="/app/collection/photo">📷 snap a photo</Link> of your cards and we&apos;ll find them for you. Coming from another app?{" "}
-            <Link href="/app/collection/import">Import a CSV</Link>.
+            <Link href="/app/collection/photo">📷 snap a photo</Link> of your cards and we&apos;ll find them for you. {user.plan.collectionImport && <>Coming from another app?{" "}
+            <Link href="/app/collection/import">Import a CSV</Link>.</>}
           </p>
         </div>
       )}

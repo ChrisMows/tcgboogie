@@ -77,10 +77,10 @@ export async function savePreferences(formData) {
 /** The Price alerts page's on/off switches for each alert channel. */
 export async function toggleAlertChannel(channel, on) {
   const user = await requireUser();
-  const premium = user.plan.watchAlertChannels.includes("sms");
+  const can = (c) => user.plan.watchAlertChannels.includes(c);
   if (channel === "email") await store.setAlertChannel(user.id, "alertEmail", on);
-  else if (channel === "discord" && premium && user.discordConnected) await store.setAlertChannel(user.id, "alertDiscord", on);
-  else if (channel === "sms" && premium && user.phoneVerifiedAt) await store.setAlertChannel(user.id, "alertSms", on);
+  else if (channel === "discord" && can("discord") && user.discordConnected) await store.setAlertChannel(user.id, "alertDiscord", on);
+  else if (channel === "sms" && can("sms") && user.phoneVerifiedAt) await store.setAlertChannel(user.id, "alertSms", on);
   else return { ok: false };
   revalidatePath("/app", "layout");
   return { ok: true };

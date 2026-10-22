@@ -16,6 +16,12 @@ import { getCurrentUser } from "@/lib/session";
 const { users, accounts, collectionItems, priceWatches, profiles, alertLog, adminLog, appSettings } = schema;
 
 /** Admin pages and actions: the signed-in member must be an admin (ADMIN_EMAILS), else the page doesn't exist. */
+/** An admin change that isn't about one member (e.g. Features), for the Admin log. */
+export async function logAdminAction(admin, action, details) {
+  if (!db) return;
+  await db.insert(adminLog).values({ adminEmail: admin.email, action, details });
+}
+
 export async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) notFound();

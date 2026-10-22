@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth, authEnabled } from "@/auth";
 import { effectiveTier, isAdminEmail } from "@/lib/access";
+import { refreshFeatures } from "@/lib/features";
 import { planFor } from "@/lib/plans";
 import * as store from "@/lib/store";
 
@@ -12,6 +13,7 @@ export const demoMode = process.env.DEMO_MODE === "1" && !authEnabled;
 /** The signed-in member, or null. Includes their plan and alert preferences. */
 export async function getCurrentUser() {
   await connection(); // who's signed in differs per request: never bake this into a static page
+  await refreshFeatures();
   if (demoMode) {
     const jar = await cookies();
     const tier = jar.get("demo_tier")?.value === "free" ? "free" : "premium";

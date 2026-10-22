@@ -1,4 +1,5 @@
 import "server-only";
+import { refreshFeatures } from "@/lib/features";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { db, schema } from "@/lib/db";
@@ -16,6 +17,7 @@ const short = (n) => String(n || "").replace(/\s*-\s*[\w/]+$/, "").replace(/\s*\
 
 /** Alert members about new listings, each once, on the channels their plan includes and they switched on. */
 export async function dispatchWatchListings() {
+  await refreshFeatures(); // Admin → Features choices
   const out = { listings: 0, sent: 0, failed: 0 };
   if (!db) return out;
   const claimed = await db.update(watchListings).set({ notifiedAt: new Date() }).where(isNull(watchListings.notifiedAt)).returning();

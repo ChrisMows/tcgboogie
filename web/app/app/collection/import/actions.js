@@ -27,6 +27,7 @@ async function productFor(row) {
 /** Match a batch of rows (at most 25) to catalog products. */
 export async function matchRows(rows) {
   const user = await requireUser();
+  if (!user.plan.collectionImport) return { ok: false, error: "CSV import isn't part of your plan.", results: [] };
   const out = [];
   for (const row of (Array.isArray(rows) ? rows : []).slice(0, 25)) {
     if (!allow("importMatch", user.id)) return { ok: false, error: "That's the most cards we can look up today. Import these, then come back tomorrow for the rest.", results: out };
@@ -43,6 +44,7 @@ export async function matchRows(rows) {
 /** Add matched rows (at most 50 per call). Each row: the CSV fields plus productId of its match. */
 export async function importRows(rows) {
   const user = await requireUser();
+  if (!user.plan.collectionImport) return { ok: false, error: "CSV import isn't part of your plan." };
   if (!allow("importAdd", user.id)) return { ok: false, error: SLOW_DOWN };
   let added = 0;
   const failed = [];

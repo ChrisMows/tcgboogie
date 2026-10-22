@@ -9,19 +9,19 @@ import { toggleAlertChannel } from "@/app/app/actions";
 export default function AlertChannels({ user }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const premium = user.plan.watchAlertChannels.includes("sms");
+  const can = (c) => user.plan.watchAlertChannels.includes(c); // Admin → Features decides which plan gets each
   const [on, setOn] = useState({ email: user.alertEmail !== false, discord: Boolean(user.alertDiscord), sms: Boolean(user.alertSms) });
 
   const channels = [
     { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
     {
       key: "discord", icon: "💬", label: "Discord",
-      ...(!premium ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect Discord", href: "/app/account#connections" }
+      ...(!can("discord") ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect Discord", href: "/app/account#connections" }
         : { state: "ready", note: "DM from BoogieBot" }),
     },
     {
       key: "sms", icon: "📱", label: "Text",
-      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add your number", href: "/app/account#phone" }
+      ...(!can("sms") ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add your number", href: "/app/account#phone" }
         : { state: "ready", note: user.phone }),
     },
   ];

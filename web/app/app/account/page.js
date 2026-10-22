@@ -54,6 +54,8 @@ export default async function Account({ searchParams }) {
   const user = await requireUser();
   const params = await searchParams;
   const premium = user.tier === "premium";
+  const canDiscord = user.plan.watchAlertChannels.includes("discord"); // Admin → Features
+  const canSms = user.plan.watchAlertChannels.includes("sms");
   const pictures = avatarOptions(user);
   const smsReady = channelsReady().sms;
   const current = avatarFor(user);
@@ -141,23 +143,23 @@ export default async function Account({ searchParams }) {
           <label className="check">
             <input type="checkbox" name="alertEmail" defaultChecked={user.alertEmail !== false} /> ✉️ Email <span className="muted">· {user.email}</span>
           </label>
-          <label className={`check ${premium ? "" : "dim"}`} style={{ marginTop: 6 }}>
-            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!premium} /> 💬 Discord message from BoogieBot <span className="badge good" style={{ marginLeft: 6 }}>Fastest</span>
-            {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
+          <label className={`check ${canDiscord ? "" : "dim"}`} style={{ marginTop: 6 }}>
+            <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!canDiscord} /> 💬 Discord message from BoogieBot <span className="badge good" style={{ marginLeft: 6 }}>Fastest</span>
+            {!canDiscord && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
-          {premium && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts to get these.</div>}
-          <label className={`check ${premium && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
-            <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!premium || !user.phoneVerifiedAt} /> 📱 Text message
-            {!premium && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
-            {premium && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
+          {canDiscord && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts to get these.</div>}
+          <label className={`check ${canSms && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
+            <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!canSms || !user.phoneVerifiedAt} /> 📱 Text message
+            {!canSms && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
+            {canSms && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
           </label>
-          {premium && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
+          {canSms && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">
               <option value="off">Off</option>
               <option value="weekly">Weekly (Mondays)</option>
-              <option value="daily" disabled={!premium}>Daily{premium ? "" : " (Premium)"}</option>
+              <option value="daily" disabled={user.plan.emailRecap !== "daily"}>Daily{user.plan.emailRecap === "daily" ? "" : " (Premium)"}</option>
             </select>
             <div className="hint" id="recap-hint">Your collection value and biggest movers, deals that matched your filters, and alerts that hit. Sent early morning.</div>
           </div>
@@ -166,7 +168,7 @@ export default async function Account({ searchParams }) {
         </div>
       </form>
 
-      {premium && (
+      {canSms && (
         <div className="panel" id="phone">
           <h2>Text alerts</h2>
           {SMS_NOTES[params?.sms] && <div className={`notice ${["verified", "sent", "removed"].includes(params.sms) ? "good" : "warn"}`}>{SMS_NOTES[params.sms]}{params?.demo ? ` (Demo code: ${params.demo})` : ""}</div>}

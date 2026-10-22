@@ -1,4 +1,5 @@
 import "server-only";
+import { refreshFeatures } from "@/lib/features";
 import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { change } from "@/lib/collection";
@@ -19,10 +20,11 @@ const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigi
 const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
 
 export async function runSellHigh() {
+  await refreshFeatures(); // Admin → Features choices
   const out = { members: 0, cards: 0, risers: 0, sent: 0, failed: 0 };
   if (!db) return out;
   const people = (await db.select().from(users).where(sql`(${users.collectionPrefs}->>'sellHigh')::boolean is true`))
-    .filter((u) => effectiveTier(u) === "premium");
+    .filter((u) => planFor(effectiveTier(u)).collectionAlerts);
   if (!people.length) return out;
   out.members = people.length;
 

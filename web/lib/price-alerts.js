@@ -1,4 +1,5 @@
 import "server-only";
+import { refreshFeatures } from "@/lib/features";
 import { and, eq, inArray } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { getProduct } from "@/lib/catalog";
@@ -19,6 +20,7 @@ const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
  * Returns a summary of what happened.
  */
 export async function runPriceAlerts() {
+  await refreshFeatures(); // Admin → Features choices
   const out = { checked: 0, products: 0, fired: 0, rearmed: 0, sent: 0, failed: 0, skippedProducts: 0 };
   const watches = await db.select().from(priceWatches);
   if (!watches.length) return out;

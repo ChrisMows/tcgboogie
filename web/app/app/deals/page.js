@@ -15,7 +15,7 @@ export default async function DealsPage({ searchParams }) {
   const user = await requireUser("/app/deals");
   const sp = await searchParams;
   const tab = sp?.tab === "history" ? "history" : "filters";
-  const premium = user.tier === "premium";
+  const premium = Boolean(user.plan.liveFeed); // live deals (Admin → Features)
 
   return (
     <>

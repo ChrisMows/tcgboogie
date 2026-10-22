@@ -153,7 +153,7 @@ export default async function CardPage({ params, searchParams }) {
       .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
     return options[0] || null;
   })();
-  const sellItem = p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
+  const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
   return (
     <>
@@ -196,7 +196,7 @@ export default async function CardPage({ params, searchParams }) {
               {c30 !== null && <span className={c30 >= 0 ? "up" : "down"} style={{ marginLeft: 12 }}>{c30 >= 0 ? "▲" : "▼"} {pct(c30)} 30d</span>}
             </span>
           </div>
-          {deal && <DealBox deal={deal} premium={user.tier === "premium"} />}
+          {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
           {gradeIdea && gradeIdea.verdict !== "skip" && (
             <Link href="/app/collection/grading" className="grade-idea">

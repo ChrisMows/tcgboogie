@@ -6,6 +6,7 @@ import { createPolicies } from "../actions";
 import { itemLabel, unitValue } from "@/lib/collection";
 import { ebayAccount, ebaySellReady, listingsFor, sellerPolicies, suggestDescription, suggestTitle } from "@/lib/ebay-sell";
 import { ebaySearch } from "@/lib/ebay-link";
+import FeatureLocked from "@/components/FeatureLocked";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -18,6 +19,7 @@ export default async function SellPage({ params, searchParams }) {
   const { itemId } = await params;
   const sp = await searchParams;
   const user = await requireUser(`/app/collection/sell/${encodeURIComponent(itemId)}`);
+  if (!user.plan.sellOnEbay) return <FeatureLocked name="Sell on eBay" flag="sellOnEbay" from="sell" />;
   const item = await store.getItem(user.id, itemId);
   if (!item || item.list !== "owned" || item.kind === "sealed") notFound();
 

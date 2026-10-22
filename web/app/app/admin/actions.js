@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireAdmin, updateMember } from "@/lib/admin";
+import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
+import { currentFeatures, saveFeatures } from "@/lib/features";
+import { FEATURES } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
 import { logError } from "@/lib/log";
 import { sendTestAlert } from "@/lib/price-alerts";
@@ -11,6 +13,22 @@ import { sendRecapPreview } from "@/lib/recap";
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
 const back = (id, done) => redirect(`/app/admin?tab=members&user=${encodeURIComponent(id)}&done=${done}#member`);
 const DAY = 86400000;
+
+/** Admin → Features: which plan gets each feature. On for Free always means on for Premium too. */
+export async function saveFeatureChoices(formData) {
+  const admin = await requireAdmin();
+  const before = await currentFeatures();
+  const next = Object.fromEntries(FEATURES.map((f) => {
+    const free = formData.get(`${f.key}:free`) === "on";
+    return [f.key, { free, premium: free || formData.get(`${f.key}:premium`) === "on" }];
+  }));
+  const changed = FEATURES.filter((f) => before[f.key].free !== next[f.key].free || before[f.key].premium !== next[f.key].premium)
+    .map((f) => `${f.label}: ${next[f.key].free ? "Free + Premium" : next[f.key].premium ? "Premium only" : "off"}`);
+  await saveFeatures(next);
+  if (changed.length) await logAdminAction(admin, "features", { changed });
+  revalidatePath("/", "layout");
+  redirect(`/app/admin?tab=features&saved=${changed.length}`);
+}
 
 /** Complimentary Premium: for N days, until a date, or unlimited. Never charged. */
 export async function grantComp(userId, formData) {
