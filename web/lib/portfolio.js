@@ -12,7 +12,8 @@ const STALE_MS = 20 * 3600 * 1000;
 export const slim = (p) => p && {
   id: p.id, type: p.type, name: p.name, setName: p.setName, setId: p.setId || null, number: p.number, rarity: p.rarity || null,
   image: p.image, tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, graded: p.graded || {}, recentSales: p.recentSales || [], history: p.history || [],
-  ...(p.language === "japanese" ? { language: "japanese" } : {}),
+  ...(p.language && p.language !== "english" ? { language: p.language } : {}),
+  ...(p.memberAdded ? { memberAdded: true, sourceUrl: p.sourceUrl } : {}),
 };
 
 /** Fetch products for a list of IDs, at most `maxLive` of them from the API; the rest only if already cached. */

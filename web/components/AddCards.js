@@ -107,10 +107,10 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
                   <CardThumb item={p} width={42} />
                   <span className="result-text">
                     <b>{p.name}</b>
-                    <span className="small muted">{p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}{p.language === "japanese" ? " · Japanese" : ""}</span>
+                    <span className="small muted">{p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}{p.language && p.language !== "english" ? ` · ${p.language[0].toUpperCase()}${p.language.slice(1)}` : ""}</span>
                   </span>
                   {counts[p.id] ? <span className="badge accent">You own {counts[p.id]}</span> : null}
-                  <span className="result-price">{money(price)}</span>
+                  <span className="result-price">{p.memberAdded ? <span className="small muted">No price data</span> : money(price)}</span>
                 </button>
                 <button type="button" className="btn sm primary" disabled={pending} onClick={() => quick(p)}
                   title={p.type === "card" ? "Add one Near Mint copy" : "Add one"}>+ Add</button>

@@ -27,10 +27,10 @@ export default function CardRequest({ query }) {
         </div>
       ) : (
         <form onSubmit={send} className="card-request-form">
-          <label className="small" htmlFor="cr-link">Paste a link to the card. A <b>TCGplayer</b> product link gets it added straight away; other links are reviewed by us.</label>
+          <label className="small" htmlFor="cr-link">Paste a link to the card (TCGplayer, eBay, a card database…) and we&apos;ll add it. Cards our price service doesn&apos;t cover, like many Korean and Chinese cards, are added without prices.</label>
           <div className="row" style={{ gap: 8 }}>
             <input id="cr-link" type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
-            <button className="btn sm primary" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Checking…" : "Send"}</button>
+            <button className="btn sm primary" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Adding…" : "Send"}</button>
             <button type="button" className="btn sm ghost" style={{ flex: "none" }} onClick={() => setOpen(false)}>Cancel</button>
           </div>
           <span className="small muted">Searching for: “{query}”</span>

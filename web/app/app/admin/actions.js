@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
 import { approveRequest, declineRequests } from "@/lib/card-requests";
+import { hideMemberCard } from "@/lib/member-cards";
 import { currentFeatures, saveFeatures } from "@/lib/features";
 import { FEATURES } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
@@ -28,6 +29,14 @@ export async function declineCardRequest(id) {
   await declineRequests(admin, id, "Declined by an admin");
   await logAdminAction(admin, "card_request", { id, result: "declined" });
   redirect("/app/admin?tab=requests&ok=declined");
+}
+
+/** Admin → Requests: take a wrongly added member card out of search and card pages (members' lines stay saved). */
+export async function removeMemberCard(productId) {
+  const admin = await requireAdmin();
+  await hideMemberCard(productId);
+  await logAdminAction(admin, "card_request", { id: productId, result: "card removed" });
+  redirect("/app/admin?tab=requests&show=all&ok=removed");
 }
 
 /** Admin → Features: which plan gets each feature. On for Free always means on for Premium too. */

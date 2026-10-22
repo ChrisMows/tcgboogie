@@ -1199,3 +1199,4 @@ details.era > .set-grid { margin-bottom: 14px; }
 .req-link { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .req-actions { display: grid; gap: 6px; flex: 0 1 340px; }
 .req-actions input { min-width: 0; flex: 1; }
+.notice.no-price { margin: 12px 0 0; }

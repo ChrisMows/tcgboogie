@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, eq, gte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
+import { getMemberCard, isMemberId } from "@/lib/member-cards";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -337,10 +338,23 @@ function fromSealed(s) {
 }
 
 /**
- * One TCGplayer product (card or sealed) by TCGplayer product ID, with prices, slab values and 90 days of history.
+ * One product (card or sealed) by TCGplayer product ID, with prices, slab values and 90 days of history.
  * With { cachedOnly: true } it returns undefined instead of spending API credits when the product isn't cached.
+ * Cards members added that the price service doesn't have (lib/member-cards.js) come back without prices; one with a
+ * TCGplayer number gets the service's prices by itself once the service adds it.
  */
-export async function getProduct(id, { cachedOnly = false, language = "english" } = {}) {
+export async function getProduct(id, opts = {}) {
+  if (isMemberId(id)) {
+    const m = await getMemberCard(id);
+    return m && withOurSales(m);
+  }
+  const p = await pricedProduct(id, opts);
+  if (p !== null) return p;
+  const m = await getMemberCard(id);
+  return m ? withOurSales(m) : null;
+}
+
+async function pricedProduct(id, { cachedOnly = false, language = "english" } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
   // Same request (and cache entry) as the deal bot's price lookups; prices update about once a day.
   // Japanese cards are a separate catalog: the bot adds language=japanese, so we do too and share its copy.
@@ -355,7 +369,7 @@ export async function getProduct(id, { cachedOnly = false, language = "english" 
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
   if (s) return withSealedHistory(fromSealed(s));
   // Not an English card or sealed product: Japanese cards (promos included) are a separate catalog, same IDs.
-  return getProduct(id, { cachedOnly, language: "japanese" });
+  return pricedProduct(id, { cachedOnly, language: "japanese" });
 }
 
 /** Search cards and sealed products by name (a few results each, to keep lookups cheap). */

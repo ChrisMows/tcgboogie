@@ -35,6 +35,8 @@ const GRADE_LABEL = (key) => {
   return `${grader} ${m[2]}${m[3] ? `.${m[3]}` : ""}`;
 };
 
+const LANGUAGE = { japanese: "Japanese", korean: "Korean", chinese: "Chinese", other: "Other language" };
+
 // Best to worst: Near Mint first, Damaged last.
 const COND_ORDER = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
 const condRank = (c) => (COND_ORDER.indexOf(c) + 1) || 99;
@@ -186,16 +188,21 @@ export default async function CardPage({ params, searchParams }) {
           <div className="muted">
             {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}
             {p.number ? ` · #${p.number}` : ""}{p.rarity && p.rarity !== "None" ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
-            {language === "japanese" ? " · Japanese" : ""}
+            {LANGUAGE[p.language || language] ? ` · ${LANGUAGE[p.language || language]}` : ""}
           </div>
-          <div className="hero-price">
+          {p.memberAdded ? (
+            <div className="notice no-price">
+              <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
+              so you can still add it to your collection with your own value, set price alerts and report sales you see.
+            </div>
+          ) : <div className="hero-price">
             <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
             <b>{money(now)}</b>
             <span className="small">
               {c7 !== null && <span className={c7 >= 0 ? "up" : "down"}>{c7 >= 0 ? "▲" : "▼"} {pct(c7)} 7d</span>}
               {c30 !== null && <span className={c30 >= 0 ? "up" : "down"} style={{ marginLeft: 12 }}>{c30 >= 0 ? "▲" : "▼"} {pct(c30)} 30d</span>}
             </span>
-          </div>
+          </div>}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
           {gradeIdea && gradeIdea.verdict !== "skip" && (
@@ -220,6 +227,7 @@ export default async function CardPage({ params, searchParams }) {
           {isSealed ? <p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p> : (
             <>
               <h2>By condition</h2>
+              {printings.length === 0 && <p className="small muted" style={{ margin: 0 }}>No pricing data available for this card.</p>}
               {printings.map(([printing, byCond]) => (
                 <div key={printing} style={{ marginBottom: 12 }}>
                   {printings.length > 1 && <div className="small muted" style={{ marginBottom: 4 }}>{printing}</div>}
@@ -271,10 +279,14 @@ export default async function CardPage({ params, searchParams }) {
               <ReportSale productId={p.id} language={language} />
             </>
           )}
-          <p className="hint" style={{ marginBottom: 0 }}>
+          {p.memberAdded ? (
+            <p className="hint" style={{ marginBottom: 0 }}>
+              Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.
+            </p>
+          ) : <p className="hint" style={{ marginBottom: 0 }}>
             Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>
-          </p>
+          </p>}
         </div>
       </div>
     </>

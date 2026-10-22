@@ -3,7 +3,7 @@ import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, 
 import AdminFeatures from "@/components/AdminFeatures";
 import { currentFeatures } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, declineCardRequest } from "./actions";
+import { approveCardRequest, declineCardRequest, removeMemberCard } from "./actions";
 import { FEATURES } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -269,11 +269,13 @@ async function Requests({ ok, err, show }) {
   const rows = await listRequests({ status });
   return (
     <>
-      {ok && <div className="notice good">{ok === "approved" ? "Approved: the card is searchable by the member's words now." : "Declined."}</div>}
+      {ok && <div className="notice good">{ok === "approved" ? "Approved: the card is searchable by the member's words now." : ok === "removed" ? "Removed: the card no longer shows in search or opens." : "Declined."}</div>}
       {err && <div className="notice bad">{err}</div>}
       <p className="small muted" style={{ marginTop: 0 }}>
-        Members ask for cards they couldn&apos;t find. TCGplayer links to cards our price service has are added automatically; these
-        are the rest. Approve with the card&apos;s TCGplayer link, or decline. <Link href={status === "all" ? "/app/admin?tab=requests" : "/app/admin?tab=requests&show=all"}>{status === "all" ? "Show waiting only" : "Show all recent requests"}</Link>
+        Members ask for cards they couldn&apos;t find, and most are added automatically: cards our price service has are linked, and
+        cards it doesn&apos;t have (often Korean or Chinese) are added without prices from the TCGplayer page or the linked page. These are
+        the ones we couldn&apos;t identify. Approve with the card&apos;s TCGplayer link, or decline. Under &quot;all recent&quot;, remove a card
+        that was added wrongly. <Link href={status === "all" ? "/app/admin?tab=requests" : "/app/admin?tab=requests&show=all"}>{status === "all" ? "Show waiting only" : "Show all recent requests"}</Link>
       </p>
       {rows.length === 0 ? <div className="panel muted">{status === "all" ? "No requests yet." : "Nothing waiting. 🎉"}</div> : rows.map((r) => (
         <div key={r.id} className="panel req-row">
@@ -281,7 +283,14 @@ async function Requests({ ok, err, show }) {
             <b>“{r.query}”</b> <span className={`badge ${r.status === "added" ? "good" : r.status === "declined" ? "" : "warn"}`}>{r.status}</span>
             <div className="small muted">{r.email || "member"} · {ago(r.createdAt)}{r.reason ? ` · ${r.reason}` : ""}</div>
             <a href={r.link} target="_blank" rel="noopener noreferrer nofollow" className="small req-link">{r.link}</a>
-            {r.productId && <div className="small"><Link href={`/app/cards/${encodeURIComponent(r.productId)}${r.language === "japanese" ? "?lang=japanese" : ""}`}>Open the card →</Link></div>}
+            {r.productId && (
+              <div className="small row" style={{ gap: 10 }}>
+                <Link href={`/app/cards/${encodeURIComponent(r.productId)}${r.language === "japanese" ? "?lang=japanese" : ""}`}>Open the card →</Link>
+                {r.memberCard && (
+                  <form action={removeMemberCard.bind(null, r.productId)}><button className="link-btn small">Remove this member-added card</button></form>
+                )}
+              </div>
+            )}
           </div>
           {r.status === "pending" && (
             <div className="req-actions">

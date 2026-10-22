@@ -4,7 +4,7 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tcgplayer-cdn.tcgplayer.com https://*.tcgplayer.com https://cdn.discordapp.com https://*.googleusercontent.com",
+  "img-src 'self' data: blob: https://tcgplayer-cdn.tcgplayer.com https://*.tcgplayer.com https://i.ebayimg.com https://cdn.discordapp.com https://*.googleusercontent.com",
   "font-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",

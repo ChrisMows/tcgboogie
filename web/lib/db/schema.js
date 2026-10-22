@@ -329,3 +329,24 @@ export const searchAliases = pgTable("search_alias", {
   requestId: integer("request_id"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("search_alias_unique").on(t.term, t.productId, t.language)]);
+
+// Cards members added through "Request a card" that our price service doesn't carry (often Korean or Chinese cards).
+// They work like any card (collection, wishlist, price alerts, reported sales) but have no TCGplayer prices.
+// product_id is the TCGplayer product number when there is one (so prices appear by themselves once the service adds
+// it), otherwise "m-" plus a random code.
+export const memberCards = pgTable("member_card", {
+  id: serial("id").primaryKey(),
+  productId: text("product_id").notNull().unique(),
+  name: text("name").notNull(),
+  setName: text("set_name"),
+  number: text("number"),
+  rarity: text("rarity"),
+  language: text("language").notNull().default("english"), // english / japanese / korean / chinese / other
+  image: text("image"),
+  sourceUrl: text("source_url").notNull(), // the link the member sent
+  source: text("source").notNull(), // tcgplayer / page (read from the linked page)
+  addedBy: text("added_by").references(() => users.id, { onDelete: "set null" }),
+  requestId: integer("request_id"),
+  hidden: boolean("hidden").notNull().default(false), // removed by an admin (junk); search and card pages skip it
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("member_card_source_idx").on(t.sourceUrl)]);

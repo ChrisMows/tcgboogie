@@ -1,8 +1,9 @@
 import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { getProduct, searchProducts } from "@/lib/catalog";
+import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
+import { addFromPage, addFromTcgplayer, readCardPage, searchMemberCards } from "@/lib/member-cards";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -10,7 +11,11 @@ import { parseTcgplayerInput } from "@/lib/watches";
 //     if the service has that product we add it at once. The member's search words are remembered (search_alias)
 //     so the next search finds it, but only when they plausibly describe the card (a shared name word, the card
 //     number or the set), so a stray request can't make search show the wrong card.
-//   - Any other link, or a TCGplayer product the service doesn't have, waits for an admin (Admin → Requests).
+//   - A TCGplayer product the service doesn't have is added from TCGplayer's product data as a member card with no
+//     prices ("No pricing data available"), so the catalog grows one requested card at a time (lib/member-cards.js).
+//   - Any other link (eBay, PriceCharting, a Korean card site...) is read and Claude says which card it is. If the
+//     price service has that card (same number), that's the one; otherwise it's added as a member card.
+//   - Only links we can't read or that aren't about one Pokémon card wait for an admin (Admin → Requests).
 const { cardRequests, searchAliases } = schema;
 const TRUSTED = /(^|\.)tcgplayer\.com$/i;
 const STOP = new Set(["the", "and", "of", "card", "pokemon", "pokémon", "tcg", "holo", "rare", "psa", "cgc", "bgs", "sgc", "tag"]);
@@ -63,22 +68,58 @@ export async function submitRequest(user, { query, link, note }) {
     }
     let product = null;
     try { product = await getProduct(id); } catch { /* price service hiccup: treat as not found right now */ }
-    if (product) {
-      const teach = describes(q, product);
-      const requestId = await save({ status: "added", productId: String(product.id), language: product.language || "english",
-        reason: teach ? "TCGplayer product found in the price service; search taught" : "TCGplayer product found; search words didn't match the card, so search wasn't changed" });
-      if (teach) await addAlias(normTerm(q), product, requestId);
-      await log("catalog", "info", `Card request ${teach ? "added" : "found"}: ${product.name} (${product.setName || "?"}) for "${q}"`, { id: product.id, link: url.href }, user.id);
-      return { status: teach ? "added" : "found", product: { id: product.id, name: product.name, setName: product.setName, number: product.number, image: product.image, language: product.language || "english" },
-        message: teach ? "Found it! It's on TCG Boogie now, and searching for it the same way will find it from now on." : "Found it! Here's the card." };
-    }
-    await save({ status: "pending", reason: `TCGplayer product ${id} isn't in the price service yet` });
-    await log("catalog", "warn", `Card request needs review: TCGplayer ${id} not in the price service ("${q}")`, { link: url.href }, user.id);
-    return { status: "pending", message: "Thanks! That card isn't in our price data yet, so we'll review it and add it if we can." };
+    if (product) return found(user, q, url, product, "TCGplayer product found in the price service");
+    const requestId = await save({ status: "pending", reason: `TCGplayer product ${id} isn't in the price service` });
+    const added = await addFromTcgplayer(id, { link: url.href, userId: user.id, requestId }).catch(() => null);
+    if (added) return addedWithoutPrices(user, q, url, added, requestId, "TCGplayer product not in the price service; added from TCGplayer's details without prices");
+    await log("catalog", "warn", `Card request needs review: TCGplayer ${id} isn't a Pokémon card TCGplayer could describe ("${q}")`, { link: url.href }, user.id);
+    return { status: "pending", message: "Thanks! We couldn't read that card from TCGplayer, so we'll review it by hand." };
   }
 
-  await save({ status: "pending", reason: `link from ${url.hostname}` });
-  return { status: "pending", message: "Thanks! We'll review it. A TCGplayer link to the card gets it added straight away, if you have one." };
+  // Any other link: read the page and work out which card it is.
+  const requestId = await save({ status: "pending", reason: `link from ${url.hostname}` });
+  const card = await readCardPage(url.href, q).catch(() => null);
+  if (!card) {
+    if (requestId) await db.update(cardRequests).set({ reason: `link from ${url.hostname}: couldn't tell which card the page is about` }).where(eq(cardRequests.id, requestId));
+    return { status: "pending", message: "Thanks! We couldn't tell which card that page is about, so we'll review it. A TCGplayer link to the card gets it added straight away, if you have one." };
+  }
+  // The price service may have it after all (an English or Japanese card searched oddly): same card number only.
+  if (card.number && ["english", "japanese"].includes(card.language)) {
+    const bare = (n) => String(n || "").toUpperCase().replace(/\s/g, "").split("/")[0].replace(/^0+/, "");
+    const p = await findCard({ name: card.name, number: card.number, language: card.language }).catch(() => null);
+    if (p && bare(p.number) === bare(card.number)) return found(user, q, url, p, `read from ${url.hostname}; found in the price service`, requestId);
+  }
+  const added = await addFromPage(card, { link: url.href, userId: user.id, requestId }).catch(() => null);
+  if (added) return addedWithoutPrices(user, q, url, added, requestId, `read from ${url.hostname}; not in the price service, added without prices`);
+  return { status: "pending", message: "Thanks! We'll review it and add it if we can." };
+}
+
+const slimProduct = (p) => ({ id: p.id, name: p.name, setName: p.setName, number: p.number, image: p.image, language: p.language || "english" });
+
+/** The card is in the price service: mark the request added and teach search the member's words (if they fit). */
+async function found(user, q, url, product, why, requestId = null) {
+  const teach = describes(q, product);
+  const fields = { status: "added", productId: String(product.id), language: product.language || "english",
+    reason: `${why}; ${teach ? "search taught" : "search words didn't match the card, so search wasn't changed"}` };
+  if (requestId && db) await db.update(cardRequests).set(fields).where(eq(cardRequests.id, requestId));
+  else if (db) requestId = (await db.insert(cardRequests).values({ userId: user.id, query: q || "(no search)", link: url.href, ...fields }).returning({ id: cardRequests.id }))[0]?.id ?? null;
+  if (teach) await addAlias(normTerm(q), product, requestId);
+  await log("catalog", "info", `Card request ${teach ? "added" : "found"}: ${product.name} (${product.setName || "?"}) for "${q}"`, { id: product.id, link: url.href }, user.id);
+  return { status: teach ? "added" : "found", product: slimProduct(product),
+    message: teach ? "Found it! It's on TCG Boogie now, and searching for it the same way will find it from now on." : "Found it! Here's the card." };
+}
+
+/** The card isn't in the price service: it's been added as a member card, without prices. */
+async function addedWithoutPrices(user, q, url, { product, created }, requestId, why) {
+  if (requestId && db) {
+    await db.update(cardRequests).set({ status: "added", productId: String(product.id), language: product.language || "english",
+      reason: created ? why : `${why} (already added by an earlier request)` }).where(eq(cardRequests.id, requestId));
+  }
+  if (describes(q, product)) await addAlias(normTerm(q), product, requestId);
+  await log("catalog", "info", `Card request ${created ? "added a new card" : "matched a member-added card"} (no prices): ${product.name} (${product.setName || "?"}, ${product.language}) for "${q}"`,
+    { id: product.id, link: url.href }, user.id);
+  return { status: "added", noPrices: true, product: slimProduct(product),
+    message: `${created ? "Added!" : "Found it!"} ${product.name}${product.number ? ` #${product.number}` : ""} is on TCG Boogie now. We don't have pricing data for this card yet, but you can add it to your collection (with your own value) and set price alerts.` };
 }
 
 /** Products learned from approved requests for this search, as product IDs with language (newest first). */
@@ -92,14 +133,15 @@ export async function aliasMatches(query, limit = 3) {
   } catch { return []; }
 }
 
-/** The usual search, with products learned from approved requests first. */
+/** The usual search, with products learned from requests first and member-added cards (no prices) after. */
 export async function searchWithRequests(q) {
-  const [learned, found] = await Promise.all([
+  const [learned, members, found] = await Promise.all([
     aliasMatches(q).then((rows) => Promise.all(rows.map((r) => getProduct(r.productId, { language: r.language }).catch(() => null)))),
+    searchMemberCards(q),
     searchProducts(q),
   ]);
   const seen = new Set();
-  return [...learned.filter(Boolean), ...found].filter((p) => {
+  return [...learned.filter(Boolean), ...found, ...members].filter((p) => {
     const k = `${p.id}:${p.language || "english"}`;
     return seen.has(k) ? false : seen.add(k);
   });
@@ -109,9 +151,11 @@ export async function searchWithRequests(q) {
 export async function listRequests({ status = "pending", limit = 100 } = {}) {
   if (!db) return [];
   const where = status === "all" ? undefined : eq(cardRequests.status, status);
-  const rows = await db.select({ r: cardRequests, email: schema.users.email }).from(cardRequests)
-    .leftJoin(schema.users, eq(schema.users.id, cardRequests.userId)).where(where).orderBy(desc(cardRequests.createdAt)).limit(limit);
-  return rows.map(({ r, email }) => ({ ...r, email }));
+  const rows = await db.select({ r: cardRequests, email: schema.users.email, memberCard: schema.memberCards.id }).from(cardRequests)
+    .leftJoin(schema.users, eq(schema.users.id, cardRequests.userId))
+    .leftJoin(schema.memberCards, and(eq(schema.memberCards.productId, cardRequests.productId), eq(schema.memberCards.hidden, false)))
+    .where(where).orderBy(desc(cardRequests.createdAt)).limit(limit);
+  return rows.map(({ r, email, memberCard }) => ({ ...r, email, memberCard: Boolean(memberCard) }));
 }
 
 export async function pendingCount() {
@@ -125,8 +169,8 @@ export async function approveRequest(admin, id, tcgplayer) {
   if (!pid) return "Paste a TCGplayer product link or number.";
   const [req] = await db.select().from(cardRequests).where(eq(cardRequests.id, Number(id))).limit(1);
   if (!req) return "That request is gone.";
-  const product = await getProduct(pid);
-  if (!product) return "Our price service doesn't have that TCGplayer product, so it can't be priced yet.";
+  const product = (await getProduct(pid)) || (await addFromTcgplayer(pid, { link: req.link, userId: req.userId, requestId: req.id }).catch(() => null))?.product;
+  if (!product) return "TCGplayer didn't describe that product as a Pokémon card. Check the link.";
   await db.update(cardRequests).set({ status: "added", productId: String(product.id), language: product.language || "english",
     reason: `Approved by ${admin.email}`, reviewedBy: admin.email, reviewedAt: new Date() }).where(eq(cardRequests.id, req.id));
   await addAlias(normTerm(req.query), product, req.id);
