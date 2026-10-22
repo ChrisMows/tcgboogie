@@ -16,12 +16,12 @@ export default function AlertChannels({ user }) {
     { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
     {
       key: "discord", icon: "💬", label: "Discord",
-      ...(!premium ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect", href: "/app/account#connections" }
+      ...(!premium ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect Discord", href: "/app/account#connections" }
         : { state: "ready", note: "DM from BoogieBot" }),
     },
     {
       key: "sms", icon: "📱", label: "Text",
-      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add", href: "/app/account#phone" }
+      ...(!premium ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add your number", href: "/app/account#phone" }
         : { state: "ready", note: user.phone }),
     },
   ];
@@ -44,19 +44,23 @@ export default function AlertChannels({ user }) {
         <Link href="/app/account#alerts" className="small">Settings</Link>
       </div>
       <div className="ac-list">
-        {channels.map((c) => (
-          <div key={c.key} className={`ac-option ${c.state === "ready" && on[c.key] ? "on" : ""} ${c.state}`} title={c.note || undefined}>
-            <span className="ac-icon" aria-hidden="true">{c.icon}</span>
-            <b className="ac-label">{c.label}</b>
-            {c.state === "ready" && (
-              <button type="button" role="switch" aria-checked={on[c.key]} aria-label={`${c.label} alerts`} className="ac-switch" disabled={pending} onClick={() => flip(c.key)}>
-                <i />
+        {channels.map((c) => {
+          const inner = (<><span className="ac-icon" aria-hidden="true">{c.icon}</span><b className="ac-label">{c.label}</b></>);
+          if (c.state === "ready") {
+            return (
+              <button key={c.key} type="button" role="switch" aria-checked={on[c.key]} className={`ac-option ${on[c.key] ? "on" : ""}`}
+                disabled={pending} onClick={() => flip(c.key)} title={`${c.note ? `${c.note} · ` : ""}${on[c.key] ? "On" : "Off"}: tap to turn ${on[c.key] ? "off" : "on"}`}>
+                {inner}<span className="ac-switch" aria-hidden="true"><i /></span>
               </button>
-            )}
-            {c.state === "todo" && <Link href={c.href} className="btn sm">{c.action}</Link>}
-            {c.state === "locked" && <Link href="/app/premium?from=alerts" className="ac-lock small">🔒 Premium</Link>}
-          </div>
-        ))}
+            );
+          }
+          return (
+            <Link key={c.key} href={c.state === "locked" ? "/app/premium?from=alerts" : c.href} className={`ac-option ${c.state}`}
+              title={c.state === "locked" ? `${c.label} alerts are part of Premium` : `${c.action} to get ${c.label.toLowerCase()} alerts`}>
+              {inner}<span className="ac-tag" aria-hidden="true">{c.state === "locked" ? "🔒" : "+"}</span>
+            </Link>
+          );
+        })}
       </div>
       {!any && <div className="ac-warn">Nothing is switched on, so you won&apos;t hear about these alerts.</div>}
     </section>
