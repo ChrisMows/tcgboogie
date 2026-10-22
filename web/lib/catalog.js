@@ -373,26 +373,91 @@ async function pricedProduct(id, { cachedOnly = false, language = "english" } = 
 }
 
 /**
- * Search cards and sealed products by name (a few results each, to keep lookups cheap). Language words ("japanese",
- * "jp", "english") pick the catalog instead of being searched as part of the name: "black kyurem japanese" searches
- * "black kyurem" in the Japanese catalog, with more Japanese results.
+ * "Black Kyurem 020/027" -> { name: "Black Kyurem", number: "020/027" }. The number is the last word when it looks like a
+ * collector number (020, 020/027, SWSH180, TG01/TG30, 239/XY-P, #4); everything before it is the name.
+ */
+export function splitQuery(term) {
+  const words = String(term || "").trim().split(/\s+/);
+  const last = words[words.length - 1] || "";
+  if (words.length > 1 && /\d/.test(last) && /^#?[a-z]{0,5}-?\d+[a-z]?(\/[a-z0-9-]*)?$/i.test(last)) {
+    return { name: words.slice(0, -1).join(" "), number: last.replace(/^#/, "") };
+  }
+  if (words.length === 1 && /^\d+\/\d+$/.test(last)) return { name: "", number: last }; // just "020/027"
+  return { name: words.join(" "), number: "" };
+}
+
+const numBare = (s) => String(s || "").toUpperCase().replace(/\s|\(.*\)/g, "").replace(/^0+(?=\w)/, "");
+const numHead = (s) => numBare(s).split("/")[0].replace(/^0+(?=\w)/, "");
+const NAME_SKIP = new Set(["ex", "gx", "v", "the", "of"]);
+const nameWords = (s) => String(s || "").toLowerCase().replace(/\(.*?\)|\s-\s.*$/g, " ").split(/[^a-z0-9']+/).filter((w) => w.length > 1 && !NAME_SKIP.has(w));
+
+/**
+ * How well a product matches what was typed: the number counts most (exact, then the part before the slash, then a
+ * number still being typed), then how many of the name's words it has. A card with the right number but another
+ * name (Eiscue 020/108 for "Black Kyurem 020") ranks below every card with the right name.
+ */
+function matchScore(p, { name, number }) {
+  const want = nameWords(name);
+  const have = new Set(nameWords(p.name));
+  const nameScore = want.length ? want.filter((w) => have.has(w) || [...have].some((h) => h.startsWith(w))).length / want.length : 0;
+  let numScore = 0;
+  if (number && p.number) {
+    if (number.includes("/") && numBare(p.number) === numBare(number)) numScore = 3;
+    else if (numHead(p.number) === numHead(number)) numScore = 2;
+    else if (numHead(p.number).startsWith(numHead(number))) numScore = 1; // still typing the number
+  }
+  return numScore * 10 * (nameScore > 0 || !want.length ? 1 : 0.05) + nameScore * 5;
+}
+
+/**
+ * Search cards and sealed products. Built for how people type: the card's name, then its number. English and
+ * Japanese are searched together every time (Japanese cards carry English names in the catalog), and the number is
+ * matched by us, so "black kyurem 020" puts Black Kyurem 020/027 first even though the price service ranks cards
+ * that only share the number higher.
+ *   - The name alone is searched first (cached, so typing the number reuses it).
+ *   - Once the number looks complete (3+ characters, or a slash and the set total), name + number is searched too,
+ *     and a full "020/027" is also searched on its own (it's usually unique).
+ * Language words ("japanese", "jp", "english") pick the catalog instead of being searched as part of the name.
  */
 export async function searchProducts(q) {
   const raw = String(q || "").trim().slice(0, 80);
   const wantsJapanese = /\b(japanese|japan|jp|jpn)\b/i.test(raw);
+  const wantsEnglish = /\b(english|eng)\b/i.test(raw);
   const term = raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ").replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
+  const parsed = splitQuery(term);
   if (!catalogLive()) {
-    const words = term.toLowerCase().split(/\s+/);
-    return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w))).slice(0, 10);
+    const words = parsed.name.toLowerCase().split(/\s+/).filter(Boolean);
+    return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w)))
+      .map((p, i) => ({ p, i, s: matchScore(p, parsed) })).sort((x, y) => y.s - x.s || x.i - y.i).map((x) => x.p).slice(0, 10);
   }
-  const [cards, sealed, japanese] = await Promise.all([
-    wantsJapanese ? null : ppt("/cards", { search: term, limit: "8" }, 7 * 24 * HOUR),
-    wantsJapanese ? null : ppt("/sealed-products", { search: term, limit: "5" }, 7 * 24 * HOUR).catch(() => null),
-    ppt("/cards", { search: term, limit: wantsJapanese ? "12" : "4", language: "japanese" }, 7 * 24 * HOUR).catch(() => null),
-  ]);
-  const jp = (japanese?.data || []).map((c) => ({ ...fromCard(c), language: "japanese" }));
-  return wantsJapanese ? jp : [...(cards?.data || []).map(fromCard), ...jp, ...(sealed?.data || []).map(fromSealed)];
+  const { name, number } = parsed;
+  const complete = number && (number.includes("/") ? /\/[a-z0-9-]{2,}$/i.test(number) : number.replace(/\D/g, "").length >= 3 || /[a-z]/i.test(number));
+  const week = 7 * 24 * HOUR;
+  const en = !wantsJapanese, jp = !wantsEnglish;
+  const cards = (search, limit, language) => ppt("/cards", { search: search.slice(0, 80), limit: String(limit), ...(language ? { language } : {}) }, week)
+    .then((j) => (j?.data || []).map((c) => ({ ...fromCard(c), ...(language ? { language } : {}) }))).catch(() => []);
+  const lookups = [];
+  if (name.length >= 2) {
+    if (en) lookups.push(cards(name, 8));
+    if (jp) lookups.push(cards(name, 8, "japanese"));
+    if (en && !number) lookups.push(ppt("/sealed-products", { search: name, limit: "5" }, week).then((j) => (j?.data || []).map(fromSealed)).catch(() => []));
+  }
+  if (complete && name.length >= 2) {
+    if (en) lookups.push(cards(`${name} ${number}`, 8));
+    if (jp) lookups.push(cards(`${name} ${number}`, 8, "japanese"));
+  }
+  if (complete && number.includes("/")) {
+    if (en) lookups.push(cards(number, 5));
+    if (jp) lookups.push(cards(number, 5, "japanese"));
+  }
+  const seen = new Set();
+  const all = (await Promise.all(lookups)).flat().filter((p) => {
+    const k = `${p.id}:${p.language || "english"}`;
+    return seen.has(k) ? false : seen.add(k);
+  });
+  // Best match first; otherwise keep the service's order (English before Japanese for the same score).
+  return all.map((p, i) => ({ p, i, s: matchScore(p, parsed) })).sort((x, y) => y.s - x.s || x.i - y.i).map((x) => x.p).slice(0, 24);
 }
 
 /**
