@@ -308,7 +308,7 @@ export async function homeShowcase() {
       data = {
         found: all.length,
         avgOff: Math.round(all.reduce((s, d) => s + (d.discountPct || 0), 0) / all.length),
-        saved: Math.round(all.reduce((s, d) => s + Math.max(0, (d.marketValue || 0) - (d.total || 0)), 0)),
+        bestOff: Math.max(...all.map((d) => d.discountPct || 0)),
         deals: best.length === 3 ? best : null,
       };
       if (!data.deals) data = null;

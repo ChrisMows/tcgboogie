@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
+import { effectivePlans } from "@/lib/plan-copy";
 import "./home.css";
 
 // Shown until the deal bot has caught enough real deals (see homeShowcase), clearly labeled as examples.
@@ -16,16 +17,30 @@ const EXAMPLES = [
   { name: "Rayquaza Gold Star", art: "rayquaza-star", meta: "EX Deoxys · 107/107", price: "1,075.00", market: "1,450.00", off: 26, tag: "RAW · NEAR MINT", left: "12m 06s" },
 ];
 
-// Everything the site does, one line each. Grouped: find deals, know your collection, buy/sell/trade.
+// Everything the site does, one line each. `tag` says what part is Premium, worked out from the plans as
+// Admin → Features set them (no tag when Free has it all).
 const TOOLS = [
-  { icon: "⚡", title: "Deal finder", body: "eBay auctions priced well below what the card really sells for, before they end." },
-  { icon: "🔔", title: "Price alerts", body: "Pick a card and a price. We tell you when it drops or climbs." },
+  { icon: "⚡", title: "Deal finder", body: "eBay auctions priced well below what the card really sells for, before they end.",
+    tag: (f) => (f.liveFeed ? null : "Live on Premium") },
+  { icon: "🔔", title: "Price alerts", body: "Pick a card and a price. We tell you when it drops or climbs.",
+    tag: (f) => (f.maxPriceWatches === null ? null : "Unlimited on Premium") },
   { icon: "▦", title: "Collection tracker", body: "What every card is worth, updated daily. Import from any app." },
-  { icon: "📷", title: "Photo appraiser", body: "Snap a binder page. We find each card and its value." },
-  { icon: "⇄", title: "Trade Analyzer", body: "Both sides priced, and the trade graded out of 10 for fairness." },
-  { icon: "💎", title: "Worth Grading?", body: "Which of your raw cards pay off at PSA, CGC, BGS and more." },
-  { icon: "🏷", title: "Sell on eBay", body: "List a card from your collection in a minute, priced from real sales." },
+  { icon: "🖼", title: "Photo appraiser", body: "Snap a binder page. We find each card and its value.",
+    tag: (f) => (f.photoAppraiser ? null : "Premium") },
+  { icon: "⇄", title: "Trade Analyzer", body: "Both sides priced, and the trade graded out of 10 for fairness.",
+    tag: (f) => (f.tradeAnalyzer ? null : "Premium") },
+  { icon: "💎", title: "Worth Grading?", body: "Which of your raw cards pay off at PSA, CGC, BGS and more.",
+    tag: (f) => (f.gradingCheck ? null : "Full list on Premium") },
+  { icon: "🏷", title: "Sell on eBay", body: "List a card from your collection in a minute, priced from real sales.",
+    tag: (f) => (f.sellOnEbay ? null : "Premium") },
   { icon: "🌏", title: "Every language", body: "English and Japanese built in. Korean, Chinese and more on request." },
+];
+
+// The same card in three languages (Every language showcase): same artwork, different sets and numbers.
+const LANGS = [
+  { lang: "English", flag: "EN", set: "Cosmic Eclipse", number: "158/236", image: "https://tcgplayer-cdn.tcgplayer.com/product/201208_in_400x400.jpg" },
+  { lang: "Japanese", flag: "JP", set: "Alter Genesis", number: "066/095", image: "https://tcgplayer-cdn.tcgplayer.com/product/572203_in_400x400.jpg" },
+  { lang: "Chinese", flag: "CN", set: "Striking Competition", number: "037/061", image: null },
 ];
 
 const COMPARE = [
@@ -77,7 +92,9 @@ export default async function Home({ searchParams }) {
   // Pricing) carry ?home=1 so members can still read them.
   if (user && sp?.home !== "1" && !deleted) redirect("/app/collection");
   const voted = GAMES[sp?.voted] ? sp.voted : null;
-  const [mine, caught] = await Promise.all([user ? myGames(user.id) : [], homeShowcase()]);
+  const [mine, caught, plans] = await Promise.all([user ? myGames(user.id) : [], homeShowcase(), effectivePlans()]);
+  const free = plans.free;
+  const photoSearchTag = plans.free.photoSearch ? null : "Premium";
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
   );
@@ -144,12 +161,15 @@ export default async function Home({ searchParams }) {
         <div className="eyebrow">EVERYTHING IN ONE PLACE</div>
         <h2>Find it. Track it. Trade it.</h2>
         <div className="toolkit">
-          {TOOLS.map((t) => (
-            <article key={t.title} className="kit">
-              <span className="tool-icon" aria-hidden="true">{t.icon}</span>
-              <div><h3>{t.title}</h3><p>{t.body}</p></div>
-            </article>
-          ))}
+          {TOOLS.map((t) => {
+            const tag = t.tag ? t.tag(free) : null;
+            return (
+              <article key={t.title} className="kit">
+                <span className="tool-icon" aria-hidden="true">{t.icon}</span>
+                <div><h3>{t.title}{tag && <span className="kit-tag">{tag}</span>}</h3><p>{t.body}</p></div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -163,7 +183,7 @@ export default async function Home({ searchParams }) {
             <div className="deal-stats">
               <div><b>{caught.found.toLocaleString("en-US")}</b><span>deals found</span></div>
               <div><b>{caught.avgOff}%</b><span>below market, on average</span></div>
-              <div><b>${caught.saved.toLocaleString("en-US")}</b><span>under market in total</span></div>
+              <div><b>{caught.bestOff}%</b><span>biggest discount</span></div>
             </div>
           ) : <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>}
         </div>
@@ -196,6 +216,39 @@ export default async function Home({ searchParams }) {
         <p className="note">
           {caught ? "Real eBay listings our deal finder caught, shown after they ended. Premium members get them live." : "Illustrative listings and prices, not live offers."}
         </p>
+      </section>
+
+      {/* Finding cards: search by picture, and every language (the same card in three printings). */}
+      <section className="content wrap" id="find">
+        <div className="eyebrow">ANY CARD. ANY LANGUAGE.</div>
+        <h2>Snap it, and we find it.</h2>
+        <div className="find-grid">
+          <div className="find-panel">
+            <div className="find-head"><b>📷 Search by picture</b>{photoSearchTag && <span className="kit-tag">{photoSearchTag}</span>}</div>
+            <p>Point your phone at a card, or upload a photo. We read the name and number and pull up the exact card.</p>
+            <div className="snap-demo" aria-hidden="true">
+              <div className="snap-phone"><span className="snap-frame"><CardArt name="charizard" className="snap-card" alt="" /></span></div>
+              <span className="snap-arrow">→</span>
+              <div className="snap-result">
+                <CardArt name="charizard" className="snap-thumb" alt="" />
+                <div><b>Charizard ex</b><small>151 · 199/165</small><span className="snap-found">✓ Found</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="find-panel">
+            <div className="find-head"><b>🌏 Every language</b></div>
+            <p>English and Japanese are built in, and Korean, Chinese and more are added on request. Same art, different sets and numbers, all told apart.</p>
+            <div className="lang-strip">
+              {LANGS.map((l) => (
+                <figure key={l.flag}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {l.image ? <img src={l.image} alt={`Naganadel & Guzzlord GX, ${l.lang}`} loading="lazy" /> : <span className="lang-ph">中文</span>}
+                  <figcaption><b>{l.flag}</b> {l.number}<small>{l.set}</small></figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="content wrap edge" id="trade">

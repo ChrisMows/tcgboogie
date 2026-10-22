@@ -118,6 +118,34 @@
 .home .kit .tool-icon { flex: none; width: 40px; height: 40px; font-size: 18px; }
 .home .tool-icon { display: inline-flex; width: 44px; height: 44px; border-radius: 10px; align-items: center; justify-content: center; background: #d3ff6614; color: var(--accent); font-size: 20px; }
 
+/* small "Premium" tags on tools */
+.home .kit-tag { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font: 600 10px var(--font-body, inherit);
+  letter-spacing: 0.3px; color: var(--accent); background: #d3ff6614; border: 1px solid #d3ff6640; vertical-align: middle; white-space: nowrap; }
+
+/* any card, any language: search by picture + the same card in three languages */
+.home .find-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 28px; }
+.home .find-panel { border: 1px solid #364150; background: #141b25; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.home .find-head { display: flex; align-items: center; gap: 6px; font: 500 19px var(--font-head); }
+.home .find-panel > p { color: #a0aab7; font-size: 14px; line-height: 1.6; margin: 0; }
+.home .snap-demo { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: auto; padding-top: 12px; }
+.home .snap-phone { width: 110px; height: 190px; border: 3px solid #3a4556; border-radius: 18px; background: #0c1016; display: flex; align-items: center; justify-content: center; }
+.home .snap-frame { position: relative; display: block; padding: 6px; border: 2px dashed var(--accent); border-radius: 8px; }
+.home .snap-card, .home .snap-thumb { display: block; width: 62px; height: auto; border-radius: 5px; }
+.home .snap-card.art-card, .home .snap-thumb.art-card { padding: 4px; border-width: 2px; }
+.home .snap-arrow { color: var(--accent); font-size: 24px; }
+.home .snap-result { display: flex; gap: 10px; align-items: center; border: 1px solid #303b4c; border-radius: 10px; padding: 10px; background: #10151c; }
+.home .snap-result > div { display: grid; gap: 3px; }
+.home .snap-result b { font-size: 14px; }
+.home .snap-result small { color: #8f9aa9; font-size: 11px; }
+.home .snap-found { color: var(--accent); font-size: 12px; font-weight: 600; }
+.home .lang-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: auto; padding-top: 12px; }
+.home .lang-strip figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
+.home .lang-strip img, .home .lang-ph { width: 100%; max-width: 120px; aspect-ratio: 63 / 88; object-fit: contain; border-radius: 6px; }
+.home .lang-ph { display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #2b344a, #141b25); border: 1px solid #364150; color: #c7d1df; font-size: 22px; }
+.home .lang-strip figcaption { display: grid; text-align: center; font-size: 12px; color: #c7d1df; }
+.home .lang-strip figcaption b { color: var(--accent); margin-right: 4px; }
+.home .lang-strip figcaption small { color: #8f9aa9; font-size: 11px; }
+
 /* real deals: totals beside the heading, card pictures from TCGplayer */
 .home .deal-stats { display: flex; gap: 28px; }
 .home .deal-stats div { display: grid; gap: 2px; }
@@ -184,6 +212,7 @@
   .home .deal-grid { gap: 12px; }
   .home .info { padding: 14px; }
   .home .toolkit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home .find-grid { grid-template-columns: minmax(0, 1fr); }
   .home .games-mobile-note { display: block; }
   .home .section-heading { flex-wrap: wrap; }
 }
