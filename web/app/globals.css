@@ -1107,6 +1107,12 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-hero-main { min-width: 0; flex: 1 1 260px; }
 .gr-hero-num { font-family: var(--font-head), var(--font-body), sans-serif; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
 .gr-cost { display: grid; gap: 6px; }
+.gr-pickers { display: grid; gap: 12px; }
+.gr-graders button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 13px; }
+.gr-count { background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: 11px; font-weight: 800; padding: 0 6px; line-height: 17px; }
+.gr-empty { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.gr-empty-icon { width: 48px; height: 48px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); font-size: 22px; }
+.gr-empty-text { flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gr-cost-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .gr-cost .seg button { padding: 7px 12px; font-size: 13px; }
 .gr-cost-custom { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0 8px; }

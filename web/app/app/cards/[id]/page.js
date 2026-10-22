@@ -2,7 +2,7 @@ import RecentSales from "@/components/RecentSales";
 import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
 import { setLabel } from "@/lib/sets";
-import { DEFAULT_GRADING_COST, gradingCandidates, gradingMath } from "@/lib/grading";
+import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardActions, { AddCardButton } from "@/components/CardActions";
@@ -146,8 +146,12 @@ export default async function CardPage({ params, searchParams }) {
   const wished = mine.some((it) => it.list === "wishlist");
   // Sell on eBay: the copy you own (the first one if you have several; each copy also has its own link below).
   const gradeIdea = (() => {
+    // The grader that pays best at its cheapest tier.
     const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
-    return c ? { ...c, ...gradingMath(c) } : null;
+    if (!c) return null;
+    const options = Object.entries(GRADING_COMPANIES).map(([g, co]) => ({ cost: co.tiers[0][1], grade: co.top, ...gradingMath(c, co.tiers[0][1], g) }))
+      .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
+    return options[0] || null;
   })();
   const sellItem = p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
@@ -196,8 +200,8 @@ export default async function CardPage({ params, searchParams }) {
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
           {gradeIdea && gradeIdea.verdict !== "skip" && (
             <Link href="/app/collection/grading" className="grade-idea">
-              💎 Worth grading? A PSA 10 sells for about {money(gradeIdea.psa10, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after ${DEFAULT_GRADING_COST} grading.
-              {gradeIdea.verdict === "safe" ? " Even a 9 would cover it." : " Only pays if it gets a 10."} →
+              💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after ${gradeIdea.cost} grading.
+              {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
             </Link>
           )}
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
