@@ -11,6 +11,8 @@ import { addItem, productDetails, quickAdd, searchCatalog } from "@/app/app/coll
 import { money, nmPrice } from "@/lib/collection";
 
 /** Search-as-you-type to add cards and sealed products. Quick "+" adds a Near Mint copy; picking a result opens details. */
+const PAGE = 8; // search results per page (big pictures, so you can tell versions apart)
+
 export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose }) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -28,6 +30,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   const [errors, setErrors] = useState({});
   const [counts, setCounts] = useState(owned);
   const [searching, setSearching] = useState(false);
+  const [shown, setShown] = useState(PAGE); // results show a page at a time, with big pictures
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const seq = useRef(0);
@@ -44,6 +47,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       if (!res.ok) { setResults([]); setError(res.error); return; }
       setError(null);
       setResults(res.results);
+      setShown(PAGE);
     }, 350);
     return () => clearTimeout(t);
   }, [q]);
@@ -98,26 +102,35 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
           <ItemForm key={picked.id} product={picked} binders={binders} onSubmit={submit} pending={pending} errors={errors} />
         </div>
       ) : results && results.length > 0 && (
-        <ul className="results">
-          {results.map((p) => {
-            const price = p.type === "sealed" ? p.prices?.market : nmPrice(p);
-            return (
-              <li key={p.id}>
-                <button type="button" className="result-main" onClick={() => { setErrors({}); pick(p); }}>
-                  <CardThumb item={p} width={42} />
-                  <span className="result-text">
-                    <b>{p.name}</b>
-                    <span className="small muted">{p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}{p.language && p.language !== "english" ? ` · ${p.language[0].toUpperCase()}${p.language.slice(1)}` : ""}</span>
-                  </span>
-                  {counts[p.id] ? <span className="badge accent">You own {counts[p.id]}</span> : null}
-                  <span className="result-price">{p.memberAdded ? <span className="small muted">No price data</span> : money(price)}</span>
-                </button>
-                <button type="button" className="btn sm primary" disabled={pending} onClick={() => quick(p)}
-                  title={p.type === "card" ? "Add one Near Mint copy" : "Add one"}>+ Add</button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <ul className="result-grid">
+            {results.slice(0, shown).map((p) => {
+              const price = p.type === "sealed" ? p.prices?.market : nmPrice(p);
+              return (
+                <li key={`${p.id}:${p.language || "english"}`} className="result-tile">
+                  <button type="button" className="result-tile-main" onClick={() => { setErrors({}); pick(p); }} title="Choose condition, grade and more">
+                    <span className="result-tile-art">
+                      <CardThumb item={p} width={150} />
+                      {counts[p.id] ? <span className="badge accent result-owned">You own {counts[p.id]}</span> : null}
+                    </span>
+                    <b className="result-tile-name">{p.name}</b>
+                    <span className="small muted result-tile-set">
+                      {p.setName}{p.number ? ` · ${p.number}` : ""}{p.type === "sealed" ? " · Sealed" : ""}{p.language && p.language !== "english" ? ` · ${p.language[0].toUpperCase()}${p.language.slice(1)}` : ""}
+                    </span>
+                    <span className="result-price">{p.memberAdded ? <span className="small muted">No price data</span> : money(price)}</span>
+                  </button>
+                  <button type="button" className="btn sm primary" disabled={pending} onClick={() => quick(p)}
+                    title={p.type === "card" ? "Add one Near Mint copy" : "Add one"}>+ Add</button>
+                </li>
+              );
+            })}
+          </ul>
+          {results.length > shown && (
+            <button type="button" className="btn ghost sm result-more" onClick={() => setShown((n) => n + PAGE)}>
+              Show more ({results.length - shown})
+            </button>
+          )}
+        </>
       )}
       {toast}
     </div>
