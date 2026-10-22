@@ -3,7 +3,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from . import db
+from . import db, shared
 from .alerts import build_discord_payload, card_label, send_discord
 from .auto import (_base_name, auto_market_value, choose_printing, grade_number, mixed_printing_reason,
                    number_matches, number_queries, pick_card, raw_market_value, tcgplayer_link)
@@ -343,7 +343,10 @@ class Finder:
                  "language": lang, "grader": grader, "grade": grade, "product_id": card.get("tcgPlayerId")}
         if getattr(self, "on_identified", None):
             self.on_identified(s, ident)  # whatever its price: we want how every identified slab sells
-        mv = auto_market_value(priced.get("card"), int(priced.get("history_days") or 0), grader, grade, self.cfg)
+        ours = None
+        if self.cfg["deal"].get("use_our_sales", True) and shared.enabled():
+            ours = shared.our_sales(card.get("tcgPlayerId"), grader, grade, lang, int(self.cfg["deal"]["comp_lookback_days"]))
+        mv = auto_market_value(priced.get("card"), int(priced.get("history_days") or 0), grader, grade, self.cfg, our_sales=ours)
         if not mv.ok:
             return skip(mv.reason, label=card_label(ident), mv=mv)
 

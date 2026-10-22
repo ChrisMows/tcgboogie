@@ -71,6 +71,7 @@ delivery:
 deal:
   comp_lookback_days: 30      # only sold comps from the last N days count toward market value
   min_comps: 3                # skip the card if fewer sold comps than this (after outliers removed)
+  use_our_sales: true         # graded: also count the eBay sales the bot recorded and members reported (sale table)
   max_comp_spread: 0.35       # skip if comps vary too much (coefficient of variation; 0.35 = 35%)
   comp_refresh_days: 15       # dashboard marks a watchlist card "refresh due" after this many days
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import dealfinder.finder as fm
 from dealfinder import db
-from dealfinder.auto import auto_market_value, grade_key, mixed_printing_reason, number_queries, pick_card
+from dealfinder.auto import auto_market_value, grade_key, merge_our_sales, mixed_printing_reason, number_queries, pick_card
 from dealfinder.finder import Finder
 from dealfinder.parse import Listing
 from dealfinder.ppt import PPTOutOfCredits
@@ -117,6 +117,39 @@ class ValueTests(unittest.TestCase):
     def test_low_confidence_estimate_does_not_block(self):
         # the real CGC 10 data had a $149 'estimate' at low confidence - ignore it rather than trust it
         self.assertTrue(auto_market_value(priced_card(smart=149, confidence="low"), 30, "PSA", "10", AUTO_CFG).ok)
+
+
+class OurSalesTests(unittest.TestCase):
+    def ours(self, *pairs):
+        return [{"sold_date": (TODAY - timedelta(days=d)).isoformat(), "price": p} for d, p in pairs]
+
+    def test_merge_skips_sales_the_service_already_has(self):
+        comps = [{"sold_date": (TODAY - timedelta(days=1)).isoformat(), "price": 1000.0, "shipping": 0, "excluded": 0}]
+        merged, added = merge_our_sales(comps, self.ours((1, 1000.5), (2, 1100.0)))
+        self.assertEqual(added, 1)  # day 1 is the same sale; day 2 is new
+        self.assertEqual(len(merged), 2)
+
+    def test_our_sales_join_the_value(self):
+        base = auto_market_value(priced_card(days=2), 30, "PSA", "10", AUTO_CFG, today=TODAY)
+        self.assertFalse(base.ok)  # only 2 service sales: not enough on its own
+        mv = auto_market_value(priced_card(days=2), 30, "PSA", "10", AUTO_CFG, today=TODAY,
+                               our_sales=self.ours((3, 3880.0), (4, 3950.0)))
+        self.assertTrue(mv.ok, mv.reason)
+        self.assertEqual(mv.comps_used, 4)
+        self.assertIn("2 eBay sales we recorded", mv.reason)
+
+    def test_our_sales_alone_still_need_enough(self):
+        card = {**UMBREON, "ebay": {"salesByGrade": {}, "priceHistory": {}}}
+        self.assertFalse(auto_market_value(card, 30, "PSA", "10", AUTO_CFG, today=TODAY, our_sales=self.ours((1, 900.0))).ok)
+        mv = auto_market_value(card, 30, "PSA", "10", AUTO_CFG, today=TODAY,
+                               our_sales=self.ours((1, 900.0), (2, 920.0), (5, 880.0)))
+        self.assertTrue(mv.ok, mv.reason)
+        self.assertAlmostEqual(mv.value, 900.0)
+
+    def test_old_sales_dont_count(self):
+        mv = auto_market_value(priced_card(days=2), 30, "PSA", "10", AUTO_CFG, today=TODAY,
+                               our_sales=self.ours((45, 3900.0), (60, 3900.0)))
+        self.assertFalse(mv.ok)
 
 
 class FakePPT:

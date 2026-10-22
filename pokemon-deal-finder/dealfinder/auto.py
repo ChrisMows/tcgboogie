@@ -124,17 +124,34 @@ def mixed_printing_reason(card, listing):
     return None
 
 
-def auto_market_value(card, history_days, grader, grade, cfg, today=None):
-    """30-day market value for one grader+grade from the service's daily graded-sales history."""
+def merge_our_sales(comps, ours):
+    """Add our own recorded sales to the service's comps, skipping ones the service already counted
+    (same day, a lone sale that day, within $1). Same rule as the website. Returns (comps, how many we added)."""
+    singles = {}
+    for c in comps:
+        singles.setdefault(c["sold_date"], []).append(c["price"])
+    added = []
+    for s in ours or []:
+        day = singles.get(s["sold_date"], [])
+        if len(day) == 1 and abs(day[0] - s["price"]) < 1:
+            continue
+        added.append({"sold_date": s["sold_date"], "price": s["price"], "shipping": 0, "excluded": 0})
+    return comps + added, len(added)
+
+
+def auto_market_value(card, history_days, grader, grade, cfg, today=None, our_sales=None):
+    """30-day market value for one grader+grade from the service's daily graded-sales history, plus our own
+    recorded eBay sales of that card and grade (our_sales: [{"sold_date", "price"}]). The usual safety checks
+    (enough sales, outliers dropped, prices not swinging too much) apply to the combined list."""
     deal, auto = cfg["deal"], cfg["auto"]
     key = grade_key(grader, grade)
     if not key:
         return MarketValue(None, reason=f"{grader} {grade} isn't priced separately")
     ebay = (card or {}).get("ebay") or {}
     g = (ebay.get("salesByGrade") or {}).get(key)
-    if not g:
+    if not g and not our_sales:
         return MarketValue(None, reason=f"no {grader} {grade} sales on record")
-    if (ebay.get("smartPriceOutlierByGrade") or {}).get(key):
+    if g and (ebay.get("smartPriceOutlierByGrade") or {}).get(key):
         return MarketValue(None, reason=f"{grader} {grade} price data is flagged as unreliable by the service")
     lookback = int(deal["comp_lookback_days"])
     if history_days < lookback:
@@ -147,11 +164,12 @@ def auto_market_value(card, history_days, grader, grade, cfg, today=None):
         except (TypeError, ValueError):
             continue
         comps += [{"sold_date": day[:10], "price": avg, "shipping": 0, "excluded": 0}] * min(n, 50)
+    comps, ours = merge_our_sales(comps, our_sales)
     mv = market_value(comps, deal, today or date.today())
     if not mv.ok:
         return mv
 
-    smart = g.get("smartMarketPrice") or {}
+    smart = (g or {}).get("smartMarketPrice") or {}
     sp = smart.get("price")
     if sp and smart.get("confidence") in ("medium", "high"):
         gap = abs(mv.value - sp) / sp
@@ -162,7 +180,8 @@ def auto_market_value(card, history_days, grader, grade, cfg, today=None):
         return MarketValue(None, comps_in_window=mv.comps_in_window,
                            reason=f"worth ${mv.value:,.0f}, under the ${auto['min_market_value']:,.0f} minimum")
     mv.reason = (f"median of {mv.comps_used} sales (${mv.low:,.2f}-${mv.high:,.2f}) in the last {lookback} days "
-                 f"via PokemonPriceTracker (eBay + Fanatics, shipping not included)")
+                 f"via PokemonPriceTracker (eBay + Fanatics, shipping not included)"
+                 + (f", including {ours} eBay sales we recorded" if ours else ""))
     return mv
 
 

@@ -53,7 +53,7 @@ def _run(sql, params=(), fetch=False):
         try:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
-                return cur.fetchone() if fetch else True
+                return (cur.fetchall() if fetch == "all" else cur.fetchone()) if fetch else True
         except Exception as e:  # noqa: BLE001
             try:
                 conn.close()
@@ -176,6 +176,25 @@ def save_watch_listing(watch_id, item):
 
 
 # ----- our own sales history (web: sale) -----
+_sales_memo = {}
+
+
+def our_sales(product_id, grader, grade, language, days=30):
+    """Our own recorded sales of one card in one grade (auctions we watched end, sales members reported):
+    [{"sold_date": "YYYY-MM-DD", "price": float}], newest first. Remembered for 30 minutes per card."""
+    key = (str(product_id), grader, str(grade), language or "english", days)
+    hit = _sales_memo.get(key)
+    if hit and time.time() - hit[0] < 1800:
+        return hit[1]
+    rows = _run("SELECT sold_at, price FROM sale WHERE product_id = %s AND grader = %s AND grade = %s AND language = %s "
+                "AND kind = 'graded' AND sold_at >= now() - make_interval(days => %s) ORDER BY sold_at DESC",
+                (str(product_id), grader, str(grade), language or "english", int(days)), fetch="all")
+    out = [{"sold_date": r[0].date().isoformat(), "price": float(r[1])} for r in (rows or []) if r[1]]
+    if rows is not None:  # don't remember a database outage as "no sales"
+        _sales_memo[key] = (time.time(), out)
+    return out
+
+
 def discord_id_for(email):
     """The Discord user ID connected to the member with this email, or None."""
     row = _run('SELECT a."providerAccountId" FROM account a JOIN "user" u ON u.id = a."userId" '
