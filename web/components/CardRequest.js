@@ -4,18 +4,22 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { requestCard } from "@/app/app/collection/actions";
 
-/** Under card searches: "Can't find it? Request it" with a link to the card (TCGplayer links are added at once). */
-export default function CardRequest({ query }) {
+/**
+ * Under card searches (and on set pages): "Can't find it? Request it" with a link to the card or sealed product.
+ * TCGplayer links are added at once; other links are read and added when we can tell what they are.
+ */
+export default function CardRequest({ query, label = "Can’t find it? Request a card or sealed product →", kind: startKind = "card" }) {
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState("");
+  const [kind, setKind] = useState(startKind);
   const [res, setRes] = useState(null);
   const [pending, start] = useTransition();
   if (!open) {
-    return <button type="button" className="link-btn small card-request-open" onClick={() => { setOpen(true); setRes(null); }}>Can&apos;t find it? Request a card →</button>;
+    return <button type="button" className="link-btn small card-request-open" onClick={() => { setOpen(true); setRes(null); }}>{label}</button>;
   }
   const send = (e) => {
     e.preventDefault();
-    start(async () => setRes(await requestCard(query, link)));
+    start(async () => setRes(await requestCard(query, link, kind)));
   };
   return (
     <div className="card-request">
@@ -27,13 +31,21 @@ export default function CardRequest({ query }) {
         </div>
       ) : (
         <form onSubmit={send} className="card-request-form">
-          <label className="small" htmlFor="cr-link">Paste a link to the card (TCGplayer, eBay, a card database…) and we&apos;ll add it. Cards our price service doesn&apos;t cover, like many Korean and Chinese cards, are added without prices.</label>
+          <div className="seg card-request-kind" role="radiogroup" aria-label="What are you looking for?">
+            {[["card", "A card"], ["sealed", "A sealed product"]].map(([k, l]) => (
+              <button key={k} type="button" role="radio" aria-checked={kind === k} className={kind === k ? "on" : ""} onClick={() => setKind(k)}>{l}</button>
+            ))}
+          </div>
+          <label className="small" htmlFor="cr-link">
+            Paste a link to the {kind === "sealed" ? "product (booster box, ETB, tin…)" : "card"} on TCGplayer, eBay or a card database and we&apos;ll add it.
+            Anything our price service doesn&apos;t cover, like many Korean and Chinese {kind === "sealed" ? "products" : "cards"}, is added without prices.
+          </label>
           <div className="row" style={{ gap: 8 }}>
             <input id="cr-link" type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
             <button className="btn sm primary" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Adding…" : "Send"}</button>
             <button type="button" className="btn sm ghost" style={{ flex: "none" }} onClick={() => setOpen(false)}>Cancel</button>
           </div>
-          <span className="small muted">Searching for: “{query}”</span>
+          {query && <span className="small muted">Searching for: “{query}”</span>}
         </form>
       )}
     </div>

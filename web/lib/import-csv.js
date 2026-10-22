@@ -1,11 +1,21 @@
 // Collection import: read a CSV from TCG Boogie, TCGplayer, Collectr, PriceCharting (or a hand-made sheet) and turn each
 // row into { name, set, number, quantity, condition, grader, grade, paid, productId, language, list }.
 // Runs in the browser (parsing and column detection) and on the server (re-checking rows).
+// Files from apps we don't know (other column names, no header row, ; or tab separated) aren't turned away: the
+// browser asks the server to guess the columns (Claude reads the header and a few rows), and the member can correct
+// each column before anything is matched.
 
 export const MAX_ROWS = 1000;
 
-/** CSV text -> array of rows (arrays of strings). Handles quotes, escaped quotes, commas and newlines in cells. */
-export function parseCsv(text) {
+/** The separator a file uses: comma, semicolon (European spreadsheets) or tab, whichever the first line has most of. */
+export function sniffDelimiter(text) {
+  const first = String(text || "").split(/\r?\n/, 1)[0];
+  const n = (ch) => first.split(ch).length - 1;
+  return [",", ";", "\t"].reduce((best, ch) => (n(ch) > n(best) ? ch : best), ",");
+}
+
+/** CSV text -> array of rows (arrays of strings). Handles quotes, escaped quotes, separators and newlines in cells. */
+export function parseCsv(text, delimiter = sniffDelimiter(text)) {
   const rows = [];
   let row = [], cell = "", quoted = false;
   const s = String(text || "").replace(/^﻿/, "");
@@ -14,7 +24,7 @@ export function parseCsv(text) {
     if (quoted) {
       if (ch === '"' && s[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') quoted = false; else cell += ch;
     } else if (ch === '"') quoted = true;
-    else if (ch === ",") { row.push(cell); cell = ""; } else if (ch === "\n" || ch === "\r") {
+    else if (ch === delimiter) { row.push(cell); cell = ""; } else if (ch === "\n" || ch === "\r") {
       if (ch === "\r" && s[i + 1] === "\n") i++;
       row.push(cell); rows.push(row); row = []; cell = "";
     } else cell += ch;
@@ -94,19 +104,36 @@ export function toRow(cells, map) {
   };
 }
 
-/** Whole file -> { rows, columns, skipped } (at most MAX_ROWS rows). */
-export function readCollectionCsv(text) {
-  const all = parseCsv(text);
-  if (all.length < 2) return { rows: [], columns: {}, skipped: 0, error: "That file has no rows." };
-  const columns = detectColumns(all[0]);
-  if (columns.name === undefined && columns.productId === undefined) {
-    return { rows: [], columns, skipped: 0, error: "We couldn't find a card name or TCGplayer ID column. The first row should be column names, like Name, Set, Number, Quantity." };
-  }
+/** Parsed file rows + a column map -> { rows, skipped } (at most MAX_ROWS rows). */
+export function rowsFrom(all, columns, hasHeader = true) {
   const rows = [];
   let skipped = 0;
-  for (const cells of all.slice(1)) {
+  for (const cells of all.slice(hasHeader ? 1 : 0)) {
     const r = toRow(cells, columns);
     if (r) rows.push(r); else skipped++;
   }
-  return { rows: rows.slice(0, MAX_ROWS), columns, skipped: skipped + Math.max(0, rows.length - MAX_ROWS) };
+  return { rows: rows.slice(0, MAX_ROWS), skipped: skipped + Math.max(0, rows.length - MAX_ROWS) };
 }
+
+/**
+ * Whole file -> { rows, columns, skipped, all }. When no name or TCGplayer ID column is recognised by name it returns
+ * needsColumns: true (and no rows) so the columns can be guessed and checked first.
+ */
+export function readCollectionCsv(text) {
+  const all = parseCsv(text);
+  if (all.length < 1 || (all.length < 2 && !all[0]?.length)) return { rows: [], columns: {}, skipped: 0, all, error: "That file has no rows." };
+  const columns = detectColumns(all[0]);
+  // A "name" column that mostly holds numbers ("Card #" -> 4/102) is the wrong column: let the columns be checked.
+  const sample = all.slice(1, 11).map((r) => String(r[columns.name] ?? "").trim()).filter(Boolean);
+  const numbery = columns.name !== undefined && sample.length && sample.filter((v) => /^[\d\s/#-]+$/.test(v)).length > sample.length / 2;
+  if (numbery) delete columns.name;
+  if ((columns.name === undefined && columns.productId === undefined) || numbery) return { rows: [], columns, skipped: 0, all, needsColumns: true };
+  return { ...rowsFrom(all, columns), columns, all };
+}
+
+// What each of our fields means, for the column guess (server) and the column picker (browser).
+export const FIELDS = {
+  name: "Card or product name", set: "Set", number: "Card number", quantity: "Quantity", condition: "Condition",
+  printing: "Printing (Holofoil, Reverse…)", grader: "Grading company", grade: "Grade", paid: "Price paid each",
+  productId: "TCGplayer product ID", language: "Language", list: "List (owned / wishlist)", type: "Type (card / sealed)",
+};

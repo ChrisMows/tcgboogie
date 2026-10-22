@@ -3,7 +3,8 @@ import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, 
 import AdminFeatures from "@/components/AdminFeatures";
 import { currentFeatures } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, declineCardRequest, removeMemberCard } from "./actions";
+import { approveCardRequest, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
+import { gameTotals } from "@/lib/game-interest";
 import { FEATURES } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -54,7 +55,7 @@ export default async function Admin({ searchParams }) {
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
-      {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} />}
+      {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
       {tab === "features" && <AdminFeatures features={FEATURES.map(({ key, group, label, help }) => ({ key, group, label, help: help || null }))}
         choices={await currentFeatures()} saved={sp?.saved} />}
     </>
@@ -264,25 +265,55 @@ async function Members({ q, userId, done }) {
   );
 }
 
-async function Requests({ ok, err, show }) {
+const REQUEST_KINDS = [["all", "All"], ["card", "Cards"], ["sealed", "Sealed"], ["import", "Import files"], ["games", "Games"]];
+const OK_NOTES = { approved: "Approved: the card is searchable by the member's words now.", removed: "Removed: the card no longer shows in search or opens.",
+  done: "Marked as reviewed.", declined: "Declined." };
+
+async function Requests({ ok, err, show, kind: rawKind }) {
+  const kind = REQUEST_KINDS.some(([k]) => k === rawKind) ? rawKind : "all";
   const status = show === "all" ? "all" : "pending";
-  const rows = await listRequests({ status });
+  const href = (k, s = status) => `/app/admin?tab=requests${k !== "all" ? `&kind=${k}` : ""}${s === "all" ? "&show=all" : ""}`;
+  const rows = kind === "games" ? [] : await listRequests({ status, kind });
+  const games = kind === "games" ? await gameTotals() : [];
   return (
     <>
-      {ok && <div className="notice good">{ok === "approved" ? "Approved: the card is searchable by the member's words now." : ok === "removed" ? "Removed: the card no longer shows in search or opens." : "Declined."}</div>}
+      {OK_NOTES[ok] && <div className="notice good">{OK_NOTES[ok]}</div>}
       {err && <div className="notice bad">{err}</div>}
+      <div className="seg" style={{ marginBottom: 12 }}>
+        {REQUEST_KINDS.map(([k, label]) => <Link key={k} href={href(k)} className={kind === k ? "on" : ""} style={{ padding: "6px 12px", fontSize: 13 }}>{label}</Link>)}
+      </div>
+      {kind === "games" ? (
+        <>
+          <p className="small muted" style={{ marginTop: 0 }}>&quot;Notify me&quot; votes from the homepage: which game to add next, and who to email when it&apos;s live.</p>
+          {games.map((g) => (
+            <div key={g.game} className="panel req-row">
+              <div className="req-main">
+                <b>{g.label}</b> <span className={`badge ${g.votes ? "accent" : ""}`}>{g.votes} vote{g.votes === 1 ? "" : "s"}</span>
+                {g.emails.length > 0 && (
+                  <details className="small"><summary>Who asked</summary><p style={{ margin: "6px 0 0", wordBreak: "break-all" }}>{g.emails.join(", ")}</p></details>
+                )}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : (
+      <>
       <p className="small muted" style={{ marginTop: 0 }}>
-        Members ask for cards they couldn&apos;t find, and most are added automatically: cards our price service has are linked, and
-        cards it doesn&apos;t have (often Korean or Chinese) are added without prices from the TCGplayer page or the linked page. These are
-        the ones we couldn&apos;t identify. Approve with the card&apos;s TCGplayer link, or decline. Under &quot;all recent&quot;, remove a card
-        that was added wrongly. <Link href={status === "all" ? "/app/admin?tab=requests" : "/app/admin?tab=requests&show=all"}>{status === "all" ? "Show waiting only" : "Show all recent requests"}</Link>
+        {kind === "import"
+          ? "Collection files whose column names we didn't recognise (we only keep the column names and file name). We guess the columns and members can correct them, so these show which apps' exports to add by name."
+          : <>Members ask for cards and sealed products they couldn&apos;t find, and most are added automatically: ones our price service has are linked, and
+            ones it doesn&apos;t have (often Korean or Chinese) are added without prices from the TCGplayer page or the linked page. Waiting here are
+            the ones we couldn&apos;t identify. Approve with the TCGplayer link, or decline. Under &quot;all recent&quot;, remove one that was added wrongly.</>}{" "}
+        <Link href={href(kind, status === "all" ? "pending" : "all")}>{status === "all" ? "Show waiting only" : "Show all recent requests"}</Link>
       </p>
       {rows.length === 0 ? <div className="panel muted">{status === "all" ? "No requests yet." : "Nothing waiting. 🎉"}</div> : rows.map((r) => (
         <div key={r.id} className="panel req-row">
           <div className="req-main">
-            <b>“{r.query}”</b> <span className={`badge ${r.status === "added" ? "good" : r.status === "declined" ? "" : "warn"}`}>{r.status}</span>
+            <b>{r.kind === "import" ? r.query : `“${r.query}”`}</b> {r.kind !== "card" && <span className="badge">{r.kind === "import" ? "Import file" : "Sealed"}</span>}{" "}
+            <span className={`badge ${r.status === "added" || r.status === "done" ? "good" : r.status === "declined" ? "" : "warn"}`}>{r.status}</span>
             <div className="small muted">{r.email || "member"} · {ago(r.createdAt)}{r.reason ? ` · ${r.reason}` : ""}</div>
-            <a href={r.link} target="_blank" rel="noopener noreferrer nofollow" className="small req-link">{r.link}</a>
+            {r.kind === "import" ? <span className="small muted">File: {r.link}</span>
+              : <a href={r.link} target="_blank" rel="noopener noreferrer nofollow" className="small req-link">{r.link}</a>}
             {r.productId && (
               <div className="small row" style={{ gap: 10 }}>
                 <Link href={`/app/cards/${encodeURIComponent(r.productId)}${r.language === "japanese" ? "?lang=japanese" : ""}`}>Open the card →</Link>
@@ -292,7 +323,10 @@ async function Requests({ ok, err, show }) {
               </div>
             )}
           </div>
-          {r.status === "pending" && (
+          {r.status === "pending" && r.kind === "import" && (
+            <div className="req-actions"><form action={doneCardRequest.bind(null, r.id)}><button className="btn sm">Mark reviewed</button></form></div>
+          )}
+          {r.status === "pending" && r.kind !== "import" && (
             <div className="req-actions">
               <form action={approveCardRequest.bind(null, r.id)} className="row" style={{ gap: 6 }}>
                 <input name="tcgplayer" placeholder="TCGplayer link or number" required />
@@ -303,6 +337,8 @@ async function Requests({ ok, err, show }) {
           )}
         </div>
       ))}
+      </>
+      )}
     </>
   );
 }

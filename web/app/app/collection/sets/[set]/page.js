@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SetGrid from "@/components/SetGrid";
 import CardThumb from "@/components/CardThumb";
+import CardRequest from "@/components/CardRequest";
+import { memberCardsInSet } from "@/lib/member-cards";
 import { getSetCards, getSetSealed, listSets } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { money, nmPrice, ownedCounts, unitValue } from "@/lib/collection";
@@ -22,9 +24,11 @@ export default async function SetPage({ params, searchParams }) {
   const set = sets.find((s) => s.name === name);
   if (!set) notFound();
   if (!allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
-  const [cards, items, watches] = await Promise.all([
-    getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id),
+  const [serviceCards, items, watches, added] = await Promise.all([
+    getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id), memberCardsInSet(name),
   ]);
+  // Cards members added to this set that the price service doesn't list (no prices) come after the service's cards.
+  const cards = serviceCards && [...serviceCards, ...added.filter((m) => !serviceCards.some((c) => c.id === m.id))];
   const owned = ownedCounts(items);
   const wished = items.filter((it) => it.list === "wishlist").map((it) => it.productId);
   const inSet = new Set((cards || []).map((c) => c.id));
@@ -62,6 +66,7 @@ export default async function SetPage({ params, searchParams }) {
             <div className="stat"><b>{money(toComplete)}</b><span>to finish the set in Near Mint ({missing.length} {missing.length === 1 ? "card" : "cards"})</span></div>
           </div>
           <SetGrid cards={cards.map(slim)} owned={owned} wished={wished} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
+          {!user.demo && <CardRequest query={setLabel(name).name} label="Missing a card from this set? Request it →" />}
           <div className="panel" id="sealed" style={{ marginTop: 18 }}>
             <h2 style={{ marginTop: 0 }}>Sealed products</h2>
             {!showSealed ? (
@@ -82,6 +87,7 @@ export default async function SetPage({ params, searchParams }) {
               </div>
             )}
             <p className="hint" style={{ marginBottom: 0 }}>Open a product to add it to your collection, wishlist it, or set a price alert.</p>
+            {showSealed && !user.demo && <CardRequest query={`${setLabel(name).name} sealed`} kind="sealed" label="Missing a sealed product from this set? Request it →" />}
           </div>
         </>
       )}

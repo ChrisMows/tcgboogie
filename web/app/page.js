@@ -5,6 +5,7 @@ import PlanCards from "@/components/PlanCards";
 import Source from "@/components/Source";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+import { GAMES, myGames } from "@/lib/game-interest";
 import "./home.css";
 
 const EXAMPLES = [
@@ -39,6 +40,8 @@ export default async function Home({ searchParams }) {
   // Signed-in members go straight to their collection. Links to the homepage's own sections (Explore deals,
   // Pricing) carry ?home=1 so members can still read them.
   if (user && sp?.home !== "1" && !deleted) redirect("/app/collection");
+  const voted = GAMES[sp?.voted] ? sp.voted : null;
+  const mine = user ? await myGames(user.id) : [];
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
   );
@@ -84,16 +87,20 @@ export default async function Home({ searchParams }) {
         </div>
       </section>
 
-      <div className="games">
+      <div className="games" id="games">
         <div className="wrap">
           <small>ONE HOBBY.<br />EVERY UNIVERSE.</small>
           <span className="game">Pokémon</span>
-          <span className="game magic soon">MAGIC</span>
-          <span className="game lorcana soon">LORCANA</span>
-          <span className="game soon" style={{ fontStyle: "italic" }}>ONE PIECE</span>
-          <span className="game soon">Yu-Gi-Oh!</span>
-          <span className="more"><b className="lime">Live: Pokémon.</b><br />The rest are coming soon.</span>
+          {/* Coming soon: each is a "Notify me" vote (plain links, so they're never prefetched). */}
+          {[["magic", "MAGIC", "magic"], ["lorcana", "LORCANA", "lorcana"], ["onepiece", "ONE PIECE", "italic"], ["yugioh", "Yu-Gi-Oh!", ""]].map(([key, label, cls]) => (
+            <a key={key} href={`/app/notify?game=${key}`} className={`game soon game-vote ${cls}`} title={`Tell me when ${GAMES[key]} is live`}>
+              {label}
+              <span className="game-vote-tag">{mine.includes(key) || voted === key ? "✓ On the list" : "🔔 Notify me"}</span>
+            </a>
+          ))}
+          <span className="more"><b className="lime">Live: Pokémon.</b><br />Tap a game to vote for it next.</span>
         </div>
+        {voted && <div className="wrap game-voted">Thanks! We&apos;ll email you when {GAMES[voted]} is live. The games with the most votes come first.</div>}
       </div>
 
       <section className="content wrap" id="tools">

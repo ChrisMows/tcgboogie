@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
@@ -47,7 +47,9 @@ async function addAlias(term, product, requestId) {
  * A member's request. Returns { status: "added" | "found" | "pending" | "declined", message, product? }.
  * "found" means the product exists but the search words didn't match it well enough to teach search.
  */
-export async function submitRequest(user, { query, link, note }) {
+export async function submitRequest(user, { query, link, note, kind }) {
+  kind = kind === "sealed" ? "sealed" : "card";
+  const what = kind === "sealed" ? "product" : "card";
   const q = String(query || "").trim().slice(0, 120);
   const raw = String(link || "").trim().slice(0, 500);
   let url;
@@ -56,7 +58,7 @@ export async function submitRequest(user, { query, link, note }) {
 
   const save = async (fields) => {
     if (!db) return null;
-    const [row] = await db.insert(cardRequests).values({ userId: user.id, query: q || "(no search)", link: url.href, note: note ? String(note).slice(0, 300) : null, ...fields }).returning({ id: cardRequests.id });
+    const [row] = await db.insert(cardRequests).values({ userId: user.id, kind, query: q || "(no search)", link: url.href, note: note ? String(note).slice(0, 300) : null, ...fields }).returning({ id: cardRequests.id });
     return row?.id ?? null;
   };
 
@@ -76,15 +78,20 @@ export async function submitRequest(user, { query, link, note }) {
     return { status: "pending", message: "Thanks! We couldn't read that card from TCGplayer, so we'll review it by hand." };
   }
 
-  // Any other link: read the page and work out which card it is.
+  // Any other link: read the page and work out which card or sealed product it is.
   const requestId = await save({ status: "pending", reason: `link from ${url.hostname}` });
-  const card = await readCardPage(url.href, q).catch(() => null);
+  const card = await readCardPage(url.href, q, kind).catch(() => null);
   if (!card) {
-    if (requestId) await db.update(cardRequests).set({ reason: `link from ${url.hostname}: couldn't tell which card the page is about` }).where(eq(cardRequests.id, requestId));
-    return { status: "pending", message: "Thanks! We couldn't tell which card that page is about, so we'll review it. A TCGplayer link to the card gets it added straight away, if you have one." };
+    if (requestId) await db.update(cardRequests).set({ reason: `link from ${url.hostname}: couldn't tell which ${what} the page is about` }).where(eq(cardRequests.id, requestId));
+    return { status: "pending", message: `Thanks! We couldn't tell which ${what} that page is about, so we'll review it. A TCGplayer link to it gets it added straight away, if you have one.` };
   }
-  // The price service may have it after all (an English or Japanese card searched oddly): same card number only.
-  if (card.number && ["english", "japanese"].includes(card.language)) {
+  // The price service may have it after all (searched oddly): a card with the same number, or a sealed product with the same name.
+  if (card.type === "sealed" && card.language === "english") {
+    const words = (n) => normTerm(n).split(" ").filter((w) => !STOP.has(w)).sort().join(" ");
+    const p = (await searchProducts(card.name).catch(() => [])).find((x) => x.type === "sealed" && words(x.name) === words(card.name));
+    if (p) return found(user, q, url, p, `read from ${url.hostname}; found in the price service`, requestId);
+  }
+  if (card.type === "card" && card.number && ["english", "japanese"].includes(card.language)) {
     const bare = (n) => String(n || "").toUpperCase().replace(/\s/g, "").split("/")[0].replace(/^0+/, "");
     const p = await findCard({ name: card.name, number: card.number, language: card.language }).catch(() => null);
     if (p && bare(p.number) === bare(card.number)) return found(user, q, url, p, `read from ${url.hostname}; found in the price service`, requestId);
@@ -119,7 +126,7 @@ async function addedWithoutPrices(user, q, url, { product, created }, requestId,
   await log("catalog", "info", `Card request ${created ? "added a new card" : "matched a member-added card"} (no prices): ${product.name} (${product.setName || "?"}, ${product.language}) for "${q}"`,
     { id: product.id, link: url.href }, user.id);
   return { status: "added", noPrices: true, product: slimProduct(product),
-    message: `${created ? "Added!" : "Found it!"} ${product.name}${product.number ? ` #${product.number}` : ""} is on TCG Boogie now. We don't have pricing data for this card yet, but you can add it to your collection (with your own value) and set price alerts.` };
+    message: `${created ? "Added!" : "Found it!"} ${product.name}${product.number ? ` #${product.number}` : ""} is on TCG Boogie now. We don't have pricing data for this ${product.type === "sealed" ? "product" : "card"} yet, but you can add it to your collection (with your own value) and set price alerts.` };
 }
 
 /** Products learned from approved requests for this search, as product IDs with language (newest first). */
@@ -148,9 +155,9 @@ export async function searchWithRequests(q) {
 }
 
 // ---------- Admin → Requests ----------
-export async function listRequests({ status = "pending", limit = 100 } = {}) {
+export async function listRequests({ status = "pending", kind = "all", limit = 100 } = {}) {
   if (!db) return [];
-  const where = status === "all" ? undefined : eq(cardRequests.status, status);
+  const where = and(status === "all" ? undefined : eq(cardRequests.status, status), kind === "all" ? undefined : eq(cardRequests.kind, kind));
   const rows = await db.select({ r: cardRequests, email: schema.users.email, memberCard: schema.memberCards.id }).from(cardRequests)
     .leftJoin(schema.users, eq(schema.users.id, cardRequests.userId))
     .leftJoin(schema.memberCards, and(eq(schema.memberCards.productId, cardRequests.productId), eq(schema.memberCards.hidden, false)))
@@ -177,9 +184,32 @@ export async function approveRequest(admin, id, tcgplayer) {
   return null;
 }
 
+/** Import-format requests: mark reviewed ("done"). */
+export async function markRequestDone(admin, id) {
+  await db.update(cardRequests).set({ status: "done", reviewedBy: admin.email, reviewedAt: new Date() })
+    .where(and(eq(cardRequests.id, Number(id)), eq(cardRequests.status, "pending")));
+}
+
 export async function declineRequests(admin, ids, reason) {
   const list = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(Boolean);
   if (!list.length) return;
   await db.update(cardRequests).set({ status: "declined", reason: String(reason || "Declined").slice(0, 200), reviewedBy: admin.email, reviewedAt: new Date() })
     .where(and(inArray(cardRequests.id, list), eq(cardRequests.status, "pending")));
+}
+
+/**
+ * Import: a member's file whose columns we couldn't recognise by name. Saved as a request (just the column names and
+ * the file name, never the rows) so admins can see which apps' exports to support. Once per member per header a day.
+ */
+export async function recordImportFormat(user, { fileName, header, guessed }) {
+  if (!db) return;
+  const cols = (Array.isArray(header) ? header : []).map((h) => String(h || "").trim().slice(0, 40)).filter(Boolean).slice(0, 30);
+  if (!cols.length) return;
+  const query = cols.join(" | ").slice(0, 600);
+  const since = new Date(Date.now() - 86400000);
+  const [dupe] = await db.select({ id: cardRequests.id }).from(cardRequests)
+    .where(and(eq(cardRequests.userId, user.id), eq(cardRequests.kind, "import"), eq(cardRequests.query, query), gte(cardRequests.createdAt, since))).limit(1);
+  if (dupe) return;
+  await db.insert(cardRequests).values({ userId: user.id, kind: "import", query, link: String(fileName || "file.csv").slice(0, 200),
+    status: "pending", reason: guessed ? "Columns not recognised; we guessed them and the member could adjust" : "Columns not recognised" });
 }

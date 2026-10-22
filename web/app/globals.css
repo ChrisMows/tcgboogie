@@ -1192,11 +1192,21 @@ details.era > .set-grid { margin-bottom: 14px; }
 @media (max-width: 600px) { .feat-row { grid-template-columns: minmax(0, 1fr) 52px 52px; } .feat-save { bottom: 64px; } }
 .card-request-open { display: inline-block; margin-top: 8px; }
 .card-request { margin-top: 10px; padding: 12px; border: 1px dashed var(--border-strong); border-radius: 10px; }
-.card-request-form { display: grid; gap: 6px; }
-.card-request-form input { flex: 1; min-width: 0; }
+.card-request-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.card-request-form .row { flex-wrap: wrap; }
+
+.card-request-kind { justify-self: start; }
+.import-columns { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.import-columns label { display: grid; gap: 4px; }
+.import-columns select { width: 100%; min-width: 0; }
+.card-request-kind button { padding: 5px 12px; font-size: 13px; }
+.card-request-form input { flex: 1 1 170px; min-width: 0; }
 .req-row { display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; }
 .req-main { min-width: 0; flex: 1 1 320px; }
 .req-link { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .req-actions { display: grid; gap: 6px; flex: 0 1 340px; }
 .req-actions input { min-width: 0; flex: 1; }
 .notice.no-price { margin: 12px 0 0; }
+.seg a { padding: 8px 16px; color: var(--muted); border-right: 1px solid var(--border); text-decoration: none; }
+.seg a:last-child { border-right: 0; }
+.seg a.on { background: var(--accent-soft); color: var(--accent); }

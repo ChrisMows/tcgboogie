@@ -3,15 +3,59 @@
 import Link from "next/link";
 import { useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { importRows, matchRows } from "@/app/app/collection/import/actions";
-import { readCollectionCsv } from "@/lib/import-csv";
+import { guessColumns, importRows, matchRows } from "@/app/app/collection/import/actions";
+import { FIELDS, readCollectionCsv, rowsFrom } from "@/lib/import-csv";
 
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const FIELD_NAMES = { name: "Name", set: "Set", number: "Number", quantity: "Quantity", condition: "Condition", grade: "Grade", grader: "Grader", paid: "Price paid", productId: "TCGplayer ID", printing: "Printing", language: "Language", list: "List" };
 
+/** Which column holds each field: pre-filled from the column names or Claude's guess, and the member can change any. */
+function ColumnPicker({ all, start, onUse, onCancel }) {
+  const [cols, setCols] = useState(start.columns || {});
+  const [hasHeader, setHasHeader] = useState(start.hasHeader !== false);
+  const width = Math.max(...all.slice(0, 6).map((r) => r.length));
+  const sample = (i) => (all[hasHeader ? 1 : 0]?.[i] ?? "").slice(0, 24);
+  const label = (i) => `${hasHeader ? (all[0][i] || `Column ${i + 1}`) : `Column ${i + 1}`}${sample(i) ? ` (e.g. ${sample(i)})` : ""}`;
+  const ready = cols.name !== undefined || cols.productId !== undefined;
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>Which column is which?</h2>
+      <p className="small muted" style={{ marginTop: 0 }}>
+        {start.guessed ? "We didn't recognise this file's columns, so we made a guess. Check it and fix anything that's off." : "Check the columns we'll use and change any that are wrong."}{" "}
+        A card name (or TCGplayer ID) is all we need; set and number make matches more exact.
+      </p>
+      <label className="small" style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10 }}>
+        <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} /> The first row is column names
+      </label>
+      <div className="import-columns">
+        {Object.entries(FIELDS).map(([k, text]) => (
+          <label key={k} className="small">
+            <span>{text}{k === "name" ? " *" : ""}</span>
+            <select value={cols[k] ?? -1} onChange={(e) => {
+              const v = Number(e.target.value);
+              const next = { ...cols };
+              if (v < 0) delete next[k]; else next[k] = v;
+              setCols(next);
+            }}>
+              <option value={-1}>Not in this file</option>
+              {Array.from({ length: width }, (_, i) => <option key={i} value={i}>{label(i)}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        <button type="button" className="btn primary" style={{ flex: "none" }} disabled={!ready} onClick={() => onUse(cols, hasHeader)}>Use these columns</button>
+        {onCancel && <button type="button" className="btn ghost" style={{ flex: "none" }} onClick={onCancel}>Cancel</button>}
+        {!ready && <span className="small muted">Pick the column with the card name.</span>}
+      </div>
+    </div>
+  );
+}
+
 /** Upload a CSV from another app (or ours): match every row to a card, review, and import. */
 export default function ImportCollection() {
-  const [file, setFile] = useState(null); // { name, rows, columns, skipped }
+  const [file, setFile] = useState(null); // { name, rows, columns, skipped, all, hasHeader }
+  const [picking, setPicking] = useState(null); // column picker: { columns, hasHeader, guessed } or "guessing"
   const [results, setResults] = useState([]); // per row: { product, value } once matched
   const [picked, setPicked] = useState({});
   const [stage, setStage] = useState("pick"); // pick -> ready -> matching -> review -> importing -> done
@@ -20,10 +64,25 @@ export default function ImportCollection() {
 
   const onFile = async (f) => {
     if (!f) return;
-    setNote(null); setResults([]); setDone(null);
+    setNote(null); setResults([]); setDone(null); setPicking(null);
     const parsed = readCollectionCsv(await f.text());
     if (parsed.error) { setNote(parsed.error); setStage("pick"); return; }
-    setFile({ name: f.name, ...parsed });
+    setFile({ name: f.name, ...parsed, hasHeader: true });
+    if (!parsed.needsColumns) { setStage("ready"); return; }
+    // Columns we don't know by name: guess them, then let the member check.
+    setStage("columns");
+    setPicking("guessing");
+    const g = await guessColumns(f.name, parsed.all.slice(0, 6)).catch(() => ({ columns: {}, hasHeader: true }));
+    // Claude's guess wins; columns we recognised by name fill the gaps (or everything, if there was no guess).
+    setPicking({ ...g, columns: { ...parsed.columns, ...g.columns } });
+  };
+
+  const useColumns = (columns, hasHeader) => {
+    const { rows, skipped } = rowsFrom(file.all, columns, hasHeader);
+    setFile({ ...file, rows, skipped, columns, hasHeader });
+    setPicking(null); setResults([]);
+    if (!rows.length) { setNote("No rows had a card name in that column. Pick another column."); setPicking({ columns, hasHeader }); return; }
+    setNote(null);
     setStage("ready");
   };
 
@@ -63,20 +122,28 @@ export default function ImportCollection() {
       <div className="panel">
         <label className="btn primary" style={{ cursor: "pointer" }}>
           {file ? "Choose another file" : "Choose a CSV file"}
-          <input type="file" accept=".csv,text/csv" hidden disabled={stage === "matching" || stage === "importing"} onChange={(e) => onFile(e.target.files?.[0])} />
+          <input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" hidden disabled={stage === "matching" || stage === "importing"} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
         <p className="hint" style={{ marginBottom: 0 }}>
-          Export your collection as CSV from TCGplayer, Collectr, PriceCharting or a spreadsheet. The first row should be column names
-          (Name, Set, Number, Quantity, Condition…). A TCGplayer ID column gives the most exact matches. Up to 1,000 rows.
+          Export your collection as CSV from TCGplayer, Collectr, PriceCharting, another app or a spreadsheet. Any layout works: if we
+          don&apos;t recognise the columns, we&apos;ll work them out and you can check them. A card name is all we need; set, number or a
+          TCGplayer ID make matches more exact. Up to 1,000 rows.
         </p>
       </div>
       {note && <div className="notice warn">{note}</div>}
 
-      {file && stage !== "pick" && (
+      {picking === "guessing" && <div className="notice">We don&apos;t recognise this file&apos;s columns yet. Working out which is which…</div>}
+      {picking && picking !== "guessing" && file && (
+        <ColumnPicker key={JSON.stringify(picking)} all={file.all} start={picking} onUse={useColumns}
+          onCancel={stage === "ready" ? () => setPicking(null) : null} />
+      )}
+
+      {file && !picking && stage !== "pick" && stage !== "columns" && (
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>{file.name}: {file.rows.length} row{file.rows.length === 1 ? "" : "s"}{file.skipped ? ` (${file.skipped} skipped)` : ""}</h2>
           <p className="small muted" style={{ marginTop: 0 }}>
-            Columns we&apos;ll use: {Object.keys(file.columns).filter((k) => FIELD_NAMES[k]).map((k) => FIELD_NAMES[k]).join(", ")}.
+            Columns we&apos;ll use: {Object.keys(file.columns).filter((k) => FIELD_NAMES[k]).map((k) => FIELD_NAMES[k]).join(", ")}.{" "}
+            {stage === "ready" && <button type="button" className="link-btn small" onClick={() => setPicking({ columns: file.columns, hasHeader: file.hasHeader })}>Change columns</button>}
           </p>
           {stage === "ready" && <button type="button" className="btn primary" onClick={match}>Find these cards</button>}
           {stage === "matching" && <div className="notice">Finding cards… {results.length} of {file.rows.length}</div>}

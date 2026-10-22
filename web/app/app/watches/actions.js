@@ -11,12 +11,14 @@ import { atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateW
 const publicProduct = (p) => p && {
   id: p.id, type: p.type, name: p.name, setName: p.setName, number: p.number, image: p.image,
   tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, history: p.history, language: p.language || "english",
+  ...(p.memberAdded ? { memberAdded: true } : {}),
 };
 
 // Until the price service is connected, only the small preview catalog is searchable: say so plainly.
 const notFound = (how) => (!catalogLive()
   ? "Our live card catalog isn't connected yet, so only a few sample cards can be found right now (try Charizard, Umbreon or Psyduck). Every TCGplayer card will work once it's switched on."
-  : how === "link" ? "We couldn't find that TCGplayer product. Check the link, or search by name." : "No matches. Try fewer words, or paste the TCGplayer link.");
+  : how === "link" ? "We couldn't find that TCGplayer product. Check the link, search by name, or request it below."
+    : "No matches. Try fewer words or paste the TCGplayer link, or request the card or product below and we'll add it.");
 
 /** Find a product from a pasted TCGplayer link/ID, or search by name. */
 export async function findProducts(query) {

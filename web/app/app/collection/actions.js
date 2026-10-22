@@ -35,7 +35,7 @@ export async function searchCatalog(query) {
     return {
       ok: false,
       error: catalogLive()
-        ? "No matches. Try fewer words, or the card number like 199/165."
+        ? "No matches. Try fewer words, or the card number like 199/165. Still missing? Request it below."
         : "No match in the preview catalog. Until the price service is connected it only has a few sample cards: try Charizard, Umbreon, Blastoise, Mew, “151”, “Base Set”, or Elite Trainer Box.",
     };
   } catch {
@@ -44,11 +44,11 @@ export async function searchCatalog(query) {
 }
 
 /** "Can't find a card? Request it": what they searched for and a link to the card. */
-export async function requestCard(query, link, note) {
+export async function requestCard(query, link, kind = "card") {
   const user = await requireUser();
   if (user.demo) return { status: "declined", message: "Requests aren't saved in the demo." };
   if (!allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
-  return submitRequest(user, { query, link, note });
+  return submitRequest(user, { query, link, kind });
 }
 
 /** Full details of a product picked from search results (search results don't carry graded sales). */

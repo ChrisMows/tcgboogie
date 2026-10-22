@@ -308,8 +308,9 @@ export const watchListings = pgTable("watch_listing", {
 export const cardRequests = pgTable("card_request", {
   id: serial("id").primaryKey(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  query: text("query").notNull(), // what they searched for
-  link: text("link").notNull(),
+  kind: text("kind").notNull().default("card"), // card / sealed / import (an import file we couldn't read)
+  query: text("query").notNull(), // what they searched for (import: the file's column names)
+  link: text("link").notNull(), // import: the file name
   note: text("note"),
   status: text("status").notNull(), // added / pending / declined
   productId: text("product_id"),
@@ -337,6 +338,7 @@ export const searchAliases = pgTable("search_alias", {
 export const memberCards = pgTable("member_card", {
   id: serial("id").primaryKey(),
   productId: text("product_id").notNull().unique(),
+  type: text("type").notNull().default("card"), // card / sealed
   name: text("name").notNull(),
   setName: text("set_name"),
   number: text("number"),
@@ -350,3 +352,13 @@ export const memberCards = pgTable("member_card", {
   hidden: boolean("hidden").notNull().default(false), // removed by an admin (junk); search and card pages skip it
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("member_card_source_idx").on(t.sourceUrl)]);
+
+// "Notify me" votes for games we don't cover yet (homepage). One per member per game; tells us which game to add next
+// and who to tell when it's live.
+export const gameInterest = pgTable("game_interest", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  game: text("game").notNull(), // magic / lorcana / onepiece / yugioh
+  notifiedAt: timestamp("notified_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("game_interest_unique").on(t.userId, t.game)]);
