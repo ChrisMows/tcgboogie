@@ -2,6 +2,7 @@ import Link from "next/link";
 import { compActive } from "@/lib/access";
 import { billingLive, billingMode, hasLiveSubscription } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
+import { effectivePlans, planHighlights } from "@/lib/plan-copy";
 import { requireUser } from "@/lib/session";
 import { openBillingPortal, startCheckout } from "../actions";
 
@@ -20,17 +21,11 @@ const FROM = {
   photo: "The photo appraiser is part of Premium.",
 };
 
-// The five things that matter, in a few words each.
-const PERKS = [
-  ["Every deal live", "while you can still bid"],
-  ["Text & Discord alerts", "plus email"],
-  ["Unlimited price alerts", `Free has ${PLANS.free.maxPriceWatches}`],
-  [`${PLANS.premium.maxProfiles} deal filters`, "Japanese cards, earlier and deeper deals"],
-  ["Full collection tools", "photo appraiser, grading check, set-completion deals"],
-];
 
 export default async function Premium({ searchParams }) {
   const user = await requireUser();
+  // What Premium adds over Free, worked out from the plans as Admin → Features set them (lib/plan-copy.js).
+  const perks = planHighlights(await effectivePlans()).premium.slice(0, 6);
   const sp = await searchParams;
   const price = PLANS.premium.price;
   const subscribed = hasLiveSubscription(user);
@@ -52,7 +47,7 @@ export default async function Premium({ searchParams }) {
         <div className="premium-body">
           <p className="premium-lead">Everything in Free, plus:</p>
           <ul className="premium-list">
-            {PERKS.map(([b, s]) => <li key={b}><b>{b}</b> <span className="muted">{s}</span></li>)}
+            {perks.map((b) => <li key={b}><b>{b}</b></li>)}
           </ul>
 
           {subscribed ? (

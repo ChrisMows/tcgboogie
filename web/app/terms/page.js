@@ -37,7 +37,7 @@ export default function Terms() {
         <li><b>Refunds.</b> Payments aren&apos;t refunded for partial months, including the month you cancel in, except where the law requires it. If you believe you were charged in error, email <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a> and we&apos;ll make it right.</li>
         <li><b>Failed payments.</b> If a renewal payment fails, Stripe retries it over the following days and Premium stays on meanwhile. If it still can&apos;t be collected, the subscription ends and your account returns to Free.</li>
         <li><b>Price changes.</b> If the price of Premium changes, we&apos;ll email you at least 30 days before your next renewal at the new price. You can cancel before then.</li>
-        <li><b>Back to Free.</b> When Premium ends, your account, collection and settings are kept. Premium-only features (such as live deal alerts, text and Discord alerts, extra filters, full value history and CSV export) stop working.</li>
+        <li><b>Back to Free.</b> When Premium ends, your account, collection and settings are kept. Features the Free plan doesn&apos;t include stop working; the pricing page&apos;s &quot;Compare every feature&quot; table shows which those are.</li>
         <li><b>Complimentary Premium.</b> Premium we give you for free (for example in a giveaway) is never charged and ends on the date we tell you.</li>
       </ul>
 
@@ -66,9 +66,10 @@ export default function Terms() {
 
       <h2 id="tools">7. Estimates and tools</h2>
       <ul>
-        <li>The grading check, trade analyzer, photo appraiser and collection values are estimates to help you decide. A grade is never guaranteed, grading fees and turnaround change, and the photo appraiser (which uses AI) can misidentify a card. Check before you act on them.</li>
+        <li>The grading check, trade analyzer, photo appraiser, search by picture and collection values are estimates to help you decide. A grade is never guaranteed, grading fees and turnaround change, and our AI features can misidentify a card. Check before you act on them.</li>
+        <li><b>Cards you add.</b> When you request a card we don&apos;t list, we may add it to the catalog for every member, using details read (by AI) from the page you link, which can be wrong. Member-added cards may have no market price; any value you type in is your own. We may edit or remove member-added cards, and limit accounts that add misleading or inappropriate ones.</li>
         <li><b>Selling on eBay.</b> When you list a card through TCG Boogie, the listing is yours: you&apos;re responsible for it, for the item, and for following eBay&apos;s rules and fees. We only fill in the listing for you to review and post.</li>
-        <li><b>What you give us.</b> When you report a sale or upload a photo, you let us use it to run TCG Boogie, for example to value that card for every member. Only report real eBay sales; we may remove reports and limit accounts that abuse it.</li>
+        <li><b>What you give us.</b> When you report a sale, request a card or upload a photo, you let us use it to run TCG Boogie, for example to value that card or add it to the catalog for every member. Only report real eBay sales and real cards; we may remove submissions and limit accounts that abuse them.</li>
       </ul>
 
       <h2 id="use">8. Fair use</h2>

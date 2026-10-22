@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { PLANS } from "@/lib/plans";
+import { channels, effectivePlans, planHighlights } from "@/lib/plan-copy";
 
 export const metadata = { title: "FAQ" };
 
-const { free, premium } = PLANS;
-
-const FAQS = [
+// Answers that describe what each plan includes are built from the plans as Admin → Features set them
+// (lib/plan-copy.js), so the FAQ never promises a feature a plan doesn't have.
+const faqs = ({ free, premium, sms, lists }) => [
   ["Is it really free?",
-    `Yes. Free includes the collection tracker, ${free.maxPriceWatches} price alerts, the trade analyzer and a look at the deals you missed. No card needed. Premium is $${premium.price}/month plus sales tax when you want deals live.`],
+    `Yes. Free is free forever, no card needed, and includes: ${lists.free.join(" · ")}. Premium is $${premium.price}/month plus sales tax.`],
   ["Where do the deals come from?",
     "Public eBay auctions for graded slabs, raw cards and sealed product. We flag the ones priced well below what the same item has really sold for, before they end."],
   ["How do you know what a card is worth?",
-    "Raw cards and sealed product use TCGplayer's market price, updated daily. Graded cards use sales of that exact card and grade over the last 90 days: eBay and Fanatics Collect sales, auctions our deal finder watched end, and sales members report. Newer sales count more than older ones."],
+    "In your collection and on card pages: raw cards and sealed product use TCGplayer's market price, updated daily, and graded cards use sales of that exact card and grade over the last 90 days (eBay and Fanatics Collect sales, auctions our deal finder watched end, and sales members report), newer sales counting more. Deal alerts compare a listing with what that exact card sold for on eBay in the last 30 days, so a deal reflects today's market. Cards our price service doesn't cover say \"No pricing data available\" instead of guessing."],
   ["Why does a graded price say \"Few sales\" or \"No sales in the last 90 days\"?",
     "Some grades barely sell. With three or more recent sales we use the typical price; with one or two we still show a value but mark it \"Few sales\" so you know it's thin. If nothing sold in 90 days we say so instead of guessing."],
   ["A price looks wrong. Can I fix it?",
@@ -31,15 +31,15 @@ const FAQS = [
   ["What's a price alert?",
     "Pick any card or sealed product and your price. Buying? We tell you when it drops to your price, and (for cards) when someone lists it on eBay at or under your price. Selling? We tell you when it climbs to it. The Performance tab shows how close each alert is."],
   ["What does the collection tracker do?",
-    "Keeps every card you own in one place with what it's worth, updated daily, and charts its value and what you paid over time. Add cards by search, open a set and tap the ones you have, import a CSV from any app, request cards we don't list yet, or (Premium) snap a photo and we find the cards for you. The eye button hides your totals for screenshots."],
+    `Keeps every card you own in one place with what it's worth, updated daily, and charts its value and what you paid over time. Add cards by search, open a set and tap the ones you have, import a CSV from any app, request cards we don't list yet, search by picture${premium.photoSearch && !free.photoSearch ? " (Premium)" : ""}, or photograph a whole binder page${premium.photoAppraiser && !free.photoAppraiser ? " (Premium)" : ""} and we find every card. The eye button hides your totals for screenshots.`],
   ["Which of my cards are worth grading?",
     "Open Worth Grading? from your collection. For each raw Near Mint card we compare today's raw price with recent graded sales at PSA, BGS, CGC, SGC or TAG, take off the grading cost you pick, and show the profit. Free shows the top 3; Premium shows them all."],
   ["What's the trade analyzer?",
     "Put in what you'd give (from your collection or any card) and what you'd get, in any condition or grade, plus cash. We price both sides at today's market and tell you if the trade is fair."],
   ["What's the difference between Free and Premium?",
-    `Free shows deals after the auction ends, so you can see what you missed. Premium gets them to you live, with text and Discord alerts, unlimited price alerts, ${premium.maxProfiles} deal filters, Japanese cards and the full collection tools: all-time history, CSV export, the full grading check, the photo appraiser, sell-high alerts and deals on cards missing from your sets.`],
+    `Free includes: ${lists.free.join(" · ")}. Premium adds: ${lists.premium.join(" · ")}.`],
   ["How do alerts reach me? Do I need Discord?",
-    "No. Alerts come by email on every plan. Premium adds text messages and Discord. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a weekly email recap (daily on Premium) that you can turn off in Settings."],
+    `No. On Free, alerts come by ${channels(free, sms)}; on Premium, by ${channels(premium, sms)}. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a ${free.emailRecap} email recap${premium.emailRecap !== free.emailRecap ? ` (${premium.emailRecap} on Premium)` : ""} that you can turn off in Settings.`],
   ["How does billing work?",
     `Premium is $${premium.price} a month plus any sales tax where you live, shown before you pay. It renews monthly until you cancel. Payments go through Stripe; we never see your card number.`],
   ["Can I cancel anytime?",
@@ -47,17 +47,19 @@ const FAQS = [
   ["Can I sell my cards on eBay from here?",
     "Yes. Connect your eBay seller account in Settings, then tap Sell on eBay on any card in your collection. We fill in the title, set, number, grade or condition, cert number and a price from recent sales; you add photos and post. We never see your eBay password, and eBay's normal selling fees apply."],
   ["Do you bid or buy for me?",
-    "No. We send the alert. You decide whether to bid or buy, and we never touch your eBay or TCGplayer account."],
+    "No. We send the alert; you decide whether to bid or buy. We never bid, buy or message sellers for you. If you connect eBay to sell your own cards, we only create the listings you review and post, and you can disconnect it anytime in Settings."],
   ["Are you affiliated with eBay or TCGplayer?",
     "No, we're independent. Some eBay links earn us a small commission if you buy. It never changes your price."],
 ];
 
-export default function FAQ() {
+export default async function FAQ() {
+  const plans = await effectivePlans();
+  const list = faqs({ ...plans, lists: planHighlights(plans) });
   return (
     <div className="wrap doc">
       <h1>Questions? Answers.</h1>
       <p className="updated">Still stuck? Email support@tcgboogie.com.</p>
-      {FAQS.map(([q, a]) => (
+      {list.map(([q, a]) => (
         <details className="faq" key={q}>
           <summary>{q}</summary>
           <p>{a}</p>

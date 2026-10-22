@@ -21,7 +21,10 @@ export default function Privacy() {
         <li><b>Your plan and billing status:</b> whether you&apos;re on Premium and when it renews. Payments are handled by Stripe; we never see or store your card number.</li>
         <li><b>eBay connection (optional):</b> if you connect eBay to sell from your collection, eBay gives us an access key (stored encrypted) and your eBay username. We use it only to create the listings you ask for, upload the photos you choose, and read your shipping, payment and return policies. We never see your eBay password, and we don&apos;t read your messages, orders or purchases.</li>
         <li><b>Sales you report:</b> if you report an eBay sale we&apos;re missing, we keep the listing link, its sold price and date, and that you reported it (so we can stop misuse). The sale itself is public eBay information and is used to value that card for everyone.</li>
-        <li><b>Photos you upload (Premium photo appraiser):</b> sent to our AI provider to identify the cards, then discarded. We don&apos;t store them.</li>
+        <li><b>Photos you upload (search by picture and the photo appraiser):</b> sent to our AI provider to identify the cards, then discarded. We don&apos;t store them.</li>
+        <li><b>Card requests:</b> when you ask us to add a card, we keep the link you send, what you searched for, and that you sent it. We read the linked page (or, for eBay, the listing through eBay&apos;s official service) to identify the card. A card we add this way joins the catalog every member can search; your name isn&apos;t shown with it.</li>
+        <li><b>Collection files you import:</b> your file is read in your browser and we receive only the rows needed to find each card. If we don&apos;t recognise the file&apos;s columns, we send its first few rows to our AI provider to work out which column is which, and keep the column names (not your rows) so we can support that app.</li>
+        <li><b>Game votes:</b> the games you tap &quot;Notify me&quot; on, so we can count votes and email you when one is live.</li>
         <li><b>Basic logs:</b> records of sign-ins, alerts and errors, kept 60 days, so we can fix problems.</li>
       </ul>
 
@@ -30,8 +33,9 @@ export default function Privacy() {
       <ul>
         <li><b>Stripe</b> (payments), <b>Neon</b> (our database), <b>Hostinger</b> (our servers and email) and <b>Amazon Web Services</b> (sending alert emails).</li>
         <li><b>Discord</b> and <b>Twilio</b> to deliver your Discord and text alerts, if you turn them on.</li>
-        <li><b>eBay</b>, when you connect it and list a card.</li>
-        <li><b>Anthropic</b> (Claude), our AI provider: it checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card, and identifies the cards in photos you upload to the photo appraiser. It gets the images only, never your name, email or other account details, and under its business terms it doesn&apos;t train its models on them.</li>
+        <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
+        <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; and works out the columns of an import file we don&apos;t recognise, from its first few rows. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
+        <li><b>PokemonPriceTracker</b>, our price service: the card searches and card lookups that show prices. It doesn&apos;t get your account details.</li>
       </ul>
       <p>We don&apos;t sell your data or share it with advertisers.</p>
 

@@ -1,4 +1,5 @@
-// Subscription plans. Keep in sync with the bot's config.yaml (plans:).
+// Subscription plans. Keep in sync with the bot's config.yaml (plans:). What the site says each plan includes is
+// worked out from these fields (and Admin → Features) in lib/plan-copy.js.
 export const PLANS = {
   free: {
     key: "free",
@@ -25,14 +26,6 @@ export const PLANS = {
     collectionImport: true, // CSV import from other apps
     tradeAnalyzer: true,
     sellOnEbay: true,
-    features: [
-      "Collection tracker, unlimited cards",
-      "5 price alerts",
-      "Trade Analyzer and import from any app",
-      "Worth Grading? top 3 picks",
-      "See the deals you missed, after they end",
-      "Sell your cards on eBay in a minute",
-    ],
   },
   premium: {
     key: "premium",
@@ -58,14 +51,6 @@ export const PLANS = {
     collectionImport: true,
     tradeAnalyzer: true,
     sellOnEbay: true,
-    features: [
-      "Every deal live, before the auction ends",
-      "Instant alerts by text, Discord and email",
-      "Unlimited price alerts",
-      "15 deal filters, Japanese cards, earlier and deeper deals",
-      "Photo appraiser and every Worth Grading? pick",
-      "Full collection history and CSV export",
-    ],
   },
 };
 

@@ -9,6 +9,7 @@ Each check:
 """
 import copy
 import logging
+import os
 import time
 
 import requests
@@ -70,6 +71,9 @@ class WebLink:
         self.scan_every = int(w.get("scan_refresh_seconds", 120))
         self.session = requests.Session()
         self.session.headers["User-Agent"] = "TCGBoogie-DealBot/1.0"
+        # The website's alert dispatch endpoints are locked with DISPATCH_SECRET (same value in both .env files).
+        secret = os.environ.get("DISPATCH_SECRET", "").strip()
+        self.dispatch_headers = {"Authorization": f"Bearer {secret}"} if secret else {}
         self._scan = (0.0, None)
         self.tracked = {}  # item_id -> end time (iso) for deals we published that haven't ended
         self.new_deals = 0
@@ -212,7 +216,7 @@ class WebLink:
     def after_check(self, stats, ppt=None):
         if self.new_deals:
             try:
-                r = self.session.post(f"{self.site}/api/deals/dispatch", timeout=60)
+                r = self.session.post(f"{self.site}/api/deals/dispatch", headers=self.dispatch_headers, timeout=60)
                 log.info("Website alerts: %s", r.json() if r.ok else f"HTTP {r.status_code}")
             except (requests.RequestException, ValueError) as e:
                 log.warning("Couldn't reach the website to send alerts (%s); it will retry next check", type(e).__name__)
@@ -223,7 +227,7 @@ class WebLink:
     def notify_watch_listings(self):
         """Ask the website to alert members about new eBay listings that meet their price alerts."""
         try:
-            r = self.session.post(f"{self.site}/api/watches/dispatch", timeout=60)
+            r = self.session.post(f"{self.site}/api/watches/dispatch", headers=self.dispatch_headers, timeout=60)
             log.info("Website price-alert listings: %s", r.json() if r.ok else f"HTTP {r.status_code}")
         except (requests.RequestException, ValueError) as e:
             log.warning("Couldn't reach the website for listing alerts (%s); they'll go out on the next round", type(e).__name__)

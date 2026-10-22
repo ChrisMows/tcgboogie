@@ -9,6 +9,7 @@ import { changeRenewal, connectProvider, deleteAccount, disconnectEbay, openBill
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
 import { PLANS } from "@/lib/plans";
+import { effectivePlans, planHighlights } from "@/lib/plan-copy";
 import { compActive } from "@/lib/access";
 
 export const metadata = { title: "Settings" };
@@ -52,6 +53,7 @@ const BILLING_NOTES = {
 
 export default async function Account({ searchParams }) {
   const user = await requireUser();
+  const premiumPerks = planHighlights(await effectivePlans()).premium; // what Premium adds, as Admin → Features set it
   const params = await searchParams;
   const premium = user.tier === "premium";
   const canDiscord = user.plan.watchAlertChannels.includes("discord"); // Admin → Features
@@ -133,7 +135,7 @@ export default async function Account({ searchParams }) {
           <div className={`notice ${BILLING_NOTES[params.billing][0]}`} style={{ marginTop: 12 }}>{BILLING_NOTES[params.billing][1]}</div>
         )}
         {!premium && !subscribed && (
-          <ul className="plan-perks">{PLANS.premium.features.map((f) => <li key={f}>{f}</li>)}</ul>
+          <ul className="plan-perks">{premiumPerks.map((f) => <li key={f}>{f}</li>)}</ul>
         )}
       </div>
       <form action={savePreferences} key={`${user.phoneVerifiedAt ? "sms" : "no-sms"}-${user.alertSms ? 1 : 0}-${user.tier}`}>

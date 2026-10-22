@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { dispatchRefusal } from "@/lib/dispatch-auth";
 import { log } from "@/lib/log";
 import { dispatchWatchListings } from "@/lib/watch-listings";
 
 // The deal bot calls this after saving eBay listings that meet members' price alerts. It only alerts listings already
-// in the database (which only the bot can write), each once, so it's safe for anyone to call.
+// in the database (which only the bot can write), each once. POST only, and locked by DISPATCH_SECRET (see lib/dispatch-auth.js).
 export const dynamic = "force-dynamic";
 
-async function handle() {
+export async function POST(req) {
+  const refused = dispatchRefusal(req, "watches");
+  if (refused) return NextResponse.json({ ok: false }, { status: refused });
   try {
     return NextResponse.json({ ok: true, ...(await dispatchWatchListings()) });
   } catch (e) {
@@ -14,5 +17,3 @@ async function handle() {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-export const GET = handle;
-export const POST = handle;
