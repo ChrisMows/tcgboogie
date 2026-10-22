@@ -4,21 +4,10 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import CardThumb from "@/components/CardThumb";
 import CardRequest from "@/components/CardRequest";
+import { shrinkImage as shrink } from "@/lib/shrink-image";
 import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
 
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-// Shrink in the browser (longest side 1568px, Claude's sweet spot for images) so uploads are quick.
-async function shrink(file) {
-  const img = await createImageBitmap(file).catch(() => null);
-  if (!img) return file;
-  const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
-  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85));
-  return blob ? new File([blob], "cards.jpg", { type: "image/jpeg" }) : file;
-}
 
 /** Snap or upload a photo of cards: we read each one, price it, and let you add them to your collection. */
 export default function PhotoAppraiser({ allowed }) {

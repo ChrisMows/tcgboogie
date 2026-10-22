@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
+import { logError } from "@/lib/log";
 import { slim } from "@/lib/portfolio";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
@@ -40,6 +42,38 @@ export async function searchCatalog(query) {
     };
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
+  }
+}
+
+/**
+ * Add cards: search by picture. The photo is read the same way as the photo appraiser (Claude reads each card's name
+ * and number, then the catalog match must agree on both), and the matches come back as search results.
+ * Returns { ok, results, unread: [{ name, number, language }] } or { ok: false, error }.
+ */
+export async function searchByPhoto(formData) {
+  const user = await requireUser();
+  if (!user.plan.photoSearch) return { ok: false, error: "Search by picture is part of Premium." };
+  if (!appraiserReady()) return { ok: false, error: "Search by picture isn't switched on yet." };
+  if (!allow("photoSearch", user.id)) return { ok: false, error: SLOW_DOWN };
+  const file = formData.get("photo");
+  if (!file || typeof file === "string" || !file.size) return { ok: false, error: "Pick a photo first." };
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { ok: false, error: "That photo format isn't supported. Try a JPEG or PNG (a screenshot works too)." };
+  if (file.size > 5 * 1024 * 1024) return { ok: false, error: "That photo is too large. Try a smaller one." };
+  try {
+    const data = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const { cards } = await appraisePhoto({ data, mediaType: file.type }, user.id);
+    const results = [];
+    const unread = [];
+    for (const c of cards) {
+      const full = c.product ? await getProduct(c.product.id, { language: c.product.language }).catch(() => null) : null;
+      if (full && !results.some((r) => r.id === full.id)) results.push(slim(full));
+      else if (!full && c.read.name) unread.push({ name: c.read.name, number: c.read.number, language: c.read.language });
+    }
+    if (!results.length && !unread.length) return { ok: false, error: "We couldn't make out a card. Try a closer, brighter photo with the name and number visible." };
+    return { ok: true, results, unread };
+  } catch (e) {
+    await logError("website", "Search by picture failed", e, {}, user.id);
+    return { ok: false, error: "We couldn't read that photo. Try again with more light and the card flat." };
   }
 }
 

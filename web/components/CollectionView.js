@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import {
   addBinder, changeQuantity, editItem, moveToCollection, removeBinder, removeItem, renameBinder, watchProduct,
 } from "@/app/app/collection/actions";
-import { KINDS, SORTS, itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { KINDS, SORTS, isOwnValue, itemLabel, money, pct, unitValue } from "@/lib/collection";
 
 const short = (name) => name.replace(/\s*\(.*\)$/, "");
 
@@ -143,6 +143,9 @@ export default function CollectionView({ items, binders, products, watched: watc
         </div>
       )}
 
+      {shown.some(isOwnValue) && (
+        <p className="small muted own-value-key"><span className="own-value-tag">✎ Your value</span> Amber values are ones you typed in yourself, not market prices.</p>
+      )}
       {shown.length === 0 ? (
         <div className="panel empty-state">
           {items.length === 0 ? (
@@ -165,7 +168,10 @@ export default function CollectionView({ items, binders, products, watched: watc
                   <span className="chip-mini">{itemLabel(it)}</span>
                   <Change v={it.change7} />
                 </div>
-                <div className="tile-value">{money(unitValue(it) !== null ? unitValue(it) * (wishlist ? 1 : it.quantity) : null)}</div>
+                <div className={`tile-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
+                  {money(unitValue(it) !== null ? unitValue(it) * (wishlist ? 1 : it.quantity) : null)}
+                  {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
+                </div>
               </Link>
               {wishlist && (
                 <div className="tile-actions">
@@ -192,7 +198,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                     <div className="small muted">
                       {it.setName}{it.number ? ` · ${it.number}` : ""} · <span className="chip-mini">{itemLabel(it)}</span>
                       {it.binderId && binderName(it.binderId) ? <> · {binderName(it.binderId)}</> : null}
-                      {it.customValue !== null && it.customValue !== undefined ? <> · your value</> : null}
+
                     </div>
                   </div>
                 </div>
@@ -203,8 +209,9 @@ export default function CollectionView({ items, binders, products, watched: watc
                     <button type="button" disabled={pending} onClick={() => act(() => changeQuantity(it.id, 1))} aria-label="One more">+</button>
                   </div>
                 )}
-                <div className="item-value">
+                <div className={`item-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
                   <b>{money(v !== null ? v * (wishlist ? 1 : it.quantity) : null)}</b>
+                  {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
                   <div className="small muted">{!wishlist && it.quantity > 1 && v !== null ? `${money(v)} each · ` : ""}<Change v={it.change7} /></div>
                 </div>
                 {!wishlist && (

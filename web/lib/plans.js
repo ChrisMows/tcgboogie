@@ -21,6 +21,7 @@ export const PLANS = {
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
     photoAppraiser: false, // snap a photo of cards: identify, price, add
+    photoSearch: false, // Add cards: search by picture (camera or upload)
     collectionImport: true, // CSV import from other apps
     tradeAnalyzer: true,
     sellOnEbay: true,
@@ -53,6 +54,7 @@ export const PLANS = {
     collectionAlerts: true,
     gradingCheck: true,
     photoAppraiser: true,
+    photoSearch: true,
     collectionImport: true,
     tradeAnalyzer: true,
     sellOnEbay: true,
@@ -91,6 +93,8 @@ export const FEATURES = [
   { key: "gradingCheck", group: "Collection", label: "Full Worth Grading? list", help: "Without it, members see the top 3 cards.",
     get: (p) => p.gradingCheck, set: (p, on) => ({ gradingCheck: on }) },
   { key: "photoAppraiser", group: "Collection", label: "Photo appraiser", get: (p) => p.photoAppraiser, set: (p, on) => ({ photoAppraiser: on }) },
+  { key: "photoSearch", group: "Collection", label: "Search by picture", help: "Camera or photo upload in the Add cards search: we read the card and find it.",
+    get: (p) => p.photoSearch, set: (p, on) => ({ photoSearch: on }) },
   { key: "tradeAnalyzer", group: "Collection", label: "Trade analyzer", get: (p) => p.tradeAnalyzer, set: (p, on) => ({ tradeAnalyzer: on }) },
   { key: "sellOnEbay", group: "Collection", label: "Sell on eBay", get: (p) => p.sellOnEbay, set: (p, on) => ({ sellOnEbay: on }) },
 ];

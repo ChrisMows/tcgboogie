@@ -44,6 +44,8 @@ export function marketValue(product, item) {
 
 /** What one copy counts for in totals: the member's own value if they set one, else the market value. */
 export const unitValue = (item) => (item.customValue ?? item.unitValue ?? null);
+/** The member typed this copy's value themselves (it isn't a market price): shown in amber with "Your value". */
+export const isOwnValue = (item) => item.customValue !== null && item.customValue !== undefined;
 
 /** Price change over the last `days` from a product's history (raw Near Mint / sealed only). */
 export function change(product, days = 7) {

@@ -1,19 +1,20 @@
 "use client";
 
 import CardRequest from "@/components/CardRequest";
+import { shrinkImage } from "@/lib/shrink-image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import CardThumb from "@/components/CardThumb";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
-import { addItem, productDetails, quickAdd, searchCatalog } from "@/app/app/collection/actions";
+import { addItem, productDetails, quickAdd, searchByPhoto, searchCatalog } from "@/app/app/collection/actions";
 import { money, nmPrice } from "@/lib/collection";
 
 /** Search-as-you-type to add cards and sealed products. Quick "+" adds a Near Mint copy; picking a result opens details. */
 const PAGE = 8; // search results per page (big pictures, so you can tell versions apart)
 
-export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose }) {
+export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose, photoSearch = false }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [results, setResults] = useState(null);
@@ -31,13 +32,18 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   const [counts, setCounts] = useState(owned);
   const [searching, setSearching] = useState(false);
   const [shown, setShown] = useState(PAGE); // results show a page at a time, with big pictures
+  // Search by picture: the photo's preview, what we read but couldn't find, and whether it's being read.
+  const [photo, setPhoto] = useState(null); // { url, unread: [{ name, number, language }] }
+  const [reading, setReading] = useState(false);
+  const fileRef = useRef(null);
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const seq = useRef(0);
 
   useEffect(() => {
     const term = q.trim();
-    if (term.length < 2) { setResults(null); setError(null); return; }
+    if (term.length < 2) { if (!photo) { setResults(null); setError(null); } return; }
+    setPhoto(null);
     const n = ++seq.current;
     setSearching(true);
     const t = setTimeout(async () => {
@@ -51,6 +57,24 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     }, 350);
     return () => clearTimeout(t);
   }, [q]);
+
+  // Search by picture: read the photo, then show the cards found as the search results.
+  async function onPhoto(file) {
+    if (!file) return;
+    setQ(""); setPicked(null); setError(null); setShown(PAGE);
+    setPhoto({ url: URL.createObjectURL(file), unread: [] });
+    setResults(null);
+    setReading(true);
+    const fd = new FormData();
+    fd.append("photo", await shrinkImage(file));
+    const res = await searchByPhoto(fd).catch(() => ({ ok: false, error: "We couldn't read that photo. Please try again." }));
+    setReading(false);
+    if (!res.ok) { setResults([]); setError(res.error); return; }
+    setResults(res.results);
+    setPhoto((p) => p && { ...p, unread: res.unread || [] });
+    if (!res.results.length) setError("We read the card but couldn't find it in our catalog. Request it below and we'll add it.");
+  }
+  const clearPhoto = () => { setPhoto(null); setResults(null); setError(null); };
 
   function quick(p) {
     start(async () => {
@@ -82,11 +106,33 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         <input type="text" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
           placeholder="Search a card, set, or number (Charizard 151, 215/203), or paste a TCGplayer link" aria-label="Search cards to add" />
         {searching && <span className="small muted">Searching…</span>}
+        {photoSearch === true ? (
+          <>
+            <button type="button" className="photo-search-btn" onClick={() => fileRef.current?.click()} disabled={reading}
+              title="Search by picture: take a photo or upload one" aria-label="Search by picture">📷</button>
+            {/* No capture attribute: phones offer "Take photo" or the photo library; desktops get a file picker. */}
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+          </>
+        ) : photoSearch === "locked" ? (
+          <Link href="/app/premium?from=photo-search" className="photo-search-btn" title="Search by picture is part of Premium" aria-label="Search by picture (Premium)">📷</Link>
+        ) : null}
         {onClose && <button type="button" className="btn ghost sm" onClick={onClose}>Done</button>}
       </div>
-      {isDemo && !q && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
+      {isDemo && !q && !photo && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
+      {photo && (
+        <div className="photo-search">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photo.url} alt="Your photo" />
+          <span className="small">{reading ? "Reading your photo…" : results?.length ? `Found ${results.length} card${results.length === 1 ? "" : "s"} in your photo` : "Your photo"}</span>
+          <button type="button" className="link-btn small" onClick={clearPhoto}>Clear</button>
+        </div>
+      )}
       {error && <div className="hint">{error}</div>}
       {q.trim().length >= 2 && !searching && <CardRequest query={q} />}
+      {photo && !reading && photo.unread.slice(0, 3).map((c, i) => (
+        <CardRequest key={i} query={`${c.name}${c.number ? ` ${c.number}` : ""}${c.language === "japanese" ? " Japanese" : ""}`}
+          label={`Can’t find ${c.name}${c.number ? ` ${c.number}` : ""}? Request it →`} />
+      ))}
 
       {picked ? (
         <div className="picked">

@@ -16,6 +16,7 @@ export const LIMITS = {
   importMatch: { max: 400, windowMs: 24 * 60 * 60 * 1000 }, // collection import: rows looked up (3 credits each, unless cached)
   importAdd: { max: 100, windowMs: 60 * 60 * 1000 }, // collection import: batches added
   importColumns: { max: 20, windowMs: 24 * 60 * 60 * 1000 }, // collection import: unfamiliar files read by Claude
+  photoSearch: { max: 60, windowMs: 24 * 60 * 60 * 1000 }, // Add cards: search by picture (one photo read each)
   appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000 }, // photo appraiser photos (about a cent each, plus price lookups)
 };
 
