@@ -3,6 +3,7 @@ import { and, asc, eq, gte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
+import { FAMILIES } from "@/lib/pokemon-families";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -406,22 +407,36 @@ function editDistance(a, b) {
 const wordMatches = (typed, word) => typed === word || word.startsWith(typed)
   || (typed.length >= 5 && editDistance(typed, word) <= (typed.length >= 8 ? 2 : 1));
 
+// Each Pokémon -> the rest of its evolution family ("buneary" -> ["lopunny"]).
+const RELATIVES = new Map();
+for (const f of FAMILIES) {
+  const names = f.split("|");
+  for (const n of names) RELATIVES.set(n, names.filter((x) => x !== n));
+}
+// "&", "and" or "tag team" in a search means a TAG TEAM card ("Mega Lopunny & Jigglypuff GX"). Those words aren't
+// sent to the price service (it would search them as names and return TAG TEAM tins and code cards).
+const TAG_WORDS = /\s*(&|\band\b|\btag\s*team\b|\btag\b)\s*/gi;
+const isTagSearch = (s) => /&|\band\b|\btag\s*team\b/i.test(s);
+
 /**
  * How well a product matches what was typed: the number counts most (exact, then the part before the slash, then a
  * number still being typed), then how many of the name's words it has. A card with the right number but another
  * name (Eiscue 020/108 for "Black Kyurem 020") ranks below every card with the right name.
  */
-function matchScore(p, { name, number }) {
-  const want = nameWords(name);
-  const have = new Set(nameWords(p.name));
-  const nameScore = want.length ? want.filter((w) => [...have].some((h) => wordMatches(w, h))).length / want.length : 0;
+function matchScore(p, { name, number, tag }) {
+  const want = nameWords(name.replace(TAG_WORDS, " "));
+  const have = [...new Set(nameWords(p.name))];
+  // A word matches the name directly, or through its evolution family (Buneary -> Mega Lopunny), which counts a bit less.
+  const wordScore = (w) => (have.some((h) => wordMatches(w, h)) ? 1 : (RELATIVES.get(w) || []).some((r) => have.includes(r)) ? 0.8 : 0);
+  const nameScore = want.length ? want.reduce((t, w) => t + wordScore(w), 0) / want.length : 0;
+  const tagBonus = tag && p.type === "card" && p.name.includes("&") && nameScore > 0 ? 4 : 0;
   let numScore = 0;
   if (number && p.number) {
     if (number.includes("/") && numBare(p.number) === numBare(number)) numScore = 3;
     else if (numHead(p.number) === numHead(number)) numScore = 2;
     else if (numHead(p.number).startsWith(numHead(number))) numScore = 1; // still typing the number
   }
-  return numScore * 10 * (nameScore > 0 || !want.length ? 1 : 0.05) + nameScore * 5;
+  return numScore * 10 * (nameScore > 0 || !want.length ? 1 : 0.05) + nameScore * 5 + tagBonus;
 }
 
 /**
@@ -440,13 +455,16 @@ export async function searchProducts(q) {
   const wantsEnglish = /\b(english|eng)\b/i.test(raw);
   const term = raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ").replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
-  const parsed = splitQuery(term);
+  const tag = isTagSearch(term);
+  const parsed = { ...splitQuery(term), tag };
   if (!catalogLive()) {
     const words = parsed.name.toLowerCase().split(/\s+/).filter(Boolean);
     return SAMPLE.filter((p) => words.every((w) => `${p.name} ${p.setName} ${p.number || ""}`.toLowerCase().includes(w)))
       .map((p, i) => ({ p, i, s: matchScore(p, parsed) })).sort((x, y) => y.s - x.s || x.i - y.i).map((x) => x.p).slice(0, 10);
   }
-  const { name, number } = parsed;
+  // TAG TEAM searches: the tag words aren't searched as names (see TAG_WORDS).
+  const name = tag ? parsed.name.replace(TAG_WORDS, " ").replace(/\s+/g, " ").trim() : parsed.name;
+  const { number } = parsed;
   const complete = number && (number.includes("/") ? /\/[a-z0-9-]{2,}$/i.test(number) : number.replace(/\D/g, "").length >= 3 || /[a-z]/i.test(number));
   const week = 7 * 24 * HOUR;
   const en = !wantsJapanese, jp = !wantsEnglish;
@@ -461,6 +479,16 @@ export async function searchProducts(q) {
   if (complete && name.length >= 2) {
     if (en) lookups.push(cards(`${name} ${number}`, 8));
     if (jp) lookups.push(cards(`${name} ${number}`, 8, "japanese"));
+  }
+  // TAG TEAM cards are always "… & … GX", and a Pokémon is often in one as its evolution (Buneary -> Mega Lopunny &
+  // Jigglypuff GX), so a TAG TEAM search also looks up "<name> gx" and "<relative> gx" for the first relatives.
+  if (tag && name.length >= 2) {
+    const typed = nameWords(name);
+    const extra = [...new Set(typed.flatMap((w) => [w, ...(RELATIVES.get(w) || []).slice(0, 3)]))].slice(0, 4);
+    for (const n of extra) {
+      if (en) lookups.push(cards(`${n} gx`, 8));
+      if (jp) lookups.push(cards(`${n} gx`, 8, "japanese"));
+    }
   }
   if (complete && number.includes("/")) {
     if (en) lookups.push(cards(number, 5));
