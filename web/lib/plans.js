@@ -27,8 +27,9 @@ export const PLANS = {
     features: [
       "Collection tracker, unlimited cards",
       "5 price alerts",
+      "Trade Analyzer and import from any app",
+      "Worth Grading? top 3 picks",
       "See the deals you missed, after they end",
-      "1 deal filter",
       "Sell your cards on eBay in a minute",
     ],
   },
@@ -60,6 +61,7 @@ export const PLANS = {
       "Instant alerts by text, Discord and email",
       "Unlimited price alerts",
       "15 deal filters, Japanese cards, earlier and deeper deals",
+      "Photo appraiser and every Worth Grading? pick",
       "Full collection history and CSV export",
     ],
   },

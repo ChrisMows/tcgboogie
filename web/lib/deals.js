@@ -289,3 +289,31 @@ export async function botStatus() {
   const [hb] = await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, "bot_heartbeat")).limit(1);
   return { lastDeal: last?.at || null, today: day?.n || 0, heartbeat: hb?.value || null };
 }
+
+/**
+ * Homepage showcase: the best deals caught (and already ended, so nothing live is given away) in the last 30 days,
+ * plus totals. Cached 15 minutes. Returns null until there are enough real deals to show.
+ */
+let showcase = globalThis.__tcgShowcase ?? (globalThis.__tcgShowcase = { at: 0, data: null });
+export async function homeShowcase() {
+  if (Date.now() - showcase.at < 15 * 60000) return showcase.data;
+  let data = null;
+  try {
+    const all = await recentDeals({ days: 30, limit: 2000 });
+    const ended = all.filter((d) => d.ended && d.image && d.discountPct > 0 && d.marketValue > 0);
+    if (all.length >= 10 && ended.length >= 3) {
+      const seen = new Set();
+      const best = ended.filter((d) => d.marketValue >= 50).sort((a, b) => b.discountPct - a.discountPct)
+        .filter((d) => (seen.has(d.name) ? false : seen.add(d.name))).slice(0, 3);
+      data = {
+        found: all.length,
+        avgOff: Math.round(all.reduce((s, d) => s + (d.discountPct || 0), 0) / all.length),
+        saved: Math.round(all.reduce((s, d) => s + Math.max(0, (d.marketValue || 0) - (d.total || 0)), 0)),
+        deals: best.length === 3 ? best : null,
+      };
+      if (!data.deals) data = null;
+    }
+  } catch { data = null; }
+  showcase = globalThis.__tcgShowcase = { at: Date.now(), data };
+  return data;
+}
