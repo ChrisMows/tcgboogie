@@ -23,7 +23,7 @@ export default function CollectionHero({ summary, week, adding, exportAllowed, t
     { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
     { key: "movers", label: "Movers", icon: "📈", panel: true },
     { key: "grading", label: "Worth Grading?", icon: "💎", href: "/app/collection/grading" },
-    { key: "trade", label: "Trade", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
+    { key: "trade", label: "Trade Analyzer", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
     { key: "alerts", label: "Alerts", icon: "🔔", panel: true },
     { key: "chart", label: "Chart", icon: "📊", panel: true },
     exportAllowed
