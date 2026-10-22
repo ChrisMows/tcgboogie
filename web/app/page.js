@@ -40,7 +40,7 @@ const TOOLS = [
 const LANGS = [
   { lang: "English", flag: "EN", set: "Cosmic Eclipse", number: "158/236", image: "https://tcgplayer-cdn.tcgplayer.com/product/201208_in_400x400.jpg" },
   { lang: "Japanese", flag: "JP", set: "Alter Genesis", number: "066/095", image: "https://tcgplayer-cdn.tcgplayer.com/product/572203_in_400x400.jpg" },
-  { lang: "Chinese", flag: "CN", set: "Striking Competition", number: "037/061", image: "/cards/naganadel-guzzlord-gx-037-061-chinese.jpg" },
+  { lang: "Chinese", flag: "CN", set: "Striking Competition", number: "037/061", image: "/cards/naganadel-guzzlord-gx-037-061-cn.jpg" },
 ];
 
 const COMPARE = [
