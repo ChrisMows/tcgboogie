@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { defaultFilters } from "@/lib/filters";
 import { PLANS } from "@/lib/plans";
@@ -411,8 +411,15 @@ export async function setCollectionPrefs(userId, prefs) {
     sellHighPct: Math.min(200, Math.max(10, Math.round(Number(prefs.sellHighPct) || 25))),
   };
   if (isDemo(userId)) return Object.assign(demoCollection().collectionPrefs, clean);
-  await db.update(users).set({ collectionPrefs: clean }).where(eq(users.id, userId));
+  // Merged, so other choices kept here (like hiding the setup checklist) survive.
+  await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || ${JSON.stringify(clean)}::jsonb` }).where(eq(users.id, userId));
   return clean;
+}
+
+/** The member hid the "Get set up" checklist on their collection. */
+export async function hideSetupSteps(userId) {
+  if (isDemo(userId)) return void (demoCollection().collectionPrefs.hideSetup = true);
+  await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || '{"hideSetup": true}'::jsonb` }).where(eq(users.id, userId));
 }
 
 /** New members start with one profile. */

@@ -7,6 +7,7 @@ import { chartSeries, itemLabel, ownedCounts, unitValue } from "@/lib/collection
 import { loadCollection } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
+import { hideSetup } from "./actions";
 
 export const metadata = { title: "Collection" };
 
@@ -50,7 +51,8 @@ export default async function CollectionPage({ searchParams }) {
           🔔 <b>{hit} price {hit === 1 ? "alert" : "alerts"}</b> hit your price. See {hit === 1 ? "it" : "them"} →
         </Link>
       )}
-      {steps.some((s) => !s[1]) && (
+      {/* Shown until every step is done, or the member hides it. */}
+      {steps.some((s) => !s[1]) && !c.prefs?.hideSetup && (
         <div className="start-here">
           <b>Get set up</b>
           <ol>
@@ -61,6 +63,7 @@ export default async function CollectionPage({ searchParams }) {
               </li>
             ))}
           </ol>
+          <form action={hideSetup} className="start-hide"><button className="link-btn small" title="Hide this checklist">Hide</button></form>
         </div>
       )}
 

@@ -250,6 +250,13 @@ export async function removeBinder(id) {
   return { ok: true };
 }
 
+/** Hide the "Get set up" checklist for good. */
+export async function hideSetup() {
+  const user = await requireUser();
+  await store.hideSetupSteps(user.id);
+  revalidatePath("/app/collection");
+}
+
 /** Premium collection alerts. */
 export async function saveCollectionPrefs(prefs) {
   const user = await requireUser();

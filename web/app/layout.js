@@ -75,12 +75,11 @@ export default async function RootLayout({ children }) {
           <div className="wrap">
             <Brand />
             <nav className="main" aria-label="Main">
-              {/* Always shown; signed-out visitors go to sign in, then straight to the page they picked. */}
-              <Link href={user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection"}>My collection</Link>
-              <Link href={user ? "/app/deals" : "/login?next=%2Fapp%2Fdeals"}>My deals</Link>
-              <Link href={user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches"}>My price alerts</Link>
-              <Link href="/?home=1#deals">Explore deals</Link>
-              <Link href="/how-it-works">How it works</Link>
+              {/* Five links. Signed-out visitors: Collection and Price alerts go to sign in, then straight to that page;
+                  Deals shows the deals we've caught on the homepage. How it works is in the footer. */}
+              <Link href={user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection"}>Collection</Link>
+              <Link href={user ? "/app/deals" : "/?home=1#deals"}>Deals</Link>
+              <Link href={user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches"}>Price alerts</Link>
               <Link href="/?home=1#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
             </nav>

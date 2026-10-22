@@ -104,7 +104,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       <div className="search-box">
         <span aria-hidden="true">⌕</span>
         <input type="text" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
-          placeholder="Search a card, set, or number (Charizard 151, 215/203), or paste a TCGplayer link" aria-label="Search cards to add" />
+          placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" />
         {searching && <span className="small muted">Searching…</span>}
         {photoSearch === true ? (
           <>

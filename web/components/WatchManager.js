@@ -195,7 +195,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                 <div>
                   <label className="sr-only" htmlFor="q">TCGplayer link or card name</label>
                   <input id="q" type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search a card or sealed product, or paste a TCGplayer link" />
+                    placeholder="Card name + number, or a sealed product" />
                   {isDemo && <div className="hint">Demo: try “Charizard”, “Umbreon”, “Evolving Skies”, or https://www.tcgplayer.com/product/517045</div>}
                 </div>
                 <button className="btn" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>

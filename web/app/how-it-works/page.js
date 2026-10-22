@@ -4,8 +4,8 @@ import Source from "@/components/Source";
 export const metadata = { title: "How it works" };
 
 const CHECKS = [
-  ["Exact card", "Set, number, printing, language, and grade or condition. Not sure? We skip it."],
-  ["Real sales", "Value comes from what that exact card sold for in the last 30 days."],
+  ["Exact card", "Set, number, printing, language, and grade or condition. We compare the listing photos with the card: a different card isn't sent, and if we can't tell, the alert says so."],
+  ["Real sales", "A deal is measured against what that exact card sold for on eBay in the last 30 days."],
   ["Red flags", "New sellers, overseas shipping and fishy wording are flagged on the alert."],
 ];
 
@@ -26,7 +26,7 @@ function StepTwo() {
   return (
     <div className="mock">
       <div className="mock-title">Watching now <span className="mock-live">● Live</span></div>
-      <div className="mock-line"><Source name="ebay" /><span>Ending auctions</span><b>every minute</b></div>
+      <div className="mock-line"><Source name="ebay" /><span>Ending auctions</span><b>about every minute</b></div>
       <div className="mock-line"><Source name="tcgplayer" /><span>Price alerts</span><b>daily prices</b></div>
       <div className="mock-line"><span>Your collection</span><b>valued daily</b></div>
     </div>
