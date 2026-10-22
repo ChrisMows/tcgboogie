@@ -40,7 +40,7 @@ export default function PlanCards({ signedIn = false }) {
           <div className="price">$0</div>
           <div className="muted">{free.tagline}</div>
           <ul>{free.features.map((f) => <li key={f}>{f}</li>)}</ul>
-          <Link href={signedIn ? "/app" : "/login?mode=signup"} className="btn block">{signedIn ? "Go to dashboard" : "Start free"}</Link>
+          <Link href={signedIn ? "/app/collection" : "/login?mode=signup"} className="btn block">{signedIn ? "Go to my collection" : "Start free"}</Link>
         </div>
         <div className="plan featured">
           <div className="row" style={{ justifyContent: "space-between" }}>

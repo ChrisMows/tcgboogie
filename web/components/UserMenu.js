@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { repairPicture } from "@/app/app/actions";
 
 const ITEMS = [
-  ["/app", "Home"],
+  ["/app/collection", "Collection"],
   ["/app/account", "Settings"],
   ["/app/account#plan", "Plan & billing"],
 ];

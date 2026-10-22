@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The whole member area: Home first, then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
+// The whole member area: Collection first (it's the home page), then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const LINKS = [
-  ["/app", "Home", "⌂", (p) => p === "/app"],
   ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
   ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
@@ -18,7 +17,6 @@ const BOTTOM = [
 ];
 
 const TABS = [
-  { href: "/app", label: "Home", icon: "⌂", isOn: (p) => p === "/app" },
   { href: "/app/collection", label: "Collection", icon: "▦", isOn: (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards") },
   { href: "/app/deals", label: "Deals", icon: "⚡", isOn: (p) => p.startsWith("/app/deals") },
   { href: "/app/watches", label: "Alerts", icon: "🔔", isOn: (p) => p.startsWith("/app/watches") },

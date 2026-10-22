@@ -16,7 +16,7 @@ export default async function CollectionPage({ searchParams }) {
   const tab = sp?.tab === "wishlist" ? "wishlist" : "owned";
   const adding = sp?.add === "1";
   const c = await loadCollection(user);
-  const watches = await store.listWatches(user.id);
+  const [watches, profiles] = await Promise.all([store.listWatches(user.id), store.listProfiles(user.id)]);
   const { summary } = c;
 
   const movers = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
@@ -30,12 +30,39 @@ export default async function CollectionPage({ searchParams }) {
   const then = [...c.snapshots].filter((p) => String(p.day) <= weekAgo).pop();
   const week = then && then.value > 0 ? { change: summary.value - then.value, pct: (summary.value - then.value) / then.value } : null;
 
+  // Collection is the member area's home page, so new members' setup steps and price alerts that hit show here.
+  const steps = [
+    ["Add a few cards to your collection", c.owned.length > 0, "/app/collection?add=1"],
+    ["Set up a deal filter", profiles.some((p) => p.updatedAt > p.createdAt), "/app/deals"],
+    ["Set a price alert", watches.length > 0, "/app/watches"],
+  ];
+  const hit = watches.filter((w) => w.status === "triggered").length;
+
   return (
     <>
       <h1 className="sr-only">Collection</h1>
       <CollectionHero summary={summary} week={week} adding={adding} exportAllowed={!!user.plan.collectionExport} movers={movers}
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
+
+      {steps.some((s) => !s[1]) && (
+        <div className="start-here">
+          <b>Get set up</b>
+          <ol>
+            {steps.map(([label, done, href], i) => (
+              <li key={label} className={done ? "done" : ""}>
+                <span className="start-num">{done ? "✓" : i + 1}</span>
+                {done ? <span>{label}</span> : <Link href={href}>{label} →</Link>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {hit > 0 && (
+        <Link href="/app/watches" className="notice coll-alert-hit">
+          🔔 <b>{hit} price {hit === 1 ? "alert" : "alerts"}</b> hit your price. See {hit === 1 ? "it" : "them"} →
+        </Link>
+      )}
 
       {adding && (
         <div className="panel">
