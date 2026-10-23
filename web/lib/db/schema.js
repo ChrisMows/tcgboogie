@@ -259,6 +259,11 @@ export const deals = pgTable("deal", {
   lastPrice: doublePrecision("last_price"),
   lastSeenAt: timestamp("last_seen_at", { mode: "date" }),
   dispatchedAt: timestamp("dispatched_at", { mode: "date" }),
+  // How it really ended, looked up by the bot once after the auction (dealfinder/sales.py): did it sell, and for how
+  // much including shipping. outcome_checked_at is set even when eBay no longer had the listing (sold stays null).
+  sold: boolean("sold"),
+  finalPrice: doublePrecision("final_price"),
+  outcomeCheckedAt: timestamp("outcome_checked_at", { mode: "date" }),
 }, (t) => [index("deal_ends_idx").on(t.endsAt)]);
 
 // A member's connected eBay seller account (for "Sell on eBay"). Tokens are encrypted (lib/secret-box.js).

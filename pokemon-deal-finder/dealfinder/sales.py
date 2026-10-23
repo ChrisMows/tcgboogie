@@ -5,6 +5,9 @@ one the bot already uses) still returns a listing for a while after it ends, wit
 sold. So every graded auction the bot identifies (card + grade, whatever its price) is remembered, and shortly
 after it ends we look it up once: if it sold, its final price goes into the website's `sale` table, where the
 website merges it with the price service's sales. Official API, one call per auction, no scraping.
+
+Every deal the bot published (raw, graded or sealed) is looked up the same way, once, and how it ended is saved on
+the deal itself (sold, final price with shipping), so the website can show deals that really sold below market.
 """
 import json
 import logging
@@ -20,6 +23,18 @@ def _money(v):
         return round(float((v or {}).get("value")), 2)
     except (TypeError, ValueError):
         return None
+
+
+def final_total(item):
+    """What an ended listing went for including shipping, sold or not (None if eBay doesn't say)."""
+    price = _money(item.get("currentBidPrice")) or _money(item.get("price"))
+    if not price:
+        return None
+    for o in item.get("shippingOptions") or []:
+        ship = _money(o.get("shippingCost"))
+        if ship is not None:
+            return round(price + ship, 2)
+    return price
 
 
 def final_sale(item):
@@ -99,6 +114,7 @@ class SaleTracker:
         due = sorted((k for k, v in self.pending.items() if now - v["ends"] >= timedelta(minutes=wait)),
                      key=lambda k: self.pending[k]["ends"])
         saved = 0
+        looked = {}  # item_id -> the item (or None), so a deal that's also waiting here is looked up once
         for item_id in due[:per_check]:
             if self.used >= daily:
                 break
@@ -109,6 +125,7 @@ class SaleTracker:
             except Exception as e:  # noqa: BLE001 - one lookup failing must not stop the rest
                 log.info("Final price lookup failed for %s: %s", item_id, e)
                 continue
+            looked[item_id] = item
             sale = final_sale(item or {})
             if not sale or sale["best_offer"]:
                 continue
@@ -123,6 +140,29 @@ class SaleTracker:
                 saved += 1
         self.saved += saved
         self._save()
-        log.info("Final prices: %d auctions waiting, %d looked up, %d sold and recorded (%d lookups today)",
-                 len(self.pending), min(len(due), per_check), saved, self.used)
+        outcomes = self.run_deals(per_check, daily, wait, looked)
+        log.info("Final prices: %d auctions waiting, %d looked up, %d sold and recorded, %d deal outcomes (%d lookups today)",
+                 len(self.pending), min(len(due), per_check), saved, outcomes, self.used)
         return saved
+
+    def run_deals(self, per_check, daily, wait, looked=None):
+        """How our published deals ended: one lookup each, saved on the deal. Returns how many were recorded."""
+        done = 0
+        for item_id in shared.deals_needing_outcome(per_check, wait):
+            item = (looked or {}).get(item_id)
+            if item is None:
+                if self.used >= daily:
+                    break
+                self.used += 1
+                try:
+                    item = self.ebay.get_item(item_id)
+                except Exception as e:  # noqa: BLE001 - eBay drops ended listings after a while: record that we tried
+                    log.info("Deal outcome lookup failed for %s: %s", item_id, e)
+                    item = None
+            if not item:
+                shared.save_deal_outcome(item_id, None, None)
+                continue
+            sold = int(((item.get("estimatedAvailabilities") or [{}])[0]).get("estimatedSoldQuantity") or 0) > 0
+            shared.save_deal_outcome(item_id, sold, final_total(item) if sold else None)
+            done += 1
+        return done

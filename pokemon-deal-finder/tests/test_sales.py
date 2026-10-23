@@ -4,7 +4,20 @@ from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 from dealfinder import sales
-from dealfinder.sales import SaleTracker, final_sale
+from dealfinder.sales import SaleTracker, final_sale, final_total
+
+
+# These tests must never reach the real database (the server runs them with its .env loaded): every shared-database
+# call is stubbed out here, and the tests that check database calls patch the exact functions they look at.
+_no_db = mock.patch.object(sales.shared, "_run", return_value=None)
+
+
+def setUpModule():
+    _no_db.start()
+
+
+def tearDownModule():
+    _no_db.stop()
 
 SOLD = {"title": "Mew ex 232/091 PSA 10", "currentBidPrice": {"value": "406.00"}, "price": {"value": "406.00"},
         "itemEndDate": "2026-10-21T18:15:54.000Z", "buyingOptions": ["AUCTION"],
@@ -82,3 +95,36 @@ class PersistenceTests(unittest.TestCase):
         with mock.patch.object(sales.shared, "enabled", return_value=True):
             t.run()
         self.assertIn("v1|9|0", SaleTracker({"sales": {}}, ebay, conn).pending)
+
+
+class DealOutcomeTests(unittest.TestCase):
+    """Every deal we published gets one lookup after it ends: did it sell, and for how much with shipping."""
+    def setUp(self):
+        self.ebay = mock.Mock()
+        self.t = SaleTracker({"sales": {"daily_calls": 10, "max_per_check": 10, "wait_minutes": 10}}, self.ebay)
+
+    def run_with(self, due, items):
+        self.ebay.get_item.side_effect = lambda i: items[i] if not isinstance(items[i], Exception) else (_ for _ in ()).throw(items[i])
+        with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=due),                 mock.patch.object(sales.shared, "save_deal_outcome") as save:
+            self.t.run()
+        return {c.args[0]: c.args[1:] for c in save.call_args_list}
+
+    def test_final_total_includes_shipping(self):
+        self.assertEqual(final_total(SOLD), 411.0)
+
+    def test_sold_unsold_and_gone(self):
+        unsold = {**SOLD, "estimatedAvailabilities": [{"estimatedSoldQuantity": 0}]}
+        got = self.run_with(["v1|1|0", "v1|2|0", "v1|3|0"], {"v1|1|0": SOLD, "v1|2|0": unsold, "v1|3|0": RuntimeError("404")})
+        self.assertEqual(got["v1|1|0"], (True, 411.0))
+        self.assertEqual(got["v1|2|0"], (False, None))
+        self.assertEqual(got["v1|3|0"], (None, None))  # eBay no longer has it: recorded so we don't ask again
+
+    def test_a_deal_waiting_for_its_sale_is_looked_up_once(self):
+        now = datetime.now(timezone.utc)
+        self.t.remember({"itemId": "v1|9|0", "itemEndDate": (now - timedelta(minutes=30)).isoformat().replace("+00:00", "Z"),
+                         "title": "Mew ex PSA 10", "itemWebUrl": "u"}, {"kind": "graded", "product_id": "517045", "grader": "PSA", "grade": "10"})
+        self.ebay.get_item.return_value = SOLD
+        with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "save_sale", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=["v1|9|0"]),                 mock.patch.object(sales.shared, "save_deal_outcome") as save:
+            self.t.run()
+        self.assertEqual(self.ebay.get_item.call_count, 1)
+        save.assert_called_once_with("v1|9|0", True, 411.0)

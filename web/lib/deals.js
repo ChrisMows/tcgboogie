@@ -26,7 +26,9 @@ function toDeal(row, now = Date.now()) {
     minutesLeft: left > 0 ? Math.max(1, Math.round(left)) : null,
     ended: left <= 0,
     lastBid: row.lastPrice ?? row.data.total,
-    soldFor: null, // eBay doesn't share final prices; tiles show the last bid we saw
+    // How it really ended, looked up by the bot after the auction (null until then, or if eBay no longer had it).
+    sold: row.sold ?? null,
+    soldFor: row.sold ? row.finalPrice ?? null : null, // final price with shipping
   };
 }
 
@@ -291,30 +293,30 @@ export async function botStatus() {
 }
 
 /**
- * Homepage showcase: three deals caught in the last 30 days (already ended, so nothing live is given away), plus
- * totals. Only deals we can stand behind: the listing photos matched the card, someone was bidding, the title doesn't
- * say reprint, and the discount is believable (15-60%). The price shown is the last bid we saw, not the final price
- * (eBay doesn't share that for raw cards), so a 95% "discount" is almost always a wrong card or an auction that
- * jumped at the end. Cached 15 minutes. Returns null until there are enough to show.
+ * Homepage showcase: deals from the last 30 days that really SOLD below market, by their final price (with shipping),
+ * which the bot looks up after each auction ends. Only ones we can stand behind: the listing photos matched the card,
+ * the title doesn't say reprint, and the real discount is 15-70%. `realOff` is that discount. Cached 15 minutes.
+ * Returns null until at least three such sales are known (the homepage then shows clearly labeled examples).
  */
 const REPRINT_TITLE = /celebrations|classic collection|30th (anniversary|celebration)|25th anniversary|reprint/i;
-const credible = (d) => d.photoCheck === "match" && (d.bidCount ?? 0) > 0 && d.discountPct >= 15 && d.discountPct <= 60
-  && !REPRINT_TITLE.test(d.title || "");
+const realOff = (d) => (d.soldFor > 0 && d.marketValue > 0 ? Math.round((1 - d.soldFor / d.marketValue) * 100) : null);
+const credible = (d) => d.sold === true && d.photoCheck === "match" && !REPRINT_TITLE.test(d.title || "")
+  && realOff(d) >= 15 && realOff(d) <= 70;
 let showcase = globalThis.__tcgShowcase ?? (globalThis.__tcgShowcase = { at: 0, data: null });
 export async function homeShowcase() {
   if (Date.now() - showcase.at < 15 * 60000) return showcase.data;
   let data = null;
   try {
     const all = await recentDeals({ days: 30, limit: 2000 });
-    const good = all.filter((d) => d.ended && d.marketValue > 0 && credible(d));
-    if (all.length >= 10 && good.length >= 3) {
+    const good = all.filter((d) => d.ended && credible(d)).map((d) => ({ ...d, realOff: realOff(d) }));
+    if (good.length >= 3) {
       const seen = new Set();
-      const best = good.filter((d) => d.image && d.marketValue >= 50).sort((a, b) => b.discountPct - a.discountPct)
+      const best = good.filter((d) => d.image && d.marketValue >= 50).sort((a, b) => b.realOff - a.realOff)
         .filter((d) => (seen.has(d.name) ? false : seen.add(d.name))).slice(0, 3);
       data = {
-        found: all.length,
-        avgOff: Math.round(good.reduce((s, d) => s + d.discountPct, 0) / good.length),
-        bestOff: Math.max(...good.map((d) => d.discountPct)),
+        soldBelow: good.length,
+        avgOff: Math.round(good.reduce((s, d) => s + d.realOff, 0) / good.length),
+        bestOff: Math.max(...good.map((d) => d.realOff)),
         deals: best.length === 3 ? best : null,
       };
       if (!data.deals) data = null;

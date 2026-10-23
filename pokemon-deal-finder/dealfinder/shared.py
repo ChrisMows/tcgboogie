@@ -202,6 +202,22 @@ def discord_id_for(email):
     return row[0] if row else None
 
 
+# ----- how our deals really ended (web: deal.sold / final_price / outcome_checked_at) -----
+def deals_needing_outcome(limit, wait_minutes=10, max_days=30):
+    """Deals that ended at least `wait_minutes` ago (and at most `max_days`) whose outcome we haven't looked up,
+    newest first. Returns [item_id]."""
+    rows = _run("SELECT id FROM deal WHERE outcome_checked_at IS NULL AND ends_at < now() - make_interval(mins => %s) "
+                "AND ends_at > now() - make_interval(days => %s) ORDER BY ends_at DESC LIMIT %s",
+                (int(wait_minutes), int(max_days), int(limit)), fetch="all")
+    return [r[0] for r in rows or []]
+
+
+def save_deal_outcome(item_id, sold, final_price):
+    """Record how a deal ended: sold True/False (None = eBay no longer had it) and the final price with shipping."""
+    _run("UPDATE deal SET sold = %s, final_price = %s, outcome_checked_at = now() WHERE id = %s",
+         (sold, final_price, item_id))
+
+
 def save_sale(sale):
     """A real eBay sale (an auction we identified, looked up after it ended). Returns True if it's new."""
     row = _run("INSERT INTO sale (item_id, product_id, kind, grader, grade, condition, language, price, shipping, sold_at, "

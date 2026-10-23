@@ -177,14 +177,14 @@ export default async function Home({ searchParams }) {
       <section className="content wrap" id="deals">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">{caught ? "REAL DEALS, ALREADY ENDED" : "LESS SCROLLING. MORE SCORING."}</div>
+            <div className="eyebrow">{caught ? "REAL SALES, BELOW MARKET" : "LESS SCROLLING. MORE SCORING."}</div>
             <h2>{caught ? "Deals we caught this month." : "Deals like these."}</h2>
           </div>
           {caught ? (
             <div className="deal-stats">
-              <div><b>{caught.found.toLocaleString("en-US")}</b><span>deals found</span></div>
-              <div><b>{caught.avgOff}%</b><span>below market when spotted, on average</span></div>
-              <div><b>{caught.bestOff}%</b><span>biggest discount when spotted</span></div>
+              <div><b>{caught.soldBelow.toLocaleString("en-US")}</b><span>sold below market</span></div>
+              <div><b>{caught.avgOff}%</b><span>below market, on average</span></div>
+              <div><b>{caught.bestOff}%</b><span>biggest saving</span></div>
             </div>
           ) : <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>}
         </div>
@@ -209,16 +209,16 @@ export default async function Home({ searchParams }) {
                       <h3>{d.name}</h3>
                       <div className="meta">{[d.setName, d.number].filter(Boolean).join(" · ")}</div>
                       <div className="prices">
-                        <div><span className="price">${usd(d.total)}</span><span className="old">${usd(d.marketValue)}</span></div>
-                        <span className="discount">↓ {d.discountPct}%</span>
+                        <div><span className="price">${usd(d.soldFor)}</span><span className="old">${usd(d.marketValue)}</span></div>
+                        <span className="discount">↓ {d.realOff}%</span>
                       </div>
-                      <div className="price-note">Last bid we saw, vs. what it usually sells for</div>
+                      <div className="price-note">Sold for, with shipping, vs. what it usually sells for</div>
                     </div>
                   </Card>
                   <div className="bottom deal-card-foot">
-                    <span>Ended {daysAgo(d.endsAt)}</span>
+                    <span>Sold {daysAgo(d.endsAt)}</span>
                     {listing ? (
-                      <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}>Final price on eBay ↗</a>
+                      <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}>See the sale on eBay ↗</a>
                     ) : <Link href="/login?mode=signup">Catch the next one ↗</Link>}
                   </div>
                 </article>
@@ -227,7 +227,7 @@ export default async function Home({ searchParams }) {
           </div>
         ) : <DealTabs deals={EXAMPLES} cards={cards} />}
         <p className="note">
-          {caught ? "Real eBay listings our deal finder caught, shown after they ended. Prices are the last bid we saw before the end; auctions often finish higher. Premium members get deals live." : "Illustrative listings and prices, not live offers."}
+          {caught ? "Real eBay auctions our deal finder caught that sold below market. Prices are what each one finally sold for, including shipping. Premium members get deals while they're live." : "Illustrative listings and prices, not live offers."}
         </p>
       </section>
 

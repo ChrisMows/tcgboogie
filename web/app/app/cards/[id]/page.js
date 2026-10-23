@@ -61,9 +61,11 @@ function DealBox({ deal: d, premium }) {
         <span className="small muted">{grade}{d.language === "japanese" ? " · Japanese" : ""}</span>
       </div>
       <div className="deal-box-price">
-        <b>{money(live ? d.total : d.lastBid)}</b>
-        <span className="muted">{live ? "with shipping" : "last bid we saw"}</span>
-        <span className="deal-box-off">{Math.round(d.discountPct)}% below {money(d.marketValue)}</span>
+        <b>{money(live ? d.total : d.soldFor ?? d.lastBid)}</b>
+        <span className="muted">{live ? "with shipping" : d.soldFor ? "sold for, with shipping" : d.sold === false ? "last bid · didn't sell" : "last bid we saw"}</span>
+        <span className="deal-box-off">
+          {Math.round(!live && d.soldFor && d.marketValue ? (1 - d.soldFor / d.marketValue) * 100 : d.discountPct)}% below {money(d.marketValue)}
+        </span>
       </div>
       <div className="small muted">
         {live ? `About ${d.minutesLeft} min left` : `Ended ${new Date(d.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
