@@ -225,6 +225,29 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; text-tra
 .doc p, .doc li { color: #c9d1dd; }
 details.faq { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
 details.faq summary { cursor: pointer; font-weight: 600; }
+/* Deals → My filters: the cards in a filter, as pictures */
+.fx-strip { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-right: 10px; }
+.fx-strip-thumb { border-radius: 3px; }
+.fx-more, .fx-any { font-size: 12px; font-weight: 600; color: var(--text); background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.fx-any { color: var(--accent); }
+.fx-cards { margin-bottom: 14px; }
+.fx-cards-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.fx-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.fx-card { position: relative; display: flex; gap: 10px; align-items: center; padding: 8px 30px 8px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); min-width: 0; }
+.fx-card-text { display: grid; gap: 2px; min-width: 0; }
+.fx-card-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-card-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-card-value { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.fx-card-x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.fx-card-x:hover { color: var(--bad); background: var(--bad-soft); }
+.fx-card-any { width: 64px; height: 89px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px dashed var(--border-strong); color: var(--accent); font-size: 22px; }
+.fx-card-add { justify-content: center; min-height: 105px; padding: 8px; border-style: dashed; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.fx-card-add:hover { border-color: var(--accent); color: var(--accent); }
+.fx-empty { display: grid; gap: 6px; justify-items: start; text-align: left; }
+.fx-empty p { margin: 0; }
+.fx-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+@media (max-width: 700px) { .fx-summary, .fx-any, .fx-more { display: none; } .fx-strip { margin-right: 6px; } .fx-strip .fx-strip-thumb:nth-of-type(n+4) { display: none; } }
+
 /* FAQ: topic jump links and grouped sections */
 .faq-topics { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 6px; }
 .faq-topics a { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 13px; color: var(--text); text-decoration: none; }

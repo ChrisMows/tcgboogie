@@ -30,7 +30,7 @@ export function defaultFilters(plan) {
     maxGrade: 10,
     languages: plan.japanese ? ["english", "japanese"] : ["english"],
     pokemon: [], // "any card named …" (e.g. every Charizard)
-    cards: [], // specific cards picked from the list: { name, setName, number }
+    cards: [], // specific cards picked from the list: { name, setName, number, productId?, image? }
     excludePokemon: [],
     sets: [],
     excludeSets: [],
@@ -109,7 +109,11 @@ export function validateFilters(input, plan) {
   for (const key of ["pokemon", "excludePokemon", "sets", "excludeSets"]) f[key] = words(input[key]);
   const text = (v, n) => String(v || "").trim().slice(0, n);
   f.cards = (Array.isArray(input.cards) ? input.cards : [])
-    .map((c) => ({ name: text(c?.name, 80), setName: text(c?.setName, 80) || null, number: text(c?.number, 20) || null }))
+    .map((c) => ({
+      name: text(c?.name, 80), setName: text(c?.setName, 80) || null, number: text(c?.number, 20) || null,
+      ...(/^(\d{1,12}|m-[a-z0-9]{1,20})$/.test(String(c?.productId || "")) ? { productId: String(c.productId) } : {}),
+      ...(/^https:\/\/tcgplayer-cdn\.tcgplayer\.com\/product\/[\w.-]+$/.test(String(c?.image || "")) ? { image: String(c.image) } : {}),
+    }))
     .filter((c) => c.name)
     .slice(0, 100);
 

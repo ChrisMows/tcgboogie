@@ -86,7 +86,7 @@ function CardPicker({ f, set }) {
   const cards = f.cards || [];
   const isOn = (c) => cards.some((x) => sameCard(x, { name: c.name, number: c.number, setName: c.setName }));
   const flip = (c) => {
-    const entry = { name: c.name, setName: c.setName, number: c.number };
+    const entry = { name: c.name, setName: c.setName, number: c.number, productId: c.id, image: c.image || undefined };
     set("cards", isOn(c) ? cards.filter((x) => !sameCard(x, entry)) : [...cards, entry]);
   };
   const term = q.trim();
@@ -243,7 +243,66 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
   }
 }
 
-export default function FilterStudio({ profiles: initial, plan, deals, sample, prefill, allSets, ready }) {
+/** A filter card's picture and value: from the page (looked up on the server) or what the picker saved. */
+const cardKey = (c) => `${c?.name || ""}|${c?.number || ""}|${c?.setName || ""}`;
+const usd = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Collapsed row: the first few picked cards as small pictures, "any …" names as chips, and "+N" for the rest. */
+function CardStrip({ f, cardInfo }) {
+  const cards = f.cards || [];
+  const shown = cards.slice(0, 6);
+  if (!cards.length && !f.pokemon.length) return null;
+  return (
+    <span className="fx-strip" aria-label={`${cards.length + f.pokemon.length} cards in this filter`}>
+      {f.pokemon.slice(0, 2).map((p) => <span key={p} className="fx-any">Any {p}</span>)}
+      {shown.map((c) => {
+        const info = cardInfo[cardKey(c)] || c;
+        return <CardThumb key={cardKey(c)} item={{ name: c.name, number: c.number, image: info.image || c.image }} width={30} className="fx-strip-thumb" />;
+      })}
+      {cards.length > shown.length && <span className="fx-more">+{cards.length - shown.length}</span>}
+    </span>
+  );
+}
+
+/** Expanded: every picked card as a tile (picture, name, number, set, market value), each removable, plus Add cards. */
+function CardGrid({ f, set, cardInfo, onAdd }) {
+  const cards = f.cards || [];
+  const total = cards.length + f.pokemon.length;
+  return (
+    <div className="fx-cards">
+      <div className="fx-cards-head">
+        <b>Cards in this filter</b>
+        <span className="small muted">{total ? `${total} · deals on any of these` : "None picked: deals on every card that fits the other settings"}</span>
+      </div>
+      <div className="fx-card-grid">
+        {f.pokemon.map((p) => (
+          <div key={`any-${p}`} className="fx-card any">
+            <span className="fx-card-any" aria-hidden="true">★</span>
+            <span className="fx-card-text"><b>Any {p}</b><span className="small muted">every set and version</span></span>
+            <button type="button" className="fx-card-x" aria-label={`Remove any ${p}`} onClick={() => set("pokemon", f.pokemon.filter((x) => x !== p))}>✕</button>
+          </div>
+        ))}
+        {cards.map((c) => {
+          const info = cardInfo[cardKey(c)] || {};
+          return (
+            <div key={cardKey(c)} className="fx-card">
+              <CardThumb item={{ name: c.name, number: c.number, image: info.image || c.image }} width={64} />
+              <span className="fx-card-text">
+                <b title={c.name}>{short(c.name)}</b>
+                <span className="small muted">{c.number ? `#${cardNo(c.number)}` : ""}{c.setName ? `${c.number ? " · " : ""}${c.setName}` : ""}</span>
+                {info.value ? <span className="fx-card-value">Market {usd(info.value)} <span className="muted">raw NM</span></span> : null}
+              </span>
+              <button type="button" className="fx-card-x" aria-label={`Remove ${c.name}`} onClick={() => set("cards", cards.filter((x) => !sameCard(x, c)))}>✕</button>
+            </div>
+          );
+        })}
+        <button type="button" className="fx-card fx-card-add" onClick={onAdd}>+ Add cards</button>
+      </div>
+    </div>
+  );
+}
+
+export default function FilterStudio({ profiles: initial, plan, deals, sample, prefill, allSets, ready, cardInfo = {} }) {
   const router = useRouter();
   const defaults = useMemo(() => defaultFilters(plan), [plan]);
   const [profiles, setProfiles] = useState(initial);
@@ -375,7 +434,13 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                 <button type="button" className="fx-pencil" title="Rename" aria-label={`Rename ${p.name}`} onClick={() => { setNewName(p.name); setRenaming(true); }}>✎</button>
               ) : null}
               <button type="button" className="fx-rest" onClick={() => openBox(p)} tabIndex={-1} aria-hidden="true">
-                {!isOpen && <span className="fx-summary">{applied.length ? applied.map((x) => `${x.label}: ${x.summary(f)}`).join(" · ") : "Every deal over your plan's minimums"}</span>}
+                {!isOpen && <CardStrip f={f} cardInfo={cardInfo} />}
+                {!isOpen && (
+                  <span className="fx-summary">
+                    {applied.filter((x) => x.key !== "cards").map((x) => `${x.label}: ${x.summary(f)}`).join(" · ")
+                      || (applied.length ? "" : "Every deal over your plan's minimums")}
+                  </span>
+                )}
                 <span className="fs-count">{results.length} {results.length === 1 ? "deal" : "deals"}</span>
                 <span className={`fx-chev ${isOpen ? "open" : ""}`} title={isOpen ? "Close this filter" : "Open this filter"}>{isOpen ? "−" : "+"}</span>
               </button>
@@ -383,6 +448,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
 
             {isOpen && (
               <div className="fx-body">
+                {hasCards(draft) && <CardGrid f={draft} set={set} cardInfo={cardInfo} onAdd={() => { setPop("cards"); barRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />}
                 <div className="fs-bar" ref={barRef}>
                   <div className="fs-bar-head">
                     <span className="small muted">{applied.length ? `${applied.length} filter${applied.length === 1 ? "" : "s"} set` : "No filters set: every deal over your plan's minimums"}</span>
@@ -439,7 +505,30 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                   <span className="small muted">{sample ? "example deals: real ones appear as the deal finder catches them" : `deals from the last 7 days · ${premium ? "you get new ones live" : "Free shows them after they end"}`}</span>
                 </div>
                 <DealGrid deals={results} mode={premium ? "live" : "missed"}
-                  empty={<>Nothing matches yet. Try <button type="button" className="link-btn" onClick={() => setDraft({ ...defaults })}>clearing this filter</button> or widening a setting.</>} />
+                  empty={(() => {
+                    const n = (draft.cards || []).length + draft.pokemon.length;
+                    const lower = Math.max(plan.minDiscountFloor, draft.minDiscountPct - 10);
+                    return (
+                      <div className="fx-empty">
+                        <b>No deals yet {n ? `on ${n === 1 ? "this card" : `these ${n} cards`}` : "for this filter"} in the last 7 days.</b>
+                        <p className="small muted">
+                          A deal is a listing at least {draft.minDiscountPct}% below what the card usually sells for
+                          {draft.usOnly ? ", from a US seller" : ""}. {n ? "These cards just haven't had one yet." : ""} Widen it:
+                        </p>
+                        <div className="fx-empty-actions">
+                          {lower < draft.minDiscountPct && (
+                            <button type="button" className="btn sm" onClick={() => set("minDiscountPct", lower)}>Try {lower}% below</button>
+                          )}
+                          {draft.maxMinutesLeft < plan.maxWindowMinutes && (
+                            <button type="button" className="btn sm" onClick={() => set("maxMinutesLeft", plan.maxWindowMinutes)}>Ends within {plan.maxWindowMinutes} min</button>
+                          )}
+                          {draft.usOnly && <button type="button" className="btn sm" onClick={() => set("usOnly", false)}>Any seller country</button>}
+                          <button type="button" className="link-btn small" onClick={() => setDraft({ ...defaults })}>Clear this filter</button>
+                        </div>
+                        {dirty && <p className="small muted" style={{ margin: "8px 0 0" }}>The count above updates as you change it. Tap <b>Update this filter</b> to keep it.</p>}
+                      </div>
+                    );
+                  })()} />
               </div>
             )}
           </section>
