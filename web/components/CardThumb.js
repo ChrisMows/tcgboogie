@@ -22,16 +22,30 @@ function Placeholder({ item, width, style, className = "" }) {
   );
 }
 
+// The short condition each grader prints next to the number. Half grades take the whole grade's words plus "+".
+const WORDS = {
+  PSA: { 10: "GEM MT", 9: "MINT", 8: "NM-MT", 7: "NM", 6: "EX-MT", 5: "EX", 4: "VG-EX", 3: "VG", 2: "GOOD", 1.5: "FR", 1: "PR" },
+  BGS: { 10: "PRISTINE", 9.5: "GEM MINT", 9: "MINT", 8: "NM-MT", 7: "NM", 6: "EX-MT", 5: "EX", 4: "VG-EX", 3: "VG", 2: "GOOD", 1: "POOR" },
+  CGC: { 10: "GEM MINT", 9.5: "MINT+", 9: "MINT", 8: "NM/MINT", 7: "NM", 6: "EX/NM", 5: "EX", 4: "VG/EX", 3: "VG", 2: "GOOD", 1: "POOR" },
+  SGC: { 10: "GEM MINT", 9.5: "MINT+", 9: "MINT", 8: "NM/MT", 7: "NM", 6: "EX/NM", 5: "EX", 4: "VG/EX", 3: "VG", 2: "GOOD", 1: "POOR" },
+  TAG: { 10: "GEM MINT", 9: "MINT", 8: "NM-MT", 7: "NM", 6: "EX-MT", 5: "EX", 4: "VG-EX", 3: "VG", 2: "GOOD", 1: "POOR" },
+};
+export function gradeWords(grader, grade) {
+  if (/pristine/i.test(String(grade))) return "PRISTINE";
+  const n = Number(String(grade).replace(/[^\d.]/g, ""));
+  const table = WORDS[grader] || WORDS.PSA;
+  if (table[n]) return table[n];
+  return table[Math.floor(n)] ? `${table[Math.floor(n)]}+` : "";
+}
+
 function Slab({ item, style, className }) {
   const grade = String(item.grade || "").replace(" Pristine", "");
-  const pristine = String(item.grade || "").includes("Pristine");
   return (
     <div className={`thumb slab slab-${String(item.grader).toLowerCase()} ${className}`} style={style}
       title={`${item.grader} ${item.grade}`} aria-label={`${item.grader} ${item.grade} slab`}>
       <div className="slab-label">
-        <span className="slab-grader">{item.grader}</span>
-        <span className="slab-name">{String(item.name || "").replace(/\s*\(.*\)$/, "")}{item.number ? ` #${String(item.number).split("/")[0]}` : ""}</span>
-        <span className="slab-grade">{pristine ? <small>PRISTINE </small> : null}{grade}</span>
+        <span className="slab-words">{gradeWords(item.grader, item.grade)}</span>
+        <span className="slab-score"><span className="slab-grader">{item.grader}</span><span className="slab-grade">{grade}</span></span>
       </div>
       <div className="slab-window">
         {item.image
