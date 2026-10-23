@@ -30,3 +30,16 @@ export function ebaySearch(query, { sold = false, sealed = false, source = "sear
   if (sold) { q.set("LH_Sold", "1"); q.set("LH_Complete", "1"); q.set("_sop", "13"); }
   return ebayLink(`https://www.ebay.com/sch/i.html?${q}`, source);
 }
+
+/**
+ * A deal that has ended, on eBay: its sold listings for that exact card and grade, newest first. eBay sends an ended
+ * listing's own link to a general product page showing whatever is for sale now (another grader, another grade), so
+ * the sale itself is only visible in sold listings. Returns { href, affiliate }.
+ */
+export function dealSoldSearch(d, source = "deal-sold") {
+  const grade = d.kind === "graded" && d.grader && d.grade ? ` ${d.grader} ${String(d.grade).replace(/\.0$/, "")}` : "";
+  const query = `${String(d.name || "").replace(/\s*\(.*\)$/, "")} ${d.number || ""}${grade}${d.language === "japanese" ? " Japanese" : ""}`
+    .replace(/\s+/g, " ").trim();
+  return ebaySearch(query, { sold: true, sealed: d.kind === "sealed", source });
+}
+

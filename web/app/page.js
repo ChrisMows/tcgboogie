@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
 import { effectivePlans } from "@/lib/plan-copy";
-import { ebayLink } from "@/lib/ebay-link";
+import { dealSoldSearch } from "@/lib/ebay-link";
 import "./home.css";
 
 // Shown until the deal bot has caught enough real deals (see homeShowcase), clearly labeled as examples.
@@ -191,10 +191,10 @@ export default async function Home({ searchParams }) {
         {caught ? (
           <div className="deal-grid">
             {caught.deals.map((d) => {
-              // The card opens its page with this deal's details (members; visitors sign in first). The listing itself
-              // is on eBay, where an ended listing shows what it sold for.
+              // The card opens its page with this deal's details (members; visitors sign in first). On eBay the sale shows
+              // in sold listings for that card and grade (an ended listing's own link goes to a general product page).
               const page = d.productId ? `/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}` : null;
-              const listing = d.url ? ebayLink(d.url, "home-caught") : null;
+              const listing = dealSoldSearch(d, "home-caught");
               const Card = page ? Link : "div";
               return (
                 <article className="deal-card" key={d.id}>
@@ -217,9 +217,8 @@ export default async function Home({ searchParams }) {
                   </Card>
                   <div className="bottom deal-card-foot">
                     <span>Sold {daysAgo(d.endsAt)}</span>
-                    {listing ? (
-                      <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}>See the sale on eBay ↗</a>
-                    ) : <Link href="/login?mode=signup">Catch the next one ↗</Link>}
+                    <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}
+                      title={`eBay sold listings for ${d.name}${d.kind === "graded" ? ` ${d.grader} ${String(d.grade).replace(/\.0$/, "")}` : ""}`}>Sold listings on eBay ↗</a>
                   </div>
                 </article>
               );

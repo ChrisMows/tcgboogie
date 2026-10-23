@@ -17,7 +17,7 @@ import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
-import { ebayLink, ebaySearch } from "@/lib/ebay-link";
+import { dealSoldSearch, ebayLink, ebaySearch } from "@/lib/ebay-link";
 import { getDeal } from "@/lib/deals";
 
 export async function generateMetadata({ params, searchParams }) {
@@ -50,7 +50,9 @@ const saleNote = (g) => {
 
 /** The eBay listing this page was opened from: price, time left, warnings, and the way to the listing. */
 function DealBox({ deal: d, premium }) {
-  const link = ebayLink(d.url, "card-page-deal");
+  // A live listing opens itself; an ended one opens eBay's sold listings for this card and grade, because eBay sends
+  // an ended listing's own link to a general product page showing other listings.
+  const link = d.ended ? dealSoldSearch(d, "card-page-deal-sold") : ebayLink(d.url, "card-page-deal");
   const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
   const live = !d.ended;
   return (
@@ -74,7 +76,7 @@ function DealBox({ deal: d, premium }) {
       {d.flags?.length > 0 && <ul className="deal-box-flags">{d.flags.map((f) => <li key={f}>⚠ {f}</li>)}</ul>}
       <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: "wrap" }}>
         <a className="btn primary" style={{ flex: "none" }} href={link.href} target="_blank" rel={`noopener noreferrer${link.affiliate ? " sponsored" : ""}`}>
-          Open listing on eBay ↗
+          {live ? "Open listing on eBay ↗" : "Sold listings on eBay ↗"}
         </a>
         {!premium && live && <span className="small muted" style={{ flex: "1 1 200px" }}>Premium members get deals like this the moment we find them.</span>}
       </div>
