@@ -38,25 +38,42 @@ export function gradeWords(grader, grade) {
   return table[Math.floor(n)] ? `${table[Math.floor(n)]}+` : "";
 }
 
+// The strip across the top of each company's label (their name as it reads on the slab, no logos).
+const BAND = { CGC: "CERTIFIED GUARANTY CO.", BGS: "BECKETT GRADING", SGC: "SGC GRADING", TAG: "TAG GRADING" };
+
+/**
+ * A graded copy in its slab, drawn in each grading company's style: the clear case with its silver rails, the black
+ * insert the card sits on, and the company's label (PSA's red-framed white label with the mark at the bottom; CGC's
+ * banded white label, cream and black-and-gold for Pristine 10; BGS silver, gold for 9.5, black for 10; SGC black;
+ * TAG). Slabs are taller than cards, so it's drawn a little narrower to stand the same height as a raw card next to it.
+ */
 function Slab({ item, style, className }) {
   const grade = String(item.grade || "").replace(" Pristine", "");
-  // Each company's special labels: black and gold for CGC Pristine 10 and BGS 10, gold for BGS 9.5.
-  const tier = (item.grader === "CGC" && /pristine/i.test(String(item.grade))) || (item.grader === "BGS" && Number(grade) === 10) ? "slab-black"
+  const pristine = /pristine/i.test(String(item.grade));
+  const tier = (item.grader === "CGC" && pristine) || (item.grader === "BGS" && Number(grade) === 10) ? "slab-black"
     : item.grader === "BGS" && Number(grade) === 9.5 ? "slab-gold" : "";
+  const w = typeof style.width === "number" ? Math.round(style.width * 0.82) : style.width;
   return (
-    <div className={`thumb slab slab-${String(item.grader).toLowerCase()} ${tier} ${className}`} style={style}
+    <div className={`slab slab-${String(item.grader).toLowerCase()} ${tier} ${className}`} style={{ width: w, minWidth: w }}
       title={`${item.grader} ${item.grade}`} aria-label={`${item.grader} ${item.grade} slab`}>
       <div className="slab-case">
-      <div className="slab-label">
-        <span className="slab-words">{gradeWords(item.grader, item.grade)}</span>
-        <span className="slab-score"><span className="slab-grader">{item.grader}</span><span className="slab-grade">{grade}</span></span>
-      </div>
-      <div className="slab-window">
-        {item.image
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item.image} alt="" loading="lazy" />
-          : <span className="slab-noimg">{item.number ? `#${String(item.number).split("/")[0]}` : ""}</span>}
-      </div>
+        <div className="slab-label">
+          {BAND[item.grader] && <div className="slab-band"><b>{item.grader}</b><span>{BAND[item.grader]}</span></div>}
+          <div className="slab-body">
+            <div className="slab-left">
+              <span className="slab-words">{gradeWords(item.grader, item.grade)}</span>
+              <span className="slab-barcode" />
+            </div>
+            <div className="slab-score">{tier === "slab-black" && <small>{pristine ? "PRISTINE" : "BLACK"}</small>}<b>{grade}</b></div>
+          </div>
+          {item.grader === "PSA" && <span className="slab-mark">PSA</span>}
+        </div>
+        <div className="slab-window">
+          {item.image
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={item.image} alt="" loading="lazy" />
+            : <span className="slab-noimg">{item.number ? `#${String(item.number).split("/")[0]}` : ""}</span>}
+        </div>
       </div>
     </div>
   );
