@@ -280,7 +280,7 @@ function condition(item) {
   if (item.kind === "graded") {
     const d = [];
     if (GRADER_IDS[item.grader]) d.push({ name: "27501", values: [GRADER_IDS[item.grader]] });
-    if (GRADE_IDS[String(Number(item.grade))] || GRADE_IDS[String(item.grade)]) d.push({ name: "27502", values: [GRADE_IDS[String(Number(item.grade))] || GRADE_IDS[String(item.grade)]] });
+    if (GRADE_IDS[String(parseFloat(item.grade))] || GRADE_IDS[String(item.grade)]) d.push({ name: "27502", values: [GRADE_IDS[String(parseFloat(item.grade))] || GRADE_IDS[String(item.grade)]] });
     if (item.certNumber) d.push({ name: "27503", additionalInfo: String(item.certNumber).slice(0, 20) });
     return { condition: "LIKE_NEW", conditionDescriptors: d }; // 2750 = Graded
   }

@@ -31,7 +31,7 @@ const WORDS = {
   TAG: { 10: "GEM MINT", 9: "MINT", 8: "NM-MT", 7: "NM", 6: "EX-MT", 5: "EX", 4: "VG-EX", 3: "VG", 2: "GOOD", 1: "POOR" },
 };
 export function gradeWords(grader, grade) {
-  if (/pristine/i.test(String(grade))) return "PRISTINE";
+  if (/pristine|black label/i.test(String(grade))) return "PRISTINE";
   const n = Number(String(grade).replace(/[^\d.]/g, ""));
   const table = WORDS[grader] || WORDS.PSA;
   if (table[n]) return table[n];
@@ -44,14 +44,17 @@ const BAND = { CGC: "CERTIFIED GUARANTY CO.", BGS: "BECKETT GRADING", SGC: "SGC 
 /**
  * A graded copy in its slab, drawn in each grading company's style: the clear case with its silver rails, the black
  * insert the card sits on, and the company's label (PSA's red-framed white label with the mark at the bottom; CGC's
- * banded white label, cream and black-and-gold for Pristine 10; BGS silver, gold for 9.5, black for 10; SGC black;
+ * banded white label, cream and black-and-gold for Pristine 10; BGS silver, gold for 9.5 and 10, black and gold for the
+ * Black Label 10; SGC black;
  * TAG). Slabs are taller than cards, so it's drawn a little narrower to stand the same height as a raw card next to it.
  */
 function Slab({ item, style, className }) {
-  const grade = String(item.grade || "").replace(" Pristine", "");
+  const grade = String(item.grade || "").replace(" Pristine", "").replace(" Black Label", "");
   const pristine = /pristine/i.test(String(item.grade));
-  const tier = (item.grader === "CGC" && pristine) || (item.grader === "BGS" && Number(grade) === 10) ? "slab-black"
-    : item.grader === "BGS" && Number(grade) === 9.5 ? "slab-gold" : "";
+  const blackLabel = item.grader === "BGS" && /black label/i.test(String(item.grade));
+  // The special labels: black and gold for CGC Pristine 10 and Beckett's Black Label 10; gold for BGS 10 and 9.5.
+  const tier = (item.grader === "CGC" && pristine) || blackLabel ? "slab-black"
+    : item.grader === "BGS" && Number(grade) >= 9.5 ? "slab-gold" : "";
   const w = typeof style.width === "number" ? Math.round(style.width * 0.82) : style.width;
   return (
     <div className={`slab slab-${String(item.grader).toLowerCase()} ${tier} ${className}`} style={{ width: w, minWidth: w }}
@@ -64,7 +67,7 @@ function Slab({ item, style, className }) {
               <span className="slab-words">{gradeWords(item.grader, item.grade)}</span>
               <span className="slab-barcode" />
             </div>
-            <div className="slab-score">{tier === "slab-black" && <small>{pristine ? "PRISTINE" : "BLACK"}</small>}<b>{grade}</b></div>
+            <div className="slab-score">{tier === "slab-black" && <small>{blackLabel ? "BLACK LABEL" : "PRISTINE"}</small>}<b>{grade}</b></div>
           </div>
           {item.grader === "PSA" && <span className="slab-mark">PSA</span>}
         </div>

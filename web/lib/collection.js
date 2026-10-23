@@ -7,14 +7,18 @@ export const KINDS = { raw: "Raw", graded: "Graded", sealed: "Sealed" };
 export const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
 export const COND_SHORT = { "Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP", "Heavily Played": "HP", Damaged: "DMG" };
 export const GRADES = ["10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1"];
-// CGC's top grade comes in two labels that sell very differently: Pristine 10 above Gem Mint 10.
+// The top grade comes in two labels that sell very differently: CGC Pristine 10 above Gem Mint 10, and Beckett's
+// Black Label 10 (every subgrade a 10) above its regular Pristine 10.
 export const PRISTINE = "10 Pristine";
-export const gradesFor = (grader) => (grader === "CGC" ? [PRISTINE, ...GRADES] : GRADES);
+export const BLACK_LABEL = "10 Black Label";
+export const gradesFor = (grader) => (grader === "CGC" ? [PRISTINE, ...GRADES] : grader === "BGS" ? [BLACK_LABEL, ...GRADES] : GRADES);
+/** How a grade reads in a menu: "10 Gem Mint" for CGC, "10 Pristine" for BGS. */
+export const gradeOption = (grader, g) => (g === "10" && grader === "CGC" ? "10 Gem Mint" : g === "10" && grader === "BGS" ? "10 Pristine" : g);
 export const SORTS = { value: "Value (high to low)", gain: "Gain (best first)", change: "7-day change", name: "Name", added: "Recently added" };
 
 /** ('PSA', '9.5') -> 'psa9_5', the key slab prices are stored under (same as the bot's grade_key). */
 export const gradeKey = (grader, grade) => (grader && grade
-  ? `${grader.toLowerCase()}${String(grade).replace(" Pristine", "_pristine").replace(".", "_")}` : null);
+  ? `${grader.toLowerCase()}${String(grade).replace(" Pristine", "_pristine").replace(" Black Label", "_black").replace(".", "_")}` : null);
 
 export const money = (v, digits = 2) =>
   v === null || v === undefined || !Number.isFinite(Number(v))

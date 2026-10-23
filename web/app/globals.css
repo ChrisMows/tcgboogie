@@ -1495,11 +1495,15 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .slab-cgc.slab-black .slab-label { background: linear-gradient(180deg, #fbf6e6, #ece0b9); }
 .slab.slab-black .slab-score { background: #0c0c0c; color: #e9c86a; border: 0.6cqw solid #c9a54a; border-radius: 2cqw; padding: 1.4cqw 2.4cqw; }
 .slab.slab-black .slab-score b { font-size: 13cqw; }
-/* BGS: silver label; gold for 9.5; black with gold for 10 */
+/* BGS: silver label; gold for 9.5 and Pristine 10; the Black Label 10 is black with gold lettering, band and trim */
 .slab-bgs .slab-label { background: linear-gradient(90deg, #b9bdc4, #f1f2f4 45%, #c3c7cd); }
 .slab-bgs.slab-gold .slab-label { background: linear-gradient(90deg, #b8913a, #f3d98b 45%, #c39b45); }
 .slab-bgs.slab-black .slab-label { background: linear-gradient(180deg, #1a1a1a, #000); color: #e9c86a; }
-.slab-bgs.slab-black .slab-barcode { filter: invert(1); }
+.slab-bgs.slab-black .slab-label { box-shadow: inset 0 0 0 0.7cqw #c9a54a; }
+.slab-bgs.slab-black .slab-band { background: #000; color: #e9c86a; border-bottom: 0.5cqw solid #c9a54a; }
+.slab-bgs.slab-black .slab-barcode { background: repeating-linear-gradient(90deg, #e9c86a 0 0.5cqw, transparent 0.5cqw 0.9cqw, #e9c86a 0.9cqw 1.6cqw, transparent 1.6cqw 2cqw); }
+.slab-bgs.slab-black .slab-case { box-shadow: inset 0 0 0 1.1cqw #e9ecef, inset 0 0 0 1.9cqw #8e949c, inset 0 0 0 2.6cqw #050505, inset 0 0 0 3.2cqw #c9a54a,
+    0 4px 14px rgba(0, 0, 0, 0.55), 0 0 12px rgba(233, 200, 106, 0.25); }
 /* SGC: the black "tuxedo" label, white lettering */
 .slab-sgc .slab-label { background: #0b0b0b; color: #fff; }
 .slab-sgc .slab-band { background: #2a2a2a; }

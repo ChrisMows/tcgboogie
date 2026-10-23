@@ -4,7 +4,7 @@ import CardRequest from "@/components/CardRequest";
 import { useEffect, useRef, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { productDetails, searchCatalog } from "@/app/app/collection/actions";
-import { CONDITIONS, GRADERS, gradesFor, marketValue, money, nmPrice } from "@/lib/collection";
+import { CONDITIONS, GRADERS, gradeOption, gradesFor, marketValue, money, nmPrice } from "@/lib/collection";
 
 /**
  * How fair a trade is, 0-10, the same whichever side you're on: from the smaller side's value over the larger one's.
@@ -162,7 +162,7 @@ function Entry({ e, onChange, onRemove }) {
                     {GRADERS.map((g) => <option key={g}>{g}</option>)}
                   </select>
                   <select value={e.spec.grade} onChange={(x) => spec({ grade: x.target.value })} aria-label="Grade">
-                    {gradesFor(e.spec.grader).map((g) => <option key={g} value={g}>{e.spec.grader === "CGC" && g === "10" ? "10 Gem Mint" : g}</option>)}
+                    {gradesFor(e.spec.grader).map((g) => <option key={g} value={g}>{gradeOption(e.spec.grader, g)}</option>)}
                   </select>
                 </>
               ) : (
