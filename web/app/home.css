@@ -154,6 +154,11 @@
 .home .deal-stats span { font-size: 11px; color: #8f9aa9; }
 .home .deal-grid { margin-top: 26px; }
 .home .art-img.real { height: 190px; width: auto; object-fit: contain; }
+.home .deal-card { display: flex; flex-direction: column; }
+.home .deal-card-link { display: block; color: inherit; text-decoration: none; flex: 1; }
+.home a.deal-card-link:hover h3 { color: var(--accent); }
+.home .price-note { font-size: 10px; color: #7c899b; margin-top: 6px; }
+.home .deal-card-foot { padding: 0 21px 18px; margin-top: 0; }
 
 /* trade analyzer, in miniature */
 .home .edge .btn { margin-top: 18px; }

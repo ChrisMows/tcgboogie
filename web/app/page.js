@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
 import { effectivePlans } from "@/lib/plan-copy";
+import { ebayLink } from "@/lib/ebay-link";
 import "./home.css";
 
 // Shown until the deal bot has caught enough real deals (see homeShowcase), clearly labeled as examples.
@@ -182,39 +183,51 @@ export default async function Home({ searchParams }) {
           {caught ? (
             <div className="deal-stats">
               <div><b>{caught.found.toLocaleString("en-US")}</b><span>deals found</span></div>
-              <div><b>{caught.avgOff}%</b><span>below market, on average</span></div>
-              <div><b>{caught.bestOff}%</b><span>biggest discount</span></div>
+              <div><b>{caught.avgOff}%</b><span>below market when spotted, on average</span></div>
+              <div><b>{caught.bestOff}%</b><span>biggest discount when spotted</span></div>
             </div>
           ) : <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>}
         </div>
         {caught ? (
           <div className="deal-grid">
-            {caught.deals.map((d) => (
-              <article className="deal-card" key={d.id}>
-                <div className="art">
-                  <span className="art-tag">{dealTag(d)}</span>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="art-img real" src={d.image.replace("_in_200x200", "_in_400x400")} alt={`${d.name} card`} loading="lazy" />
-                </div>
-                <div className="info">
-                  <span className="category">POKÉMON{d.language === "japanese" ? " · JAPANESE" : ""}</span>
-                  <h3>{d.name}</h3>
-                  <div className="meta">{[d.setName, d.number].filter(Boolean).join(" · ")}</div>
-                  <div className="prices">
-                    <div><span className="price">${usd(d.total)}</span><span className="old">${usd(d.marketValue)}</span></div>
-                    <span className="discount">↓ {d.discountPct}%</span>
-                  </div>
-                  <div className="bottom">
+            {caught.deals.map((d) => {
+              // The card opens its page with this deal's details (members; visitors sign in first). The listing itself
+              // is on eBay, where an ended listing shows what it sold for.
+              const page = d.productId ? `/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}` : null;
+              const listing = d.url ? ebayLink(d.url, "home-caught") : null;
+              const Card = page ? Link : "div";
+              return (
+                <article className="deal-card" key={d.id}>
+                  <Card {...(page ? { href: page } : {})} className="deal-card-link" title={page ? "See the deal and the card's prices" : undefined}>
+                    <div className="art">
+                      <span className="art-tag">{dealTag(d)}</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img className="art-img real" src={d.image.replace("_in_200x200", "_in_400x400")} alt={`${d.name} card`} loading="lazy" />
+                    </div>
+                    <div className="info">
+                      <span className="category">POKÉMON{d.language === "japanese" ? " · JAPANESE" : ""}</span>
+                      <h3>{d.name}</h3>
+                      <div className="meta">{[d.setName, d.number].filter(Boolean).join(" · ")}</div>
+                      <div className="prices">
+                        <div><span className="price">${usd(d.total)}</span><span className="old">${usd(d.marketValue)}</span></div>
+                        <span className="discount">↓ {d.discountPct}%</span>
+                      </div>
+                      <div className="price-note">Last bid we saw, vs. what it usually sells for</div>
+                    </div>
+                  </Card>
+                  <div className="bottom deal-card-foot">
                     <span>Ended {daysAgo(d.endsAt)}</span>
-                    <Link href="/login?mode=signup">Catch the next one ↗</Link>
+                    {listing ? (
+                      <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}>Final price on eBay ↗</a>
+                    ) : <Link href="/login?mode=signup">Catch the next one ↗</Link>}
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         ) : <DealTabs deals={EXAMPLES} cards={cards} />}
         <p className="note">
-          {caught ? "Real eBay listings our deal finder caught, shown after they ended. Premium members get them live." : "Illustrative listings and prices, not live offers."}
+          {caught ? "Real eBay listings our deal finder caught, shown after they ended. Prices are the last bid we saw before the end; auctions often finish higher. Premium members get deals live." : "Illustrative listings and prices, not live offers."}
         </p>
       </section>
 

@@ -21,6 +21,14 @@ SPECIAL_WORDS = ["error", "black dot", "metal", "jumbo", "oversize", "corocoro",
                  "classic collection", "30th celebration", "shadowless", "miscellaneous", "cosmos", "theme deck",
                  "world championship", "championship", "w stamp", "pokemon center"]
 
+# Reprint sets (Celebrations Classic Collection, ME: 30th Celebration Classic Collection...). A reprint card's set name
+# carries several of these, but sellers usually write only one ("Blastoise 2/102 Celebrations"), so one is enough to
+# match the reprint. And a listing that names any of them is a reprint: it's never valued as the original card (a $15
+# reprint priced as a $230 Base Set Blastoise looked like a 91%-off deal).
+REPRINT_WORDS = ["celebrations", "classic collection", "30th celebration"]
+# How sellers also write them.
+TITLE_ALIASES = [("30th anniversary", "30th celebration"), ("25th anniversary", "celebrations")]
+
 
 def grade_key(grader, grade):
     """('PSA', '9.5') -> 'psa9_5'. Special labels (Pristine / Black Label) aren't priced separately -> None."""
@@ -85,6 +93,10 @@ def pick_card(listing, candidates):
     names_text = norm_text(" ".join([listing.title, listing.aspects.get("card name", ""),
                                      listing.aspects.get("character", "")]))
     title_ctx = norm_text(" ".join([listing.title, listing.aspects.get("set", ""), listing.aspects.get("features", "")]))
+    for said, means in TITLE_ALIASES:
+        if has_phrase(title_ctx, said):
+            title_ctx += " " + means
+    reprint_listing = any(has_phrase(title_ctx, w) for w in REPRINT_WORDS)
     nums = listing.card_numbers()
     ok = []
     for c in candidates:
@@ -98,8 +110,14 @@ def pick_card(listing, candidates):
         specials = [w for w in SPECIAL_WORDS if has_phrase(special_text, w)]
         in_title = [w for w in specials if has_phrase(title_ctx, w)
                     or (w == "shadowless" and "1st edition" in listing.variants())]
-        if len(in_title) < len(specials):
+        reprint = [w for w in specials if w in REPRINT_WORDS]
+        # Every other special word must be in the title; for a reprint set, one of its words is enough.
+        if any(w not in in_title for w in specials if w not in REPRINT_WORDS):
             continue
+        if reprint and not any(w in in_title for w in reprint):
+            continue
+        if reprint_listing and not reprint:
+            continue  # the listing is a reprint: never the original card
         ok.append((len(in_title), c))
     if not ok:
         return None, "no catalog card matched the number + name in the title"

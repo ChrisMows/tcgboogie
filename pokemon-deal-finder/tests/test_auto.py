@@ -32,6 +32,15 @@ UNPADDED_4_102 = [
     {"name": "Charizard", "setName": "ME: 30th Celebration Classic Collection", "cardNumber": "4/102", "tcgPlayerId": "714372", "printingsAvailable": ["Holofoil"]},
     {"name": "Charizard", "setName": "Celebrations: Classic Collection", "cardNumber": "4/102", "tcgPlayerId": "250320", "printingsAvailable": ["Holofoil"]},
 ]
+# A reprint and its original, shaped like catalog results (IDs are made up for the test).
+BLASTOISE_2_102 = [
+    {"name": "Blastoise", "setName": "Base Set", "cardNumber": "2/102", "tcgPlayerId": "42348", "printingsAvailable": ["Holofoil"]},
+    {"name": "Blastoise", "setName": "Celebrations: Classic Collection", "cardNumber": "2/102", "tcgPlayerId": "250311", "printingsAvailable": ["Holofoil"]},
+]
+METAGROSS_11_113 = [
+    {"name": "Metagross (Delta Species)", "setName": "EX Delta Species", "cardNumber": "11/113", "tcgPlayerId": "89120", "printingsAvailable": ["Holofoil"]},
+    {"name": "Metagross (Delta Species)", "setName": "ME: 30th Celebration Classic Collection", "cardNumber": "11/113", "tcgPlayerId": "714380", "printingsAvailable": ["Holofoil"]},
+]
 UMBREON = {"name": "Umbreon VMAX (Alternate Art Secret)", "setName": "SWSH07: Evolving Skies", "cardNumber": "215/203",
            "tcgPlayerId": "246723", "printingsAvailable": ["Holofoil"]}
 GREY_HAT = {"name": "Pikachu with Grey Felt Hat", "setName": "SV: Scarlet & Violet Promo Cards", "cardNumber": "085",
@@ -85,6 +94,23 @@ class IdentifyTests(unittest.TestCase):
         self.assertIsNone(card)  # Drapion fails name; Celebrations sets need the title to say so
         card, _ = pick_card(L("Celebrations Classic Collection Charizard 4/102 PSA 10"), UNPADDED_4_102)
         self.assertEqual(card["tcgPlayerId"], "250320")
+
+    def test_reprint_named_once_is_the_reprint(self):
+        # Sellers write one of the reprint set's words, not all of them.
+        card, _ = pick_card(L("Blastoise 2/102 Celebrations Holo Rare"), BLASTOISE_2_102)
+        self.assertEqual(card["tcgPlayerId"], "250311")
+        card, _ = pick_card(L("Pokemon Metagross Delta Species 11/113 30th Anniversary Classic Collection Holo"), METAGROSS_11_113)
+        self.assertEqual(card["tcgPlayerId"], "714380")
+        # The original is still found when the title doesn't say reprint.
+        card, _ = pick_card(L("1999 Base Set Blastoise 2/102 Holo PSA 8"), BLASTOISE_2_102)
+        self.assertEqual(card["tcgPlayerId"], "42348")
+
+    def test_reprint_listing_never_valued_as_original(self):
+        # Only the original came back from the search: a reprint listing must not be priced as it.
+        card, why = pick_card(L("Blastoise 2/102 Celebrations Holo Rare"), BLASTOISE_2_102[:1])
+        self.assertIsNone(card, why)
+        card, why = pick_card(L("Metagross 11/113 30th Anniversary Set NM Or Better"), METAGROSS_11_113[:1])
+        self.assertIsNone(card, why)
 
     def test_modern_and_promo(self):
         self.assertEqual(pick_card(L("2021 Pokemon Evolving Skies Umbreon VMAX #215/203 Alt Art PSA 10"), [UMBREON])[0]["tcgPlayerId"], "246723")
