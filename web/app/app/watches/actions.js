@@ -6,7 +6,7 @@ import { searchWithRequests } from "@/lib/card-requests";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
-import { atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
+import { alertsWord, atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
 
 const publicProduct = (p) => p && {
   id: p.id, type: p.type, name: p.name, setName: p.setName, number: p.number, image: p.image,
@@ -40,11 +40,12 @@ export async function findProducts(query) {
 export async function addWatch(productId, input) {
   const user = await requireUser();
   if (atWatchLimit(user.plan, await store.countWatches(user.id))) {
-    return { ok: false, errors: { _: `You're using all ${user.plan.maxPriceWatches} price alerts on Free. Remove one to add another, or upgrade for unlimited.` } };
+    return { ok: false, errors: { _: `You're using your ${alertsWord(user.plan.maxPriceWatches)} on ${user.plan.label}. Remove one to add another, or get unlimited with Premium.` } };
   }
   const product = await getProduct(productId);
   if (!product) return { ok: false, errors: { _: "That product is no longer available." } };
   const { watch, errors } = validateWatch(input || {}, product);
+  if (!user.plan.ebayListingAlerts) watch.alsoEbay = false; // not on this plan (Admin → Plans)
   if (Object.keys(errors).length) return { ok: false, errors };
   const price = currentPrice(product, watch);
   await store.createWatch(user.id, {
@@ -64,6 +65,7 @@ export async function editWatch(id, input) {
   const product = await getProduct(existing.productId);
   if (!product) return { ok: false, errors: { _: "That product is no longer available." } };
   const { watch, errors } = validateWatch({ ...existing, ...input }, product);
+  if (!user.plan.ebayListingAlerts) watch.alsoEbay = false; // not on this plan (Admin → Plans)
   if (Object.keys(errors).length) return { ok: false, errors };
   const price = currentPrice(product, watch);
   const hit = isTriggered(watch, price);

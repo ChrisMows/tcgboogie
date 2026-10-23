@@ -60,7 +60,7 @@ function SetPicker({ f, set, allSets }) {
 }
 
 /** Cards: type a name or number; the list narrows as you go. Tick as many as you like. */
-function CardPicker({ f, set }) {
+function CardPicker({ f, set, cap = null }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("az");
   const [res, setRes] = useState({ cards: [], loading: true });
@@ -84,6 +84,8 @@ function CardPicker({ f, set }) {
   }, [res.cards, sort]);
 
   const cards = f.cards || [];
+  // The plan's cards per filter ("any card named …" counts as one): at the limit, nothing new can be ticked.
+  const full = cap !== null && cards.length + f.pokemon.length >= cap;
   const isOn = (c) => cards.some((x) => sameCard(x, { name: c.name, number: c.number, setName: c.setName }));
   const flip = (c) => {
     const entry = { name: c.name, setName: c.setName, number: c.number, productId: c.id, image: c.image || undefined };
@@ -105,11 +107,17 @@ function CardPicker({ f, set }) {
           ))}
         </div>
       )}
+      {cap !== null && (
+        <div className={`fs-cap small ${full ? "full" : ""}`}>
+          {cards.length + f.pokemon.length} of {cap} card{cap === 1 ? "" : "s"} picked
+          {full ? <> · that&apos;s your plan&apos;s limit. <Link href="/app/premium?from=filter-cards">Unlimited with Premium</Link></> : null}
+        </div>
+      )}
       <input type="search" className="fs-search" placeholder="Type a card name or number, e.g. Charizard 199" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       <SortToggle value={sort} onChange={setSort} options={[["az", "A–Z"], ["set", "Set order"]]} />
       <div className="fs-list cards">
         {term.length >= 2 && (
-          <Check checked={anyOn} onChange={() => set("pokemon", anyOn ? f.pokemon.filter((p) => p.toLowerCase() !== term.toLowerCase()) : [...f.pokemon, term])}>
+          <Check checked={anyOn} disabled={full && !anyOn} onChange={() => set("pokemon", anyOn ? f.pokemon.filter((p) => p.toLowerCase() !== term.toLowerCase()) : [...f.pokemon, term])}>
             <span className="fs-opt"><b>Any card named “{term}”</b><span className="small muted"> · every set and version</span></span>
           </Check>
         )}
@@ -118,7 +126,7 @@ function CardPicker({ f, set }) {
         {res.needsQuery && <div className="small muted">Type at least 2 letters, or pick a set first.</div>}
         {sorted.map((c) => (
           <label key={c.id} className={`fs-card ${c.owned ? "owned" : ""}`}>
-            <input type="checkbox" checked={isOn(c)} onChange={() => flip(c)} />
+            <input type="checkbox" checked={isOn(c)} disabled={full && !isOn(c)} onChange={() => flip(c)} />
             <CardThumb item={c} width={30} />
             <span className="fs-opt">
               <b>{short(c.name)}</b>
@@ -138,7 +146,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
   const premium = plan.key === "premium";
   switch (k) {
     case "sets": return <SetPicker f={f} set={set} allSets={allSets} />;
-    case "cards": return <CardPicker f={f} set={set} />;
+    case "cards": return <><CardPicker f={f} set={set} cap={plan.maxCardsPerFilter ?? null} /><Err msg={errors.cards} /></>;
     case "product": {
       const cards = hasCards(f);
       const sealed = f.cardTypes.includes("sealed");
@@ -265,14 +273,17 @@ function CardStrip({ f, cardInfo }) {
 }
 
 /** Expanded: every picked card as a tile (picture, name, number, set, market value), each removable, plus Add cards. */
-function CardGrid({ f, set, cardInfo, onAdd }) {
+function CardGrid({ f, set, cardInfo, onAdd, cap = null }) {
   const cards = f.cards || [];
   const total = cards.length + f.pokemon.length;
+  const full = cap !== null && total >= cap;
   return (
     <div className="fx-cards">
       <div className="fx-cards-head">
         <b>Cards in this filter</b>
-        <span className="small muted">{total ? `${total} · deals on any of these` : "None picked: deals on every card that fits the other settings"}</span>
+        <span className="small muted">
+          {total ? `${total}${cap !== null ? ` of ${cap}` : ""} · deals on any of these` : "None picked: deals on every card that fits the other settings"}
+        </span>
       </div>
       <div className="fx-card-grid">
         {f.pokemon.map((p) => (
@@ -296,7 +307,9 @@ function CardGrid({ f, set, cardInfo, onAdd }) {
             </div>
           );
         })}
-        <button type="button" className="fx-card fx-card-add" onClick={onAdd}>+ Add cards</button>
+        {full ? (
+          <Link href="/app/premium?from=filter-cards" className="fx-card fx-card-add">🔒 {cap} card{cap === 1 ? "" : "s"} on your plan · Unlimited with Premium</Link>
+        ) : <button type="button" className="fx-card fx-card-add" onClick={onAdd}>+ Add cards</button>}
       </div>
     </div>
   );
@@ -448,7 +461,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
 
             {isOpen && (
               <div className="fx-body">
-                {hasCards(draft) && <CardGrid f={draft} set={set} cardInfo={cardInfo} onAdd={() => { setPop("cards"); barRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />}
+                {hasCards(draft) && <CardGrid f={draft} set={set} cardInfo={cardInfo} cap={plan.maxCardsPerFilter ?? null} onAdd={() => { setPop("cards"); barRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />}
                 <div className="fs-bar" ref={barRef}>
                   <div className="fs-bar-head">
                     <span className="small muted">{applied.length ? `${applied.length} filter${applied.length === 1 ? "" : "s"} set` : "No filters set: every deal over your plan's minimums"}</span>

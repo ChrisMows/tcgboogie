@@ -6,6 +6,7 @@ import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { logError } from "@/lib/log";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
+import { useQuota } from "@/lib/quota";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -19,10 +20,12 @@ export async function appraise(formData) {
   if (!file || typeof file === "string" || !file.size) return { ok: false, error: "Pick a photo first." };
   if (!TYPES.includes(file.type)) return { ok: false, error: "That photo format isn't supported. Try a JPEG or PNG (a screenshot works too)." };
   if (file.size > 5 * 1024 * 1024) return { ok: false, error: "That photo is too large. Try a smaller one." };
+  const quota = await useQuota("appraise", user);
+  if (!quota.ok) return { ok: false, error: quota.message, left: 0 };
   try {
     const data = Buffer.from(await file.arrayBuffer()).toString("base64");
     const res = await appraisePhoto({ data, mediaType: file.type }, user.id);
-    return { ok: true, ...res };
+    return { ok: true, ...res, left: quota.left };
   } catch (e) {
     await logError("website", "Photo appraiser failed", e, {}, user.id);
     return { ok: false, error: "We couldn't read that photo. Try again with more light and the cards flat." };

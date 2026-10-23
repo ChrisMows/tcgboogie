@@ -10,7 +10,8 @@ import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Snap or upload a photo of cards: we read each one, price it, and let you add them to your collection. */
-export default function PhotoAppraiser({ allowed }) {
+export default function PhotoAppraiser({ allowed, quota = null }) {
+  const [left, setLeft] = useState(quota?.limit == null ? null : quota.left);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [picked, setPicked] = useState({});
@@ -26,6 +27,7 @@ export default function PhotoAppraiser({ allowed }) {
       const fd = new FormData();
       fd.append("photo", await shrink(file));
       const r = await appraise(fd);
+      if (typeof r.left === "number") setLeft(r.left);
       if (!r.ok) { setError(r.error); return; }
       setResult(r);
       setPicked(Object.fromEntries(r.cards.map((c, i) => [i, Boolean(c.product)])));
@@ -48,6 +50,15 @@ export default function PhotoAppraiser({ allowed }) {
     );
   }
 
+  if (left === 0 && !result) {
+    return (
+      <div className="panel">
+        <p style={{ marginTop: 0 }}>You&apos;ve used all {quota.limit} photo appraiser photos for this month. They reset on the 1st.</p>
+        <Link href="/app/premium?from=photo" className="btn primary">Unlimited with Premium</Link>
+      </div>
+    );
+  }
+
   const chosen = result ? result.cards.filter((c, i) => picked[i] && c.product) : [];
   return (
     <>
@@ -56,7 +67,7 @@ export default function PhotoAppraiser({ allowed }) {
           📷 {result || preview ? "Try another photo" : "Take or choose a photo"}
           <input type="file" accept="image/*" capture="environment" hidden disabled={pending} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
-        <span className="small muted">Works best with cards flat, in good light, numbers visible. Up to 20 cards per photo.</span>
+        <span className="small muted">Works best with cards flat, in good light, numbers visible. Up to 20 cards per photo.{left !== null && ` ${left} of ${quota.limit} photos left this month.`}</span>
       </div>
 
       {error && <div className="notice warn">{error}</div>}

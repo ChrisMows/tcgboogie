@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { PLANS } from "@/lib/plans";
+import { PLANS, planFor } from "@/lib/plans";
 import { TERMS_UPDATED } from "@/lib/terms";
 
 export const metadata = { title: "Terms of Service | TCG Boogie" };
 
 export default function Terms() {
   const price = PLANS.premium.price;
+  const trial = Math.max(0, Number(planFor("premium").trialDays) || 0);
   return (
     <div className="wrap doc">
       <h1>Terms of Service</h1>
@@ -32,8 +33,15 @@ export default function Terms() {
       <h2 id="premium">3. Premium subscription</h2>
       <ul>
         <li><b>Price.</b> Premium costs ${price} per month, plus any sales tax that applies where you live. The total is shown before you pay.</li>
-        <li><b>Billing.</b> You&apos;re charged when you subscribe, then automatically every month on the same date until you cancel. Payments are processed securely by Stripe; we never see or store your full card number.</li>
-        <li><b>Cancelling.</b> You can cancel anytime in Settings → Plan (or through Manage billing). When you cancel, Premium stays on through the end of the period you&apos;ve already paid for, then your account returns to the Free plan automatically. You won&apos;t be charged again.</li>
+        {trial > 0 && (
+          <li><b>Free trial.</b> If you&apos;ve never subscribed before, Premium starts with a {trial}-day free trial. You add a payment card at
+            checkout but aren&apos;t charged that day. Unless you cancel before the trial ends, the trial turns into a paid subscription and your
+            card is charged ${price} plus tax on the day it ends, then monthly. We email you about 3 days before the first charge. Cancel during
+            the trial in Settings → Billing and you&apos;re never charged; Premium stays on until the trial&apos;s last day. One trial per member;
+            we may decline a trial if it looks like it&apos;s being repeated.</li>
+        )}
+        <li><b>Billing.</b> You&apos;re charged when you subscribe (or when your free trial ends), then automatically every month on the same date until you cancel. Payments are processed securely by Stripe; we never see or store your full card number.</li>
+        <li><b>Cancelling.</b> You can cancel anytime in Settings → Billing, in one click. When you cancel, Premium stays on through the end of the period you&apos;ve already paid for, then your account returns to the Free plan automatically. You won&apos;t be charged again.</li>
         <li><b>Refunds.</b> Payments aren&apos;t refunded for partial months, including the month you cancel in, except where the law requires it. If you believe you were charged in error, email <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a> and we&apos;ll make it right.</li>
         <li><b>Failed payments.</b> If a renewal payment fails, Stripe retries it over the following days and Premium stays on meanwhile. If it still can&apos;t be collected, the subscription ends and your account returns to Free.</li>
         <li><b>Price changes.</b> If the price of Premium changes, we&apos;ll email you at least 30 days before your next renewal at the new price. You can cancel before then.</li>

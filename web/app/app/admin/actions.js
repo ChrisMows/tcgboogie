@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
 import { approveAsRead, approveRequest, declineRequests, markRequestDone } from "@/lib/card-requests";
 import { hideMemberCard } from "@/lib/member-cards";
-import { currentFeatures, saveFeatures } from "@/lib/features";
-import { FEATURES } from "@/lib/plans";
+import { currentFeatures, currentLimits, saveFeatures, saveLimits } from "@/lib/features";
+import { FEATURES, LIMITS } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
 import { logError } from "@/lib/log";
 import { sendTestAlert } from "@/lib/price-alerts";
@@ -69,6 +69,24 @@ export async function saveFeatureChoices(formData) {
   if (changed.length) await logAdminAction(admin, "features", { changed });
   revalidatePath("/", "layout");
   redirect(`/app/admin?tab=features&saved=${changed.length}`);
+}
+
+/** Admin → Plans: the number limits for each plan ("unlimited" or a whole number). */
+export async function saveLimitChoices(formData) {
+  const admin = await requireAdmin();
+  const before = await currentLimits();
+  const read = (key, tier) => {
+    const v = formData.get(`${key}:${tier}`);
+    return v === "unlimited" ? null : v === null || v === "" ? before[tier][key] : Number(v);
+  };
+  const next = Object.fromEntries(["free", "premium"].map((t) => [t, Object.fromEntries(LIMITS.map((l) => [l.key, read(l.key, t)]))]));
+  const show = (v) => (v === null ? "unlimited" : String(v));
+  const saved = await saveLimits(next);
+  const changed = LIMITS.flatMap((l) => ["free", "premium"].filter((t) => (saved[t]?.[l.key] ?? before[t][l.key]) !== before[t][l.key])
+    .map((t) => `${l.label} (${t === "free" ? "Free" : "Premium"}): ${show(before[t][l.key])} → ${show(saved[t][l.key])}`));
+  if (changed.length) await logAdminAction(admin, "features", { changed });
+  revalidatePath("/", "layout");
+  redirect(`/app/admin?tab=features&limits=${changed.length}#limits`);
 }
 
 /** Complimentary Premium: for N days, until a date, or unlimited. Never charged. */

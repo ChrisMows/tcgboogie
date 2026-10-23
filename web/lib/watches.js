@@ -17,6 +17,8 @@ export function parseTcgplayerInput(text) {
 
 export const watchLimit = (plan) => plan.maxPriceWatches; // null = unlimited
 export const atWatchLimit = (plan, count) => plan.maxPriceWatches !== null && count >= plan.maxPriceWatches;
+/** "1 price alert" / "5 price alerts" */
+export const alertsWord = (n) => `${n} price alert${n === 1 ? "" : "s"}`;
 
 /** The current price this watch tracks, from a product's price table. */
 export function currentPrice(product, watch) {

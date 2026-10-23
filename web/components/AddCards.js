@@ -14,12 +14,15 @@ import { money, nmPrice } from "@/lib/collection";
 /** Search-as-you-type to add cards and sealed products. Quick "+" adds a Near Mint copy; picking a result opens details. */
 const PAGE = 8; // search results per page (big pictures, so you can tell versions apart)
 
-export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose, photoSearch = false }) {
+export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose, photoSearch = false, photoQuota = null }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [picked, setPicked] = useState(null);
+  // This month's search-by-picture allowance (Free): { limit, left }; null limit = unlimited.
+  const [photoLeft, setPhotoLeft] = useState(photoQuota?.limit == null ? null : photoQuota.left);
+  const photoOut = photoLeft === 0;
   // Search results don't carry graded sales: show the form at once, then fill in the card's full details.
   const pick = (p) => {
     setPicked({ ...p, detailsLoading: p.type === "card" });
@@ -69,6 +72,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     fd.append("photo", await shrinkImage(file));
     const res = await searchByPhoto(fd).catch(() => ({ ok: false, error: "We couldn't read that photo. Please try again." }));
     setReading(false);
+    if (typeof res.left === "number") setPhotoLeft(res.left);
     if (!res.ok) { setResults([]); setError(res.error); return; }
     setResults(res.results);
     setPhoto((p) => p && { ...p, unread: res.unread || [] });
@@ -106,7 +110,10 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         <input type="text" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
           placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" />
         {searching && <span className="small muted">Searching…</span>}
-        {photoSearch === true ? (
+        {photoSearch === true && photoOut ? (
+          <Link href="/app/premium?from=photo-search" className="photo-search-btn"
+            title={`You've used this month's ${photoQuota.limit} picture searches. Unlimited with Premium.`} aria-label="Search by picture (used up this month)">📷</Link>
+        ) : photoSearch === true ? (
           <>
             <button type="button" className="photo-search-btn" onClick={() => fileRef.current?.click()} disabled={reading}
               title="Search by picture: take a photo or upload one" aria-label="Search by picture">📷</button>
@@ -118,6 +125,12 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         ) : null}
         {onClose && <button type="button" className="btn ghost sm" onClick={onClose}>Done</button>}
       </div>
+      {photoSearch === true && photoLeft !== null && (
+        <div className="hint">
+          📷 Search by picture: {photoOut ? <>you&apos;ve used all {photoQuota.limit} this month (they reset on the 1st). <Link href="/app/premium?from=photo-search">Unlimited with Premium</Link></>
+            : <>{photoLeft} of {photoQuota.limit} left this month</>}
+        </div>
+      )}
       {isDemo && !q && !photo && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}
       {photo && (
         <div className="photo-search">

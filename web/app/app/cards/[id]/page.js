@@ -281,7 +281,7 @@ export default async function CardPage({ params, searchParams }) {
                     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
                   }))} />
               )}
-              <ReportSale productId={p.id} language={language} />
+              {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
             </>
           )}
           {p.memberAdded ? (

@@ -35,7 +35,9 @@ export async function dispatchWatchListings() {
     const r = byWatch[l.watchId];
     if (!r) continue;
     const { watch: w, user } = r;
-    const allowed = planFor(effectiveTier(user)).watchAlertChannels;
+    const memberPlan = planFor(effectiveTier(user));
+    if (!memberPlan.ebayListingAlerts) continue; // switched off for this plan in Admin → Plans
+    const allowed = memberPlan.watchAlertChannels;
     const target = targetPrice(w);
     const name = short(w.name);
     const link = ebayLink(l.url, "price-alert-listing");

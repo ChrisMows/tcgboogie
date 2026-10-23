@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { compActive } from "@/lib/access";
-import { billingLive, billingMode, hasLiveSubscription } from "@/lib/billing";
+import { billingLive, billingMode, hasLiveSubscription, trialDaysFor } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
 import { effectivePlans, planHighlights } from "@/lib/plan-copy";
 import { requireUser } from "@/lib/session";
-import { openBillingPortal, startCheckout } from "../actions";
+import { startCheckout } from "../actions";
 
 export const metadata = { title: "Premium" };
 
@@ -19,6 +19,9 @@ const FROM = {
   deals: "Live deals are part of Premium.",
   grading: "The full grading check is part of Premium.",
   photo: "The photo appraiser is part of Premium.",
+  "photo-search": "Unlimited search by picture is part of Premium.",
+  sell: "Unlimited Sell on eBay listings are part of Premium.",
+  "filter-cards": "More cards per deal filter are part of Premium.",
 };
 
 
@@ -32,6 +35,8 @@ export default async function Premium({ searchParams }) {
   const comped = compActive(user);
   const payments = billingLive() && !user.demo;
   const fmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const trial = subscribed || comped ? 0 : trialDaysFor(user);
+  const firstCharge = fmt(Date.now() + trial * 86400000);
 
   return (
     <div className="premium-page">
@@ -42,6 +47,7 @@ export default async function Premium({ searchParams }) {
           <div className="eyebrow-sm">TCG BOOGIE PREMIUM</div>
           <div className="premium-price"><b>${price}</b><span>/month</span></div>
           <div className="small muted">plus sales tax · cancel anytime</div>
+          {trial > 0 && <div className="premium-trial">Try it free for {trial} days</div>}
         </div>
 
         <div className="premium-body">
@@ -52,12 +58,13 @@ export default async function Premium({ searchParams }) {
 
           {subscribed ? (
             <div className="premium-state">
-              <b>You&apos;re on Premium 🎉</b>
+              <b>{user.subscriptionStatus === "trialing" ? "Your free trial is on 🎉" : <>You&apos;re on Premium 🎉</>}</b>
               <span className="muted">
                 {user.cancelAtPeriodEnd ? <>Ends {fmt(user.currentPeriodEnd)}, then back to Free.</>
+                  : user.subscriptionStatus === "trialing" && user.currentPeriodEnd ? <>First charge ${price} on {fmt(user.currentPeriodEnd)}. Cancel before then in Settings and you pay nothing.</>
                   : user.currentPeriodEnd ? <>Renews {fmt(user.currentPeriodEnd)}.</> : null}
               </span>
-              <form action={openBillingPortal}><button className="btn">Manage billing</button></form>
+              <Link href="/app/account#billing" className="btn">Billing</Link>
             </div>
           ) : comped || (user.isAdmin && !user.demo && user.tier === "premium") ? (
             <div className="premium-state">
@@ -73,9 +80,11 @@ export default async function Premium({ searchParams }) {
               {sp?.agree === "missing" && <div className="notice bad">Tick the box to continue.</div>}
               <label className="premium-agree">
                 <input type="checkbox" name="agree" required />
-                <span>I agree to the <Link href="/terms#premium" target="_blank">Terms</Link>. Renews monthly until I cancel.</span>
+                <span>I agree to the <Link href="/terms#premium" target="_blank">Terms</Link>.{" "}
+                  {trial > 0 ? <>After {trial} free days, ${price}/month plus tax starting {firstCharge}, renewing monthly until I cancel.</> : "Renews monthly until I cancel."}</span>
               </label>
-              <button className="btn primary premium-cta" disabled={!payments}>Get Premium · ${price}/mo</button>
+              <button className="btn primary premium-cta" disabled={!payments}>{trial > 0 ? `Start ${trial}-day free trial` : `Get Premium · $${price}/mo`}</button>
+              {trial > 0 && <p className="hint" style={{ margin: 0, textAlign: "center" }}><b>$0 today.</b> Card required. We email you 3 days before your first charge; cancel in one click before {firstCharge} and you pay nothing.</p>}
               {payments && billingMode() === "test" && <p className="hint" style={{ margin: 0 }}>Test mode: card 4242 4242 4242 4242.</p>}
             </form>
           )}

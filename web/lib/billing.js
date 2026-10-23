@@ -3,7 +3,8 @@ import crypto from "node:crypto";
 import { and, eq, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
-import { PLANS } from "@/lib/plans";
+import { sendEmail } from "@/lib/notify";
+import { PLANS, planFor } from "@/lib/plans";
 import { TERMS_VERSION } from "@/lib/terms";
 
 // Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
@@ -20,6 +21,7 @@ const EVENTS = [
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "customer.subscription.trial_will_end",
   "invoice.paid",
   "invoice.payment_failed",
 ];
@@ -30,6 +32,14 @@ export const billingMode = () => (String(process.env.STRIPE_SECRET_KEY || "").st
 /** Stripe statuses that keep Premium on. past_due = a renewal failed and Stripe is retrying the card. */
 const PAID = ["active", "trialing", "past_due"];
 export const hasLiveSubscription = (user) => Boolean(user?.stripeSubscriptionId) && PAID.includes(user.subscriptionStatus);
+
+/**
+ * Free-trial days this member would get at checkout (Admin → Plans → Billing). Only a member's first subscription:
+ * anyone who has subscribed before (even if it ended) pays from day one.
+ */
+export const trialDaysFor = (user) => (user?.stripeSubscriptionId ? 0 : Math.max(0, Number(planFor("premium").trialDays) || 0));
+export const onTrial = (user) => hasLiveSubscription(user) && user.subscriptionStatus === "trialing";
+const longDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 
 // ---------- Stripe API ----------
 
@@ -160,18 +170,30 @@ async function customerFor(user) {
 /** Start Checkout for Premium. Returns the Stripe-hosted page to send the member to. */
 export async function checkoutUrl(user) {
   const [customer, price] = await Promise.all([customerFor(user), premiumPrice()]);
+  let trial = trialDaysFor(user);
+  if (trial) {
+    // Belt and braces: no trial if this Stripe customer has ever had a subscription.
+    const past = await stripe("GET", "subscriptions", { customer, status: "all", limit: 1 }).catch(() => null);
+    if (!past || past.data?.length) trial = 0;
+  }
+  const firstCharge = longDate(Date.now() + trial * 86400000);
   const s = await stripe("POST", "checkout/sessions", {
     mode: "subscription",
     customer,
     client_reference_id: user.id,
     line_items: [{ price, quantity: 1 }],
-    subscription_data: { metadata: { userId: user.id, terms: TERMS_VERSION } },
+    payment_method_collection: "always", // a card is needed for the trial too
+    subscription_data: {
+      metadata: { userId: user.id, terms: TERMS_VERSION, ...(trial ? { trialDays: trial } : {}) },
+      ...(trial ? { trial_period_days: trial, trial_settings: { end_behavior: { missing_payment_method: "cancel" } } } : {}),
+    },
+    ...(trial ? { custom_text: { submit: { message: `You won't be charged today. Your first payment of $${PLANS.premium.price} plus tax is on ${firstCharge}, unless you cancel before then in Settings (one click). We email you 3 days before.` } } } : {}),
     allow_promotion_codes: "true",
     customer_update: { name: "auto", address: "auto" },
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
     cancel_url: `${SITE}/app/premium?billing=cancelled#enroll`,
   });
-  await log("payments", "info", "Checkout opened", { session: s.id }, user.id);
+  await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id }, user.id);
   return s.url;
 }
 
@@ -194,12 +216,65 @@ export async function confirmCheckout(user, sessionId) {
   return true;
 }
 
+/**
+ * Settings → Billing: what the member pays, when, with which card, and every past invoice. Read live from Stripe
+ * (nothing about cards is stored here). Returns null when Stripe can't be reached; the page then shows the basics.
+ */
+export async function billingDetails(user) {
+  if (!billingLive() || !user.stripeCustomerId) return null;
+  try {
+    const [sub, invoices, customer] = await Promise.all([
+      user.stripeSubscriptionId
+        ? stripe("GET", `subscriptions/${encodeURIComponent(user.stripeSubscriptionId)}`, { expand: ["default_payment_method"] }).catch(() => null)
+        : null,
+      stripe("GET", "invoices", { customer: user.stripeCustomerId, limit: 24 }),
+      stripe("GET", `customers/${encodeURIComponent(user.stripeCustomerId)}`, { expand: ["invoice_settings.default_payment_method"] }),
+    ]);
+    const pm = (sub?.default_payment_method && typeof sub.default_payment_method === "object" ? sub.default_payment_method : null)
+      || (customer?.invoice_settings?.default_payment_method && typeof customer.invoice_settings.default_payment_method === "object" ? customer.invoice_settings.default_payment_method : null);
+    const card = pm?.card ? { brand: pm.card.brand, last4: pm.card.last4, expMonth: pm.card.exp_month, expYear: pm.card.exp_year }
+      : pm?.type ? { brand: pm.type.replace(/_/g, " "), last4: null } : null;
+    const live = sub && PAID.includes(sub.status);
+    const end = sub ? (sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end) : null;
+    const amount = sub?.items?.data?.[0]?.price?.unit_amount;
+    // The next charge (before tax; Stripe adds the member's sales tax on the invoice). None once cancelled.
+    let next = live && !sub.cancel_at_period_end && !sub.cancel_at && end ? { date: new Date(end * 1000), amount: amount != null ? amount / 100 : PLANS.premium.price, exact: false } : null;
+    if (next) {
+      const preview = await stripe("POST", "invoices/create_preview", { customer: user.stripeCustomerId, subscription: sub.id }).catch(() => null);
+      if (preview && Number.isFinite(preview.total)) next = { ...next, amount: preview.total / 100, exact: true };
+    }
+    return {
+      status: sub?.status || null,
+      trialEnd: sub?.status === "trialing" && sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      endsAt: live && (sub.cancel_at_period_end || sub.cancel_at) ? new Date((sub.cancel_at || end) * 1000) : null,
+      started: sub?.start_date ? new Date(sub.start_date * 1000) : null,
+      next,
+      card,
+      invoices: (invoices.data || []).filter((i) => i.status !== "draft").map((i) => ({
+        id: i.id,
+        number: i.number,
+        date: new Date((i.status_transitions?.paid_at || i.created) * 1000),
+        amount: (i.status === "paid" ? i.amount_paid : i.amount_due) / 100,
+        status: i.status, // paid / open / void / uncollectible
+        trial: i.total === 0 && i.billing_reason === "subscription_create",
+        url: i.hosted_invoice_url || null,
+        pdf: i.invoice_pdf || null,
+      })),
+    };
+  } catch (e) {
+    await log("payments", "warn", `Billing details couldn't load: ${e.message}`, {}, user.id);
+    return null;
+  }
+}
+
 /** Cancel at the end of the paid month (the member keeps Premium until then), or undo that. */
 export async function setCancelAtPeriodEnd(user, cancel) {
   if (!user.stripeSubscriptionId) throw new Error("No subscription to change.");
   const sub = await stripe("POST", `subscriptions/${user.stripeSubscriptionId}`, { cancel_at_period_end: cancel ? "true" : "false" });
   await applySubscription(sub, user.id);
-  await log("payments", "info", cancel ? "Member cancelled renewal (keeps Premium to month end)" : "Member turned renewal back on", { subscription: sub.id }, user.id);
+  await log("payments", "info", cancel
+    ? (sub.status === "trialing" ? "Member cancelled during the free trial (won't be charged)" : "Member cancelled renewal (keeps Premium to month end)")
+    : "Member turned renewal back on", { subscription: sub.id }, user.id);
 }
 
 // ---------- Keeping the member's plan in step with Stripe ----------
@@ -250,6 +325,24 @@ async function applySubscription(sub, userId) {
   }
 }
 
+/**
+ * Billing emails (trial ending, payment failed, Premium ended). These go out whatever the member's alert settings,
+ * like a receipt would. Never blocks the webhook: a failed email is only logged.
+ */
+async function emailMember(customerId, subscriptionUserId, message) {
+  try {
+    let [u] = subscriptionUserId ? await db.select().from(users).where(eq(users.id, subscriptionUserId)).limit(1) : [];
+    if (!u && customerId) [u] = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
+    if (!u?.email) return;
+    await sendEmail(u.email, { ...message, footer: "You're getting this because it's about your TCG Boogie subscription. Questions? support@tcgboogie.com" });
+    await log("payments", "info", `Billing email sent: ${message.subject}`, {}, u.id);
+  } catch (e) {
+    await log("payments", "warn", `Billing email failed: ${e.message}`, { subject: message.subject });
+  }
+}
+
+const SETTINGS_BILLING = `${SITE}/app/account#billing`;
+
 /** Check Stripe's signature on a webhook (Stripe-Signature: t=…,v1=…). Rejects anything older than 5 minutes. */
 async function verify(raw, header) {
   const secret = await webhookSecret();
@@ -284,10 +377,44 @@ export async function handleWebhook(raw, signature) {
       await syncSubscription(o.subscription, o.client_reference_id);
     } else if (event.type.startsWith("customer.subscription.")) {
       await syncSubscription(o.id);
+      if (event.type === "customer.subscription.trial_will_end" && o.status === "trialing" && !o.cancel_at_period_end && !o.cancel_at && o.trial_end) {
+        const when = longDate(o.trial_end * 1000);
+        await emailMember(o.customer, o.metadata?.userId, {
+          subject: `Your Premium trial ends ${when}`,
+          heading: "Your free trial ends soon",
+          lines: [
+            `Your TCG Boogie Premium trial ends on ${when}. Then your card is charged $${PLANS.premium.price} plus tax, and Premium renews monthly.`,
+            "Want to keep Premium? Do nothing. Not for you? Cancel in Settings before then and you won't be charged.",
+          ],
+          button: { label: "Review billing", url: SETTINGS_BILLING },
+        });
+      }
+      if (event.type === "customer.subscription.deleted") {
+        await emailMember(o.customer, o.metadata?.userId, {
+          subject: "Your Premium has ended",
+          heading: "You're back on Free",
+          lines: [
+            "Your TCG Boogie Premium subscription has ended and you won't be charged again.",
+            "Your collection, filters and settings are all still here. Anything over the Free limits is paused, not deleted.",
+          ],
+          button: { label: "Come back to Premium", url: `${SITE}/app/premium` },
+        });
+      }
     } else if (event.type.startsWith("invoice.")) {
       const subId = o.subscription || o.parent?.subscription_details?.subscription;
       if (subId) await syncSubscription(subId);
-      if (event.type === "invoice.payment_failed") await log("payments", "warn", "A payment failed (Stripe will retry)", { invoice: o.id, customer: o.customer, amount: o.amount_due / 100 });
+      if (event.type === "invoice.payment_failed") {
+        await log("payments", "warn", "A payment failed (Stripe will retry)", { invoice: o.id, customer: o.customer, amount: o.amount_due / 100 });
+        await emailMember(o.customer, null, {
+          subject: "Your Premium payment didn't go through",
+          heading: "We couldn't charge your card",
+          lines: [
+            `Your payment of $${(o.amount_due / 100).toFixed(2)} for TCG Boogie Premium didn't go through. We'll try again over the next few days.`,
+            "To keep Premium, update your card in Settings → Billing.",
+          ],
+          button: { label: "Update card", url: SETTINGS_BILLING },
+        });
+      }
       if (event.type === "invoice.paid") await log("payments", "info", `Payment received: $${(o.amount_paid / 100).toFixed(2)}`, { invoice: o.id, customer: o.customer });
     }
     return 200;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { billingLive } from "@/lib/billing";
-import { effectivePlans, planHighlights, planRows } from "@/lib/plan-copy";
+import { effectivePlans, planHighlights, planRows, trialDays } from "@/lib/plan-copy";
 
 /** Free vs Premium cards plus the full comparison table (homepage #pricing). */
 // What each plan includes comes from lib/plan-copy.js (the plans as Admin → Features left them).
@@ -8,6 +8,7 @@ export default async function PlanCards({ signedIn = false }) {
   const plans = await effectivePlans();
   const { free, premium } = plans;
   const lists = planHighlights(plans);
+  const trial = billingLive() ? trialDays(plans) : 0;
   const upgrade = signedIn ? "/app/premium" : "/login?mode=signup&plan=premium";
   return (
     <>
@@ -27,12 +28,16 @@ export default async function PlanCards({ signedIn = false }) {
           <div className="price">${premium.price}<small> / month</small></div>
           <div className="tax-note">Plus applicable sales tax</div>
           <div className="muted">{premium.tagline}</div>
+          {trial > 0 && <div className="premium-trial">{trial} days free for new members</div>}
           <ul>
             <li className="plus-all">Everything in Free, plus:</li>
             {lists.premium.map((f) => <li key={f}>{f}</li>)}
           </ul>
-          <Link href={upgrade} className="btn primary block">Get Premium</Link>
-          <div className="hint" style={{ textAlign: "center" }}>Cancel anytime.{billingLive() ? " Secure checkout by Stripe." : " Card payments launch soon."}</div>
+          <Link href={upgrade} className="btn primary block">{trial > 0 ? `Try Premium free for ${trial} days` : "Get Premium"}</Link>
+          <div className="hint" style={{ textAlign: "center" }}>
+            {trial > 0 ? `$0 today, card required. Cancel before day ${trial} and you pay nothing; we email you 3 days before.` : "Cancel anytime."}
+            {billingLive() ? " Secure checkout by Stripe." : " Card payments launch soon."}
+          </div>
         </div>
       </div>
       <details className="compare-all">

@@ -16,7 +16,7 @@ async function shrink(file) {
   return blob ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
 }
 
-export default function SellForm({ itemId, initial, policies, needsZip, suggested, soldHref }) {
+export default function SellForm({ itemId, initial, policies, needsZip, suggested, soldHref, quota = null }) {
   const [title, setTitle] = useState(initial.title);
   const [format, setFormat] = useState("FIXED_PRICE");
   const [photos, setPhotos] = useState([]); // { file, url }
@@ -130,6 +130,11 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
         {pending ? "Posting to eBay…" : photos.length ? `List on eBay${format === "AUCTION" ? " (auction)" : ""}` : "Add a photo to list"}
       </button>
       <p className="hint" style={{ textAlign: "center" }}>Posts to your eBay account right away. eBay&apos;s normal selling fees apply.</p>
+      {quota?.limit != null && (
+        <p className="hint" style={{ textAlign: "center" }}>
+          {typeof result?.left === "number" ? result.left : quota.left} of {quota.limit} listings left this month · <a href="/app/premium?from=sell">Unlimited with Premium</a>
+        </p>
+      )}
     </form>
   );
 }

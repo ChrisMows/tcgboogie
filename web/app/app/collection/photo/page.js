@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PhotoAppraiser from "@/components/PhotoAppraiser";
+import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Photo appraiser" };
@@ -15,7 +16,7 @@ export default async function PhotoPage() {
           <p>Snap your cards: we name them, price them, and add them to your collection.</p>
         </div>
       </div>
-      <PhotoAppraiser allowed={Boolean(user.plan.photoAppraiser)} />
+      <PhotoAppraiser allowed={Boolean(user.plan.photoAppraiser)} quota={user.plan.photoAppraiser ? await quotaStatus("appraise", user) : null} />
     </>
   );
 }

@@ -5,6 +5,7 @@ import CollectionView from "@/components/CollectionView";
 import { catalogLive } from "@/lib/catalog";
 import { chartSeries, itemLabel, ownedCounts, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
+import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { hideSetup } from "./actions";
@@ -70,7 +71,8 @@ export default async function CollectionPage({ searchParams }) {
       {adding && (
         <div className="panel">
           <h2>Add cards</h2>
-          <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus photoSearch={user.plan.photoSearch ? true : "locked"} />
+          <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus photoSearch={user.plan.photoSearch ? true : "locked"}
+            photoQuota={user.plan.photoSearch ? await quotaStatus("photoSearch", user) : null} />
           {/* Other ways to add a lot at once: one short chip each (the hover title says a little more). */}
           <div className="add-more">
             <span className="small muted">More ways to add</span>

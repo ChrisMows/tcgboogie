@@ -225,6 +225,12 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; text-tra
 .doc p, .doc li { color: #c9d1dd; }
 details.faq { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
 details.faq summary { cursor: pointer; font-weight: 600; }
+/* Admin → Plans: number limits */
+.limit-row { align-items: center; }
+.limit-cell { display: grid; gap: 4px; justify-items: center; }
+.limit-cell input[type=number] { width: 88px; text-align: center; padding: 6px; }
+.limit-unl { display: flex; align-items: center; gap: 4px; }
+
 /* Deals → My filters: the cards in a filter, as pictures */
 .fx-strip { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-right: 10px; }
 .fx-strip-thumb { border-radius: 3px; }
@@ -244,6 +250,9 @@ details.faq summary { cursor: pointer; font-weight: 600; }
 .fx-card-add { justify-content: center; min-height: 105px; padding: 8px; border-style: dashed; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
 .fx-card-add:hover { border-color: var(--accent); color: var(--accent); }
 .fx-empty { display: grid; gap: 6px; justify-items: start; text-align: left; }
+.fs-cap { margin: 0 0 8px; color: var(--muted); }
+.fs-cap.full { color: var(--warn); }
+a.fx-card-add { text-decoration: none; text-align: center; }
 .fx-empty p { margin: 0; }
 .fx-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
 @media (max-width: 700px) { .fx-summary, .fx-any, .fx-more { display: none; } .fx-strip { margin-right: 6px; } .fx-strip .fx-strip-thumb:nth-of-type(n+4) { display: none; } }
@@ -1301,3 +1310,16 @@ details.era > .set-grid { margin-bottom: 14px; }
 .seg a { padding: 8px 16px; color: var(--muted); border-right: 1px solid var(--border); text-decoration: none; }
 .seg a:last-child { border-right: 0; }
 .seg a.on { background: var(--accent-soft); color: var(--accent); }
+
+/* Settings → Billing */
+.bill-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.bill-facts > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.bill-facts form { margin-top: 4px; }
+.bill-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.bill-table th, .bill-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.bill-table th { font-weight: 600; color: var(--muted); font-size: 12px; }
+.billing .table-wrap { overflow-x: auto; }
+.bill-cancel { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+details.bill-cancel { display: block; }
+details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.premium-trial { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; }

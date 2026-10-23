@@ -22,7 +22,7 @@ function ProductThumb({ product, size = 56 }) {
   );
 }
 
-function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors }) {
+function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, listingAlerts = true }) {
   const printings = product.type === "card" ? Object.keys(product.prices || {}) : [];
   const [printing, setPrinting] = useState(initial?.printing || printings[0] || null);
   const conditions = product.type === "card" ? Object.keys(product.prices?.[printing] || {}) : [];
@@ -36,7 +36,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors })
   const suggest = (up) => (now ? (up ? Math.ceil(now * 1.15) : Math.floor(now * 0.85)) : "");
   const [target, setTarget] = useState(initial?.targetPrice ?? suggest(isRising(initial || {})));
   const [dropPct, setDropPct] = useState(initial?.dropPct ?? 15);
-  const ebayOk = product.type === "card" && product.language !== "japanese";
+  const ebayOk = listingAlerts && product.type === "card" && product.language !== "japanese"; // listingAlerts: on this plan
   const [alsoEbay, setAlsoEbay] = useState(ebayOk ? initial?.alsoEbay ?? true : false);
   const fires = byPct ? (now ? now * (rising ? 1 + dropPct / 100 : 1 - dropPct / 100) : null) : Number(target) || null;
   const already = fires && now ? (rising ? now >= fires : now <= fires) : false;
@@ -186,7 +186,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
           <h2>Add a price alert</h2>
           {full ? (
             <div className="notice warn" style={{ marginBottom: 0 }}>
-              You're using all {limit} price alerts. Remove one below to add another, or{" "}
+              You're using your {limit} price alert{limit === 1 ? "" : "s"}. Remove one below to add another, or{" "}
               <Link href="/app/premium?from=watches">upgrade to Premium</Link> for unlimited alerts.
             </div>
           ) : (
@@ -227,7 +227,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     <Sparkline points={picked.history} width={180} />
                     <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>Change</button>
                   </div>
-                  <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} />
+                  <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} listingAlerts={plan.ebayListingAlerts !== false} />
                 </div>
               )}
             </>
@@ -298,7 +298,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                 </div>
                 {editing === w.id && products[w.productId] && (
                   <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-                    <WatchForm product={products[w.productId]} initial={w} onSubmit={(input) => save(w.id, input)} submitLabel="Save changes" pending={pending} errors={errors} />
+                    <WatchForm product={products[w.productId]} initial={w} onSubmit={(input) => save(w.id, input)} submitLabel="Save changes" pending={pending} errors={errors} listingAlerts={plan.ebayListingAlerts !== false} />
                   </div>
                 )}
               </div>

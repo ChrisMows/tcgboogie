@@ -116,6 +116,9 @@ export function validateFilters(input, plan) {
     }))
     .filter((c) => c.name)
     .slice(0, 100);
+  if (plan.maxCardsPerFilter !== null && plan.maxCardsPerFilter !== undefined && f.cards.length + f.pokemon.length > plan.maxCardsPerFilter) {
+    errors.cards = `Your plan includes up to ${plan.maxCardsPerFilter} card${plan.maxCardsPerFilter === 1 ? "" : "s"} per filter. Remove some, or get unlimited with Premium.`;
+  }
 
   const comps = num(input.minComps, base.minComps);
   if (!Number.isInteger(comps) || comps < 3 || comps > 200) errors.minComps = "Use a whole number from 3 to 200.";
@@ -133,8 +136,17 @@ export function validateFilters(input, plan) {
 }
 
 /** After a downgrade, pull a saved profile back inside the plan's limits (never throws). */
+/** How many cards a filter picks: each picked card, and each "any card named …" (null plan limit = unlimited). */
+export const filterCardCount = (f) => (f.cards || []).length + (f.pokemon || []).length;
+
 export function clampToPlan(filters, plan) {
   const f = { ...defaultFilters(plan), ...(filters || {}) };
+  // Over the plan's cards per filter (e.g. after a downgrade): keep the first ones, "any card named …" first.
+  const cap = plan.maxCardsPerFilter;
+  if (cap !== null && cap !== undefined && filterCardCount(f) > cap) {
+    f.pokemon = (f.pokemon || []).slice(0, cap);
+    f.cards = (f.cards || []).slice(0, Math.max(0, cap - f.pokemon.length));
+  }
   f.minDiscountPct = Math.max(f.minDiscountPct, plan.minDiscountFloor);
   f.maxMinutesLeft = Math.min(f.maxMinutesLeft, plan.maxWindowMinutes);
   f.minMarketValue = Math.max(f.minMarketValue, plan.minValueFloor);

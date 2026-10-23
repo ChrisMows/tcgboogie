@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
 import AdminFeatures from "@/components/AdminFeatures";
-import { currentFeatures } from "@/lib/features";
+import AdminLimits from "@/components/AdminLimits";
+import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
 import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
 import { gameTotals } from "@/lib/game-interest";
-import { FEATURES } from "@/lib/plans";
+import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
@@ -48,7 +49,7 @@ export default async function Admin({ searchParams }) {
       <div className="tabs-row" role="tablist">
         <Link href="/app/admin" className={tab === "status" ? "on" : ""} role="tab" aria-selected={tab === "status"}>Status</Link>
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
-        <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Features</Link>
+        <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
@@ -56,8 +57,16 @@ export default async function Admin({ searchParams }) {
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
-      {tab === "features" && <AdminFeatures features={FEATURES.map(({ key, group, label, help }) => ({ key, group, label, help: help || null }))}
-        choices={await currentFeatures()} saved={sp?.saved} />}
+      {tab === "features" && (
+        <>
+          <h2 style={{ margin: "4px 0 10px" }}>Features</h2>
+          <AdminFeatures features={FEATURES.map(({ key, group, label, help }) => ({ key, group, label, help: help || null }))}
+        choices={await currentFeatures()} saved={sp?.saved} />
+          <h2 id="limits" style={{ margin: "26px 0 10px" }}>Limits</h2>
+          <AdminLimits limits={LIMITS.map(({ key, group, label, help, unit, min, max, unlimited, premiumOnly }) => ({ key, group, label, help: help || null, unit: unit || null, min, max, unlimited, premiumOnly: Boolean(premiumOnly) }))}
+            values={await currentLimits()} saved={sp?.limits} />
+        </>
+      )}
     </>
   );
 }

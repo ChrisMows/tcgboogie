@@ -150,7 +150,7 @@ export async function changeRenewal(formData) {
   const cancel = formData.get("renew") !== "on";
   try { await setCancelAtPeriodEnd(user, cancel); } catch (e) { await logError("payments", "Renewal change failed", e, { cancel }, user.id); billingError("error"); }
   revalidatePath("/app", "layout");
-  billingError(cancel ? "cancelled-renewal" : "renewing");
+  billingError(!cancel ? "renewing" : user.subscriptionStatus === "trialing" ? "cancelled-trial" : "cancelled-renewal");
 }
 
 export async function logOut() {

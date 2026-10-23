@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { listItem, SellError, setupPolicies } from "@/lib/ebay-sell";
+import { checkQuota, useQuota } from "@/lib/quota";
 import { logError } from "@/lib/log";
 import { allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
@@ -13,6 +14,8 @@ export async function listOnEbay(itemId, formData) {
   if (!user.plan.sellOnEbay) return { ok: false, error: "Sell on eBay isn't part of your plan." };
   if (user.demo) return { ok: false, error: "Not available in the demo." };
   if (!await allow("ebayList", user.id)) return { ok: false, error: "Too many listings in a short time. Please wait a few minutes." };
+  const quota = await checkQuota("ebayListing", user); // used only once eBay accepts the listing
+  if (!quota.ok) return { ok: false, error: quota.message, left: 0 };
   const item = await store.getItem(user.id, itemId);
   if (!item || item.list !== "owned" || item.kind === "sealed") return { ok: false, error: "That card isn't in your collection." };
   const price = Number(String(formData.get("price") || "").replace(/[$,]/g, ""));
@@ -30,7 +33,8 @@ export async function listOnEbay(itemId, formData) {
       policies: { fulfillment: String(formData.get("fulfillment") || ""), payment: String(formData.get("payment") || ""), return: String(formData.get("return") || "") },
       photos,
     });
-    return { ok: true, url: r.url };
+    const used = await useQuota("ebayListing", user).catch(() => ({ left: null }));
+    return { ok: true, url: r.url, left: used.left ?? null };
   } catch (e) {
     if (e instanceof SellError) {
       if (e.code === "not_connected" || e.code === "reconnect") return { ok: false, error: e.message, reconnect: true };

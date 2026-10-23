@@ -8,7 +8,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
-import { effectivePlans } from "@/lib/plan-copy";
+import { billingLive } from "@/lib/billing";
+import { effectivePlans, trialDays } from "@/lib/plan-copy";
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { saleLine } from "@/lib/deal-outcome";
 import "./home.css";
@@ -29,13 +30,13 @@ const TOOLS = [
     tag: (f) => (f.maxPriceWatches === null ? null : "Unlimited on Premium") },
   { icon: "▦", title: "Collection tracker", body: "What every card is worth, updated daily. Import from any app." },
   { icon: "🖼", title: "Photo appraiser", body: "Snap a binder page. We find each card and its value.",
-    tag: (f) => (f.photoAppraiser ? null : "Premium") },
+    tag: (f) => (!f.photoAppraiser || f.appraisePerMonth === 0 ? "Premium" : f.appraisePerMonth === null ? null : "Unlimited on Premium") },
   { icon: "⇄", title: "Trade Analyzer", body: "Both sides priced, and the trade graded out of 10 for fairness.",
     tag: (f) => (f.tradeAnalyzer ? null : "Premium") },
   { icon: "💎", title: "Worth Grading?", body: "Which of your raw cards pay off at PSA, CGC, BGS and more.",
     tag: (f) => (f.gradingCheck ? null : "Full list on Premium") },
   { icon: "🏷", title: "Sell on eBay", body: "List a card from your collection in a minute, priced from real sales.",
-    tag: (f) => (f.sellOnEbay ? null : "Premium") },
+    tag: (f) => (!f.sellOnEbay || f.sellPerMonth === 0 ? "Premium" : f.sellPerMonth === null ? null : `${f.sellPerMonth} a month free`) },
   { icon: "🌏", title: "Every language", body: "English and Japanese built in. Korean, Chinese and more on request." },
 ];
 
@@ -97,7 +98,9 @@ export default async function Home({ searchParams }) {
   const voted = GAMES[sp?.voted] ? sp.voted : null;
   const [mine, caught, plans] = await Promise.all([user ? myGames(user.id) : [], homeShowcase(), effectivePlans()]);
   const free = plans.free;
-  const photoSearchTag = plans.free.photoSearch ? null : "Premium";
+  const photoSearchTag = !plans.free.photoSearch || plans.free.photoSearchPerMonth === 0 ? "Premium"
+    : plans.free.photoSearchPerMonth === null ? null : `${plans.free.photoSearchPerMonth} a month free`;
+  const trial = billingLive() ? trialDays(plans) : 0;
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),
   );
@@ -308,7 +311,7 @@ export default async function Home({ searchParams }) {
       <section className="content wrap" id="pricing">
         <div className="eyebrow">SIMPLE PRICING</div>
         <h2>Start free. Upgrade when it pays for itself.</h2>
-        <p className="sub">One good flip covers the month.</p>
+        <p className="sub">One good flip covers the month.{trial > 0 ? ` New members get ${trial} days of Premium free.` : ""}</p>
         <PlanCards signedIn={Boolean(user)} />
       </section>
 

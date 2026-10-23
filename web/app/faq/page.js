@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { channels, effectivePlans, planHighlights } from "@/lib/plan-copy";
+import { billingLive } from "@/lib/billing";
+import { channels, effectivePlans, planHighlights, trialDays } from "@/lib/plan-copy";
 
 export const metadata = { title: "FAQ" };
 
 // Questions grouped by topic, with a row of jump links at the top. Answers that describe what each plan includes are
 // built from the plans as Admin → Features set them (lib/plan-copy.js), so the FAQ never promises a feature a plan
 // doesn't have.
-const groups = ({ free, premium, sms, lists }) => {
+const groups = ({ free, premium, sms, lists, trial }) => {
   const premiumOnly = (flag) => (premium[flag] && !free[flag] ? " (Premium)" : "");
   return [
     ["start", "Getting started", [
@@ -75,9 +76,13 @@ const groups = ({ free, premium, sms, lists }) => {
     ]],
     ["billing", "Plans and billing", [
       ["How does billing work?",
-        `Premium is $${premium.price} a month plus any sales tax where you live, shown before you pay. It renews monthly until you cancel. Payments go through Stripe; we never see your card number.`],
+        `Premium is $${premium.price} a month plus any sales tax where you live, shown before you pay. It renews monthly until you cancel. Payments go through Stripe; we never see your card number. Settings → Billing shows your next charge, the card on file and every past payment with its receipt.`],
+      ...(trial > 0 ? [["Is there a free trial?",
+        `Yes. New members get ${trial} days of Premium free. You add a card at checkout but pay $0 that day; your first $${premium.price} charge is when the trial ends. We email you 3 days before, and if you cancel in Settings → Billing before the trial ends, you're never charged. One trial per member.`]] : []),
       ["Can I cancel anytime?",
-        "Yes, in one click from Settings → Plan. You keep Premium until the end of the month you paid for, then you're back on Free with your collection and settings intact. Months aren't refunded part-way, and deleting your account cancels your subscription too."],
+        "Yes, in one click from Settings → Billing. You keep Premium until the end of the month you paid for (or the end of your free trial), then you're back on Free with your collection and settings intact. Anything over the Free limits is paused, not deleted. Months aren't refunded part-way, and deleting your account cancels your subscription too."],
+      ["What are the monthly limits on Free?",
+        `Free includes ${free.photoSearchPerMonth === null ? "unlimited" : free.photoSearchPerMonth} search-by-picture photos and ${free.sellPerMonth === null ? "unlimited" : free.sellPerMonth} Sell on eBay listings a month, counted from the 1st. The Add cards box and the Sell page show how many you have left. Premium has no monthly limits.`],
     ]],
     ["account", "Your account and data", [
       ["Who can see my collection?",
@@ -90,7 +95,7 @@ const groups = ({ free, premium, sms, lists }) => {
 
 export default async function FAQ() {
   const plans = await effectivePlans();
-  const list = groups({ ...plans, lists: planHighlights(plans) });
+  const list = groups({ ...plans, lists: planHighlights(plans), trial: billingLive() ? trialDays(plans) : 0 });
   return (
     <div className="wrap doc">
       <h1>Questions? Answers.</h1>

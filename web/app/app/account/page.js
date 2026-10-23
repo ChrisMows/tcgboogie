@@ -4,7 +4,7 @@ import { demoMode, requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { logError } from "@/lib/log";
 import { ebayAccount, ebaySellReady } from "@/lib/ebay-sell";
-import { billingLive, billingMode, confirmCheckout, hasLiveSubscription } from "@/lib/billing";
+import { billingDetails, billingLive, billingMode, confirmCheckout, hasLiveSubscription, trialDaysFor } from "@/lib/billing";
 import { changeRenewal, connectProvider, deleteAccount, disconnectEbay, openBillingPortal, disconnectProvider, refreshPicture, removePhone, saveName, savePreferences, sendPhoneCode, setAvatar, verifyPhoneCode } from "../actions";
 import { channelsReady } from "@/lib/notify";
 import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar";
@@ -40,11 +40,12 @@ const EBAY_NOTES = {
   disconnected: ["good", "eBay disconnected. We've deleted the access eBay gave us."],
 };
 const BILLING_NOTES = {
-  welcome: ["good", "Welcome to Premium! Stripe emails your receipt, and you can find every invoice under Manage billing."],
+  welcome: ["good", "Welcome to Premium! Stripe emails your receipt, and every receipt is under Billing below."],
   pending: ["warn", "Payment received by Stripe. Your Premium switches on within a minute; refresh this page if it hasn't yet."],
   cancelled: ["", "Checkout cancelled. You weren't charged."],
-  already: ["", "You already have Premium. Use Manage billing to change your card or plan."],
+  already: ["", "You already have Premium. Change your card or cancel under Billing below."],
   "cancelled-renewal": ["good", "Done. Premium stays on until the end of the month you've paid for, and you won't be charged again."],
+  "cancelled-trial": ["good", "Done. Your trial is cancelled and you won't be charged. Premium stays on until the trial's last day."],
   renewing: ["good", "Great, your Premium will keep renewing."],
   slow: ["warn", "Too many tries in a short time. Please wait a few minutes."],
   off: ["warn", "Card payments aren't available right now."],
@@ -76,6 +77,13 @@ export default async function Account({ searchParams }) {
   // Admins can test checkout while previewing as Free; comped members don't need to pay.
   const showUpgrade = !premium && !compActive(user);
   const periodEnd = user.currentPeriodEnd ? fmt(user.currentPeriodEnd) : null;
+  const trialing = subscribed && user.subscriptionStatus === "trialing";
+  const trialOffer = showUpgrade && payments ? trialDaysFor(user) : 0;
+  const bill = payments && user.stripeCustomerId ? await billingDetails(user) : null;
+  const money = (v) => `$${Number(v || 0).toFixed(2)}`;
+  const billingNote = params?.billing === "welcome" && trialing
+    ? ["good", `Your free trial has started! Your first charge is ${periodEnd}; cancel before then and you pay nothing. We'll email you 3 days before.`]
+    : BILLING_NOTES[params?.billing];
 
   return (
     <>
@@ -94,12 +102,14 @@ export default async function Account({ searchParams }) {
               {subscribed ? "Premium" : user.plan.label}{" "}
               {subscribed && user.subscriptionStatus === "past_due" ? <span className="badge warn">Payment due</span>
                 : subscribed && user.cancelAtPeriodEnd ? <span className="badge">Ending</span>
+                : trialing ? <span className="badge accent">Free trial</span>
                 : premium || subscribed ? <span className="badge accent">Active</span> : null}
             </div>
             <div className="small muted">
               {subscribed ? (
                 user.cancelAtPeriodEnd
                   ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
+                  : trialing ? <>Free until <b>{periodEnd}</b>, then ${PLANS.premium.price}/month + tax</>
                   : <>${PLANS.premium.price}/month + tax{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
               ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
                 : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
@@ -109,35 +119,120 @@ export default async function Account({ searchParams }) {
           </div>
           {subscribed ? (
             <div className="row" style={{ flex: "none", gap: 8, justifyContent: "flex-end" }}>
-              <form action={changeRenewal}>
-                {user.cancelAtPeriodEnd
-                  ? <><input type="hidden" name="renew" value="on" /><button className="btn primary">Keep Premium</button></>
-                  : <button className="btn ghost">Cancel at end of month</button>}
-              </form>
-              <form action={openBillingPortal}><button className="btn">Manage billing</button></form>
+              {user.cancelAtPeriodEnd && (
+                <form action={changeRenewal}><input type="hidden" name="renew" value="on" /><button className="btn primary">Keep Premium</button></form>
+              )}
+              <a href="#billing" className="btn">Billing</a>
             </div>
           ) : showUpgrade ? (
             <div style={{ textAlign: "right" }}>
-              <Link href="/app/premium" className="btn primary">Upgrade to Premium · ${PLANS.premium.price}/mo</Link>
-              <div className="hint">Plus applicable sales tax. Cancel anytime.</div>
+              <Link href="/app/premium" className="btn primary">{trialOffer ? `Try Premium free for ${trialOffer} days` : `Upgrade to Premium · $${PLANS.premium.price}/mo`}</Link>
+              <div className="hint">{trialOffer ? `Then $${PLANS.premium.price}/mo plus tax. Cancel anytime.` : "Plus applicable sales tax. Cancel anytime."}</div>
             </div>
           ) : null}
         </div>
         {subscribed && user.subscriptionStatus === "past_due" && (
           <div className="notice warn" style={{ marginTop: 12 }}>
-            Your last payment didn&apos;t go through. Stripe will try again over the next few days; update your card under <b>Manage billing</b> to keep Premium.
+            Your last payment didn&apos;t go through. Stripe will try again over the next few days; update your card under <a href="#billing">Billing</a> to keep Premium.
           </div>
         )}
         {payments && testMode && !subscribed && showUpgrade && (
           <div className="hint" style={{ marginTop: 8 }}>Test mode: no real money. Pay with card 4242 4242 4242 4242, any future date, any CVC.</div>
         )}
-        {BILLING_NOTES[params?.billing] && (
-          <div className={`notice ${BILLING_NOTES[params.billing][0]}`} style={{ marginTop: 12 }}>{BILLING_NOTES[params.billing][1]}</div>
+        {billingNote && (
+          <div className={`notice ${billingNote[0]}`} style={{ marginTop: 12 }}>{billingNote[1]}</div>
         )}
         {!premium && !subscribed && (
           <ul className="plan-perks">{premiumPerks.map((f) => <li key={f}>{f}</li>)}</ul>
         )}
       </div>
+      {payments && user.stripeCustomerId && (subscribed || bill?.invoices?.length > 0) && (
+        <div className="panel billing" id="billing">
+          <h2>Billing</h2>
+          {!bill && <p className="small muted" style={{ marginTop: -6 }}>We couldn&apos;t reach our payment provider just now, so some details are missing. Refresh in a minute.</p>}
+          <div className="bill-facts">
+            <div>
+              <span className="small muted">Plan</span>
+              <b>{subscribed ? `Premium · $${PLANS.premium.price}/month` : "Free"}</b>
+              <span className="small muted">
+                {trialing ? "Free trial" : subscribed && user.subscriptionStatus === "past_due" ? "Payment due" : subscribed ? "Active" : "No subscription"}
+                {bill?.started ? ` · since ${fmt(bill.started)}` : ""}
+              </span>
+            </div>
+            <div>
+              <span className="small muted">{subscribed && !user.cancelAtPeriodEnd ? "Next charge" : "Next charge"}</span>
+              {subscribed && !user.cancelAtPeriodEnd ? (
+                <>
+                  <b>{bill?.next ? money(bill.next.amount) : `$${PLANS.premium.price}`}{bill?.next?.exact ? "" : " + tax"}</b>
+                  <span className="small muted">on {bill?.next ? fmt(bill.next.date) : periodEnd}{trialing ? " (when your trial ends)" : ""}</span>
+                </>
+              ) : subscribed ? (
+                <><b>None</b><span className="small muted">Premium ends {periodEnd}</span></>
+              ) : <><b>None</b><span className="small muted">You&apos;re not subscribed</span></>}
+            </div>
+            <div>
+              <span className="small muted">Payment method</span>
+              {bill?.card ? (
+                <>
+                  <b style={{ textTransform: "capitalize" }}>{bill.card.brand}{bill.card.last4 ? ` •••• ${bill.card.last4}` : ""}</b>
+                  {bill.card.expMonth && <span className="small muted">Expires {String(bill.card.expMonth).padStart(2, "0")}/{String(bill.card.expYear).slice(-2)}</span>}
+                </>
+              ) : <b>None on file</b>}
+              <form action={openBillingPortal}><button className="link-btn small">{bill?.card ? "Update card" : "Add a card"}</button></form>
+            </div>
+          </div>
+
+          {subscribed && user.subscriptionStatus === "past_due" && (
+            <div className="notice warn">Your last payment didn&apos;t go through. Update your card to keep Premium; we&apos;ll retry automatically.</div>
+          )}
+
+          <h3>Billing history</h3>
+          {bill?.invoices?.length ? (
+            <div className="table-wrap">
+              <table className="bill-table">
+                <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th><span className="sr-only">Receipt</span></th></tr></thead>
+                <tbody>
+                  {bill.invoices.map((i) => (
+                    <tr key={i.id}>
+                      <td>{fmt(i.date)}</td>
+                      <td>{i.trial ? "Free trial started" : "Premium, monthly"}{i.number ? <span className="small muted"> · {i.number}</span> : null}</td>
+                      <td>{money(i.amount)}</td>
+                      <td><span className={`badge ${i.status === "paid" ? "good" : i.status === "open" ? "warn" : ""}`}>{i.status === "paid" ? "Paid" : i.status === "open" ? "Due" : i.status === "void" ? "Void" : "Unpaid"}</span></td>
+                      <td>
+                        {i.url && <a href={i.url} target="_blank" rel="noopener noreferrer">{i.status === "open" ? "Pay" : "Receipt"}</a>}
+                        {i.pdf && <> · <a href={i.pdf} target="_blank" rel="noopener noreferrer">PDF</a></>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="small muted">No payments yet.{trialing ? " Your first one is when your trial ends." : ""}</p>}
+
+          {subscribed && (
+            user.cancelAtPeriodEnd ? (
+              <div className="bill-cancel">
+                <p className="small muted" style={{ margin: 0 }}>Cancelled: Premium ends <b>{periodEnd}</b> and you won&apos;t be charged again. Changed your mind?</p>
+                <form action={changeRenewal}><input type="hidden" name="renew" value="on" /><button className="btn primary sm">Keep Premium</button></form>
+              </div>
+            ) : (
+              <details className="bill-cancel">
+                <summary>{trialing ? "Cancel free trial" : "Cancel Premium"}</summary>
+                <p className="small" style={{ marginBottom: 10 }}>
+                  {trialing
+                    ? <>You won&apos;t be charged anything. Premium stays on until <b>{periodEnd}</b>, then you&apos;re on Free.</>
+                    : <>You keep Premium until <b>{periodEnd}</b> (the end of the month you&apos;ve paid for) and won&apos;t be charged again. No refunds for partial months.</>}
+                  {" "}Your collection, filters and settings stay; anything over the Free limits is paused, not deleted.
+                </p>
+                <form action={changeRenewal}><button className="btn danger sm">{trialing ? "Yes, cancel my trial" : "Yes, cancel Premium"}</button></form>
+              </details>
+            )
+          )}
+          <p className="hint" style={{ marginBottom: 0 }}>
+            Payments are handled by Stripe; we never see your full card number. Receipts are also emailed to {user.email}.
+          </p>
+        </div>
+      )}
       <form action={savePreferences} key={`${user.phoneVerifiedAt ? "sms" : "no-sms"}-${user.alertSms ? 1 : 0}-${user.tier}`}>
         <div className="panel" id="alerts">
           <h2>How we reach you</h2>

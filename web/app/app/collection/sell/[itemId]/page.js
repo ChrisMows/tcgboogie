@@ -7,6 +7,7 @@ import { itemLabel, unitValue } from "@/lib/collection";
 import { ebayAccount, ebaySellReady, listingsFor, sellerPolicies, suggestDescription, suggestTitle } from "@/lib/ebay-sell";
 import { ebaySearch } from "@/lib/ebay-link";
 import FeatureLocked from "@/components/FeatureLocked";
+import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -94,6 +95,19 @@ export default async function SellPage({ params, searchParams }) {
     );
   }
 
+  const quota = await quotaStatus("ebayListing", user);
+  if (quota.limit !== null && quota.left === 0) {
+    return (
+      <>
+        {head}
+        <div className="panel">
+          <p style={{ marginTop: 0 }}>You&apos;ve listed {quota.limit} {quota.limit === 1 ? "card" : "cards"} on eBay this month, all your plan includes. Your allowance resets on the 1st.</p>
+          <Link href="/app/premium?from=sell" className="btn primary">Unlimited listings with Premium</Link>
+        </div>
+      </>
+    );
+  }
+
   const value = unitValue(item);
   const grade = item.kind === "graded" ? ` ${item.grader} ${item.grade}` : "";
   const sold = ebaySearch(`${item.name.replace(/\s*\(.*\)$/, "")} ${item.number || ""}${grade}`.trim(), { sold: true, source: "sell-page-sold" });
@@ -114,7 +128,7 @@ export default async function SellPage({ params, searchParams }) {
           You listed this card before: {past.map((l) => <a key={l.id} href={`https://www.ebay.com/itm/${l.listingId}`} target="_blank" rel="noopener noreferrer">{l.title} ↗</a>)}
         </div>
       )}
-      <SellForm itemId={item.id} policies={policies} needsZip={!account.postalCode} suggested={value} soldHref={sold.href}
+      <SellForm itemId={item.id} quota={quota} policies={policies} needsZip={!account.postalCode} suggested={value} soldHref={sold.href}
         initial={{ title: suggestTitle(item), description: suggestDescription(item), price: value ? Math.round(value * 100) / 100 : null, facts }} />
     </>
   );

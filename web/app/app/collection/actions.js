@@ -6,11 +6,12 @@ import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { logError } from "@/lib/log";
+import { useQuota } from "@/lib/quota";
 import { slim } from "@/lib/portfolio";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
-import { atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
+import { alertsWord, atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
 
 function refresh(productId) {
   revalidatePath("/app/collection", "layout");
@@ -59,6 +60,8 @@ export async function searchByPhoto(formData) {
   if (!file || typeof file === "string" || !file.size) return { ok: false, error: "Pick a photo first." };
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { ok: false, error: "That photo format isn't supported. Try a JPEG or PNG (a screenshot works too)." };
   if (file.size > 5 * 1024 * 1024) return { ok: false, error: "That photo is too large. Try a smaller one." };
+  const quota = await useQuota("photoSearch", user);
+  if (!quota.ok) return { ok: false, error: quota.message, left: 0 };
   try {
     const data = Buffer.from(await file.arrayBuffer()).toString("base64");
     const { cards } = await appraisePhoto({ data, mediaType: file.type }, user.id);
@@ -69,8 +72,8 @@ export async function searchByPhoto(formData) {
       if (full && !results.some((r) => r.id === full.id)) results.push(slim(full));
       else if (!full && c.read.name) unread.push({ name: c.read.name, number: c.read.number, language: c.read.language });
     }
-    if (!results.length && !unread.length) return { ok: false, error: "We couldn't make out a card. Try a closer, brighter photo with the name and number visible." };
-    return { ok: true, results, unread };
+    if (!results.length && !unread.length) return { ok: false, error: "We couldn't make out a card. Try a closer, brighter photo with the name and number visible.", left: quota.left };
+    return { ok: true, results, unread, left: quota.left };
   } catch (e) {
     await logError("website", "Search by picture failed", e, {}, user.id);
     return { ok: false, error: "We couldn't read that photo. Try again with more light and the card flat." };
@@ -81,6 +84,7 @@ export async function searchByPhoto(formData) {
 export async function requestCard(query, link, kind = "card") {
   const user = await requireUser();
   if (user.demo) return { status: "declined", message: "Requests aren't saved in the demo." };
+  if (!user.plan.cardRequests) return { status: "declined", message: "Card requests aren't part of your plan." };
   if (!await allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
   return submitRequest(user, { query, link, kind });
 }
@@ -202,7 +206,7 @@ export async function watchProduct(productId, input = {}) {
   const existing = watches.find((w) => w.productId === String(productId));
   if (existing) return { ok: true, already: true };
   if (atWatchLimit(user.plan, watches.length)) {
-    return { ok: false, limit: true, error: `You're using all ${user.plan.maxPriceWatches} price alerts on Free. Remove one, or upgrade for unlimited.` };
+    return { ok: false, limit: true, error: `You're using your ${alertsWord(user.plan.maxPriceWatches)} on ${user.plan.label}. Remove one, or get unlimited with Premium.` };
   }
   const product = await getProduct(productId);
   if (!product) return { ok: false, error: "That product is no longer available." };

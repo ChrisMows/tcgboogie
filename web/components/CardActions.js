@@ -154,7 +154,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
           <div className="hint">
             Now {money(now)}{Number(target) && now ? ` · ${Math.round(Math.abs(Number(target) / now - 1) * 100)}% ${Number(target) >= now ? "above" : "below"} today` : ""}.
             {product.type === "card" && !selling ? " We'll also watch eBay for listings at or under your price." : ""}
-            {plan.maxPriceWatches !== null ? ` Free includes ${plan.maxPriceWatches} alerts.` : ""}
+            {plan.maxPriceWatches !== null ? ` ${plan.label} includes ${plan.maxPriceWatches} price alert${plan.maxPriceWatches === 1 ? "" : "s"}.` : ""}
             {" "}More options on <Link href="/app/watches">Price alerts</Link>.
           </div>
         </form>
