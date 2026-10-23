@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import CardThumb from "@/components/CardThumb";
 import { PackBody, PackTop } from "@/components/FoilPack";
 import { REVEAL_EVENT } from "@/lib/reveal";
 
@@ -65,7 +66,9 @@ export default function PackReveal() {
               <span className="reveal-holo" />
             </div>
             <div className="reveal-face reveal-front">
-              {card.image
+              {card.kind === "graded"
+                ? <CardThumb item={card} width="100%" className="reveal-slab" />
+                : card.image
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={card.image} alt="" draggable={false} />
                 : <div className="reveal-noimg">{card.name}</div>}

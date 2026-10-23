@@ -20,9 +20,10 @@ function refresh(productId) {
 }
 
 /** What the pack-opening reveal shows for a card just added to the collection (cards only, not sealed). */
-const revealFor = (p, { value = null, quantity = 1 } = {}) => (p?.type === "card" ? {
+const revealFor = (p, { value = null, quantity = 1, item = null } = {}) => (p?.type === "card" ? {
   productId: p.id, name: String(p.name || "").replace(/\s*\(.*\)$/, ""), setName: p.setName || null, number: p.number || null,
   image: p.image || null, value, quantity,
+  ...(item?.kind === "graded" ? { kind: "graded", grader: item.grader, grade: item.grade } : {}), // graded: revealed in its slab
 } : null);
 
 const snapshotFields = (p) => ({
@@ -129,7 +130,7 @@ export async function addItem(productId, input) {
     }
   }
   refresh(product.id);
-  const reveal = item.list === "owned" ? revealFor(product, { value: mv, quantity: item.quantity }) : null;
+  const reveal = item.list === "owned" ? revealFor(product, { value: mv, quantity: item.quantity, item }) : null;
   return { ok: true, value: mv, merged: Boolean(same), fromWishlist, reveal };
 }
 
@@ -194,7 +195,7 @@ export async function moveToCollection(id) {
   await store.updateItem(user.id, id, { list: "owned", purchaseDate: new Date().toISOString().slice(0, 10) });
   refresh(it.productId);
   const product = await getProduct(it.productId, { cachedOnly: true }).catch(() => null);
-  return { ok: true, reveal: revealFor(product || { ...it, id: it.productId, type: it.productType }, { value: it.unitValue ?? null, quantity: it.quantity }) };
+  return { ok: true, reveal: revealFor(product || { ...it, id: it.productId, type: it.productType }, { value: it.unitValue ?? null, quantity: it.quantity, item: it }) };
 }
 
 /** Remove the wishlist entry for a product (used by the heart toggle on set grids and card pages). */

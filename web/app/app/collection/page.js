@@ -24,7 +24,7 @@ export default async function CollectionPage({ searchParams }) {
 
   const movers = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
     .sort((a, b) => Math.abs(b.change7 * unitValue(b) * b.quantity) - Math.abs(a.change7 * unitValue(a) * a.quantity)).slice(0, 5)
-    .map((it) => ({ id: it.id, productId: it.productId, image: it.image, number: it.number, productType: it.productType,
+    .map((it) => ({ id: it.id, productId: it.productId, image: it.image, number: it.number, productType: it.productType, kind: it.kind, grader: it.grader, grade: it.grade,
       name: it.name.replace(/\s*\(.*\)$/, ""), label: itemLabel(it), change7: it.change7 }));
   const list = tab === "wishlist" ? c.wishlist : c.owned;
   // Opened from a binder tile: the Collection tab starts filtered to that binder.
