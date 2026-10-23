@@ -312,12 +312,12 @@ export async function homeShowcase() {
     if (good.length >= 3) {
       const seen = new Set();
       const best = good.filter((d) => d.image && d.marketValue >= 50).sort((a, b) => b.realOff - a.realOff)
-        .filter((d) => (seen.has(d.name) ? false : seen.add(d.name))).slice(0, 3);
+        .filter((d) => (seen.has(d.name) ? false : seen.add(d.name))).slice(0, 15); // the homepage carousel shows up to 15
       data = {
         soldBelow: good.length,
         avgOff: Math.round(good.reduce((s, d) => s + d.realOff, 0) / good.length),
         bestOff: Math.max(...good.map((d) => d.realOff)),
-        deals: best.length === 3 ? best : null,
+        deals: best.length >= 3 ? best : null,
       };
       if (!data.deals) data = null;
     }

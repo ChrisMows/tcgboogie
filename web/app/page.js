@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CardArt from "@/components/CardArt";
 import DealTabs from "@/components/DealTabs";
+import DealCarousel from "@/components/DealCarousel";
 import PlanCards from "@/components/PlanCards";
 import Source from "@/components/Source";
 import { redirect } from "next/navigation";
@@ -190,7 +191,7 @@ export default async function Home({ searchParams }) {
           ) : <span className="label">◉ &nbsp; EXAMPLE DEAL FEED</span>}
         </div>
         {caught ? (
-          <div className="deal-grid">
+          <DealCarousel>
             {caught.deals.map((d) => {
               // The card opens its page with this deal's details (members; visitors sign in first). On eBay the sale shows
               // in sold listings for that card and grade (an ended listing's own link goes to a general product page).
@@ -224,7 +225,7 @@ export default async function Home({ searchParams }) {
                 </article>
               );
             })}
-          </div>
+          </DealCarousel>
         ) : <DealTabs deals={EXAMPLES} cards={cards} />}
         <p className="note">
           {caught ? "Real eBay auctions our deal finder caught that sold below market. Prices are what each one finally sold for, including shipping. Premium members get deals while they're live." : "Illustrative listings and prices, not live offers."}
