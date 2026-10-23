@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import NavProgress from "@/components/NavProgress";
 import Link from "next/link";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -43,6 +45,7 @@ export default async function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('tcgb-hide-values')==='1')document.documentElement.classList.add('hide-values')}catch(e){}" }} />
       </head>
       <body>
+        <Suspense fallback={null}><NavProgress /></Suspense>
         {demoMode && (
           <div className="demo-bar">
             <div className="wrap">

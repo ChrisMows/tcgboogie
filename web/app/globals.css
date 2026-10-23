@@ -1323,3 +1323,46 @@ details.era > .set-grid { margin-bottom: 14px; }
 details.bill-cancel { display: block; }
 details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 .premium-trial { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; }
+
+/* Page loading: the pack being torn open (components/PackLoader.js) and the top progress bar (NavProgress.js) */
+.pack-loader { min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  opacity: 0; animation: pack-in 0.25s ease-out 0.15s forwards; } /* a short delay: fast pages never flash it */
+.pack-art { position: relative; width: 112px; height: 112px; }
+.pack-art img { width: 100%; height: 100%; display: block; transform-origin: 50% 85%; animation: pack-open 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 8px 18px rgba(211, 255, 102, 0.18)); }
+.pack-shine { position: absolute; inset: 0; pointer-events: none; animation: pack-open 1.6s ease-in-out infinite; transform-origin: 50% 85%;
+  -webkit-mask: url(/brand/pack.webp) center / contain no-repeat; mask: url(/brand/pack.webp) center / contain no-repeat; }
+.pack-shine::before { content: ""; position: absolute; inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.75) 50%, transparent 60%);
+  animation: pack-shine 1.6s ease-in-out infinite; }
+.pack-spark { position: absolute; width: 16px; height: 16px; background: var(--accent); opacity: 0; transform: scale(0);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  animation: pack-spark 1.6s ease-out infinite; }
+.pack-spark.s1 { top: -6px; right: 2px; }
+.pack-spark.s2 { top: 14px; left: -4px; width: 11px; height: 11px; animation-delay: 0.12s; }
+.pack-spark.s3 { top: -14px; left: 44px; width: 9px; height: 9px; animation-delay: 0.22s; background: #fff; }
+.pack-label { color: var(--muted); font-size: 14px; letter-spacing: 0.02em; }
+@keyframes pack-in { to { opacity: 1; } }
+/* Shake (tearing the pack), the card pops up out of it, then settles. */
+@keyframes pack-open {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  8% { transform: rotate(-5deg); } 16% { transform: rotate(5deg); } 24% { transform: rotate(-4deg); } 32% { transform: rotate(3deg); }
+  40% { transform: rotate(0) scale(0.96, 1.03); }
+  52% { transform: translateY(-14px) scale(1.07); }
+  66% { transform: translateY(-10px) scale(1.04); }
+  84% { transform: translateY(0) scale(1); }
+}
+@keyframes pack-shine { 0%, 45% { transform: translateX(-60%); } 75%, 100% { transform: translateX(60%); } }
+@keyframes pack-spark { 0%, 45% { opacity: 0; transform: scale(0) rotate(0); } 58% { opacity: 1; transform: scale(1.2) rotate(45deg); } 80%, 100% { opacity: 0; transform: scale(0.4) rotate(90deg); } }
+
+.nav-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000; pointer-events: none; }
+.nav-progress span { display: block; height: 100%; width: 0; background: var(--accent); box-shadow: 0 0 10px var(--accent);
+  animation: nav-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+.nav-progress.done span { width: 100%; animation: none; transition: width 0.2s ease-out, opacity 0.3s 0.1s; opacity: 0; }
+@keyframes nav-progress { 0% { width: 0; } 10% { width: 35%; } 100% { width: 92%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-art img, .pack-shine, .pack-shine::before, .pack-spark { animation: none; }
+  .pack-loader { animation-duration: 0.01s; }
+  .nav-progress span { animation-duration: 0.01s; }
+}
