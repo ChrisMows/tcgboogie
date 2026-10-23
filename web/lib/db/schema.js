@@ -375,3 +375,12 @@ export const gameInterest = pgTable("game_interest", {
   notifiedAt: timestamp("notified_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("game_interest_unique").on(t.userId, t.game)]);
+
+// Our own visit counts (Admin → Traffic): one row per day, kind and key, e.g. ("2026-10-24", "view", "/faq") = 31.
+// Only totals: nothing here identifies a visitor (lib/traffic.js).
+export const siteTraffic = pgTable("site_traffic", {
+  day: text("day").notNull(), // YYYY-MM-DD (UTC)
+  kind: text("kind").notNull(), // view / visitor / ref / source / signup
+  key: text("key").notNull(),
+  count: integer("count").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.day, t.kind, t.key] })]);

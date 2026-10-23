@@ -6,6 +6,7 @@ import { runPriceAlerts } from "@/lib/price-alerts";
 import { recordSealedPrices } from "@/lib/catalog";
 import { runRecaps } from "@/lib/recap";
 import { runSellHigh } from "@/lib/sell-high";
+import { sendAdminAlerts } from "@/lib/admin-alerts";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -41,6 +42,10 @@ async function handle(req) {
     }
     try { summary.recaps = await runRecaps(); } catch (e) {
       await log("alerts", "error", `Email recaps crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });
+    }
+    // Email the admins about new errors or a quiet deal bot (at most hourly, only when there's something new).
+    try { summary.adminAlerts = await sendAdminAlerts(); } catch (e) {
+      await log("admin", "warn", `Admin error email crashed: ${e.message}`);
     }
     const value = { at: started.toISOString(), ms: Date.now() - started.getTime(), ...summary };
     await db.update(schema.appSettings).set({ value, updatedAt: new Date() }).where(eq(schema.appSettings.key, KEY));

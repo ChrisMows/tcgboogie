@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import MobileMenu from "@/components/MobileMenu";
 import NavProgress from "@/components/NavProgress";
+import PageViews from "@/components/PageViews";
 import Link from "next/link";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -38,6 +40,13 @@ function Brand() {
 
 export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
+  const navLinks = [
+    { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
+    { href: user ? "/app/deals" : "/?home=1#deals", label: "Deals" },
+    { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
+    { href: "/?home=1#pricing", label: "Pricing" },
+    { href: "/faq", label: "FAQ" },
+  ];
   return (
     <html lang="en" className={`${body.variable} ${head.variable}`}>
       <head>
@@ -46,6 +55,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <Suspense fallback={null}><NavProgress /></Suspense>
+        <Suspense fallback={null}><PageViews signedIn={Boolean(user)} /></Suspense>
         {demoMode && (
           <div className="demo-bar">
             <div className="wrap">
@@ -80,13 +90,10 @@ export default async function RootLayout({ children }) {
             <nav className="main" aria-label="Main">
               {/* Five links. Signed-out visitors: Collection and Price alerts go to sign in, then straight to that page;
                   Deals shows the deals we've caught on the homepage. How it works is in the footer. */}
-              <Link href={user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection"}>Collection</Link>
-              <Link href={user ? "/app/deals" : "/?home=1#deals"}>Deals</Link>
-              <Link href={user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches"}>Price alerts</Link>
-              <Link href="/?home=1#pricing">Pricing</Link>
-              <Link href="/faq">FAQ</Link>
+              {navLinks.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
             </nav>
             <div className="header-actions">
+              <MobileMenu links={navLinks} signedIn={Boolean(user)} />
               {user ? (
                 <UserMenu name={user.name} email={user.email} avatarUrl={avatarFor(user).url} initials={initials(user)}
                   planLabel={user.plan.label} isAdmin={Boolean(user.isAdmin)} onLogOut={logOut} />

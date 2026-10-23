@@ -6,6 +6,7 @@ import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
 import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
 import { gameTotals } from "@/lib/game-interest";
+import { trafficReport } from "@/lib/traffic";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -35,7 +36,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "traffic"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -51,11 +52,13 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
+        <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
+      {tab === "traffic" && <Traffic />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
       {tab === "features" && (
         <>
@@ -385,5 +388,55 @@ async function Log() {
         </div>
       ) : <p className="muted" style={{ margin: 0 }}>No admin changes yet.</p>}
     </div>
+  );
+}
+
+// Traffic: our own cookie-free visit counts (lib/traffic.js), the last 30 days.
+async function Traffic() {
+  let r = null;
+  try { r = await trafficReport(30); } catch { r = null; }
+  if (!r) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Traffic counts aren&apos;t available yet (the site_traffic table needs <code>npm run db:push</code>).</p></div>;
+  const max = Math.max(1, ...r.days.map((d) => d.visitors));
+  const Table = ({ title, rows, empty, unit }) => (
+    <div className="panel">
+      <h2>{title}</h2>
+      {rows.length ? (
+        <table className="list">
+          <tbody>{rows.map(([k, n]) => <tr key={k}><td style={{ wordBreak: "break-all" }}>{k}</td><td style={{ textAlign: "right" }}>{n.toLocaleString()} {unit}</td></tr>)}</tbody>
+        </table>
+      ) : <p className="small muted" style={{ margin: 0 }}>{empty}</p>}
+    </div>
+  );
+  return (
+    <>
+      <div className="stat-row">
+        <div className="panel stat"><span className="small muted">Visitors · 30 days</span><b>{r.totals.visitors.toLocaleString()}</b></div>
+        <div className="panel stat"><span className="small muted">Page views</span><b>{r.totals.views.toLocaleString()}</b></div>
+        <div className="panel stat"><span className="small muted">Sign-ups</span><b>{r.totals.signups.toLocaleString()}</b></div>
+        <div className="panel stat"><span className="small muted">Visitor → sign-up</span><b>{r.totals.visitors ? `${((r.totals.signups / r.totals.visitors) * 100).toFixed(1)}%` : "—"}</b></div>
+      </div>
+      <div className="panel">
+        <h2>By day</h2>
+        <p className="small muted" style={{ marginTop: -6 }}>Counted without cookies; bots and admin pages are left out. Tag links in your posts with <code>?utm_source=tiktok&amp;utm_campaign=launch</code> to see which ones bring people.</p>
+        <table className="list">
+          <thead><tr><th>Day</th><th>Visitors</th><th></th><th>Views</th><th>Sign-ups</th></tr></thead>
+          <tbody>
+            {r.days.map((d) => (
+              <tr key={d.day}>
+                <td>{d.day}</td><td>{d.visitors}</td>
+                <td style={{ width: "40%" }}><span className="traffic-bar" style={{ width: `${(d.visitors / max) * 100}%` }} /></td>
+                <td>{d.views}</td><td>{d.signups || ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="traffic-grid">
+        <Table title="Sign-ups by what brought them" rows={r.signupSources} empty="No sign-ups credited yet." unit="" />
+        <Table title="Campaign links (utm)" rows={r.sources} empty="No tagged links yet." unit="visits" />
+        <Table title="Sites that sent visitors" rows={r.refs} empty="No referring sites yet." unit="visits" />
+        <Table title="Top pages" rows={r.pages} empty="No page views yet." unit="views" />
+      </div>
+    </>
   );
 }

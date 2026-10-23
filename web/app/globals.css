@@ -1519,3 +1519,32 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 /* Tiny thumbnails (list rows, mini lists): just the grade on the label */
 @container (max-width: 60px) { .slab-band, .slab-words, .slab-barcode, .slab-mark, .slab-score small { display: none; } .slab-body { justify-content: center; padding: 0; } .slab-score b { font-size: 26cqw; } .slab-label { height: 34cqw; } }
 .reveal-face .slab-window img { width: auto; height: auto; }
+
+/* Phones: the header links behind a menu button (components/MobileMenu.js) */
+.mobile-menu { display: none; position: relative; }
+.mobile-menu-btn { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--text);
+  font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.mobile-menu-list { position: absolute; right: 0; top: calc(100% + 10px); width: min(260px, calc(100vw - 32px)); z-index: 30; display: flex; flex-direction: column;
+  padding: 8px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--panel); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); }
+.mobile-menu-list > a { padding: 12px 12px; border-radius: 8px; color: var(--text); font-size: 15px; }
+.mobile-menu-list > a:hover { background: var(--panel-2); text-decoration: none; }
+.mobile-menu-auth { display: flex; flex-direction: column; gap: 8px; padding: 10px 4px 4px; margin-top: 6px; border-top: 1px solid var(--border); }
+.mobile-menu-auth .btn { justify-content: center; }
+@media (max-width: 860px) {
+  .mobile-menu { display: block; }
+  .header-actions .login-link { display: none; }
+}
+
+/* 404 page (app/not-found.js) */
+.not-found { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 40px 16px; }
+.not-found img { width: 110px; height: auto; opacity: 0.9; margin-bottom: 8px; }
+.not-found h1 { font-size: clamp(28px, 5vw, 42px); margin: 4px 0; }
+.not-found p { max-width: 440px; margin: 0 0 14px; }
+.not-found-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* Admin → Traffic */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.stat-row .stat { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.stat-row .stat b { font-size: 24px; }
+.traffic-bar { display: block; height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+.traffic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }

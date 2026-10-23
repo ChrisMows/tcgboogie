@@ -26,6 +26,8 @@ const nextConfig = {
   // Old member pages, merged into Deals and Account (query strings such as ?pokemon= are kept).
   async redirects() {
     return [
+      // One address for the site: www.tcgboogie.com goes to tcgboogie.com (keeps search ranking in one place).
+      { source: "/:path*", has: [{ type: "host", value: "www.tcgboogie.com" }], destination: "https://tcgboogie.com/:path*", permanent: true },
       { source: "/pricing", destination: "/#pricing", permanent: false },
       { source: "/app/filters", destination: "/app/deals", permanent: false },
       { source: "/app/feed", destination: "/app/deals", permanent: false },

@@ -45,6 +45,12 @@ export default function Privacy() {
         account. Your browser also remembers a few display choices on your device (such as hiding your collection value or
         grid vs list view); those never leave your device. No advertising or tracking cookies.
       </p>
+      <p>
+        We count visits ourselves, without cookies or outside analytics: each page view adds one to a daily total, and
+        to count visitors we use a code made from your IP address and browser that changes every day and is never stored
+        with anything that identifies you. Your browser also remembers which site or campaign link first brought you
+        here; when you create an account we record that source once, as a total, so we know which posts work.
+      </p>
 
       <h2>Emails we send</h2>
       <p>

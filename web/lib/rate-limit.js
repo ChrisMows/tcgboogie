@@ -9,6 +9,7 @@ const hits = globalThis.__tcgRateLimit ?? (globalThis.__tcgRateLimit = new Map()
 const { rateLimits } = schema;
 
 export const LIMITS = {
+  pageView: { max: 300, windowMs: 10 * 60 * 1000 }, // visit counting beacons (Admin → Traffic)
   search: { max: 120, windowMs: 10 * 60 * 1000 }, // card/product searches and link lookups
   cardPage: { max: 300, windowMs: 60 * 60 * 1000 }, // card pages opened
   setLoad: { max: 40, windowMs: 60 * 60 * 1000 }, // whole-set card lists (the expensive one)
