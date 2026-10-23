@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CardBackArt from "@/components/CardBackArt";
+import { PackBody, PackTop } from "@/components/FoilPack";
 import { REVEAL_EVENT } from "@/lib/reveal";
 
 const OFF_KEY = "tcgb-reveal-off";
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
- * Every card added to a collection gets a pack opening: the TCG Boogie pack shakes and bursts, the card rises out
- * face down (its real back: English, Japanese or the original Japanese back), shimmering with slow pulsing light,
+ * Every card added to a collection gets a pack opening: a shiny silver pack shakes, its top rips off, the card rises
+ * out of the opening face down (its real back: English, Japanese or the original Japanese back), shimmering with slow pulsing light,
  * then spins around to show the card. Tap anywhere to close. Members can turn it off from the overlay; devices set to
  * reduced motion skip it.
  */
@@ -57,9 +58,6 @@ export default function PackReveal() {
     <div className="reveal" key={run} role="dialog" aria-modal="true" aria-label={`Added ${card.name} to your collection`} onClick={close}>
       <div className="reveal-rays" aria-hidden="true" />
       <div className="reveal-stage" aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="reveal-pack" src="/brand/pack.webp" alt="" />
-        <div className="reveal-burst" />
         <div className="reveal-lift">
           <div className="reveal-card">
             <div className="reveal-face reveal-back"><CardBackArt back={card.back} /><span className="reveal-holo" /></div>
@@ -72,6 +70,12 @@ export default function PackReveal() {
             </div>
           </div>
         </div>
+        {/* In front of the card: the pack body hides it until it rises out of the top. */}
+        <div className="rp-pack">
+          <div className="rp-body"><PackBody /><span className="rp-shine" /></div>
+          <div className="rp-top"><PackTop /></div>
+        </div>
+        <div className="reveal-burst" />
         {[1, 2, 3, 4, 5, 6].map((i) => <span key={i} className={`reveal-spark k${i}`} />)}
       </div>
       <div className="reveal-caption" onClick={(e) => e.stopPropagation()}>
