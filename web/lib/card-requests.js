@@ -95,8 +95,8 @@ export async function submitRequest(user, { query, link, note, kind }) {
   }
   if (card.type === "card" && card.number && ["english", "japanese"].includes(card.language)) {
     const bare = (n) => String(n || "").toUpperCase().replace(/\s/g, "").split("/")[0].replace(/^0+/, "");
-    const p = await findCard({ name: card.name, number: card.number, language: card.language }).catch(() => null);
-    if (p && bare(p.number) === bare(card.number)) return found(user, q, url, p, `read from ${url.hostname}; found in the price service`, requestId);
+    const p = await findCard({ name: card.name, number: card.number, language: card.language, setName: card.setName, variant: card.variant }).catch(() => null);
+    if (p && bare(p.number) === bare(card.number)) return found(user, q, url, p, `read from ${url.hostname}${card.variant ? ` (${card.variant})` : ""}; found in the price service`, requestId);
   }
   // Not a source we trust enough to add it for everyone at once: keep what we read for a one-click admin approval.
   const hold = reviewReason(card);

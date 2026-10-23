@@ -453,7 +453,7 @@ export async function searchProducts(q) {
   const raw = String(q || "").trim().slice(0, 80);
   const wantsJapanese = /\b(japanese|japan|jp|jpn)\b/i.test(raw);
   const wantsEnglish = /\b(english|eng)\b/i.test(raw);
-  const term = raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ").replace(/\s+/g, " ").trim();
+  const term = spellVariants(raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ")).replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
   const tag = isTagSearch(term);
   const parsed = { ...splitQuery(term), tag };
@@ -494,8 +494,22 @@ export async function searchProducts(q) {
     if (en) lookups.push(cards(number, 5));
     if (jp) lookups.push(cards(number, 5, "japanese"));
   }
+  const first = (await Promise.all(lookups)).flat();
+  // The service only finds a number when it's part of a product's name, so "eevee 074" finds the Pokémon Day promo
+  // "Eevee - 074/131" but not Prismatic Evolutions' Eevee 074/131 and its Poke Ball and Master Ball patterns. When a
+  // result shows the full number ("074/131"), search name + that full number too: that finds every version.
+  if (complete && !number.includes("/") && name.length >= 2) {
+    const head = (n) => String(n || "").toUpperCase().split("/")[0].replace(/^0+(?=\w)/, "");
+    const fulls = [...new Set(first.filter((p) => String(p.number || "").includes("/") && head(p.number) === head(number)).map((p) => p.number))].slice(0, 2);
+    const more = [];
+    for (const full of fulls) {
+      if (en) more.push(cards(`${name} ${full}`, 8));
+      if (jp) more.push(cards(`${name} ${full}`, 8, "japanese"));
+    }
+    first.push(...(await Promise.all(more)).flat());
+  }
   const seen = new Set();
-  const all = (await Promise.all(lookups)).flat().filter((p) => {
+  const all = first.filter((p) => {
     const k = `${p.id}:${p.language || "english"}`;
     return seen.has(k) ? false : seen.add(k);
   });
@@ -508,13 +522,19 @@ export async function searchProducts(q) {
   }).sort((x, y) => y.s - x.s || x.at - y.at || x.jp - y.jp).map((x) => x.p).slice(0, 24);
 }
 
+/** One-word spellings of pattern variants, as TCGplayer names them: "masterball" -> "master ball". */
+export const spellVariants = (s) => String(s || "").replace(/\bmaster\s*ball\b/gi, "master ball").replace(/\bpok[eé]\s*ball\b/gi, "poke ball");
+
 /**
  * One card from what's printed on it (photo appraiser, imports, card requests): small searches by name and number
  * (cached a week), trying the full number first ("Black Kyurem 020/027"), then the number before the slash, then the
  * name alone. A result only counts if its name shares a word with the card's and, when a number was read, its number
  * matches. Never "the closest result": no match returns null, so a wrong card is never added.
+ * Several products can share a name and number (Eevee 074/131 is a Prismatic Evolutions card, its Poke Ball and
+ * Master Ball patterns, and a Pokémon Day promo), so when we know the set or the variant they decide: a variant
+ * ("Master Ball Pattern") must be in the product's name, the same set wins, and with no variant the plain card wins.
  */
-export async function findCard({ name, number, language = "english" }) {
+export async function findCard({ name, number, language = "english", setName = "", variant = "" }) {
   if (!catalogLive()) {
     const n = String(name || "").toLowerCase();
     return SAMPLE.find((p) => p.type === "card" && p.name.toLowerCase().includes(n) && (!number || p.number === number)) || null;
@@ -531,17 +551,40 @@ export async function findCard({ name, number, language = "english" }) {
   const want = new Set(words(printed));
   const sameName = (p) => want.size > 0 && words(p.name).some((w) => want.has(w));
   // No usable name (e.g. read in Japanese script): only the exact full number (with the set total) counts.
-  const pick = (found) => found.find((p) => (sameName(p) || (!want.size && num.includes("/"))) && num && bare(p.number) === bare(num))
-    || found.find((p) => sameName(p) && num && head(p.number) === head(num))
-    || (!num ? found.find(sameName) : null);
-  const tries = [...new Set([num && `${printed} ${num}`, num.includes("/") && `${printed} ${num.split("/")[0]}`, printed].filter(Boolean))];
-  for (const term of tries) {
-    const j = await ppt("/cards", { search: term.slice(0, 80), limit: "5", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
-    const p = pick((j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) })));
-    if (p) return p;
+  const numberOk = (p) => (sameName(p) || (!want.size && num.includes("/"))) && num && bare(p.number) === bare(num)
+    || (sameName(p) && num && head(p.number) === head(num)) || (!num && sameName(p));
+  const GENERIC = new Set(["pattern", "holo", "holofoil", "foil", "version", "edition", "card", "the", "of", "sv", "swsh", "sm", "xy", "set", "series"]);
+  const plainWords = (s) => normalizeWords(spellVariants(s)).filter((w) => !GENERIC.has(w));
+  const wantVariant = plainWords(variant);
+  const setWords = new Set(plainWords(setName));
+  const hasVariant = (p) => /\(.+\)/.test(p.name) || / - [\w/]+/.test(p.name);
+  const variantOk = (p) => !wantVariant.length || wantVariant.every((w) => plainWords(p.name).includes(w));
+  const sameSet = (p) => setWords.size > 0 && plainWords(p.setName).some((w) => setWords.has(w));
+  // Higher is better: the right set, then the plain card when no variant was asked for, then the exact full number.
+  const score = (p) => (sameSet(p) ? 4 : 0) + (!wantVariant.length && !hasVariant(p) ? 2 : 0) + (num && (bare(p.number) === bare(num) || (!num.includes("/") && head(p.number) === head(num))) ? 1 : 0);
+  const best = (setWords.size ? 4 : 0) + (wantVariant.length ? 0 : 2) + (num ? 1 : 0);
+
+  const tries = [...new Set([wantVariant.length && num && `${printed} ${wantVariant.join(" ")} ${num}`, num && `${printed} ${num}`,
+    num.includes("/") && `${printed} ${num.split("/")[0]}`, printed].filter(Boolean))];
+  const found = [];
+  for (let i = 0; i < tries.length && i < 5; i++) {
+    const j = await ppt("/cards", { search: tries[i].slice(0, 80), limit: "5", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
+    const list = (j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) }));
+    for (const p of list) if (!found.some((x) => x.id === p.id) && numberOk(p) && variantOk(p)) found.push(p);
+    // A number read without its set total: a result showing the full number ("074/131") leads to every version.
+    if (num && !num.includes("/")) {
+      for (const p of list) {
+        const t = `${printed} ${p.number}`;
+        if (String(p.number || "").includes("/") && head(p.number) === head(num) && sameName(p) && !tries.includes(t)) tries.splice(i + 1, 0, t);
+      }
+    }
+    const top = [...found].sort((a, b) => score(b) - score(a))[0];
+    if (top && score(top) >= best) return top;
   }
-  return null;
+  return [...found].sort((a, b) => score(b) - score(a))[0] || null;
 }
+
+const normalizeWords = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length > 1);
 
 // The set list's card counts can be off by one from the cards a set actually has, so once a set's cards have been
 // loaded we remember that count and show it everywhere (set list, "Your sets", the set page).

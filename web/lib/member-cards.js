@@ -235,7 +235,7 @@ export function pageDetails(html, base) {
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["kind", "name", "set_name", "number", "language", "rarity", "confidence"],
+  required: ["kind", "name", "set_name", "number", "language", "rarity", "variant", "confidence"],
   properties: {
     kind: { type: "string", enum: ["card", "sealed", "other"],
       description: "card: one specific Pokémon TCG card. sealed: one specific sealed Pokémon TCG product (booster box, Elite Trainer Box, tin, bundle, pack...). other: anything else" },
@@ -244,6 +244,7 @@ const SCHEMA = {
     number: { type: "string", description: "Card collector number as printed, e.g. '238/191' or 'SV-P 101'; empty if unknown or sealed" },
     language: { type: "string", enum: LANGUAGES },
     rarity: { type: "string", description: "Rarity if the page says, e.g. 'SAR', 'Special Illustration Rare'; else empty" },
+    variant: { type: "string", description: "Card: the print variant if the page names one, the way TCGplayer puts it in brackets after the name, e.g. 'Master Ball Pattern', 'Poke Ball Pattern', 'Reverse Holofoil', 'Cosmos Holo', 'Pokemon Day 2025', 'Prerelease Stamp'; empty for the standard card or sealed" },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
   },
 };
@@ -319,7 +320,7 @@ export async function readCardPage(link, query, want = "card") {
   return {
     via: page.via, game: page.game || null, // where it was read from (for the auto-add check, see reviewReason)
     type: sealed ? "sealed" : "card", name: clean(card.name), setName: clean(card.set_name),
-    number: sealed ? null : clean(card.number, 30), rarity: sealed ? null : clean(card.rarity, 60),
+    number: sealed ? null : clean(card.number, 30), rarity: sealed ? null : clean(card.rarity, 60), variant: sealed ? null : clean(card.variant, 60),
     language: LANGUAGES.includes(card.language) ? card.language : "other", image,
   };
 }
