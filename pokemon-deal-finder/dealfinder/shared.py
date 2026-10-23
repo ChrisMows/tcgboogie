@@ -204,18 +204,33 @@ def discord_id_for(email):
 
 # ----- how our deals really ended (web: deal.sold / final_price / outcome_checked_at) -----
 def deals_needing_outcome(limit, wait_minutes=10, max_days=30):
-    """Deals that ended at least `wait_minutes` ago (and at most `max_days`) whose outcome we haven't looked up,
-    newest first. Returns [item_id]."""
-    rows = _run("SELECT id FROM deal WHERE outcome_checked_at IS NULL AND ends_at < now() - make_interval(mins => %s) "
-                "AND ends_at > now() - make_interval(days => %s) ORDER BY ends_at DESC LIMIT %s",
-                (int(wait_minutes), int(max_days), int(limit)), fetch="all")
+    """Deals that ended at least `wait_minutes` ago (and at most `max_days`) whose outcome we haven't looked up, or
+    that sold before we kept the sale's details (bid, shipping, bids), newest first. Returns [item_id]."""
+    rows = _run("SELECT id FROM deal WHERE (outcome_checked_at IS NULL OR (sold IS TRUE AND NOT data ? 'outcome')) "
+                "AND ends_at < now() - make_interval(mins => %s) AND ends_at > now() - make_interval(days => %s) "
+                "ORDER BY ends_at DESC LIMIT %s", (int(wait_minutes), int(max_days), int(limit)), fetch="all")
     return [r[0] for r in rows or []]
 
 
-def save_deal_outcome(item_id, sold, final_price):
-    """Record how a deal ended: sold True/False (None = eBay no longer had it) and the final price with shipping."""
-    _run("UPDATE deal SET sold = %s, final_price = %s, outcome_checked_at = now() WHERE id = %s",
-         (sold, final_price, item_id))
+def save_deal_gone(item_id):
+    """eBay no longer has the listing. Keep anything already known (a sale recorded earlier stays) and mark it as asked,
+    so it isn't looked up again: sold stays as it was (null if never known), and an earlier sale gets an empty
+    "outcome" (no bid/shipping details)."""
+    _run("UPDATE deal SET outcome_checked_at = coalesce(outcome_checked_at, now()), "
+         "data = CASE WHEN sold IS TRUE AND NOT data ? 'outcome' THEN data || '{\"outcome\": {}}'::jsonb ELSE data END WHERE id = %s",
+         (item_id,))
+
+
+def save_deal_outcome(item_id, sold, final_price, details=None):
+    """Record how a deal ended: sold True/False (None = eBay no longer had it), the final price with shipping, and the
+    sale's details as eBay shows them ({"bid", "shipping", "bids", "ended"}), kept in the deal's data as "outcome"."""
+    if details:
+        _run("UPDATE deal SET sold = %s, final_price = %s, outcome_checked_at = now(), "
+             "data = data || jsonb_build_object('outcome', %s::jsonb) WHERE id = %s",
+             (sold, final_price, json.dumps(details), item_id))
+    else:
+        _run("UPDATE deal SET sold = %s, final_price = %s, outcome_checked_at = now() WHERE id = %s",
+             (sold, final_price, item_id))
 
 
 def save_sale(sale):

@@ -9,6 +9,7 @@ import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
 import { effectivePlans } from "@/lib/plan-copy";
 import { dealSoldSearch } from "@/lib/ebay-link";
+import { saleLine } from "@/lib/deal-outcome";
 import "./home.css";
 
 // Shown until the deal bot has caught enough real deals (see homeShowcase), clearly labeled as examples.
@@ -212,13 +213,13 @@ export default async function Home({ searchParams }) {
                         <div><span className="price">${usd(d.soldFor)}</span><span className="old">${usd(d.marketValue)}</span></div>
                         <span className="discount">↓ {d.realOff}%</span>
                       </div>
-                      <div className="price-note">Sold for, with shipping, vs. what it usually sells for</div>
+                      <div className="price-note">{saleLine(d) || "Sold for, with shipping"} · vs. what it usually sells for</div>
                     </div>
                   </Card>
                   <div className="bottom deal-card-foot">
                     <span>Sold {daysAgo(d.endsAt)}</span>
                     <a href={listing.href} target="_blank" rel={`noopener noreferrer${listing.affiliate ? " sponsored" : ""}`}
-                      title={`eBay sold listings for ${d.name}${d.kind === "graded" ? ` ${d.grader} ${String(d.grade).replace(/\.0$/, "")}` : ""}`}>Sold listings on eBay ↗</a>
+                      title="This exact sale on eBay (sold listings, found by its item number)">See this sale on eBay ↗</a>
                   </div>
                 </article>
               );

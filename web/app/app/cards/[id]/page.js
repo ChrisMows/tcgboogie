@@ -19,6 +19,7 @@ import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
 import { dealSoldSearch, ebayLink, ebaySearch } from "@/lib/ebay-link";
 import { getDeal } from "@/lib/deals";
+import { saleLine } from "@/lib/deal-outcome";
 
 export async function generateMetadata({ params, searchParams }) {
   // Title from the cache only: this runs before the sign-in check, so it must never spend price-service credits.
@@ -70,13 +71,13 @@ function DealBox({ deal: d, premium }) {
         </span>
       </div>
       <div className="small muted">
-        {live ? `About ${d.minutesLeft} min left` : `Ended ${new Date(d.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
+        {live ? `About ${d.minutesLeft} min left` : saleLine(d) || `Ended ${new Date(d.endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
         {d.comps ? ` · value from ${d.comps} recent sales` : ""}
       </div>
       {d.flags?.length > 0 && <ul className="deal-box-flags">{d.flags.map((f) => <li key={f}>⚠ {f}</li>)}</ul>}
       <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: "wrap" }}>
         <a className="btn primary" style={{ flex: "none" }} href={link.href} target="_blank" rel={`noopener noreferrer${link.affiliate ? " sponsored" : ""}`}>
-          {live ? "Open listing on eBay ↗" : "Sold listings on eBay ↗"}
+          {live ? "Open listing on eBay ↗" : "See this sale on eBay ↗"}
         </a>
         {!premium && live && <span className="small muted" style={{ flex: "1 1 200px" }}>Premium members get deals like this the moment we find them.</span>}
       </div>

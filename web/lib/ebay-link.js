@@ -32,11 +32,14 @@ export function ebaySearch(query, { sold = false, sealed = false, source = "sear
 }
 
 /**
- * A deal that has ended, on eBay: its sold listings for that exact card and grade, newest first. eBay sends an ended
- * listing's own link to a general product page showing whatever is for sale now (another grader, another grade), so
- * the sale itself is only visible in sold listings. Returns { href, affiliate }.
+ * A deal that has ended, on eBay. eBay sends an ended listing's own link to a general product page showing whatever is
+ * for sale now (another grader, another grade), so the sale is only visible in sold listings: searched by the
+ * listing's item number, that's just this sale. Without an item number, sold listings for that exact card and grade,
+ * newest first. Returns { href, affiliate }.
  */
 export function dealSoldSearch(d, source = "deal-sold") {
+  const itemNumber = String(d.id || "").split("|")[1] || (/^\d{9,14}$/.test(String(d.id || "")) ? String(d.id) : "");
+  if (itemNumber) return ebaySearch(itemNumber, { sold: true, sealed: true, source });
   const grade = d.kind === "graded" && d.grader && d.grade ? ` ${d.grader} ${String(d.grade).replace(/\.0$/, "")}` : "";
   const query = `${String(d.name || "").replace(/\s*\(.*\)$/, "")} ${d.number || ""}${grade}${d.language === "japanese" ? " Japanese" : ""}`
     .replace(/\s+/g, " ").trim();

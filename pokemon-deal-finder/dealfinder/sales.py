@@ -37,6 +37,18 @@ def final_total(item):
     return price
 
 
+def sale_details(item):
+    """How eBay shows an ended auction: winning bid, shipping, number of bids and when it ended."""
+    ship = None
+    for o in item.get("shippingOptions") or []:
+        ship = _money(o.get("shippingCost"))
+        if ship is not None:
+            break
+    bids = item.get("bidCount")
+    return {"bid": _money(item.get("currentBidPrice")) or _money(item.get("price")), "shipping": ship,
+            "bids": int(bids) if str(bids or "").isdigit() else None, "ended": item.get("itemEndDate")}
+
+
 def final_sale(item):
     """A Browse API item that has ended -> {"price", "shipping", "sold_at", "best_offer"} if it sold, else None."""
     avail = (item.get("estimatedAvailabilities") or [{}])[0]
@@ -160,9 +172,9 @@ class SaleTracker:
                     log.info("Deal outcome lookup failed for %s: %s", item_id, e)
                     item = None
             if not item:
-                shared.save_deal_outcome(item_id, None, None)
+                shared.save_deal_gone(item_id)
                 continue
             sold = int(((item.get("estimatedAvailabilities") or [{}])[0]).get("estimatedSoldQuantity") or 0) > 0
-            shared.save_deal_outcome(item_id, sold, final_total(item) if sold else None)
+            shared.save_deal_outcome(item_id, sold, final_total(item) if sold else None, sale_details(item) if sold else None)
             done += 1
         return done

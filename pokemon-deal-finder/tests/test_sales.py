@@ -105,9 +105,12 @@ class DealOutcomeTests(unittest.TestCase):
 
     def run_with(self, due, items):
         self.ebay.get_item.side_effect = lambda i: items[i] if not isinstance(items[i], Exception) else (_ for _ in ()).throw(items[i])
-        with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=due),                 mock.patch.object(sales.shared, "save_deal_outcome") as save:
+        with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=due),                 mock.patch.object(sales.shared, "save_deal_outcome") as save, \
+                mock.patch.object(sales.shared, "save_deal_gone") as gone:
             self.t.run()
-        return {c.args[0]: c.args[1:] for c in save.call_args_list}
+        got = {c.args[0]: c.args[1:] for c in save.call_args_list}
+        got.update({c.args[0]: "gone" for c in gone.call_args_list})
+        return got
 
     def test_final_total_includes_shipping(self):
         self.assertEqual(final_total(SOLD), 411.0)
@@ -115,9 +118,13 @@ class DealOutcomeTests(unittest.TestCase):
     def test_sold_unsold_and_gone(self):
         unsold = {**SOLD, "estimatedAvailabilities": [{"estimatedSoldQuantity": 0}]}
         got = self.run_with(["v1|1|0", "v1|2|0", "v1|3|0"], {"v1|1|0": SOLD, "v1|2|0": unsold, "v1|3|0": RuntimeError("404")})
-        self.assertEqual(got["v1|1|0"], (True, 411.0))
-        self.assertEqual(got["v1|2|0"], (False, None))
-        self.assertEqual(got["v1|3|0"], (None, None))  # eBay no longer has it: recorded so we don't ask again
+        self.assertEqual(got["v1|1|0"], (True, 411.0, {"bid": 406.0, "shipping": 5.0, "bids": None, "ended": "2026-10-21T18:15:54.000Z"}))
+        self.assertEqual(got["v1|2|0"], (False, None, None))
+        self.assertEqual(got["v1|3|0"], "gone")  # eBay no longer has it: marked as asked, anything known is kept
+
+    def test_details_include_bid_count(self):
+        got = self.run_with(["v1|1|0"], {"v1|1|0": {**SOLD, "bidCount": 27}})
+        self.assertEqual(got["v1|1|0"][2]["bids"], 27)
 
     def test_a_deal_waiting_for_its_sale_is_looked_up_once(self):
         now = datetime.now(timezone.utc)
@@ -127,4 +134,4 @@ class DealOutcomeTests(unittest.TestCase):
         with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "save_sale", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=["v1|9|0"]),                 mock.patch.object(sales.shared, "save_deal_outcome") as save:
             self.t.run()
         self.assertEqual(self.ebay.get_item.call_count, 1)
-        save.assert_called_once_with("v1|9|0", True, 411.0)
+        save.assert_called_once_with("v1|9|0", True, 411.0, {"bid": 406.0, "shipping": 5.0, "bids": None, "ended": "2026-10-21T18:15:54.000Z"})
