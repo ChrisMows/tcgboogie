@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AddCards from "@/components/AddCards";
+import BinderTab from "@/components/BinderTab";
 import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
 import { catalogLive } from "@/lib/catalog";
@@ -15,7 +16,7 @@ export const metadata = { title: "Collection" };
 export default async function CollectionPage({ searchParams }) {
   const user = await requireUser();
   const sp = await searchParams;
-  const tab = sp?.tab === "wishlist" ? "wishlist" : "owned";
+  const tab = sp?.tab === "wishlist" ? "wishlist" : sp?.tab === "binders" ? "binders" : "owned";
   const adding = sp?.add === "1";
   const c = await loadCollection(user);
   const [watches, profiles] = await Promise.all([store.listWatches(user.id), store.listProfiles(user.id)]);
@@ -26,6 +27,9 @@ export default async function CollectionPage({ searchParams }) {
     .map((it) => ({ id: it.id, productId: it.productId, image: it.image, number: it.number, productType: it.productType,
       name: it.name.replace(/\s*\(.*\)$/, ""), label: itemLabel(it), change7: it.change7 }));
   const list = tab === "wishlist" ? c.wishlist : c.owned;
+  // Opened from a binder tile: the Collection tab starts filtered to that binder.
+  const binderParam = String(sp?.binder || "");
+  const startBinder = binderParam === "none" || c.binders.some((b) => String(b.id) === binderParam) ? binderParam : "all";
 
   // This week's change: today's total against the last snapshot from at least 7 days ago.
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
@@ -88,8 +92,11 @@ export default async function CollectionPage({ searchParams }) {
       <div className="tabs-row" role="tablist">
         <Link href="/app/collection" role="tab" aria-selected={tab === "owned"} className={tab === "owned" ? "on" : ""}>Collection <span>{c.owned.length}</span></Link>
         <Link href="/app/collection?tab=wishlist" role="tab" aria-selected={tab === "wishlist"} className={tab === "wishlist" ? "on" : ""}>♡ Wishlist <span>{c.wishlist.length}</span></Link>
+        <Link href="/app/collection?tab=binders" role="tab" aria-selected={tab === "binders"} className={tab === "binders" ? "on" : ""}>▤ Binders <span>{c.binders.length}</span></Link>
       </div>
-      <CollectionView key={tab} tab={tab} items={list} binders={c.binders} products={c.products} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
+      {tab === "binders" ? <BinderTab binders={c.binders} items={c.owned} />
+        : <CollectionView key={`${tab}-${startBinder}`} tab={tab} items={list} binders={c.binders} products={c.products} watched={watches.map((w) => w.productId)} isDemo={user.demo}
+          initialBinder={tab === "owned" ? startBinder : "all"} />}
 
     </>
   );

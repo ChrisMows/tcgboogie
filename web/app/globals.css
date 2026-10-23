@@ -570,8 +570,6 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .coll-toolbar > select { width: auto; padding: 8px 10px; font-size: 14px; }
 .coll-toolbar .search-box { flex: 1 1 220px; }
 .coll-toolbar .seg button { padding: 7px 12px; }
-.binders .binder-row { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
-.binders .binder-row input { flex: 1; }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
 .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; }
@@ -1436,3 +1434,18 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 @keyframes rv-spin { to { rotate: 360deg; } }
 @keyframes rv-pulse { 0%, 100% { filter: brightness(0.7); } 50% { filter: brightness(1.5); } }
 @keyframes rv-twinkle { 0%, 100% { opacity: 0; transform: scale(0) rotate(0); } 40% { opacity: 1; transform: scale(1.15) rotate(45deg); } 70% { opacity: 0; transform: scale(0.4) rotate(90deg); } }
+
+/* Collection → Binders tab (components/BinderTab.js) */
+.binder-new { display: flex; gap: 10px; max-width: 460px; margin: 4px 0 8px; }
+.binder-new input { flex: 1; }
+.binder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.binder-tile { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel-2); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.binder-tile.loose { border-style: dashed; }
+.binder-peek { display: flex; gap: 6px; min-height: 84px; align-items: center; padding: 6px; margin-bottom: 6px; border-radius: 8px; background: var(--panel-3); overflow: hidden; }
+.binder-peek:hover { outline: 1px solid var(--accent); }
+.binder-name { color: var(--text); }
+.binder-name:hover { color: var(--accent); }
+.binder-tools { display: flex; gap: 14px; margin-top: 4px; }
+.binder-tools .danger-link { color: var(--bad); }
+.binder-rename { display: flex; gap: 6px; }
+.binder-rename input { flex: 1; min-width: 0; }

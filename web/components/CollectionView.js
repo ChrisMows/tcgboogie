@@ -7,7 +7,7 @@ import CardThumb from "@/components/CardThumb";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import {
-  addBinder, changeQuantity, editItem, moveToCollection, removeBinder, removeItem, renameBinder, watchProduct,
+  changeQuantity, editItem, moveToCollection, removeItem, watchProduct,
 } from "@/app/app/collection/actions";
 import { KINDS, SORTS, isOwnValue, itemLabel, money, pct, unitValue } from "@/lib/collection";
 
@@ -30,17 +30,15 @@ function WatchButton({ item, watched, onWatch, pending }) {
   );
 }
 
-export default function CollectionView({ items, binders, products, watched: watchedIds, tab, isDemo }) {
+export default function CollectionView({ items, binders, products, watched: watchedIds, tab, isDemo, initialBinder = "all" }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [binder, setBinder] = useState("all");
+  const [binder, setBinder] = useState(initialBinder);
   const [kind, setKind] = useState("all");
   const [sort, setSort] = useState("value");
   const [view, setView] = useState("grid");
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
-  const [manage, setManage] = useState(false);
-  const [newBinder, setNewBinder] = useState("");
   const [watched, setWatched] = useState(new Set(watchedIds));
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
@@ -121,27 +119,7 @@ export default function CollectionView({ items, binders, products, watched: watc
           <button type="button" className={view === "grid" ? "on" : ""} onClick={() => pickView("grid")} aria-label="Grid view">▦</button>
           <button type="button" className={view === "list" ? "on" : ""} onClick={() => pickView("list")} aria-label="List view">☰</button>
         </div>
-        {!wishlist && <button type="button" className="btn ghost sm" onClick={() => setManage(!manage)}>{manage ? "Close binders" : "Manage binders"}</button>}
       </div>
-
-      {manage && (
-        <div className="panel binders">
-          <h2>Binders</h2>
-          <p className="small muted" style={{ marginTop: -8 }}>Group cards however you like. Removing a binder keeps its cards.</p>
-          {binders.map((b) => (
-            <div key={b.id} className="binder-row">
-              <input type="text" defaultValue={b.name} maxLength={40} aria-label="Binder name"
-                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== b.name && act(() => renameBinder(b.id, e.target.value), "Binder renamed.")} />
-              <span className="small muted">{items.filter((it) => it.binderId === b.id).length} lines</span>
-              <button type="button" className="btn sm danger" onClick={() => window.confirm(`Remove the binder "${b.name}"? Its cards stay in your collection.`) && act(() => removeBinder(b.id), "Binder removed.")}>Remove</button>
-            </div>
-          ))}
-          <form className="binder-row" onSubmit={(e) => { e.preventDefault(); act(() => addBinder(newBinder), "Binder added."); setNewBinder(""); }}>
-            <input type="text" value={newBinder} maxLength={40} onChange={(e) => setNewBinder(e.target.value)} placeholder="New binder, e.g. For trade" aria-label="New binder name" />
-            <button className="btn sm" disabled={!newBinder.trim() || pending}>Add binder</button>
-          </form>
-        </div>
-      )}
 
       {shown.some(isOwnValue) && (
         <p className="small muted own-value-key"><span className="own-value-tag">✎ Your value</span> Amber values are ones you typed in yourself, not market prices.</p>
