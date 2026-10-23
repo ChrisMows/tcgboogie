@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RevealSetting from "@/components/RevealSetting";
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -424,6 +425,7 @@ export default async function Account({ searchParams }) {
           Changed your picture on Google or Discord? Discord pictures update on their own about once a day, and Google
           pictures each time you sign in with Google. Use Refresh to pick up a change right away.
         </p>
+        <RevealSetting />
       </div>
 
       <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { revealCard } from "@/lib/reveal";
 import CardRequest from "@/components/CardRequest";
 import { shrinkImage } from "@/lib/shrink-image";
 import Link from "next/link";
@@ -84,6 +85,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     start(async () => {
       const res = await quickAdd(p.id);
       if (!res.ok) return show(res.error, null, "bad");
+      revealCard(res.reveal);
       setCounts((c) => ({ ...c, [p.id]: (c[p.id] || 0) + 1 }));
       show(`Added ${p.name.replace(/\s*\(.*\)$/, "")}${p.type === "card" ? " (Near Mint)" : ""}`, { href: `/app/cards/${p.id}`, label: "Open card" });
       router.refresh();
@@ -95,6 +97,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       const res = await addItem(picked.id, input);
       if (!res.ok) return setErrors(res.errors || {});
       setErrors({});
+      revealCard(res.reveal);
       if (input.list === "owned") setCounts((c) => ({ ...c, [picked.id]: (c[picked.id] || 0) + Number(input.quantity || 1) }));
       show(input.list === "wishlist" ? `${picked.name} is on your wishlist` : `Added to your collection${res.value ? ` · worth ${money(res.value * (input.quantity || 1))}` : ""}${res.fromWishlist ? " · taken off your wishlist" : ""}`,
         { href: `/app/cards/${picked.id}`, label: "Open card" });

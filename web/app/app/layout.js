@@ -1,3 +1,4 @@
+import PackReveal from "@/components/PackReveal";
 import SideNav from "@/components/SideNav";
 import { catalogLive } from "@/lib/catalog";
 import { requireUser } from "@/lib/session";
@@ -15,6 +16,7 @@ export default async function MemberLayout({ children }) {
         )}
         {children}
       </section>
+      <PackReveal />
     </div>
   );
 }

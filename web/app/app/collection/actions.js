@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cardBack } from "@/lib/card-back";
 import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests, submitRequest } from "@/lib/card-requests";
@@ -18,6 +19,12 @@ function refresh(productId) {
   revalidatePath("/app");
   if (productId) revalidatePath(`/app/cards/${productId}`);
 }
+
+/** What the pack-opening reveal shows for a card just added to the collection (cards only, not sealed). */
+const revealFor = (p, { value = null, quantity = 1 } = {}) => (p?.type === "card" ? {
+  productId: p.id, name: String(p.name || "").replace(/\s*\(.*\)$/, ""), setName: p.setName || null, number: p.number || null,
+  image: p.image || null, back: cardBack(p), value, quantity,
+} : null);
 
 const snapshotFields = (p) => ({
   productId: p.id, productType: p.type, name: p.name, setName: p.setName, number: p.number, image: p.image, tcgplayerUrl: p.tcgplayerUrl,
@@ -123,7 +130,8 @@ export async function addItem(productId, input) {
     }
   }
   refresh(product.id);
-  return { ok: true, value: mv, merged: Boolean(same), fromWishlist };
+  const reveal = item.list === "owned" ? revealFor(product, { value: mv, quantity: item.quantity }) : null;
+  return { ok: true, value: mv, merged: Boolean(same), fromWishlist, reveal };
 }
 
 /** One tap: add a copy as raw Near Mint (or sealed), the most common case. Used by set grids and card pages. */
@@ -186,7 +194,8 @@ export async function moveToCollection(id) {
   if (!it) return { ok: false };
   await store.updateItem(user.id, id, { list: "owned", purchaseDate: new Date().toISOString().slice(0, 10) });
   refresh(it.productId);
-  return { ok: true };
+  const product = await getProduct(it.productId, { cachedOnly: true }).catch(() => null);
+  return { ok: true, reveal: revealFor(product || { ...it, id: it.productId, type: it.productType }, { value: it.unitValue ?? null, quantity: it.quantity }) };
 }
 
 /** Remove the wishlist entry for a product (used by the heart toggle on set grids and card pages). */

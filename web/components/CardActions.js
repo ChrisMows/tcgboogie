@@ -1,5 +1,6 @@
 "use client";
 
+import { revealCard } from "@/lib/reveal";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Source from "@/components/Source";
@@ -50,6 +51,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
       return show(r.error || "Something went wrong.", r.limit ? { href: "/app/premium?from=watches", label: "See Premium" } : null, "bad");
     }
     setErrors({});
+    if (r?.reveal) revealCard(r.reveal);
     if (msg) show(typeof msg === "function" ? msg(r) : msg, action);
     router.refresh();
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { revealCard } from "@/lib/reveal";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -42,6 +43,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
     start(async () => {
       const r = await quickAdd(c.id);
       if (!r.ok) { setOwned((o) => ({ ...o, [c.id]: Math.max(0, (o[c.id] || 1) - 1) })); return toastShow(r.error, null, "bad"); }
+      revealCard(r.reveal);
       toastShow(`Added ${short(c.name)} #${String(c.number).split("/")[0].replace(/^0+(?=\d)/, "")}${r.value ? ` · ${money(r.value)}` : ""}`, { label: "Undo", onClick: () => remove(c, true) });
       router.refresh();
     });
