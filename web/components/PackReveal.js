@@ -10,7 +10,7 @@ const OFF_KEY = "tcgb-reveal-off";
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
- * Every card added to a collection gets a pack opening: a shiny silver pack shakes, its top rips off, the card rises
+ * Every card added to a collection gets a pack opening: the TCG Boogie foil pack shakes, its top rips off, the card rises
  * out of the opening face down (its real back: English, Japanese or the original Japanese back), shimmering with slow pulsing light,
  * then spins around to show the card. Tap anywhere to close. Members can turn it off from the overlay; devices set to
  * reduced motion skip it.
@@ -72,7 +72,7 @@ export default function PackReveal() {
         </div>
         {/* In front of the card: the pack body hides it until it rises out of the top. */}
         <div className="rp-pack">
-          <div className="rp-body"><PackBody /><span className="rp-shine" /></div>
+          <div className="rp-body"><PackBody /></div>
           <div className="rp-top"><PackTop /></div>
         </div>
         <div className="reveal-burst" />
