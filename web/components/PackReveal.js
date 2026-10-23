@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import CardBackArt from "@/components/CardBackArt";
 import { PackBody, PackTop } from "@/components/FoilPack";
 import { REVEAL_EVENT } from "@/lib/reveal";
 
@@ -11,7 +10,7 @@ const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigi
 
 /**
  * Every card added to a collection gets a pack opening: the TCG Boogie foil pack shakes, its top rips off, the card rises
- * out of the opening face down (its real back: English, Japanese or the original Japanese back), shimmering with slow pulsing light,
+ * out of the opening face down (the TCG Boogie card back), shimmering with slow pulsing light,
  * then spins around to show the card. Tap anywhere to close. Members can turn it off from the overlay; devices set to
  * reduced motion skip it.
  */
@@ -60,7 +59,11 @@ export default function PackReveal() {
       <div className="reveal-stage" aria-hidden="true">
         <div className="reveal-lift">
           <div className="reveal-card">
-            <div className="reveal-face reveal-back"><CardBackArt back={card.back} /><span className="reveal-holo" /></div>
+            <div className="reveal-face reveal-back">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/card-backs/tcgboogie.webp" alt="" draggable={false} />
+              <span className="reveal-holo" />
+            </div>
             <div className="reveal-face reveal-front">
               {card.image
                 // eslint-disable-next-line @next/next/no-img-element

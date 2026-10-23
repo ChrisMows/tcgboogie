@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cardBack } from "@/lib/card-back";
 import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests, submitRequest } from "@/lib/card-requests";
@@ -23,7 +22,7 @@ function refresh(productId) {
 /** What the pack-opening reveal shows for a card just added to the collection (cards only, not sealed). */
 const revealFor = (p, { value = null, quantity = 1 } = {}) => (p?.type === "card" ? {
   productId: p.id, name: String(p.name || "").replace(/\s*\(.*\)$/, ""), setName: p.setName || null, number: p.number || null,
-  image: p.image || null, back: cardBack(p), value, quantity,
+  image: p.image || null, value, quantity,
 } : null);
 
 const snapshotFields = (p) => ({
