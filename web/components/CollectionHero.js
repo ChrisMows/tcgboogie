@@ -11,24 +11,25 @@ const money = (v, d = 2) => `$${Number(v || 0).toLocaleString("en-US", { minimum
 const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
 
 /**
- * Collection page top: the total, front and center, then a row of round actions. Movers, alerts and the value
- * chart open in a panel right under the row (one at a time), so the page itself stays simple.
+ * Collection page top: the total, front and center, then a row of round actions in alphabetical order. Top movers,
+ * alerts and the value chart open in a panel right under the row (one at a time); the chart is open to start with.
  */
 export default function CollectionHero({ summary, week, adding, exportAllowed, tradeAllowed = true, movers, chart, historyDays, plan, prefs, hasCards }) {
-  const [open, setOpen] = useState(null); // "movers" | "alerts" | "chart"
+  const [open, setOpen] = useState(hasCards ? "chart" : null); // "movers" | "alerts" | "chart"; the chart starts open
   const toggle = (k) => setOpen((o) => (o === k ? null : k));
 
+  // Alphabetical (Add cards stays first while it reads "Done").
   const actions = [
     { key: "add", label: adding ? "Done" : "Add cards", icon: adding ? "✓" : "+", href: adding ? "/app/collection" : "/app/collection?add=1", primary: true },
-    { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
-    { key: "movers", label: "Movers", icon: "📈", panel: true },
-    { key: "grading", label: "Worth Grading?", icon: "💎", href: "/app/collection/grading" },
-    { key: "trade", label: "Trade Analyzer", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
     { key: "alerts", label: "Alerts", icon: "🔔", panel: true },
     { key: "chart", label: "Chart", icon: "📊", panel: true },
     exportAllowed
       ? { key: "export", label: "Export", icon: "⤓", href: "/app/collection/export", download: true }
       : { key: "export", label: "Export", icon: "🔒", href: "/app/premium?from=export" },
+    { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
+    { key: "movers", label: "Top Movers", icon: "📈", panel: true },
+    { key: "trade", label: "Trade Analyzer", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
+    { key: "grading", label: "Worth Grading?", icon: "💎", href: "/app/collection/grading" },
   ];
 
   return (
@@ -65,7 +66,7 @@ export default function CollectionHero({ summary, week, adding, exportAllowed, t
 
       {open === "movers" && (
         <div className="panel coll-pop">
-          <h2>Biggest movers · 7 days</h2>
+          <h2>Top movers · 7 days</h2>
           {movers.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No big moves this week.</p> : movers.map((it) => (
             <Link key={it.id} href={`/app/cards/${it.productId}`} className="mini-row">
               <CardThumb item={it} width={30} />
