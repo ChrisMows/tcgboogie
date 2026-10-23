@@ -40,9 +40,13 @@ export function gradeWords(grader, grade) {
 
 function Slab({ item, style, className }) {
   const grade = String(item.grade || "").replace(" Pristine", "");
+  // Each company's special labels: black and gold for CGC Pristine 10 and BGS 10, gold for BGS 9.5.
+  const tier = (item.grader === "CGC" && /pristine/i.test(String(item.grade))) || (item.grader === "BGS" && Number(grade) === 10) ? "slab-black"
+    : item.grader === "BGS" && Number(grade) === 9.5 ? "slab-gold" : "";
   return (
-    <div className={`thumb slab slab-${String(item.grader).toLowerCase()} ${className}`} style={style}
+    <div className={`thumb slab slab-${String(item.grader).toLowerCase()} ${tier} ${className}`} style={style}
       title={`${item.grader} ${item.grade}`} aria-label={`${item.grader} ${item.grade} slab`}>
+      <div className="slab-case">
       <div className="slab-label">
         <span className="slab-words">{gradeWords(item.grader, item.grade)}</span>
         <span className="slab-score"><span className="slab-grader">{item.grader}</span><span className="slab-grade">{grade}</span></span>
@@ -52,6 +56,7 @@ function Slab({ item, style, className }) {
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={item.image} alt="" loading="lazy" />
           : <span className="slab-noimg">{item.number ? `#${String(item.number).split("/")[0]}` : ""}</span>}
+      </div>
       </div>
     </div>
   );

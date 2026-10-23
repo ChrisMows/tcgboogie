@@ -1450,27 +1450,52 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .binder-rename { display: flex; gap: 6px; }
 .binder-rename input { flex: 1; min-width: 0; }
 
-/* Graded copies show slabbed (components/CardThumb.js): a clear case with the grader's label on top. Sized from the
-   thumbnail's own width, so it works from tiny list rows to big tiles. */
-.slab { container-type: inline-size; position: relative; display: flex; flex-direction: column; gap: 3%; padding: 4%;
-  border-radius: 7px; background: linear-gradient(150deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08) 45%, rgba(255, 255, 255, 0.18));
-  border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.35); overflow: hidden; }
-.slab::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(120deg, transparent 35%, rgba(255, 255, 255, 0.22) 45%, transparent 55%); }
-.slab-label { flex: none; height: 17%; display: flex; align-items: center; justify-content: space-between; gap: 4%; padding: 0 6%;
-  border-radius: 3px; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; line-height: 1; overflow: hidden; }
+/* Graded copies show slabbed (components/CardThumb.js): a clear, beveled plastic case with the grading company's label
+   on top, in that company's look (not its logo). Sized from the thumbnail's own width, so it works from tiny list rows
+   to big tiles. */
+.slab { container-type: inline-size; position: relative; background: none; border-radius: 0; }
+/* the case itself, sized from the slab's width (cqw) */
+.slab-case { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 2.5cqw; padding: 5.5cqw 5.5cqw 6cqw;
+  border-radius: 6.5cqw; overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12) 18%, rgba(255, 255, 255, 0.06) 60%, rgba(255, 255, 255, 0.16)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 12%, transparent 88%, rgba(255, 255, 255, 0.18)), #262b33;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1.6cqw rgba(255, 255, 255, 0.09), inset 0 0 0 calc(1.6cqw + 1px) rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 3px 10px rgba(0, 0, 0, 0.45); }
+/* the glare across the plastic */
+.slab-case::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.28) 38%, rgba(255, 255, 255, 0.06) 46%, transparent 52%); }
+.slab-label { flex: none; height: 19%; display: flex; align-items: center; justify-content: space-between; gap: 4%; padding: 0 6%;
+  border-radius: 1.6cqw; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; line-height: 1; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
 .slab-words { font-size: 8.5cqw; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
-.slab-score { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; }
-.slab-grader { font-size: 6cqw; font-weight: 800; letter-spacing: 0.06em; }
-.slab-grade { font-size: 12.5cqw; font-weight: 900; }
-.slab-window { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 3px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
-.slab-window img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.slab-score { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 1cqw; }
+.slab-grader { font-size: 6.5cqw; font-weight: 900; letter-spacing: 0.04em; }
+.slab-grade { font-size: 13cqw; font-weight: 900; }
+/* the well the card sits in */
+.slab-window { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 3cqw; border-radius: 1.6cqw;
+  background: linear-gradient(180deg, #0e1116, #1b2028); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 2px 6px rgba(0, 0, 0, 0.6); overflow: hidden; }
+.slab-window img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; border-radius: 2cqw; }
 .slab-noimg { color: var(--muted); font-size: 12cqw; }
-/* Label colors by grading company (text stays black on every one) */
-.slab-bgs .slab-label { background: linear-gradient(90deg, #c9ccd1, #f3f4f6 50%, #c9ccd1); }
-.slab-cgc .slab-label { background: #dcebf8; }
-.slab-sgc .slab-label { background: #e6e6e6; }
-.slab-tag .slab-label { background: #eef7d6; }
+
+/* PSA: white label in a red frame, the company name in red */
+.slab-psa .slab-label { border: 1.4cqw solid #c8102e; }
+.slab-psa .slab-grader { color: #c8102e; font-style: italic; }
+/* BGS: silver label; gold for 9.5; black with gold lettering for a 10 */
+.slab-bgs .slab-label { background: linear-gradient(90deg, #b9bdc4, #f1f2f4 45%, #c3c7cd); border: 0.8cqw solid #8d939b; }
+.slab-bgs.slab-gold .slab-label { background: linear-gradient(90deg, #b8913a, #f3d98b 45%, #c39b45); border-color: #8b6b23; }
+/* CGC: pale blue label with navy lettering; black with gold for Pristine 10 */
+.slab-cgc .slab-label { background: linear-gradient(180deg, #e9f3fb, #cfe3f4); border: 0.8cqw solid #6f97c1; }
+.slab-cgc .slab-grader { color: #0b3d91; }
+/* SGC: the black "tuxedo" label and black insert, white lettering */
+.slab-sgc .slab-label { background: #0b0b0b; color: #fff; border: 0.8cqw solid #3a3a3a; }
+.slab-sgc .slab-window { background: #050505; }
+/* TAG: charcoal label with white lettering and a bright edge */
+.slab-tag .slab-label { background: linear-gradient(180deg, #1c1f24, #0e1013); color: #fff; border-bottom: 1.2cqw solid #e8e8e8; }
+/* Top grades (CGC Pristine 10, BGS 10): black label, gold lettering and border */
+.slab.slab-black .slab-label { background: linear-gradient(180deg, #151515, #000); color: #e3c169; border: 1cqw solid #c9a54a; }
+.slab.slab-black .slab-grader { color: #e3c169; font-style: normal; }
 /* Tiny thumbnails (list rows, mini lists): just the grade on the label */
 @container (max-width: 60px) { .slab-words, .slab-grader { display: none; } .slab-label { justify-content: center; } .slab-grade { font-size: 26cqw; } }
 .reveal-face .reveal-slab { width: 100%; height: 100%; border-radius: 0; }
