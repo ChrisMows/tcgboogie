@@ -78,7 +78,7 @@ def cache_get(key, max_age_seconds):
         fetched_at = fetched_at.replace(tzinfo=timezone.utc)
     if (datetime.now(timezone.utc) - fetched_at).total_seconds() > max_age_seconds:
         return None
-    return {"data": data}
+    return {"data": data, "fetched_at": fetched_at}
 
 
 def cache_put(key, data):

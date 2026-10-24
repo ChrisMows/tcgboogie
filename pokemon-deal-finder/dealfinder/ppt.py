@@ -134,21 +134,31 @@ class PPTClient:
             return {"data": json.loads(row["json"])}
         return None
 
-    def _local_put(self, key, data):
+    def _local_put(self, key, data, fetched_at=None):
+        when = (fetched_at or _now()).isoformat(timespec="seconds")
         self.conn.execute("INSERT INTO ppt_cache (key, fetched_at, json) VALUES (?, ?, ?) "
                           "ON CONFLICT(key) DO UPDATE SET fetched_at = excluded.fetched_at, json = excluded.json",
-                          (key, _now().isoformat(timespec="seconds"), json.dumps(data)))
+                          (key, when, json.dumps(data)))
         self.conn.commit()
+
+    def _fresh(self, key, max_age_hours):
+        """A fresh enough copy: this server's disk first (no network), then the shared database. A full card answer
+        is ~85 KB, and reading it from the database on every check used most of the database's monthly network
+        allowance; a shared copy is kept on disk with its original age, so it expires exactly when it would have."""
+        hit = self._local_get(key, max_age_hours)
+        if hit is None and self.shared:
+            hit = shared.cache_get(key, max_age_hours * 3600)
+            if hit is not None:
+                self._local_put(key, hit["data"], hit.get("fetched_at"))
+        return hit
 
     def _cached(self, path, params, max_age_hours, empty_max_age_hours=None):
         """Raw API JSON for a request, from cache when fresh enough. Empty results can expire sooner."""
         key = request_key(path, params)
-        hit = (shared.cache_get(key, max_age_hours * 3600) if self.shared else None) or self._local_get(key, max_age_hours)
+        hit = self._fresh(key, max_age_hours)
         if hit is not None and empty_max_age_hours is not None and _is_empty(hit["data"]):
             # Re-check "not found" sooner (new cards get added), but still reuse it for a while.
-            fresh = (shared.cache_get(key, empty_max_age_hours * 3600) if self.shared else None) \
-                or self._local_get(key, empty_max_age_hours)
-            hit = fresh
+            hit = self._fresh(key, empty_max_age_hours)
         if hit is not None:
             self.cache_hits += 1
             return hit["data"]
