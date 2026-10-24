@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import MobileMenu from "@/components/MobileMenu";
 import NavProgress from "@/components/NavProgress";
 import HelperChat from "@/components/HelperChat";
+import InstallApp from "@/components/InstallApp";
 import IdeaBox, { SuggestIdea } from "@/components/IdeaBox";
 import TourRunner from "@/components/TourRunner";
 import PageViews from "@/components/PageViews";
@@ -16,8 +17,12 @@ import { avatarFor, initials } from "@/lib/avatar";
 const body = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const head = Space_Grotesk({ subsets: ["latin"], variable: "--font-head", display: "swap" });
 
+// Installed on a home screen (app/manifest.js): the dark theme around the app, and full screen on iPhone.
+export const viewport = { themeColor: "#0b0e12", colorScheme: "dark" };
+
 export const metadata = {
   metadataBase: new URL("https://tcgboogie.com"),
+  appleWebApp: { capable: true, title: "TCG Boogie", statusBarStyle: "black-translucent" },
   title: { default: "TCG Boogie | Your next grail, at your kind of price", template: "%s | TCG Boogie" },
   description:
     "TCG Boogie watches eBay for graded and raw trading cards selling below their market value and alerts you before the auction ends.",
@@ -62,6 +67,7 @@ export default async function RootLayout({ children }) {
         <Suspense fallback={null}><PageViews signedIn={Boolean(user)} /></Suspense>
         <HelperChat signedIn={Boolean(user)} />
         <IdeaBox />
+        <InstallApp signedIn={Boolean(user)} />
         <Suspense fallback={null}><TourRunner signedIn={Boolean(user)} /></Suspense>
         {demoMode && (
           <div className="demo-bar">

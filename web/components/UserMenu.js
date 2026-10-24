@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { repairPicture } from "@/app/app/actions";
+import { InstallButton } from "@/components/InstallApp";
 
 const ITEMS = [
   ["/app/collection", "Collection"],
@@ -65,6 +66,7 @@ export default function UserMenu({ name, email, avatarUrl, initials, planLabel, 
           {ITEMS.map(([href, label]) => (
             <Link key={href} href={href} role="menuitem" onClick={() => setOpen(false)}>{label}</Link>
           ))}
+          <InstallButton className="ud-signout ud-install" onDone={() => setOpen(false)} />
           <form action={onLogOut}>
             <button type="submit" role="menuitem" className="ud-signout">Sign out</button>
           </form>
