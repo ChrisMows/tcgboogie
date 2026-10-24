@@ -8,7 +8,7 @@ import { PLANS, planFor } from "@/lib/plans";
 import { TERMS_VERSION } from "@/lib/terms";
 
 // Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
-//   STRIPE_SECRET_KEY      sk_test_… while testing, sk_live_… once launched (set on Hostinger)
+//   STRIPE_SECRET_KEY      sk_test_… while testing, sk_live_… or rk_live_… once launched (set on Hostinger)
 //   STRIPE_WEBHOOK_SECRET  optional: whsec_… from the Stripe dashboard. Without it, the admin panel's
 //                          "Set up Stripe" button creates the webhook and keeps its secret in the database.
 
@@ -27,7 +27,8 @@ const EVENTS = [
 ];
 
 export const billingLive = () => Boolean(process.env.STRIPE_SECRET_KEY);
-export const billingMode = () => (String(process.env.STRIPE_SECRET_KEY || "").startsWith("sk_live_") ? "live" : "test");
+// sk_live_… is a full secret key, rk_live_… a restricted one ("full access except sensitive operations"): both are live.
+export const billingMode = () => (/^(sk|rk)_live_/.test(String(process.env.STRIPE_SECRET_KEY || "")) ? "live" : "test");
 
 /** Stripe statuses that keep Premium on. past_due = a renewal failed and Stripe is retrying the card. */
 const PAID = ["active", "trialing", "past_due"];
