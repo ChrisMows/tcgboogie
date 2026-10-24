@@ -5,7 +5,7 @@
 set -euo pipefail
 HOST=root@2.24.77.223
 KEY=~/.ssh/tcgboogie_vps
-tar --force-local --exclude='__pycache__' --exclude='*.pyc' --exclude='logs' --exclude='data' --exclude='.env' -czf ../dealbot-update.tgz .
+tar --force-local --exclude='__pycache__' --exclude='*.pyc' --exclude='logs' --exclude='data' --exclude='.env' --exclude='.env.*' -czf ../dealbot-update.tgz .
 scp -q -i "$KEY" ../dealbot-update.tgz "$HOST":/root/dealbot-update.tgz && rm ../dealbot-update.tgz
 ssh -i "$KEY" "$HOST" 'set -e
   tar -xzf /root/dealbot-update.tgz -C /opt/dealbot/pokemon-deal-finder && rm /root/dealbot-update.tgz
