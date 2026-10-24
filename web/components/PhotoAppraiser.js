@@ -9,6 +9,9 @@ import PackLoader from "@/components/PackLoader";
 import { shrinkImage as shrink } from "@/lib/shrink-image";
 import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
 
+/** The version in a product name, "Jolteon (Master Ball Pattern)" -> "Master Ball Pattern"; the plain card is "Regular". */
+const versionOf = (name) => /\(([^)]+)\)\s*$/.exec(String(name || ""))?.[1] || "Regular";
+
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Snap or upload a photo of cards: we read each one, price it, and let you add them to your collection. */
@@ -149,6 +152,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
                             className={`photo-version ${sel === k ? "on" : ""}`}
                             onClick={() => { setVersion({ ...version, [i]: k }); setPicked({ ...picked, [i]: true }); }}>
                             <CardThumb item={o} width={56} />
+                            <span className="photo-version-name">{versionOf(o.name)}</span>
                             <span className="small"><b>{o.setName}</b><br />{o.number}{o.language === "japanese" ? " · JP" : ""}</span>
                             <span className="small photo-version-price">{o.value ? money(o.value) : "No price"}</span>
                           </button>
