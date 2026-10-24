@@ -94,6 +94,8 @@ export async function premiumPrice() {
   const p = found.data?.[0];
   // Stripe Tax needs a tax code on the product: Premium is a software subscription for personal use.
   if (p?.product && !p.product.tax_code) await stripe("POST", `products/${p.product.id}`, { tax_code: TAX_CODE });
+  // Prices are before tax ("$X/month plus tax"). Stripe lets an unspecified price be set once.
+  if (p && (!p.tax_behavior || p.tax_behavior === "unspecified")) await stripe("POST", `prices/${p.id}`, { tax_behavior: "exclusive" });
   if (p && p.unit_amount === cents && p.currency === "usd" && p.recurring?.interval === "month") return p.id;
   const product = p?.product?.id || (await stripe("POST", "products", {
     name: "TCG Boogie Premium",
@@ -104,9 +106,23 @@ export async function premiumPrice() {
   await log("payments", "info", `Creating Stripe price $${PLANS.premium.price}/month`, { replaces: p?.id || null });
   const created = await stripe("POST", "prices", {
     product, currency: "usd", unit_amount: cents, recurring: { interval: "month" },
-    lookup_key: PRICE_KEY, transfer_lookup_key: "true", nickname: `Premium $${PLANS.premium.price}/month`,
+    lookup_key: PRICE_KEY, transfer_lookup_key: "true", nickname: `Premium $${PLANS.premium.price}/month`, tax_behavior: "exclusive",
   });
   return created.id;
+}
+
+/**
+ * Is Stripe Tax switched on in the dashboard (for this mode)? Checkout adds sales tax only then, so checkout keeps
+ * working before it's set up. Checked at most every 10 minutes.
+ */
+let taxCache = { at: 0, mode: "", active: false };
+export async function taxActive() {
+  const mode = billingMode();
+  if (taxCache.mode === mode && Date.now() - taxCache.at < 10 * 60 * 1000) return taxCache.active;
+  let active = false;
+  try { active = (await stripe("GET", "tax/settings"))?.status === "active"; } catch { active = false; }
+  taxCache = { at: Date.now(), mode, active };
+  return active;
 }
 
 /** Create (or update) the webhook that tells the site about payments. Returns what happened, for the admin panel. */
@@ -144,7 +160,8 @@ export async function billingStatus() {
   if (!hook) return { ok: false, mode, detail: `${mode === "live" ? "Live" : "Test"} key added. Press “Set up Stripe” to finish.` };
   try {
     await stripe("GET", "prices", { lookup_keys: [PRICE_KEY], limit: 1 });
-    return { ok: true, mode, detail: mode === "live" ? "Live: real cards are charged" : "Test mode: fake cards only, no real money" };
+    const tax = (await taxActive()) ? "sales tax added automatically" : "sales tax off: turn on Stripe Tax in the Stripe dashboard";
+    return { ok: true, mode, detail: `${mode === "live" ? "Live: real cards are charged" : "Test mode: fake cards only, no real money"} · ${tax}` };
   } catch (e) {
     return { ok: false, mode, detail: `Stripe: ${e.message}` };
   }
@@ -169,7 +186,7 @@ async function customerFor(user) {
 
 /** Start Checkout for Premium. Returns the Stripe-hosted page to send the member to. */
 export async function checkoutUrl(user) {
-  const [customer, price] = await Promise.all([customerFor(user), premiumPrice()]);
+  const [customer, price, tax] = await Promise.all([customerFor(user), premiumPrice(), taxActive()]);
   let trial = trialDaysFor(user);
   if (trial) {
     // Belt and braces: no trial if this Stripe customer has ever had a subscription.
@@ -190,10 +207,12 @@ export async function checkoutUrl(user) {
     ...(trial ? { custom_text: { submit: { message: `You won't be charged today. Your first payment of $${PLANS.premium.price} plus tax is on ${firstCharge}, unless you cancel before then in Settings (one click). We email you 3 days before.` } } } : {}),
     allow_promotion_codes: "true",
     customer_update: { name: "auto", address: "auto" },
+    // Sales tax from the member's billing address (Stripe Tax), on the first payment and every renewal.
+    ...(tax ? { automatic_tax: { enabled: "true" }, billing_address_collection: "required" } : {}),
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
     cancel_url: `${SITE}/app/premium?billing=cancelled#enroll`,
   });
-  await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id }, user.id);
+  await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id, salesTax: tax }, user.id);
   return s.url;
 }
 
