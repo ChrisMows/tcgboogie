@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { toggleAlertChannel } from "@/app/app/actions";
 
 /** "Alerts go to": Email, Discord and Text as on/off switches, or a link to set one up (or unlock it). */
-export default function AlertChannels({ user }) {
+export default function AlertChannels({ user, smsReady = true }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const can = (c) => user.plan.watchAlertChannels.includes(c); // Admin → Features decides which plan gets each
@@ -21,7 +21,7 @@ export default function AlertChannels({ user }) {
     },
     {
       key: "sms", icon: "📱", label: "Text",
-      ...(!can("sms") ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add your number", href: "/app/account#phone" }
+      ...(!smsReady ? { state: "soon" } : !can("sms") ? { state: "locked" } : !user.phoneVerifiedAt ? { state: "todo", action: "Add your number", href: "/app/account#phone" }
         : { state: "ready", note: user.phone }),
     },
   ];
@@ -52,6 +52,13 @@ export default function AlertChannels({ user }) {
                 disabled={pending} onClick={() => flip(c.key)} title={`${c.note ? `${c.note} · ` : ""}${on[c.key] ? "On" : "Off"}: tap to turn ${on[c.key] ? "off" : "on"}`}>
                 {inner}<span className="ac-switch" aria-hidden="true"><i /></span>
               </button>
+            );
+          }
+          if (c.state === "soon") {
+            return (
+              <span key={c.key} className="ac-option soon" title={`${c.label} alerts are coming soon`}>
+                {inner}<span className="ac-tag ac-soon">Soon</span>
+              </span>
             );
           }
           return (

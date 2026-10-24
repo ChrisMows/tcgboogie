@@ -5,7 +5,7 @@ import { planFor } from "@/lib/plans";
 
 // Everything the site says about what each plan includes (pricing cards, comparison table, Premium page, Settings,
 // FAQ), worked out from the plans as Admin → Features left them, so no page promises a feature a plan doesn't have.
-// Text alerts are only mentioned once texting is actually set up.
+// Until texting is set up (Twilio), plans that include text alerts say "text alerts coming soon" instead.
 
 const yes = (on) => (on ? "✓" : "—");
 /** A monthly allowance cell: "—" (not included), "Unlimited", or "5 a month". */
@@ -25,6 +25,9 @@ export function channels(p, sms) {
   return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
 }
 
+/** " (text alerts coming soon)" when this plan includes texts but texting isn't set up yet, else "". */
+export const textSoon = (p, sms) => (!sms && p.watchAlertChannels.includes("sms") ? " (text alerts coming soon)" : "");
+
 /** Rows of the Free vs Premium comparison table: [what, free, premium]. */
 export function planRows({ free, premium, sms }) {
   const rows = [
@@ -36,7 +39,7 @@ export function planRows({ free, premium, sms }) {
     ["Cards per deal filter (\"any card named …\" counts as one)", (p) => (p.maxCardsPerFilter === null ? "Unlimited" : String(p.maxCardsPerFilter))],
     ["Japanese cards in deal alerts", (p) => yes(p.japanese)],
     ["Price alerts (buying or selling)", (p) => (p.maxPriceWatches === null ? "Unlimited" : String(p.maxPriceWatches))],
-    ["Alerts by", (p) => channels(p, sms).replace(/^e/, "E")],
+    ["Alerts by", (p) => `${channels(p, sms).replace(/^e/, "E")}${textSoon(p, sms)}`],
     ["eBay listing alerts: a watched card listed at or under your price", (p) => yes(p.ebayListingAlerts)],
     ["Photo check on deals (listing photos compared with the card)", () => "✓"],
     ["Collection tracker: unlimited cards, daily values, sets, wishlist", () => "✓"],
@@ -61,7 +64,7 @@ function lines(p, sms) {
     ["tracker", true, "Collection tracker, unlimited cards"],
     ["watches", p.maxPriceWatches !== 0, p.maxPriceWatches === null ? "Unlimited price alerts" : plural(p.maxPriceWatches, "price alert")],
     ["deals", true, p.liveFeed ? "Every deal live, before the auction ends" : "See the deals you missed, after they end"],
-    ["channels", p.watchAlertChannels.length > 1, `Instant alerts by ${channels(p, sms)}`],
+    ["channels", p.watchAlertChannels.length > 1, `Instant alerts by ${channels(p, sms)}${textSoon(p, sms)}`],
     ["filters", true, `${plural(p.maxProfiles, "deal filter")}${p.maxCardsPerFilter === null ? ", any number of cards" : ` (up to ${plural(p.maxCardsPerFilter, "card")} each)`}${p.japanese ? ", Japanese cards" : ""}`],
     ["trade", p.tradeAnalyzer, "Trade Analyzer"],
     ["import", p.collectionImport, "Import from any app"],

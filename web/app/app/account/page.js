@@ -246,12 +246,12 @@ export default async function Account({ searchParams }) {
             {!canDiscord && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
           {canDiscord && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts to get these.</div>}
-          <label className={`check ${canSms && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
-            <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!canSms || !user.phoneVerifiedAt} /> 📱 Text message
-            {!canSms && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
+          <label className={`check ${canSms && smsReady && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
+            <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!canSms || !smsReady || !user.phoneVerifiedAt} /> 📱 Text message
+            {!smsReady && !user.demo ? <span className="badge" style={{ marginLeft: 6 }}>Coming soon</span> : !canSms && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
             {canSms && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
           </label>
-          {canSms && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
+          {canSms && (smsReady || user.demo) && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">
@@ -271,7 +271,7 @@ export default async function Account({ searchParams }) {
           <h2>Text alerts</h2>
           {SMS_NOTES[params?.sms] && <div className={`notice ${["verified", "sent", "removed"].includes(params.sms) ? "good" : "warn"}`}>{SMS_NOTES[params.sms]}{params?.demo ? ` (Demo code: ${params.demo})` : ""}</div>}
           {!smsReady && !user.demo ? (
-            <p className="muted" style={{ margin: 0 }}>Text alerts are coming soon.</p>
+            <p className="muted" style={{ margin: 0 }}>Text alerts are coming soon. We&apos;ll let you know when you can add your number.</p>
           ) : user.phoneVerifiedAt ? (
             <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
               <span style={{ flex: "none" }}>📱 <b>{user.phone}</b> <span className="badge good">Confirmed</span></span>

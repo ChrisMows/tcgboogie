@@ -5,6 +5,7 @@ import WatchPerformance from "@/components/WatchPerformance";
 import { listingsByWatch } from "@/lib/watch-listings";
 import { getProduct } from "@/lib/catalog";
 import { ownedCounts } from "@/lib/collection";
+import { channelsReady } from "@/lib/notify";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -47,7 +48,7 @@ export default async function WatchesPage({ searchParams }) {
               email: user.email, alertEmail: user.alertEmail, alertDiscord: user.alertDiscord, alertSms: user.alertSms, phone: user.phone,
               phoneVerifiedAt: Boolean(user.phoneVerifiedAt), discordConnected: Boolean(user.discordConnected),
               plan: { watchAlertChannels: user.plan.watchAlertChannels },
-            }} />}
+            }} smsReady={Boolean(channelsReady().sms)} />}
             watches={watches.map((w) => ({ ...w, createdAt: String(w.createdAt), lastCheckedAt: w.lastCheckedAt ? String(w.lastCheckedAt) : null, triggeredAt: w.triggeredAt ? String(w.triggeredAt) : null }))}
             products={products}
             plan={user.plan}

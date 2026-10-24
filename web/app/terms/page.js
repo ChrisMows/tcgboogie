@@ -58,7 +58,7 @@ export default function Terms() {
 
       <h2 id="alerts">5. Alerts and messages</h2>
       <p>
-        Alerts go to the channels you turn on (email, Discord direct message, and text message on Premium). Text messages
+        Alerts go to the channels you turn on (email, Discord direct message, and, once available, text message on Premium). Text messages
         need your consent and a confirmed number; message frequency depends on your alerts, message and data rates may
         apply, reply STOP to any text to stop them and HELP for help. Every alert and recap email has a one-click unsubscribe link.
         Alerts can arrive late or not at all (for example if a marketplace or messaging service is down), so don&apos;t rely
@@ -122,7 +122,7 @@ export default function Terms() {
       </p>
 
       <h2 id="law">11. Governing law</h2>
-      <p>These terms are governed by the laws of the State of Ohio, USA, and disputes go to the state or federal courts in Ohio, unless the law where you live gives you the right to bring them locally.</p>
+      <p>These terms are governed by the laws of the State of Florida, USA, and disputes go to the state or federal courts in Florida, unless the law where you live gives you the right to bring them locally.</p>
 
       <h2 id="trademarks">12. Trademarks</h2>
       <p>

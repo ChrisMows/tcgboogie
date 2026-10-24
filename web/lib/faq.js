@@ -1,6 +1,6 @@
 import "server-only";
 import { billingLive } from "@/lib/billing";
-import { channels, effectivePlans, planHighlights, trialDays } from "@/lib/plan-copy";
+import { channels, effectivePlans, planHighlights, textSoon, trialDays } from "@/lib/plan-copy";
 
 // The FAQ (app/faq) and the site helper (lib/helper.js) both read these. Questions grouped by topic. Answers that describe what each plan includes are
 // built from the plans as Admin → Features set them (lib/plan-copy.js), so the FAQ never promises a feature a plan
@@ -58,7 +58,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
       ["What's a price alert?",
         "Pick any card or sealed product and your price. Buying? We tell you when it drops to your price, and (for cards) when someone lists it on eBay at or under your price. Selling? We tell you when it climbs to it. The Performance tab shows how close each alert is."],
       ["How do alerts reach me? Do I need Discord?",
-        `No. On Free, alerts come by ${channels(free, sms)}; on Premium, by ${channels(premium, sms)}. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a ${free.emailRecap} email recap${premium.emailRecap !== free.emailRecap ? ` (${premium.emailRecap} on Premium)` : ""} that you can turn off in Settings.`],
+        `No. On Free, alerts come by ${channels(free, sms)}${textSoon(free, sms)}; on Premium, by ${channels(premium, sms)}${textSoon(premium, sms)}. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a ${free.emailRecap} email recap${premium.emailRecap !== free.emailRecap ? ` (${premium.emailRecap} on Premium)` : ""} that you can turn off in Settings.`],
       ["Do you bid or buy for me?",
         "No. We send the alert; you decide whether to bid or buy. We never bid, buy or message sellers for you. If you connect eBay to sell your own cards, we only create the listings you review and post, and you can disconnect it anytime in Settings."],
     ]],
