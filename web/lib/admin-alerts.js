@@ -1,8 +1,8 @@
 import "server-only";
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
-import { sendEmail } from "@/lib/notify";
+import { sendDiscordDM, sendEmail } from "@/lib/notify";
 
 // Tells the admins (ADMIN_EMAILS) when something breaks, so problems don't sit unseen in Admin → Logs:
 //   - every error logged since the last email (website, payments, alerts, prices and the deal bot), grouped and counted
@@ -75,4 +75,31 @@ export async function sendAdminAlerts() {
 async function saveState(value) {
   await db.insert(schema.appSettings).values({ key: KEY, value })
     .onConflictDoUpdate({ target: schema.appSettings.key, set: { value, updatedAt: new Date() } });
+}
+
+const recentDMs = globalThis.__tcgAdminDMs ?? (globalThis.__tcgAdminDMs = []);
+
+/**
+ * A Discord message from BoogieBot to every admin (ADMIN_EMAILS) who has Discord connected, e.g. a card request
+ * waiting in Admin → Requests. At most 20 an hour, so a burst can't flood anyone. Never throws.
+ */
+export async function discordAdmins({ title, description, url, fields = [] }) {
+  try {
+    if (!db || !process.env.DISCORD_BOT_TOKEN || !admins().length) return 0;
+    const now = Date.now();
+    while (recentDMs.length && now - recentDMs[0] > 60 * 60 * 1000) recentDMs.shift();
+    if (recentDMs.length >= 20) return 0;
+    recentDMs.push(now);
+    const { users, accounts } = schema;
+    const rows = await db.select({ id: accounts.providerAccountId }).from(accounts).innerJoin(users, eq(users.id, accounts.userId))
+      .where(and(eq(accounts.provider, "discord"), inArray(sql`lower(${users.email})`, admins().map((e) => e.toLowerCase()))));
+    let sent = 0;
+    for (const r of rows) {
+      try { await sendDiscordDM(r.id, { title, description, url, fields }); sent++; } catch (e) { await log("admin", "warn", `Couldn't Discord an admin: ${e.message}`); }
+    }
+    return sent;
+  } catch (e) {
+    await log("admin", "warn", `Couldn't Discord the admins: ${e.message}`).catch(() => {});
+    return 0;
+  }
 }

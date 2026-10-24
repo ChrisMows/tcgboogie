@@ -5,6 +5,7 @@ import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
+import { discordAdmins } from "@/lib/admin-alerts";
 import { logError } from "@/lib/log";
 import { useQuota } from "@/lib/quota";
 import { slim } from "@/lib/portfolio";
@@ -93,7 +94,18 @@ export async function requestCard(query, link, kind = "card") {
   if (user.demo) return { status: "declined", message: "Requests aren't saved in the demo." };
   if (!user.plan.cardRequests) return { status: "declined", message: "Card requests aren't part of your plan." };
   if (!await allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
-  return submitRequest(user, { query, link, kind });
+  const res = await submitRequest(user, { query, link, kind });
+  // Waiting for an admin (Admin → Requests): tell the admins on Discord.
+  if (res.status === "pending") {
+    const site = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
+    await discordAdmins({
+      title: `📥 New ${kind === "sealed" ? "sealed product" : "card"} request to review`,
+      description: `${user.name || user.email || "A member"} searched for "${String(query || "").slice(0, 100) || "(no search)"}" and sent a link we couldn't add automatically.`,
+      url: `${site}/app/admin?tab=requests`,
+      fields: [{ name: "Link", value: String(link || "").slice(0, 1000) || "—" }, { name: "Review", value: `[Open Admin → Requests](${site}/app/admin?tab=requests)` }],
+    });
+  }
+  return res;
 }
 
 /** Full details of a product picked from search results (search results don't carry graded sales). */
