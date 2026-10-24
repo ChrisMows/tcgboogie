@@ -534,16 +534,28 @@ export const spellVariants = (s) => String(s || "").replace(/\bmaster\s*ball\b/g
  * Master Ball patterns, and a Pokémon Day promo), so when we know the set or the variant they decide: a variant
  * ("Master Ball Pattern") must be in the product's name, the same set wins, and with no variant the plain card wins.
  */
-export async function findCard({ name, number, language = "english", setName = "", variant = "" }) {
+export async function findCard(args) {
+  return (await cardMatches(args, false))[0] || null;
+}
+
+/**
+ * Every version that fits what was read (best first, up to `max`): the photo appraiser shows them all when there's
+ * more than one (Centiskorch VMAX is a regular, a full art and a rainbow rare) and lets the member pick.
+ */
+export async function findCardOptions(args, max = 8) {
+  return (await cardMatches(args, true)).slice(0, max);
+}
+
+async function cardMatches({ name, number, language = "english", setName = "", variant = "" }, all) {
   if (!catalogLive()) {
     const n = String(name || "").toLowerCase();
-    return SAMPLE.find((p) => p.type === "card" && p.name.toLowerCase().includes(n) && (!number || p.number === number)) || null;
+    return SAMPLE.filter((p) => p.type === "card" && p.name.toLowerCase().includes(n) && (!number || p.number === number));
   }
   const japanese = language === "japanese";
   const num = String(number || "").trim().replace(/\s+/g, "");
   // Printed symbols the catalog spells out: Gold Star "☆" is "Star"; the δ (Delta Species) mark isn't in names.
   const printed = String(name || "").replace(/\s*\(.*\)$/, "").replace(/[☆★]/g, " Star").replace(/δ/g, "").replace(/\s+/g, " ").trim();
-  if (printed.length < 2) return null;
+  if (printed.length < 2) return [];
   const bare = (s) => String(s || "").toUpperCase().replace(/\s/g, "").replace(/^0+(?=\w)/, "");
   const head = (s) => bare(s).split("/")[0].replace(/^0+(?=\w)/, "");
   const SUFFIX = new Set(["ex", "gx", "v", "vmax", "vstar", "lv", "x", "break", "prime", "star", "the", "of"]);
@@ -568,7 +580,7 @@ export async function findCard({ name, number, language = "english", setName = "
     num.includes("/") && `${printed} ${num.split("/")[0]}`, printed].filter(Boolean))];
   const found = [];
   for (let i = 0; i < tries.length && i < 5; i++) {
-    const j = await ppt("/cards", { search: tries[i].slice(0, 80), limit: "5", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
+    const j = await ppt("/cards", { search: tries[i].slice(0, 80), limit: all ? "10" : "5", ...(japanese ? { language: "japanese" } : {}) }, 7 * 24 * HOUR);
     const list = (j?.data || []).map((c) => ({ ...fromCard(c), ...(japanese ? { language: "japanese" } : {}) }));
     for (const p of list) if (!found.some((x) => x.id === p.id) && numberOk(p) && variantOk(p)) found.push(p);
     // A number read without its set total: a result showing the full number ("074/131") leads to every version.
@@ -579,9 +591,9 @@ export async function findCard({ name, number, language = "english", setName = "
       }
     }
     const top = [...found].sort((a, b) => score(b) - score(a))[0];
-    if (top && score(top) >= best) return top;
+    if (!all && top && score(top) >= best) return [top]; // findCard: the exact card, stop searching
   }
-  return [...found].sort((a, b) => score(b) - score(a))[0] || null;
+  return [...found].sort((a, b) => score(b) - score(a));
 }
 
 const normalizeWords = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length > 1);

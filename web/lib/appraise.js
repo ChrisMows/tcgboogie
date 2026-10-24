@@ -1,6 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { findCard } from "@/lib/catalog";
+import { findCardOptions } from "@/lib/catalog";
 import { GRADERS, gradeKey, nmPrice } from "@/lib/collection";
 import { log } from "@/lib/log";
 
@@ -70,17 +70,31 @@ export async function appraisePhoto(image, userId) {
   const out = [];
   for (const c of cards) {
     const language = c.language === "japanese" ? "japanese" : "english";
-    let product = null;
-    try { product = c.name ? await findCard({ name: c.name, number: c.number, language }) : null; } catch { product = null; }
+    // Every version that fits (best first); the member picks when there's more than one.
+    // Versions that fit the name and number; when the read isn't certain (or nothing fits the number), also every
+    // other version with that name, so a misread number is one tap to fix. Only a fit is ever preselected.
+    let found = [];
+    try { found = c.name ? await findCardOptions({ name: c.name, number: c.number, language, setName: c.set_hint }) : []; } catch { found = []; }
+    const fits = c.number ? found.length : 0; // without a number, every version "fits": that's a guess, so don't pick one
+    if (c.name && (c.confidence !== "high" || !c.number || !fits)) {
+      const more = await findCardOptions({ name: c.name, number: "", language }).catch(() => []);
+      for (const p of more) if (!found.some((x) => x.id === p.id)) found.push(p);
+      found = found.slice(0, 8);
+    }
     const grader = c.graded ? GRADERS.find((g) => g.toLowerCase() === String(c.grader).toLowerCase()) || null : null;
     const grade = c.graded && /^\d+(\.5)?$/.test(String(c.grade)) ? String(c.grade) : null;
-    const g = product && grader && grade ? product.graded?.[gradeKey(grader, grade)] : null;
-    const value = product ? (grader && grade ? (g && g.reliable !== false ? g.price : null) : nmPrice(product)) : null;
+    const valueOf = (p) => {
+      const g = grader && grade ? p.graded?.[gradeKey(grader, grade)] : null;
+      return grader && grade ? (g && g.reliable !== false ? g.price : null) : nmPrice(p);
+    };
+    const options = found.map((p) => ({ id: p.id, name: p.name, setName: p.setName, number: p.number, image: p.image,
+      language: p.language || "english", value: valueOf(p) }));
     out.push({
       read: { name: c.name, number: c.number, setHint: c.set_hint, language, confidence: c.confidence },
       graded: Boolean(grader && grade), grader, grade,
-      product: product && { id: product.id, name: product.name, setName: product.setName, number: product.number, image: product.image, language: product.language || "english" },
-      value,
+      product: fits ? options[0] : null, // nothing fits what was read: the member picks
+      options,
+      value: fits ? options[0].value : null,
     });
   }
   const total = out.reduce((s, c) => s + (c.value || 0), 0);

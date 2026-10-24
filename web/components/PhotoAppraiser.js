@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import CardThumb from "@/components/CardThumb";
 import CardRequest from "@/components/CardRequest";
+import PackLoader from "@/components/PackLoader";
 import { shrinkImage as shrink } from "@/lib/shrink-image";
 import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
 
@@ -16,6 +17,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [picked, setPicked] = useState({});
+  const [version, setVersion] = useState({}); // card index -> which of its options the member picked
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
   const [choice, setChoice] = useState(null); // null: ask; "pick": choose which ones below; "later": not now
@@ -34,14 +36,18 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
       if (typeof r.left === "number") setLeft(r.left);
       if (!r.ok) { setError(r.error); return; }
       setResult(r);
+      setVersion({});
       setPicked(Object.fromEntries(r.cards.map((c, i) => [i, Boolean(c.product)])));
     });
   };
 
+  // The version picked for card i (the best match unless the member chose another).
+  const productOf = (c, i) => (version[i] != null && c.options?.[version[i]]) || c.product;
+  const chooser = (c) => (c.options?.length || 0) > 1 || (!c.product && (c.options?.length || 0) > 0);
   // Add the ticked cards (or every card we matched), then go to the collection to see them.
   const add = (all = false) => start(async () => {
-    const picks = result.cards.map((c, i) => [c, i]).filter(([c, i]) => c.product && (all || picked[i]))
-      .map(([c]) => ({ productId: c.product.id, name: c.product.name, graded: c.graded, grader: c.grader, grade: c.grade }));
+    const picks = result.cards.map((c, i) => [c, i]).filter(([c, i]) => productOf(c, i) && (all || picked[i]))
+      .map(([c, i]) => ({ productId: productOf(c, i).id, name: productOf(c, i).name, graded: c.graded, grader: c.grader, grade: c.grade }));
     const r = await addAppraised(picks);
     setDone(r);
     if (r.added > 0 && !r.failed.length) router.push(`/app/collection?appraised=${r.added}`);
@@ -65,9 +71,10 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
     );
   }
 
-  const chosen = result ? result.cards.filter((c, i) => picked[i] && c.product) : [];
-  const matched = result ? result.cards.filter((c) => c.product) : [];
-  const matchedValue = matched.reduce((t, c) => t + (Number(c.value) || 0), 0);
+  const chosen = result ? result.cards.filter((c, i) => picked[i] && productOf(c, i)) : [];
+  const matched = result ? result.cards.filter((c, i) => productOf(c, i)) : [];
+  const matchedValue = result ? result.cards.reduce((t, c, i) => t + (Number(productOf(c, i)?.value) || 0), 0) : 0;
+  const unsure = result ? result.cards.filter((c, i) => chooser(c) && version[i] == null).length : 0; // not yet chosen by the member
   return (
     <>
       <div className="panel photo-drop">
@@ -79,7 +86,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
       </div>
 
       {error && <div className="notice warn">{error}</div>}
-      {pending && !result && <div className="notice">Reading your cards… this takes a few seconds.</div>}
+      {pending && !result && <div className="panel photo-loading"><PackLoader label="Reading your cards… this takes a few seconds." /></div>}
 
       {/* The question first: add what we found? */}
       {result && matched.length > 0 && !done && choice === null && (
@@ -87,13 +94,16 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
           <div>
             <b>We found {matched.length} card{matched.length === 1 ? "" : "s"}{matchedValue ? ` worth about ${money(matchedValue)}` : ""}.</b>
             <span className="muted"> Add {matched.length === 1 ? "it" : "them"} to your collection?</span>
+            {unsure > 0 && <div className="small photo-ask-note">{unsure === 1 ? "1 card" : `${unsure} cards`} could be more than one version. We picked the closest match; check {unsure === 1 ? "it" : "them"} below.</div>}
           </div>
           <div className="photo-ask-actions">
             <button type="button" className="btn primary" disabled={pending} onClick={() => add(true)}>
               {pending ? "Adding…" : matched.length === 1 ? "Add it" : `Add all ${matched.length}`}
             </button>
-            {matched.length > 1 && (
-              <button type="button" className="btn" disabled={pending} onClick={() => { setChoice("pick"); setTimeout(() => listRef.current?.scrollIntoView({ block: "start", behavior: "instant" }), 50); }}>Pick which ones</button>
+            {(matched.length > 1 || unsure > 0) && (
+              <button type="button" className="btn" disabled={pending} onClick={() => { setChoice("pick"); setTimeout(() => listRef.current?.scrollIntoView({ block: "start", behavior: "instant" }), 50); }}>
+                {unsure > 0 ? "Check versions first" : "Pick which ones"}
+              </button>
             )}
             <button type="button" className="btn ghost" disabled={pending} onClick={() => setChoice("later")}>Not now</button>
           </div>
@@ -110,23 +120,44 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
             </div>
             {result.cards.length === 0 && <p className="muted">We couldn&apos;t make out any cards. Try a closer, brighter photo.</p>}
             <div className="photo-list">
-              {result.cards.map((c, i) => (
-                <label key={i} className={`photo-row ${c.product ? "" : "dim"}`}>
-                  <input type="checkbox" checked={Boolean(picked[i])} disabled={!c.product} onChange={(e) => setPicked({ ...picked, [i]: e.target.checked })} />
-                  <CardThumb item={c.product || { name: c.read.name, number: c.read.number }} width={44} />
-                  <span className="photo-name">
-                    <b>{c.product ? c.product.name : c.read.name || "Unreadable card"}</b>
-                    <span className="small muted">
-                      {c.product ? `${c.product.setName} · ${c.product.number}` : `Read as ${c.read.number || "no number"} · no match found`}
-                      {c.graded ? ` · ${c.grader} ${c.grade}` : " · raw, priced as Near Mint"}
-                      {c.product?.language === "japanese" ? " · Japanese" : ""}
-                    </span>
-                    {c.read.confidence === "low" && <span className="badge warn">Hard to read: check it</span>}
-                  </span>
-                  <b className="photo-value">{c.value ? money(c.value) : "—"}</b>
-                  {c.product && <Link href={`/app/cards/${encodeURIComponent(c.product.id)}${c.product.language === "japanese" ? "?lang=japanese" : ""}`} className="small" onClick={(e) => e.stopPropagation()}>View</Link>}
-                </label>
-              ))}
+              {result.cards.map((c, i) => {
+                const p = productOf(c, i) || null;
+                const sel = version[i] ?? (c.product ? 0 : -1);
+                return (
+                  <div key={i} className="photo-item">
+                    <label className={`photo-row ${p ? "" : "dim"}`}>
+                      <input type="checkbox" checked={Boolean(picked[i])} disabled={!p} onChange={(e) => setPicked({ ...picked, [i]: e.target.checked })} />
+                      <CardThumb item={p || { name: c.read.name, number: c.read.number }} width={44} />
+                      <span className="photo-name">
+                        <b>{p ? p.name : c.read.name || "Unreadable card"}</b>
+                        <span className="small muted">
+                          {p ? `${p.setName} · ${p.number}` : `Read as ${c.read.number || "no number"} · no match found`}
+                          {c.graded ? ` · ${c.grader} ${c.grade}` : " · raw, priced as Near Mint"}
+                          {p?.language === "japanese" ? " · Japanese" : ""}
+                        </span>
+                        {c.read.confidence === "low" && <span className="badge warn">Hard to read: check it</span>}
+                        {chooser(c) && <span className="badge accent">{c.product ? `${c.options.length} possible versions: check below` : "Which one is it? Pick below"}</span>}
+                      </span>
+                      <b className="photo-value">{p?.value ? money(p.value) : "—"}</b>
+                      {p && <Link href={`/app/cards/${encodeURIComponent(p.id)}${p.language === "japanese" ? "?lang=japanese" : ""}`} className="small" onClick={(e) => e.stopPropagation()}>View</Link>}
+                    </label>
+                    {/* More than one version fits: show them all and let the member pick the right one. */}
+                    {chooser(c) && (
+                      <div className="photo-versions" role="radiogroup" aria-label={`Which ${c.read.name}?`}>
+                        {c.options.map((o, k) => (
+                          <button key={o.id} type="button" role="radio" aria-checked={sel === k}
+                            className={`photo-version ${sel === k ? "on" : ""}`}
+                            onClick={() => { setVersion({ ...version, [i]: k }); setPicked({ ...picked, [i]: true }); }}>
+                            <CardThumb item={o} width={56} />
+                            <span className="small"><b>{o.setName}</b><br />{o.number}{o.language === "japanese" ? " · JP" : ""}</span>
+                            <span className="small photo-version-price">{o.value ? money(o.value) : "No price"}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {/* Cards we read but couldn't find: request them right here (a link to the card adds it). */}
             {result.cards.filter((c) => !c.product && c.read.name).slice(0, 3).map((c, i) => (
