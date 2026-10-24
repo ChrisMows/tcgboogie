@@ -143,6 +143,14 @@ function CardPicker({ f, set, cap = null }) {
 }
 
 /** The controls for one facet (used in the pill dropdowns and in the All filters panel). */
+// Which setting (lib/facets.js) shows each validation error (lib/filters.js), so a failed save can open it.
+const ERROR_FACET = {
+  cards: "cards", cardTypes: "product", graders: "grade", minGrade: "gradeRange", minMarketValue: "value", maxMarketValue: "value",
+  maxPrice: "value", minDiscountPct: "discount", maxMinutesLeft: "time", languages: "language", channels: "channels",
+  minSellerFeedback: "seller", minComps: "seller",
+};
+const facetsWithErrors = (errors) => new Set(Object.keys(errors || {}).map((k) => ERROR_FACET[k]).filter(Boolean));
+
 function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
   const premium = plan.key === "premium";
   switch (k) {
@@ -367,7 +375,19 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
   function update() {
     start(async () => {
       const res = await saveProfile(selected.id, { ...draft, name: selected.name });
-      if (!res.ok) { setErrors(res.errors || {}); setMessage({ kind: "bad", text: "A setting needs a fix. Look for the note in red." }); return; }
+      if (!res.ok) {
+        // Say which setting and what's wrong, and open it so its red note shows.
+        const errs = res.errors || {};
+        const first = Object.keys(errs).find((k) => ERROR_FACET[k]);
+        const facet = first ? FACETS.find((x) => x.key === ERROR_FACET[first]) : null;
+        setErrors(errs);
+        setMessage({ kind: "bad", text: first ? `${facet ? `${facet.label}: ` : ""}${errs[first]}` : (Object.values(errs)[0] || "A setting needs a fix.") });
+        if (facet) {
+          setPop(facet.key);
+          setTimeout(() => document.querySelector(`[data-tour="facet-pop-${facet.key}"]`)?.scrollIntoView({ block: "center", behavior: "instant" }), 80);
+        }
+        return;
+      }
       setErrors({}); setMessage({ kind: "good", text: `“${selected.name}” updated. It applies from the next check, within a minute.` });
       setProfiles((ps) => ps.map((p) => (p.id === selected.id ? { ...p, filters: draft } : p)));
       router.refresh();
@@ -477,9 +497,10 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                         {FACETS.filter((x) => x.group === g).map((x) => {
                           const off = x.disabled?.(draft);
                           const on = !off && x.active(draft, defaults);
+                          const bad = facetsWithErrors(errors).has(x.key);
                           const wide = x.key === "cards" || x.key === "sets";
                           return (
-                            <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
+                            <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""} ${bad ? "bad" : ""}`}>
                               <button type="button" className="fs-pill" data-tour={`facet-${x.key}`} disabled={off} aria-expanded={pop === x.key}
                                 onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
                                 {on ? <><span className="fs-pill-k">{x.label}:</span> <span className="fs-pill-v" title={x.summary(draft)}>{x.summary(draft)}</span></> : x.label}

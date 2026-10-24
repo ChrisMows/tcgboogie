@@ -1654,3 +1654,4 @@ body:has(.tour-ring, .tour-center, .tour-looking) .helper-fab { display: none; }
   .watch-copy h1 { font-size: 30px; }
   .watch-copy p { margin-left: auto; margin-right: auto; }
 }
+.fs-pill-wrap.bad .fs-pill { border-color: var(--bad) !important; box-shadow: 0 0 0 1px var(--bad); }
