@@ -47,14 +47,19 @@ export default function DealTile({ deal: d, mode = "live", href, affiliate = fal
 }
 
 /** A grid of deal tiles with an empty state. Live deals first (ending soonest), then ended ones (newest first). */
+export const VERIFY_NOTE = "Deals are automated estimates and can be wrong. Check the card, version, condition, seller and price on the listing yourself before you buy; purchases are your own decision and at your own risk.";
+
 export function DealGrid({ deals, mode, empty }) {
   if (!deals.length) return <div className="panel empty-state">{empty || "No deals yet."}</div>;
   const isLive = (d) => mode !== "missed" && !d.ended;
   const sorted = [...deals].sort((a, b) => (isLive(b) - isLive(a))
     || (isLive(a) ? (a.minutesLeft ?? 0) - (b.minutesLeft ?? 0) : String(b.endsAt || "").localeCompare(String(a.endsAt || ""))));
   return (
-    <div className="deal-tiles">
-      {sorted.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} />)}
-    </div>
+    <>
+      <div className="deal-tiles">
+        {sorted.map((d) => <DealTile key={d.id} deal={d} mode={mode} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} />)}
+      </div>
+      <p className="verify-note">{VERIFY_NOTE} <a href="/terms#prices">Terms</a></p>
+    </>
   );
 }

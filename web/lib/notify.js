@@ -53,13 +53,16 @@ async function countEmail() {
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+// Under every member alert and recap (emails with an unsubscribe link) and every Discord DM. See Terms section 6.
+const VERIFY = "Prices and deals are automated estimates and can be wrong. Check every listing yourself before you buy; purchases are your own decision and at your own risk.";
+
 /**
  * A branded email: heading, a few lines, an optional list of linked items (bundled deals), one button.
  * unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header.
  */
 export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }, unsub = null) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || ""].join("\n").trim();
+  const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || "", unsub ? VERIFY : ""].join("\n").trim();
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b0e12;color:#f4f5ef;border-radius:14px">
     <div style="font-weight:800;font-size:18px;letter-spacing:-0.5px;margin-bottom:18px">TCG <span style="color:#d3ff66">BOOGIE</span></div>
     <h2 style="margin:0 0 12px;font-size:22px">${esc(heading)}</h2>
@@ -67,6 +70,7 @@ export async function sendEmail(to, { subject, heading, lines = [], items = [], 
     ${items.map((i) => `<p style="margin:0 0 10px;font-size:15px"><a href="${esc(i.url)}" style="color:#d3ff66;text-decoration:none">${esc(i.text)} →</a></p>`).join("")}
     ${button ? `<p style="margin:20px 0"><a href="${esc(button.url)}" style="display:inline-block;background:#d3ff66;color:#15200c;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button.label)}</a></p>` : ""}
     ${footer ? `<p style="color:#8f9aa9;font-size:12px;margin-top:22px">${esc(footer)}</p>` : ""}
+    ${unsub ? `<p style="color:#8f9aa9;font-size:12px;margin-top:${footer ? 8 : 22}px">${esc(VERIFY)}</p>` : ""}
   </div>`;
   // Every member email can be turned off in one click: a link in the footer, and the standard headers mail apps show
   // as "Unsubscribe" (RFC 8058 one-click). Without a member (e.g. a test) the link opens Settings instead.
@@ -94,7 +98,7 @@ export async function sendDiscordDM(discordUserId, { title, description, url, fi
   if (!ch.ok) throw new Error(`Discord couldn't open a DM (${ch.status}). The member may not share a server with BoogieBot.`);
   const { id } = await ch.json();
   const msg = await api(`/channels/${id}/messages`, {
-    embeds: [{ title: title.slice(0, 256), description: description?.slice(0, 2000), url, color: 0xd3ff66, fields: fields.slice(0, 10) }],
+    embeds: [{ title: title.slice(0, 256), description: description?.slice(0, 2000), url, color: 0xd3ff66, fields: fields.slice(0, 10), footer: { text: VERIFY } }],
   });
   if (!msg.ok) throw new Error(`Discord DM failed (${msg.status}). The member may have DMs turned off.`);
 }

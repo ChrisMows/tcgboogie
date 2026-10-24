@@ -223,6 +223,9 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; text-tra
 .doc .updated { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
 .doc h2 { font-size: 20px; margin: 28px 0 8px; }
 .doc p, .doc li { color: #c9d1dd; }
+.doc .callout { border: 1px solid rgba(211,255,102,.35); background: rgba(211,255,102,.06); border-radius: 10px; padding: 14px 16px; }
+.verify-note { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 12px 0 0; }
+.verify-note a { color: inherit; text-decoration: underline; }
 details.faq { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
 details.faq summary { cursor: pointer; font-weight: 600; }
 /* Admin → Plans: number limits */

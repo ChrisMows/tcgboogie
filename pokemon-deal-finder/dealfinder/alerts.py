@@ -55,7 +55,7 @@ def build_discord_payload(rec, card):
         "description": rec["title"][:300],
         "color": color,
         "fields": fields,
-        "footer": {"text": f"eBay item {rec['item_id']} · {rec['reason']['market']['reason']}"[:2048]},
+        "footer": {"text": f"eBay item {rec['item_id']} · {rec['reason']['market']['reason']} · Estimate only: check the listing before you buy"[:2048]},
     }
     if rec.get("affiliate_disclosure"):  # EPN requires the disclosure right next to the link
         embed["footer"]["text"] = f"{rec['affiliate_disclosure']} · {embed['footer']['text']}"[:2048]

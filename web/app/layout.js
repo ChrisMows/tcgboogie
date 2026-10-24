@@ -113,7 +113,9 @@ export default async function RootLayout({ children }) {
               <Brand />
               <p>
                 © {new Date().getFullYear()} TCG Boogie. Not affiliated with eBay, TCGplayer, Nintendo, The Pokémon
-                Company, or any game publisher. Values are estimates; auction prices can change.
+                Company, or any game publisher. Prices, values and deals are automated estimates and can be wrong.
+                Check every listing yourself before you buy; purchases are your own decision and at your own risk.
+                See our <Link href="/terms#prices">Terms</Link>.
               </p>
             </div>
             <nav aria-label="Footer">

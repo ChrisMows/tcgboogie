@@ -66,10 +66,16 @@ export default function Terms() {
       </p>
 
       <h2 id="prices">6. Prices, deals and other sites</h2>
+      <p className="callout">
+        <b>Every purchase is your own decision and your own responsibility.</b> TCG Boogie gives you information, not
+        recommendations. Before you bid or buy, check the listing yourself: the card, set, number, language, condition,
+        grade, photos, seller, price, shipping and returns. If you buy without checking, that risk is yours, and TCG Boogie
+        is not responsible for the result.
+      </p>
       <ul>
-        <li>Card values, &quot;deals&quot; and discounts are estimates based on recent sales and listings. They can be wrong, out of date, or change quickly. They are not financial or investment advice.</li>
-        <li>Listings belong to the marketplaces and sellers who post them. Check every listing yourself before you buy. Any purchase is between you and the seller, under that marketplace&apos;s rules.</li>
-        <li>Some links to eBay and other sites are affiliate links, which means we may earn a commission if you buy. It doesn&apos;t change your price.</li>
+        <li>Card values, &quot;deals&quot;, discounts and alerts are automated estimates based on recent sales and listings. They can be wrong, out of date, matched to the wrong card or version, or change quickly. A &quot;deal&quot; label is not a promise that a card is worth more than you pay, is authentic, or will keep its value. Nothing on TCG Boogie is financial or investment advice.</li>
+        <li>Listings belong to the marketplaces and sellers who post them. We don&apos;t check, inspect or guarantee any listing, item or seller, and we can&apos;t see a listing&apos;s changes after we show it. Any purchase is between you and the seller, under that marketplace&apos;s rules; problems with an order (a fake, damaged or wrong card, a seller who doesn&apos;t ship, a return) go to the seller and the marketplace, not to us.</li>
+        <li>Some links to eBay and other sites are affiliate links, which means we may earn a commission if you buy. It doesn&apos;t change your price, and it doesn&apos;t make us a party to the sale.</li>
       </ul>
 
       <h2 id="tools">7. Estimates and tools</h2>
@@ -96,10 +102,23 @@ export default function Terms() {
 
       <h2 id="liability">10. Disclaimers and limits</h2>
       <p>
-        TCG Boogie is provided &quot;as is&quot;. We do our best to keep it accurate and running, but we can&apos;t promise it will
-        be error-free or always available. To the fullest extent the law allows, we aren&apos;t liable for indirect or
-        consequential losses (such as a missed deal or a purchase that lost value), and our total liability to you is
-        limited to what you paid us in the 12 months before the claim.
+        TCG Boogie is provided &quot;as is&quot; and &quot;as available&quot;. We do our best to keep it accurate and running, but
+        to the fullest extent the law allows we make no warranties of any kind, express or implied, including that prices,
+        values, grades, card matches or alerts are accurate, complete or current, or that the site will be error-free or
+        always available.
+      </p>
+      <p>
+        To the fullest extent the law allows, TCG Boogie and the people who run it are not liable for any loss that comes
+        from relying on the site, its prices or its alerts, or from any purchase, sale, bid or trade you make, including
+        paying too much, a card that turns out to be fake, damaged, misdescribed or a different version, a seller who
+        doesn&apos;t deliver, a card that loses value, or a missed deal. We aren&apos;t liable for indirect, incidental,
+        special or consequential losses, and our total liability to you for any claim is limited to what you paid us in the
+        12 months before the claim (or $0 if you use the Free plan).
+      </p>
+      <p>
+        You agree to cover TCG Boogie for claims, losses and costs (including reasonable legal fees) that come from your
+        purchases, sales or listings, or from your breaking these terms. Some places don&apos;t allow some of these limits;
+        where that&apos;s the case, they apply as far as the law there allows.
       </p>
 
       <h2 id="law">11. Governing law</h2>
