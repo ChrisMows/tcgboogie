@@ -191,14 +191,14 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
             </div>
           ) : (
             <>
-              <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }} data-tour="alert-search">
+              <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }}>
                 <div>
                   <label className="sr-only" htmlFor="q">TCGplayer link or card name</label>
-                  <input id="q" type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                  <input id="q" type="text" data-tour="alert-search" value={query} onChange={(e) => setQuery(e.target.value)}
                     placeholder="Card name + number, or a sealed product" />
                   {isDemo && <div className="hint">Demo: try “Charizard”, “Umbreon”, “Evolving Skies”, or https://www.tcgplayer.com/product/517045</div>}
                 </div>
-                <button className="btn" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>
+                <button className="btn" data-tour="alert-find" style={{ flex: "none" }} disabled={pending || query.trim().length < 2}>Find</button>
               </form>
               {findError && <div className="notice bad" style={{ marginTop: 12 }}>{findError}</div>}
               {(results || findError) && <CardRequest query={query} />}

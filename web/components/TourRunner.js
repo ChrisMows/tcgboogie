@@ -94,6 +94,13 @@ export default function TourRunner({ signedIn }) {
       el.addEventListener("click", onTap, { once: true });
       cleanups.push(() => el.removeEventListener("click", onTap));
     }
+    if (step.typed && el) {
+      const box = el.matches("input, textarea") ? el : el.querySelector("input, textarea");
+      let timer = 0;
+      const onType = () => { clearTimeout(timer); if (box.value.trim().length >= 2) timer = setTimeout(() => advance(1), 1200); };
+      box?.addEventListener("input", onType);
+      cleanups.push(() => { clearTimeout(timer); box?.removeEventListener("input", onType); });
+    }
     if (step.until) {
       const iv = setInterval(() => { if (find(step.until)) { clearInterval(iv); advance(1); } }, 300);
       cleanups.push(() => clearInterval(iv));

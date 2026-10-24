@@ -8,6 +8,7 @@
 //   open    if the target isn't there, tap this first (e.g. open a filter so its buttons show)
 //   tap     move on when the member taps the target (Next still works)
 //   until   move on when this appears on the page (e.g. after typing a search)
+//   typed   move on once they've typed something into the target (a short pause after their last key)
 //   then    when they tap Next, tap this first (e.g. close a pop-up that would cover the next button)
 //   end     if this target is there, it's the last step (e.g. "Connect eBay" first: the rest comes after)
 //   wait    don't skip a missing target: show this note and wait for it (it appears after they do something)
@@ -36,7 +37,8 @@ export const TOURS = {
     title: "Add a price alert",
     about: "a price alert on any card or sealed product: buying (drops to a price) or selling (climbs to a price)",
     steps: [
-      { path: "/app/watches", target: t("alert-search"), text: "Type the card's name and number (e.g. \"Umbreon VMAX 215\"), or a sealed product, then tap Find.", until: `${t("alert-results")}, ${t("alert-direction")}` },
+      { path: "/app/watches", target: t("alert-search"), text: "Tap this box and type the card you want an alert on: its name and number, like \"Umbreon VMAX 215\". Sealed products work too.", typed: true, until: `${t("alert-results")}, ${t("alert-direction")}` },
+      { target: t("alert-find"), text: "Now tap Find to look it up.", until: `${t("alert-results")}, ${t("alert-direction")}` },
       { target: t("alert-results"), text: "Tap the right card or product.", until: t("alert-direction") },
       { target: t("alert-direction"), text: "Buying? Pick 📉 to hear when it drops. Selling? Pick 📈 to hear when it climbs." },
       { target: t("alert-target"), text: "Enter your price (or switch to a % change)." },
