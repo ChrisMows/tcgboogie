@@ -25,7 +25,7 @@ tcgplayer:
 scan_limits:
   min_discount_pct: 10
   max_minutes_left: 60
-  min_market_value: 10
+  min_market_value: 0         # no minimum card value; price lookups are paced (most valuable first) instead
 
 # Plans. A member's Discord role picks the plan (highest rank wins). "owner" is you.
 plans:
@@ -36,7 +36,7 @@ plans:
     alert_delay_seconds: 0
     min_discount_floor: 10    # lowest "% below market" a profile on this plan may use
     max_window_minutes: 60    # longest "minutes left" a profile on this plan may use
-    min_value_floor: 10       # lowest "minimum card value" a profile on this plan may use
+    min_value_floor: 0       # lowest "minimum card value" a profile on this plan may use
     features: [japanese]
   premium:
     label: Premium
@@ -46,7 +46,7 @@ plans:
     alert_delay_seconds: 0
     min_discount_floor: 15
     max_window_minutes: 60
-    min_value_floor: 10
+    min_value_floor: 0
     features: [japanese]
   standard:
     label: Standard
@@ -56,7 +56,7 @@ plans:
     alert_delay_seconds: 120  # Standard alerts arrive 2 minutes after Premium
     min_discount_floor: 35
     max_window_minutes: 10
-    min_value_floor: 30
+    min_value_floor: 0
     features: []
 
 membership:

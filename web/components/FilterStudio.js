@@ -143,6 +143,10 @@ function CardPicker({ f, set, cap = null }) {
 }
 
 /** The controls for one facet (used in the pill dropdowns and in the All filters panel). */
+/** JSON with object keys sorted, so two filters with the same settings compare equal. */
+const canon = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x)
+  ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
+
 // Which setting (lib/facets.js) shows each validation error (lib/filters.js), so a failed save can open it.
 const ERROR_FACET = {
   cards: "cards", cardTypes: "product", graders: "grade", minGrade: "gradeRange", minMarketValue: "value", maxMarketValue: "value",
@@ -205,7 +209,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
           <input type="number" min={0} placeholder="No limit" value={f.maxPrice ?? ""} onChange={(e) => set("maxPrice", e.target.value === "" ? null : Number(e.target.value))} />
         </label>
         <Err msg={errors.maxPrice} />
-        {!premium && <Lock>Free covers cards worth ${plan.minValueFloor}+.</Lock>}
+        {!premium && plan.minValueFloor > 0 && <Lock>Free covers cards worth ${plan.minValueFloor}+.</Lock>}
       </>);
     case "discount":
       return (<>
@@ -357,7 +361,8 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
   }, [pop, drawer]);
 
   const saved = selected ? clampToPlan(selected.filters, plan) : null;
-  const dirty = Boolean(selected) && JSON.stringify(draft) !== JSON.stringify(saved);
+  // Same settings in any key order count as unchanged (the server stores filters in its own order).
+  const dirty = Boolean(selected) && canon(draft) !== canon(saved);
   const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }));
   const toggle = (key, value) => setDraft((d) => ({ ...d, [key]: d[key].includes(value) ? d[key].filter((x) => x !== value) : [...d[key], value] }));
   const reset = (facet) => setDraft((d) => ({ ...d, ...facet.reset(defaults, d) }));
@@ -388,8 +393,11 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
         }
         return;
       }
+      // Keep exactly what the server saved, so the page doesn't think there are still unsaved changes.
+      const stored = res.filters || draft;
       setErrors({}); setMessage({ kind: "good", text: `“${selected.name}” updated. It applies from the next check, within a minute.` });
-      setProfiles((ps) => ps.map((p) => (p.id === selected.id ? { ...p, filters: draft } : p)));
+      setDraft(clampToPlan(stored, plan));
+      setProfiles((ps) => ps.map((p) => (p.id === selected.id ? { ...p, filters: stored } : p)));
       router.refresh();
     });
   }

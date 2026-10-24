@@ -28,7 +28,7 @@ export async function saveProfile(id, input) {
   if (Object.keys(errors).length) return { ok: false, errors };
   await store.updateProfile(user.id, id, { name, filters });
   revalidatePath("/app", "layout");
-  return { ok: true };
+  return { ok: true, filters };
 }
 
 export async function createProfile() {

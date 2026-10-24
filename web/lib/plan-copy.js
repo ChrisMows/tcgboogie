@@ -34,7 +34,7 @@ export function planRows({ free, premium, sms }) {
     ["Deals", (p) => (p.liveFeed ? "Live, while you can still bid" : "After the auction ends, with the last bid")],
     ["How early you hear about a deal", (p) => (p.liveFeed ? `Up to ${p.maxWindowMinutes} minutes before it ends` : "—")],
     ["Smallest discount we alert", (p) => `${p.minDiscountFloor}% below market`],
-    ["Card values covered", (p) => `$${p.minValueFloor}+`],
+    ...(free.minValueFloor || premium.minValueFloor ? [["Card values covered", (p) => (p.minValueFloor ? `$${p.minValueFloor}+` : "Any value")]] : []),
     ["Deal filters", (p) => String(p.maxProfiles)],
     ["Cards per deal filter (\"any card named …\" counts as one)", (p) => (p.maxCardsPerFilter === null ? "Unlimited" : String(p.maxCardsPerFilter))],
     ["Japanese cards in deal alerts", (p) => yes(p.japanese)],

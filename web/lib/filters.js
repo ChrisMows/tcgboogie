@@ -20,7 +20,7 @@ export function defaultFilters(plan) {
   return {
     minDiscountPct: Math.max(30, plan.minDiscountFloor),
     maxMinutesLeft: Math.min(10, plan.maxWindowMinutes),
-    minMarketValue: Math.max(30, plan.minValueFloor),
+    minMarketValue: plan.minValueFloor, // no minimum unless the plan sets one
     maxMarketValue: null,
     maxPrice: null,
     cardTypes: ["graded", "raw", "sealed"],

@@ -101,7 +101,7 @@ class WebLink:
         c = copy.deepcopy(cfg)
         c["deal"]["min_discount_pct"] = max(float(body["minDiscountPct"]), lim.get("min_discount_pct", 10))
         c["deal"]["max_minutes_left"] = min(float(body["maxMinutesLeft"]), lim.get("max_minutes_left", 60))
-        c["auto"]["min_market_value"] = max(float(body["minMarketValue"]), lim.get("min_market_value", 10))
+        c["auto"]["min_market_value"] = max(float(body["minMarketValue"]), lim.get("min_market_value", 0))
         c["auto"]["min_grade"] = float(body["minGrade"])
         c["auto"]["graders"] = body["graders"]
         c["auto"]["languages"] = body["languages"]

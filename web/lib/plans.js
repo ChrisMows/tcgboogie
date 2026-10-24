@@ -12,7 +12,7 @@ export const PLANS = {
     liveFeed: false, // free members see deals only after the auction ends
     minDiscountFloor: 30,
     maxWindowMinutes: 10,
-    minValueFloor: 30,
+    minValueFloor: 0, // no minimum card value (Admin → Plans can set one)
     japanese: false,
     emailRecap: "weekly",
     maxPriceWatches: 1, // always active; removing one frees a slot
@@ -46,7 +46,7 @@ export const PLANS = {
     liveFeed: true,
     minDiscountFloor: 15,
     maxWindowMinutes: 60,
-    minValueFloor: 10,
+    minValueFloor: 0,
     japanese: true,
     emailRecap: "daily",
     maxPriceWatches: null, // unlimited
