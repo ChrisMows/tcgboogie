@@ -152,9 +152,10 @@ export default async function Home({ searchParams }) {
           <span className="game game-live">Pokémon<span className="game-vote-tag live">● Live now</span></span>
           {/* Coming soon: each is a "Notify me" vote (plain links, so they're never prefetched). */}
           {[["magic", "MAGIC", "magic"], ["lorcana", "LORCANA", "lorcana"], ["onepiece", "ONE PIECE", "italic"], ["yugioh", "Yu-Gi-Oh!", ""]].map(([key, label, cls]) => (
-            <a key={key} href={`/app/notify?game=${key}`} className={`game soon game-vote ${cls}`} title={`Tell me when ${GAMES[key]} is live`}>
+            <a key={key} href={`/app/notify?game=${key}`} className={`game soon game-vote ${cls}`}
+              title={mine.includes(key) || voted === key ? `You're signed up: we'll email you when ${GAMES[key]} is live` : `Tell me when ${GAMES[key]} is live`}>
               {label}
-              <span className="game-vote-tag">{mine.includes(key) || voted === key ? "✓ On the list" : "🔔 Notify Me When Available"}</span>
+              <span className="game-vote-tag">{mine.includes(key) || voted === key ? "✓ We'll notify you" : "🔔 Notify Me When Available"}</span>
             </a>
           ))}
           <span className="more"><b className="lime">Live: Pokémon.</b><br />Tap a game to vote for it next.</span>
