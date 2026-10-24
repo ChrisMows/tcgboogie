@@ -8,7 +8,7 @@ import { suggestIdea } from "@/components/IdeaBox";
 
 const STORE = "tcgb-helper"; // this tab's chat, so it survives moving between pages
 const MAX = 600;
-const HIDDEN = /^\/(app\/admin|app\/logs|login|unsubscribe)(\/|$)/;
+const HIDDEN = /^\/(app\/admin|app\/logs|login|unsubscribe|watch)(\/|$)/;
 const STARTERS = [
   "How do I set up a deal filter?",
   "How do I add a card from an eBay link?",
