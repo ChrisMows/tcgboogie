@@ -54,7 +54,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
-        <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Helper</Link>
+        <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
@@ -394,11 +394,11 @@ async function Log() {
   );
 }
 
-// Helper: what people asked the site helper (lib/helper.js), kept 30 days. Repeated questions are FAQ material.
+// Boogie Bot: what people asked the site helper (lib/helper.js), kept 30 days. Repeated questions are FAQ material.
 async function Helper() {
   let r = null;
   try { r = await helperReport(); } catch { r = null; }
-  if (!r) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Helper questions aren&apos;t available yet (the helper_log table needs <code>npm run db:push</code>).</p></div>;
+  if (!r) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Boogie Bot questions aren&apos;t available yet (the helper_log table needs <code>npm run db:push</code>).</p></div>;
   const total = r.daily.reduce((n, d) => n + d.n, 0);
   const failed = r.daily.reduce((n, d) => n + d.failed, 0);
   const when = (d) => new Date(d).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });

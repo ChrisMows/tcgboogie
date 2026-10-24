@@ -78,7 +78,7 @@ export default async function CollectionPage({ searchParams }) {
           <AddCards binders={c.binders} owned={ownedCounts(c.items)} isDemo={user.demo || !catalogLive()} autoFocus photoSearch={user.plan.photoSearch ? true : "locked"}
             photoQuota={user.plan.photoSearch ? await quotaStatus("photoSearch", user) : null} />
           {/* Other ways to add a lot at once: one short chip each (the hover title says a little more). */}
-          <div className="add-more">
+          <div className="add-more" data-tour="add-more">
             <span className="small muted">More ways to add</span>
             <Link href="/app/collection/sets" className="add-chip" title="Open a set and tap every card you own"><span aria-hidden="true">▦</span> Tap cards in a set</Link>
             <Link href="/app/collection/photo" className="add-chip" title="Photograph a binder page or a spread: we find every card"><span aria-hidden="true">🖼</span> Photo of many cards</Link>
@@ -92,7 +92,7 @@ export default async function CollectionPage({ searchParams }) {
       <div className="tabs-row" role="tablist">
         <Link href="/app/collection" role="tab" aria-selected={tab === "owned"} className={tab === "owned" ? "on" : ""}>Collection <span>{c.owned.length}</span></Link>
         <Link href="/app/collection?tab=wishlist" role="tab" aria-selected={tab === "wishlist"} className={tab === "wishlist" ? "on" : ""}>♡ Wishlist <span>{c.wishlist.length}</span></Link>
-        <Link href="/app/collection?tab=binders" role="tab" aria-selected={tab === "binders"} className={tab === "binders" ? "on" : ""}>▤ Binders <span>{c.binders.length}</span></Link>
+        <Link href="/app/collection?tab=binders" data-tour="tab-binders" role="tab" aria-selected={tab === "binders"} className={tab === "binders" ? "on" : ""}>▤ Binders <span>{c.binders.length}</span></Link>
       </div>
       {tab === "binders" ? <BinderTab binders={c.binders} items={c.owned} />
         : <CollectionView key={`${tab}-${startBinder}`} tab={tab} items={list} binders={c.binders} products={c.products} watched={watches.map((w) => w.productId)} isDemo={user.demo}

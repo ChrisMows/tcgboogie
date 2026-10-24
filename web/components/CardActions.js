@@ -78,7 +78,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
                 <span>{it.quantity}</span>
                 <button type="button" disabled={pending} onClick={() => run(() => changeQuantity(it.id, 1))} aria-label="One more">+</button>
               </span>
-              <button type="button" className="link-btn small" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
+              <button type="button" className="link-btn small" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
               {plan?.sellOnEbay && product.type === "card" && owned.length > 1 && <Link href={`/app/collection/sell/${it.id}`} className="link-btn small sell-link">Sell this copy</Link>}
               {editing === it.id && (
                 <div className="copy-edit">

@@ -74,7 +74,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
       <div className="hint" style={{ marginBottom: 14 }}>{PRICE_TYPES[priceType].hint} Right now: <b>{money(now)}</b></div>
 
       <label className="field">I&apos;m</label>
-      <div className="seg" role="group" aria-label="Buying or selling" style={{ marginBottom: 12 }}>
+      <div className="seg" role="group" aria-label="Buying or selling" style={{ marginBottom: 12 }} data-tour="alert-direction">
         <button type="button" className={!rising ? "on" : ""} onClick={() => pickDirection(false)}>📉 Buying: alert when it drops</button>
         <button type="button" className={rising ? "on" : ""} onClick={() => pickDirection(true)}>📈 Selling: alert when it climbs</button>
       </div>
@@ -85,13 +85,13 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
         <button type="button" className={byPct ? "on" : ""} onClick={() => setByPct(true)} disabled={!now}>{rising ? "Climbs by" : "Drops by"}</button>
       </div>
       {!byPct ? (
-        <div style={{ maxWidth: 220 }}>
+        <div style={{ maxWidth: 220 }} data-tour="alert-target">
           <label className="field" htmlFor="target">Target price ($)</label>
           <input id="target" type="number" min="0.01" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} />
           <Err msg={errors?.targetPrice} />
         </div>
       ) : (
-        <div>
+        <div data-tour="alert-target">
           <div className="range-row" style={{ maxWidth: 420 }}>
             <input type="range" min={5} max={rising ? 200 : 60} step={1} value={dropPct} onChange={(e) => setDropPct(Number(e.target.value))} aria-label={rising ? "Rise percent" : "Drop percent"} />
             <output>{dropPct}%</output>
@@ -120,7 +120,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
       )}
       <Err msg={errors?._} />
       <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-        <button className="btn primary" disabled={pending}>{pending ? "Saving..." : submitLabel}</button>
+        <button className="btn primary" data-tour="alert-submit" disabled={pending}>{pending ? "Saving..." : submitLabel}</button>
       </div>
     </form>
   );
@@ -191,7 +191,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
             </div>
           ) : (
             <>
-              <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }}>
+              <form onSubmit={search} className="row" style={{ alignItems: "flex-start" }} data-tour="alert-search">
                 <div>
                   <label className="sr-only" htmlFor="q">TCGplayer link or card name</label>
                   <input id="q" type="text" value={query} onChange={(e) => setQuery(e.target.value)}
@@ -203,7 +203,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
               {findError && <div className="notice bad" style={{ marginTop: 12 }}>{findError}</div>}
               {(results || findError) && <CardRequest query={query} />}
               {results && results.length > 1 && !picked && (
-                <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+                <div style={{ display: "grid", gap: 8, marginTop: 14 }} data-tour="alert-results">
                   {results.map((p) => (
                     <button key={p.id} type="button" className="deal" style={{ display: "flex", gap: 12, alignItems: "center", cursor: "pointer", font: "inherit", color: "inherit" }}
                       onClick={() => setPicked(p)}>

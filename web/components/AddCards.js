@@ -111,7 +111,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       <div className="search-box">
         <span aria-hidden="true">⌕</span>
         <input type="text" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
-          placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" />
+          placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" data-tour="add-search" />
         {searching && <span className="small muted">Searching…</span>}
         {photoSearch === true && photoOut ? (
           <Link href="/app/premium?from=photo-search" className="photo-search-btn"

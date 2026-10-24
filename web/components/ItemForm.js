@@ -99,7 +99,7 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
         {owned && binders.length > 0 && (
           <div>
             <label className="field" htmlFor="if-binder">Binder</label>
-            <select id="if-binder" value={binderId || ""} onChange={(e) => setBinderId(e.target.value)}>
+            <select id="if-binder" data-tour="item-binder" value={binderId || ""} onChange={(e) => setBinderId(e.target.value)}>
               <option value="">No binder</option>
               {binders.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>

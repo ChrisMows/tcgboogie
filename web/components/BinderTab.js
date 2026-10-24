@@ -39,7 +39,7 @@ export default function BinderTab({ binders, items }) {
 
   return (
     <>
-      <form className="binder-new" onSubmit={(e) => { e.preventDefault(); act(() => addBinder(newBinder), "Binder added."); setNewBinder(""); }}>
+      <form className="binder-new" data-tour="binder-new" onSubmit={(e) => { e.preventDefault(); act(() => addBinder(newBinder), "Binder added."); setNewBinder(""); }}>
         <input type="text" value={newBinder} maxLength={40} onChange={(e) => setNewBinder(e.target.value)}
           placeholder="New binder, e.g. For trade" aria-label="New binder name" />
         <button className="btn primary sm" disabled={!newBinder.trim() || pending}>+ Add binder</button>

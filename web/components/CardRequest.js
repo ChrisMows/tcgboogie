@@ -15,7 +15,7 @@ export default function CardRequest({ query, label = "Can’t find it? Request a
   const [res, setRes] = useState(null);
   const [pending, start] = useTransition();
   if (!open) {
-    return <button type="button" className="link-btn small card-request-open" onClick={() => { setOpen(true); setRes(null); }}>{label}</button>;
+    return <button type="button" className="link-btn small card-request-open" data-tour="request-open" onClick={() => { setOpen(true); setRes(null); }}>{label}</button>;
   }
   const send = (e) => {
     e.preventDefault();
@@ -31,7 +31,7 @@ export default function CardRequest({ query, label = "Can’t find it? Request a
         </div>
       ) : (
         <form onSubmit={send} className="card-request-form">
-          <div className="seg card-request-kind" role="radiogroup" aria-label="What are you looking for?">
+          <div className="seg card-request-kind" data-tour="request-kind" role="radiogroup" aria-label="What are you looking for?">
             {[["card", "A card"], ["sealed", "A sealed product"]].map(([k, l]) => (
               <button key={k} type="button" role="radio" aria-checked={kind === k} className={kind === k ? "on" : ""} onClick={() => setKind(k)}>{l}</button>
             ))}
@@ -41,8 +41,8 @@ export default function CardRequest({ query, label = "Can’t find it? Request a
             Anything our price service doesn&apos;t cover, like many Korean and Chinese {kind === "sealed" ? "products" : "cards"}, is added without prices.
           </label>
           <div className="row" style={{ gap: 8 }}>
-            <input id="cr-link" type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
-            <button className="btn sm primary" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Adding…" : "Send"}</button>
+            <input id="cr-link" data-tour="request-link" type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
+            <button className="btn sm primary" data-tour="request-send" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Adding…" : "Send"}</button>
             <button type="button" className="btn sm ghost" style={{ flex: "none" }} onClick={() => setOpen(false)}>Cancel</button>
           </div>
           {query && <span className="small muted">Searching for: “{query}”</span>}

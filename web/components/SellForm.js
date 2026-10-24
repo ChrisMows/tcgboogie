@@ -52,7 +52,7 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
   return (
     <form className="panel sell-form" onSubmit={submit}>
       <div className="sell-step">
-        <h2>1. Photos <span className="small muted">(required, up to 6: front, back, close-ups)</span></h2>
+        <h2 data-tour="sell-photos">1. Photos <span className="small muted">(required, up to 6: front, back, close-ups)</span></h2>
         <div className="sell-photos">
           {photos.map((p, i) => (
             <div key={p.url} className="sell-photo">
@@ -82,7 +82,7 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
       </div>
 
       <div className="sell-step">
-        <h2>3. Price</h2>
+        <h2 data-tour="sell-price">3. Price</h2>
         <div className="seg">
           <label className={format === "FIXED_PRICE" ? "on" : ""}><input type="radio" name="format" value="FIXED_PRICE" checked={format === "FIXED_PRICE"} onChange={() => setFormat("FIXED_PRICE")} hidden />Buy It Now</label>
           <label className={format === "AUCTION" ? "on" : ""}><input type="radio" name="format" value="AUCTION" checked={format === "AUCTION"} onChange={() => setFormat("AUCTION")} hidden />Auction</label>
@@ -104,7 +104,7 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
       </div>
 
       <div className="sell-step">
-        <h2>4. Shipping, payment and returns</h2>
+        <h2 data-tour="sell-shipping">4. Shipping, payment and returns</h2>
         {needsZip && (
           <label className="field">Ships from ZIP code
             <input name="postalCode" inputMode="numeric" pattern="\d{5}" maxLength={5} required placeholder="43215" style={{ maxWidth: 160 }} />
@@ -126,7 +126,7 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
       {result?.error && (
         <div className="notice bad">{result.error}{result.reconnect && <> <a href="/api/ebay/connect">Connect eBay again</a></>}</div>
       )}
-      <button className="btn primary sell-go" disabled={pending || !photos.length}>
+      <button className="btn primary sell-go" data-tour="sell-go" disabled={pending || !photos.length}>
         {pending ? "Posting to eBay…" : photos.length ? `List on eBay${format === "AUCTION" ? " (auction)" : ""}` : "Add a photo to list"}
       </button>
       <p className="hint" style={{ textAlign: "center" }}>Posts to your eBay account right away. eBay&apos;s normal selling fees apply.</p>

@@ -431,7 +431,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
         return (
           <section key={p.id} className={`fx ${isOpen ? "open" : ""} ${isOpen && dirty ? "dirty" : ""}`}>
             <div className="fx-head">
-              <button type="button" className="fx-toggle" aria-expanded={isOpen} onClick={() => openBox(p)}>
+              <button type="button" className="fx-toggle" data-tour={i === 0 ? "filter-open" : undefined} aria-expanded={isOpen} onClick={() => openBox(p)}>
                 <span className={`fs-dot ${st}`} aria-hidden="true" />
                 {!(isOpen && renaming) && <span className="fx-name">{p.name}</span>}
                 <span className="sr-only">{st === "on" ? "running" : st === "paused" ? "paused" : "not running on your plan"}</span>
@@ -479,14 +479,14 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                           const wide = x.key === "cards" || x.key === "sets";
                           return (
                             <div key={x.key} className={`fs-pill-wrap ${on ? "on" : ""} ${pop === x.key ? "open" : ""} ${off ? "off" : ""}`}>
-                              <button type="button" className="fs-pill" disabled={off} aria-expanded={pop === x.key}
+                              <button type="button" className="fs-pill" data-tour={`facet-${x.key}`} disabled={off} aria-expanded={pop === x.key}
                                 onClick={() => setPop(pop === x.key ? null : x.key)} title={off ? (hasCards(draft) ? "Doesn't apply to the card types picked" : "Only for cards: turn on Cards under Product type") : ""}>
                                 {on ? <><span className="fs-pill-k">{x.label}:</span> <span className="fs-pill-v" title={x.summary(draft)}>{x.summary(draft)}</span></> : x.label}
                                 {!on && <span className="fs-caret" aria-hidden="true">▾</span>}
                               </button>
                               {on && <button type="button" className="fs-x" aria-label={`Clear ${x.label}`} onClick={() => reset(x)}>✕</button>}
                               {pop === x.key && (
-                                <div className={`fs-pop ${wide ? "wide" : ""}`} role="dialog" aria-label={x.label}>
+                                <div className={`fs-pop ${wide ? "wide" : ""}`} role="dialog" aria-label={x.label} data-tour={`facet-pop-${x.key}`}>
                                   <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
                                   <div className="fs-pop-foot">
                                     <button type="button" className="link-btn small" onClick={() => reset(x)}>Reset</button>
@@ -509,11 +509,11 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                   <button type="button" className="btn sm ghost" onClick={pause} disabled={pending}>{p.active ? "⏸ Pause" : "▶ Resume"}</button>
                   <button type="button" className="btn sm ghost danger" onClick={remove} disabled={pending || profiles.length <= 1}>Delete</button>
                   {dirty && <button type="button" className="btn sm" onClick={() => { setDraft(saved); setErrors({}); }}>Discard</button>}
-                  <button type="button" className="btn sm primary" onClick={update} disabled={!dirty || pending}>{pending ? "Saving…" : "Update this filter"}</button>
+                  <button type="button" className="btn sm primary" data-tour="filter-save" onClick={update} disabled={!dirty || pending}>{pending ? "Saving…" : "Update this filter"}</button>
                 </div>
                 {message && <div className={`notice ${message.kind}`} style={{ margin: "0 0 12px" }}>{message.text}</div>}
 
-                <div className="fs-results-head">
+                <div className="fs-results-head" data-tour="filter-results">
                   <b>{results.length} {results.length === 1 ? "deal matches" : "deals match"}</b>
                   <span className="small muted">{sample ? "example deals: real ones appear as the deal finder catches them" : `deals from the last 7 days · ${premium ? "you get new ones live" : "Free shows them after they end"}`}</span>
                 </div>
@@ -548,7 +548,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
         );
       })}
 
-      <button type="button" className="fx-add" onClick={addFilter} disabled={pending || atLimit}
+      <button type="button" className="fx-add" data-tour="filter-new" onClick={addFilter} disabled={pending || atLimit}
         title={atLimit ? `${plan.label} includes ${plan.maxProfiles} filter${plan.maxProfiles > 1 ? "s" : ""}` : ""}>
         + New filter{atLimit && !premium ? <> · 🔒 <Link href="/app/premium?from=filters">Premium</Link> for up to {15}</> : null}
       </button>

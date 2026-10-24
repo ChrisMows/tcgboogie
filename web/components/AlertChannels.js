@@ -38,7 +38,7 @@ export default function AlertChannels({ user }) {
   }
 
   return (
-    <section className={`panel alert-channels ${any ? "" : "none"}`}>
+    <section className={`panel alert-channels ${any ? "" : "none"}`} data-tour="alert-channels">
       <div className="ac-head">
         <h2>Alerts go to</h2>
         <Link href="/app/account#alerts" className="small">Settings</Link>

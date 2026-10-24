@@ -120,7 +120,7 @@ export default function ImportCollection() {
   return (
     <>
       <div className="panel">
-        <label className="btn primary" style={{ cursor: "pointer" }}>
+        <label className="btn primary" style={{ cursor: "pointer" }} data-tour="import-file">
           {file ? "Choose another file" : "Choose a CSV file"}
           <input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" hidden disabled={stage === "matching" || stage === "importing"} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
@@ -145,7 +145,7 @@ export default function ImportCollection() {
             Columns we&apos;ll use: {Object.keys(file.columns).filter((k) => FIELD_NAMES[k]).map((k) => FIELD_NAMES[k]).join(", ")}.{" "}
             {stage === "ready" && <button type="button" className="link-btn small" onClick={() => setPicking({ columns: file.columns, hasHeader: file.hasHeader })}>Change columns</button>}
           </p>
-          {stage === "ready" && <button type="button" className="btn primary" onClick={match}>Find these cards</button>}
+          {stage === "ready" && <button type="button" className="btn primary" data-tour="import-match" onClick={match}>Find these cards</button>}
           {stage === "matching" && <div className="notice">Finding cards… {results.length} of {file.rows.length}</div>}
 
           {results.length > 0 && stage !== "matching" && (
@@ -171,7 +171,7 @@ export default function ImportCollection() {
                 })}
               </div>
               {stage === "review" && chosenCount > 0 && (
-                <button type="button" className="btn primary" style={{ marginTop: 12 }} onClick={run}>Import {chosenCount} line{chosenCount === 1 ? "" : "s"}</button>
+                <button type="button" className="btn primary" data-tour="import-go" style={{ marginTop: 12 }} onClick={run}>Import {chosenCount} line{chosenCount === 1 ? "" : "s"}</button>
               )}
               {stage === "importing" && <div className="notice" style={{ marginTop: 12 }}>Importing…</div>}
               {done && (

@@ -200,7 +200,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className="item-actions">
                   {wishlist && <button type="button" className="btn sm primary" disabled={pending} onClick={() => act(() => moveToCollection(it.id), `${short(it.name)} moved to your collection 🎉`)}>Got it</button>}
                   <WatchButton item={it} watched={watched.has(it.productId)} onWatch={watch} pending={pending} />
-                  {!wishlist && <button type="button" className="btn sm" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>}
+                  {!wishlist && <button type="button" className="btn sm" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>}
                   <button type="button" className="btn sm danger" disabled={pending} aria-label={`Remove ${it.name}`}
                     onClick={() => window.confirm(`Remove ${short(it.name)}${wishlist ? " from your wishlist" : " from your collection"}?`) && act(() => removeItem(it.id), "Removed.")}>✕</button>
                 </div>

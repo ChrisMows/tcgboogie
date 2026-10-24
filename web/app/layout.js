@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import MobileMenu from "@/components/MobileMenu";
 import NavProgress from "@/components/NavProgress";
 import HelperChat from "@/components/HelperChat";
+import TourRunner from "@/components/TourRunner";
 import PageViews from "@/components/PageViews";
 import Link from "next/link";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
@@ -58,6 +59,7 @@ export default async function RootLayout({ children }) {
         <Suspense fallback={null}><NavProgress /></Suspense>
         <Suspense fallback={null}><PageViews signedIn={Boolean(user)} /></Suspense>
         <HelperChat signedIn={Boolean(user)} />
+        <Suspense fallback={null}><TourRunner signedIn={Boolean(user)} /></Suspense>
         {demoMode && (
           <div className="demo-bar">
             <div className="wrap">

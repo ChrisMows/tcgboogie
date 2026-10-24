@@ -178,7 +178,7 @@ export default async function CardPage({ params, searchParams }) {
             <div className="card-title-actions">
               {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
               {sellItem && (
-                <Link href={`/app/collection/sell/${sellItem.id}`} className="btn card-sell-btn" title="List this card on eBay with the details filled in">
+                <Link href={`/app/collection/sell/${sellItem.id}`} className="btn card-sell-btn" data-tour="sell-open" title="List this card on eBay with the details filled in">
                   <Source name="ebay" className="src-sm" /> Sell on eBay
                 </Link>
               )}
