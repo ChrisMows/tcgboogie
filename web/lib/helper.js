@@ -31,7 +31,8 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
     by picture), plus chips "Tap cards in a set", "Photo of many cards" and "Import a file".
   - Under any search: "Can't find it? Request a card or sealed product" — paste a TCGplayer link or an eBay listing
     link and it's usually added on the spot.
-  - Above the cards: search your collection, a binder menu (All binders / one binder / Not in a binder), Raw, graded
+  - Above the cards: search your collection (by name, set, number, or rarity: its name or a code like SIR, SAR, RR,
+    IR/AR, UR, HR, ACE), a binder menu (All binders / one binder / Not in a binder), Raw, graded
     & sealed (or one kind only), a sort menu (Value high to low, Gain best first, 7-day change, Name, Recently
     added) and grid or list view. List view has + / − quantity and Edit on each card; opening a card also has Edit.
   - Binders tab: make binders and sort cards into them.

@@ -10,6 +10,7 @@ import {
   changeQuantity, editItem, moveToCollection, removeItem, watchProduct,
 } from "@/app/app/collection/actions";
 import { KINDS, SORTS, isOwnValue, itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { rarityCodes } from "@/lib/rarity";
 
 const short = (name) => name.replace(/\s*\(.*\)$/, "");
 
@@ -51,10 +52,17 @@ export default function CollectionView({ items, binders, products, watched: watc
 
   const shown = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    // Name, set, number, condition or grade, and rarity: its name ("special illustration") or code ("sir", "rr").
+    const matches = (it) => {
+      const rarity = products[it.productId]?.rarity || "";
+      const text = `${it.name} ${it.setName} ${it.number || ""} ${itemLabel(it)} ${rarity}`.toLowerCase();
+      const codes = rarityCodes(rarity);
+      return words.every((w) => text.includes(w) || codes.includes(w));
+    };
     const list = items.filter((it) =>
       (binder === "all" || (binder === "none" ? !it.binderId : it.binderId === Number(binder)))
       && (kind === "all" || it.kind === kind)
-      && words.every((w) => `${it.name} ${it.setName} ${it.number || ""} ${itemLabel(it)}`.toLowerCase().includes(w)));
+      && matches(it));
     const total = (it) => (unitValue(it) ?? 0) * it.quantity;
     const gain = (it) => (it.purchasePrice !== null && it.purchasePrice !== undefined && unitValue(it) !== null ? (unitValue(it) - it.purchasePrice) * it.quantity : -Infinity);
     const by = {
@@ -65,7 +73,7 @@ export default function CollectionView({ items, binders, products, watched: watc
       added: (a, b) => String(b.createdAt).localeCompare(String(a.createdAt)),
     };
     return [...list].sort(by[sort] || by.value);
-  }, [items, q, binder, kind, sort]);
+  }, [items, products, q, binder, kind, sort]);
 
   const act = (fn, msg) => start(async () => { const r = await fn(); if (r?.ok === false && r.error) show(r.error, null, "bad"); else if (msg) show(msg); router.refresh(); });
 
@@ -99,7 +107,7 @@ export default function CollectionView({ items, binders, products, watched: watc
       <div className="coll-toolbar">
         <div className="search-box small">
           <span aria-hidden="true">⌕</span>
-          <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder={wishlist ? "Search your wishlist" : "Search your collection"} aria-label="Search" />
+          <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder={wishlist ? "Search your wishlist" : "Search: name, set, number or rarity (SIR, RR…)"} aria-label="Search" />
         </div>
         {!wishlist && (
           <select value={binder} onChange={(e) => setBinder(e.target.value)} aria-label="Binder">
