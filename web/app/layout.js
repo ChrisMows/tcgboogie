@@ -100,6 +100,10 @@ export default async function RootLayout({ children }) {
             </nav>
             <div className="header-actions">
               <MobileMenu links={navLinks} signedIn={Boolean(user)} />
+              {user && (
+                <SuggestIdea source="header" className="idea-btn" title="Suggest an idea"
+                  label={<><span aria-hidden="true">💡</span><span className="idea-btn-text">Suggest an idea</span></>} />
+              )}
               {user ? (
                 <UserMenu name={user.name} email={user.email} avatarUrl={avatarFor(user).url} initials={initials(user)}
                   planLabel={user.plan.label} isAdmin={Boolean(user.isAdmin)} onLogOut={logOut} />

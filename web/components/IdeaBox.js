@@ -10,8 +10,8 @@ export function suggestIdea(detail = {}) {
 }
 
 /** A link or button that opens the idea box. */
-export function SuggestIdea({ source = "menu", label = "💡 Suggest an idea", className = "link-btn", prompt, context }) {
-  return <button type="button" className={className} onClick={() => suggestIdea({ source, prompt, context })}>{label}</button>;
+export function SuggestIdea({ source = "menu", label = "💡 Suggest an idea", className = "link-btn", prompt, context, title }) {
+  return <button type="button" className={className} title={title} aria-label={title} onClick={() => suggestIdea({ source, prompt, context })}>{label}</button>;
 }
 
 /**

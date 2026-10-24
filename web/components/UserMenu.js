@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { repairPicture } from "@/app/app/actions";
-import { suggestIdea } from "@/components/IdeaBox";
 
 const ITEMS = [
   ["/app/collection", "Collection"],
@@ -66,7 +65,6 @@ export default function UserMenu({ name, email, avatarUrl, initials, planLabel, 
           {ITEMS.map(([href, label]) => (
             <Link key={href} href={href} role="menuitem" onClick={() => setOpen(false)}>{label}</Link>
           ))}
-          <button type="button" role="menuitem" className="ud-idea" onClick={() => { setOpen(false); suggestIdea({ source: "menu" }); }}>💡 Suggest an idea</button>
           <form action={onLogOut}>
             <button type="submit" role="menuitem" className="ud-signout">Sign out</button>
           </form>

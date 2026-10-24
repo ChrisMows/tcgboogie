@@ -14,7 +14,7 @@ import { sendEmail } from "@/lib/notify";
 const { ideas, users } = schema;
 const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
 export const STATUSES = [["new", "New"], ["planned", "Planned"], ["building", "Building"], ["done", "Done"], ["declined", "Not now"]];
-export const SOURCES = { menu: "Menu", footer: "Footer", faq: "FAQ", helper: "Boogie Bot", search: "Search found nothing", filters: "Deal filters", error: "Error page", notfound: "Page not found" };
+export const SOURCES = { header: "Header button", menu: "Menu", footer: "Footer", faq: "FAQ", helper: "Boogie Bot", search: "Search found nothing", filters: "Deal filters", error: "Error page", notfound: "Page not found" };
 
 const clean = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
 
