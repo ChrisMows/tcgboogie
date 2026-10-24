@@ -6,6 +6,7 @@ import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
 import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
 import { gameTotals } from "@/lib/game-interest";
+import { helperReport } from "@/lib/helper";
 import { trafficReport } from "@/lib/traffic";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
@@ -36,7 +37,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "traffic"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "traffic", "helper"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -53,12 +54,14 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
+        <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Helper</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
       {tab === "traffic" && <Traffic />}
+      {tab === "helper" && <Helper />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
       {tab === "features" && (
         <>
@@ -388,6 +391,38 @@ async function Log() {
         </div>
       ) : <p className="muted" style={{ margin: 0 }}>No admin changes yet.</p>}
     </div>
+  );
+}
+
+// Helper: what people asked the site helper (lib/helper.js), kept 30 days. Repeated questions are FAQ material.
+async function Helper() {
+  let r = null;
+  try { r = await helperReport(); } catch { r = null; }
+  if (!r) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Helper questions aren&apos;t available yet (the helper_log table needs <code>npm run db:push</code>).</p></div>;
+  const total = r.daily.reduce((n, d) => n + d.n, 0);
+  const failed = r.daily.reduce((n, d) => n + d.failed, 0);
+  const when = (d) => new Date(d).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return (
+    <>
+      <div className="stat-row">
+        <div className="panel stat"><span className="small muted">Questions · 30 days</span><b>{total.toLocaleString()}</b></div>
+        <div className="panel stat"><span className="small muted">Today</span><b>{(r.daily[0]?.day === new Date().toISOString().slice(0, 10) ? r.daily[0].n : 0).toLocaleString()}</b></div>
+        <div className="panel stat"><span className="small muted">Couldn&apos;t answer</span><b>{failed.toLocaleString()}</b></div>
+      </div>
+      <div className="panel">
+        <h2>Recent questions</h2>
+        <p className="small muted" style={{ marginTop: -6 }}>Newest first. Daily limits: 8 for visitors, 25 on Free, 80 on Premium (lib/rate-limit.js). Questions that keep coming up belong in the FAQ, which the helper reads too.</p>
+        {r.recent.length ? r.recent.map((q) => (
+          <details key={q.id} className="helper-log">
+            <summary>
+              <span className="small muted">{when(q.at)} · {q.userId ? <Link href={`/app/admin?user=${q.userId}`}>member</Link> : "visitor"} · {q.page}{q.ok ? "" : " · ⚠ not answered"}</span>
+              <span>{q.question}</span>
+            </summary>
+            <p>{q.answer}</p>
+          </details>
+        )) : <p className="small muted" style={{ margin: 0 }}>No questions yet.</p>}
+      </div>
+    </>
   );
 }
 

@@ -248,6 +248,18 @@ export const systemLog = pgTable("system_log", {
   userId: text("user_id"), // no foreign key: the log outlives deleted accounts
 }, (t) => [index("system_log_at_idx").on(t.at), index("system_log_source_idx").on(t.source, t.at)]);
 
+// The site helper's questions and answers (lib/helper.js), kept 30 days so Admin → Helper can show what confuses
+// members. Not shown to anyone else; no foreign key, so a deleted account's rows simply age out.
+export const helperLog = pgTable("helper_log", {
+  id: serial("id").primaryKey(),
+  at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
+  userId: text("user_id"), // null for visitors who aren't signed in
+  page: text("page"), // the page they asked from
+  question: text("question").notNull(),
+  answer: text("answer"),
+  ok: boolean("ok").notNull().default(true), // false when the helper couldn't answer (error or refusal)
+}, (t) => [index("helper_log_at_idx").on(t.at)]);
+
 // Deals found by the deal bot (pokemon-deal-finder), one row per eBay auction. `data` has the shape lib/filters.js
 // matches against. The bot updates lastPrice while it can still see the auction; the website sends alerts once
 // (dispatchedAt) and shows ended deals to Free members.

@@ -22,6 +22,9 @@ export const LIMITS = {
   importAdd: { max: 100, windowMs: 60 * 60 * 1000 }, // collection import: batches added
   importColumns: { max: 20, windowMs: 24 * 60 * 60 * 1000, persist: true }, // collection import: unfamiliar files read by Claude
   photoSearch: { max: 60, windowMs: 24 * 60 * 60 * 1000, persist: true }, // Add cards: search by picture (one photo read each)
+  helperVisitor: { max: 8, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions from visitors (per IP)
+  helperFree: { max: 25, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Free members
+  helperPremium: { max: 80, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Premium members
   appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000, persist: true }, // photo appraiser photos (about a cent each, plus price lookups)
 };
 
