@@ -125,16 +125,43 @@ export async function taxActive() {
   return active;
 }
 
+/**
+ * Stripe's billing page (Settings → Billing → Manage): our own settings, so nothing has to be set up by hand in the
+ * dashboard in each mode. Members can update their card, see invoices and receipts, and cancel at the end of the
+ * period they've paid for. Kept per mode; updated when "Set up Stripe" is pressed again.
+ */
+const PORTAL = {
+  business_profile: { headline: "TCG Boogie Premium", privacy_policy_url: `${SITE}/privacy`, terms_of_service_url: `${SITE}/terms` },
+  features: {
+    payment_method_update: { enabled: "true" },
+    invoice_history: { enabled: "true" },
+    customer_update: { enabled: "true", allowed_updates: ["email", "address", "name"] },
+    subscription_cancel: { enabled: "true", mode: "at_period_end", cancellation_reason: { enabled: "true", options: ["too_expensive", "missing_features", "unused", "other"] } },
+  },
+  default_return_url: `${SITE}/app/account#plan`,
+};
+
+async function setupPortal(mode) {
+  const saved = await getSetting(`stripe_portal_${mode}`);
+  if (saved?.id) {
+    try { await stripe("POST", `billing_portal/configurations/${saved.id}`, PORTAL); return saved.id; } catch (e) { if (e.status !== 404) throw e; }
+  }
+  const c = await stripe("POST", "billing_portal/configurations", PORTAL);
+  await putSetting(`stripe_portal_${mode}`, { id: c.id });
+  return c.id;
+}
+
 /** Create (or update) the webhook that tells the site about payments. Returns what happened, for the admin panel. */
 export async function setupStripe() {
   const mode = billingMode();
   const url = `${SITE}/api/stripe/webhook`;
   const price = await premiumPrice();
+  await setupPortal(mode);
   let saved = await getSetting(`stripe_webhook_${mode}`);
   if (saved?.id) {
     try {
       await stripe("POST", `webhook_endpoints/${saved.id}`, { url, enabled_events: EVENTS, disabled: "false" });
-      await log("payments", "info", `Stripe set up (${mode} mode): webhook updated`, { price, url });
+      await log("payments", "info", `Stripe set up (${mode} mode): billing page and webhook updated`, { price, url });
       return { mode, price, webhook: "updated" };
     } catch (e) {
       if (e.status !== 404) throw e;
@@ -143,7 +170,7 @@ export async function setupStripe() {
   }
   const hook = await stripe("POST", "webhook_endpoints", { url, enabled_events: EVENTS, description: "TCG Boogie website" });
   await putSetting(`stripe_webhook_${mode}`, { id: hook.id, secret: hook.secret, url });
-  await log("payments", "info", `Stripe set up (${mode} mode): webhook created`, { price, url, webhook: hook.id });
+  await log("payments", "info", `Stripe set up (${mode} mode): billing page set and webhook created`, { price, url, webhook: hook.id });
   return { mode, price, webhook: "created" };
 }
 
@@ -219,7 +246,8 @@ export async function checkoutUrl(user) {
 /** Stripe's own billing page: update card, see invoices, cancel. Returns the URL. */
 export async function portalUrl(user) {
   if (!user.stripeCustomerId) throw new Error("No billing account yet.");
-  const s = await stripe("POST", "billing_portal/sessions", { customer: user.stripeCustomerId, return_url: `${SITE}/app/account#plan` });
+  const portal = await getSetting(`stripe_portal_${billingMode()}`).catch(() => null);
+  const s = await stripe("POST", "billing_portal/sessions", { customer: user.stripeCustomerId, return_url: `${SITE}/app/account#plan`, ...(portal?.id ? { configuration: portal.id } : {}) });
   return s.url;
 }
 
