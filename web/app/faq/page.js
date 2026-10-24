@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AskHelper from "@/components/AskHelper";
+import { SuggestIdea } from "@/components/IdeaBox";
 import { currentFaq } from "@/lib/faq";
 
 export const metadata = { title: "FAQ" };
@@ -9,7 +10,7 @@ export default async function FAQ() {
   return (
     <div className="wrap doc">
       <h1>Questions? Answers.</h1>
-      <p className="updated">Still stuck? <AskHelper /> or email support@tcgboogie.com.</p>
+      <p className="updated">Still stuck? <AskHelper /> or email support@tcgboogie.com. Wish we did something we don&apos;t? <SuggestIdea source="faq" label="Suggest an idea" /></p>
       <nav className="faq-topics" aria-label="FAQ topics">
         {list.map(([id, title]) => <a key={id} href={`#${id}`}>{title}</a>)}
       </nav>

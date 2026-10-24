@@ -31,6 +31,9 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
     by picture), plus chips "Tap cards in a set", "Photo of many cards" and "Import a file".
   - Under any search: "Can't find it? Request a card or sealed product" — paste a TCGplayer link or an eBay listing
     link and it's usually added on the spot.
+  - Above the cards: search your collection, a binder menu (All binders / one binder / Not in a binder), Raw, graded
+    & sealed (or one kind only), a sort menu (Value high to low, Gain best first, 7-day change, Name, Recently
+    added) and grid or list view. List view has + / − quantity and Edit on each card; opening a card also has Edit.
   - Binders tab: make binders and sort cards into them.
 /app/collection/sets — every set; open one and tap the cards you own.
 /app/collection/photo — Photo of many cards (photo appraiser): photograph a binder page, every card is found and valued.
@@ -88,6 +91,11 @@ Show me how: when your answer explains how to do one of the walkthroughs below, 
 alone, like [[tour:price-alert]]. The site turns it into a "Show me how" button that points at each button on the page.
 Use at most one tag, only from this list, and only when the walkthrough's goal is exactly what they asked to do (asking
 about connecting eBay is connect-ebay, not sell-ebay). If none fits, use no tag. Don't mention the tag itself.
+
+Ideas: when they want to do something TCG Boogie can't do yet (a missing feature, game, filter or setting), or you
+don't know whether it can, say so plainly, suggest the closest thing it can do if there is one, then put [[idea]]
+alone on the very last line. The site turns it into a "Send this idea to the team" button, so don't tell them to
+email it. Don't use [[idea]] for things the site already does.
 ${Object.entries(TOURS).map(([id, x]) => `- ${id}: ${x.about}`).join("\n")}
 `.trim();
 
@@ -131,6 +139,7 @@ export async function askHelper({ messages, user, page }) {
   const question = turns[turns.length - 1]?.content || "";
   let answer = "";
   let tour = null; // a walkthrough to offer (lib/tours.js)
+  let idea = false; // offer "Send this idea to the team" (lib/ideas.js)
   let ok = true;
   try {
     const client = new Anthropic();
@@ -151,7 +160,8 @@ export async function askHelper({ messages, user, page }) {
       answer = response.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
       const tag = answer.match(/\[\[tour:([a-z-]+)\]\]/);
       if (tag && TOURS[tag[1]]) tour = tag[1];
-      answer = answer.replace(/\[\[tour:[^\]]*\]\]/g, "").trim();
+      idea = /\[\[idea\]\]/.test(answer);
+      answer = answer.replace(/\[\[tour:[^\]]*\]\]/g, "").replace(/\[\[idea\]\]/g, "").trim();
       if (!answer) { ok = false; answer = "Sorry, I couldn't come up with an answer. Try asking another way, or email support@tcgboogie.com."; }
     }
   } catch (e) {
@@ -160,7 +170,7 @@ export async function askHelper({ messages, user, page }) {
     await log("website", "error", `Site helper failed: ${e.message}`, null, user?.id);
   }
   await save({ userId: user && !user.demo ? user.id : null, page, question, answer: tour ? `${answer}\n[Offered: Show me how · ${TOURS[tour].title}]` : answer, ok });
-  return ok ? { answer, tour } : { answer, failed: true };
+  return ok ? { answer, tour, idea } : { answer, failed: true };
 }
 
 async function save(row) {

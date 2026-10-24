@@ -248,6 +248,22 @@ export const systemLog = pgTable("system_log", {
   userId: text("user_id"), // no foreign key: the log outlives deleted accounts
 }, (t) => [index("system_log_at_idx").on(t.at), index("system_log_source_idx").on(t.source, t.at)]);
 
+// Ideas and "I couldn't do this" notes from members and visitors (lib/ideas.js, Admin → Ideas). context is what
+// the site attached (search words, the filter they were in...). When an admin marks one done, the member gets an email.
+export const ideas = pgTable("idea", {
+  id: serial("id").primaryKey(),
+  at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
+  userId: text("user_id"), // null for visitors; no foreign key, so ideas outlive deleted accounts
+  source: text("source").notNull(), // menu / footer / faq / helper / search / filters / error / notfound
+  page: text("page"),
+  plan: text("plan"), // free / premium / visitor
+  text: text("text").notNull(),
+  context: jsonb("context"),
+  status: text("status").notNull().default("new"), // new / planned / building / done / declined
+  updatedAt: timestamp("updated_at", { mode: "date" }),
+  notifiedAt: timestamp("notified_at", { mode: "date" }), // "it's live" email sent
+}, (t) => [index("idea_at_idx").on(t.at), index("idea_status_idx").on(t.status)]);
+
 // The site helper's questions and answers (lib/helper.js), kept 30 days so Admin → Helper can show what confuses
 // members. Not shown to anyone else; no foreign key, so a deleted account's rows simply age out.
 export const helperLog = pgTable("helper_log", {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { TOURS } from "@/lib/tours";
+import { suggestIdea } from "@/components/IdeaBox";
 
 const STORE = "tcgb-helper"; // this tab's chat, so it survives moving between pages
 const MAX = 600;
@@ -79,7 +80,7 @@ export default function HelperChat({ signedIn }) {
       const r = await fetch("/api/helper", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.filter((m) => !m.local), page: path }) });
       const j = await r.json().catch(() => ({}));
-      setMessages([...next, { role: "assistant", text: j.answer || j.error || "Something went wrong. Try again in a minute.", ...(j.tour ? { tour: j.tour } : {}), ...(j.failed || j.limited || !j.answer ? { local: true } : {}) }]);
+      setMessages([...next, { role: "assistant", text: j.answer || j.error || "Something went wrong. Try again in a minute.", ...(j.tour ? { tour: j.tour } : {}), ...(j.idea ? { idea: q } : {}), ...(j.failed || j.limited || !j.answer ? { local: true } : {}) }]);
     } catch {
       setMessages([...next, { role: "assistant", text: "Couldn't reach the helper. Check your connection and try again.", local: true }]);
     } finally {
@@ -114,6 +115,12 @@ export default function HelperChat({ signedIn }) {
             {messages.map((m, i) => (
               <div key={i} className={`helper-msg ${m.role}`}>
                 {m.role === "assistant" ? <Answer text={m.text} /> : m.text}
+                {m.idea && (
+                  <button type="button" className="btn sm helper-tour" onClick={() => suggestIdea({ source: "helper", text: m.idea,
+                    prompt: "Here's what you asked Boogie Bot. Add anything that would help us build it." })}>
+                    💡 Send this idea to the team
+                  </button>
+                )}
                 {m.tour && TOURS[m.tour] && (
                   <button type="button" className="btn sm primary helper-tour" onClick={() => window.dispatchEvent(new CustomEvent("tcgb-tour", { detail: m.tour }))}>
                     ▶ Show me how

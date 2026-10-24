@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { SuggestIdea } from "@/components/IdeaBox";
 
 // Errors that mean "this page is from an older version of the site" (we deployed while it was open):
 // reload once to pick up the new version instead of showing an error.
@@ -27,6 +28,7 @@ export default function AppError({ error, reset }) {
           : "That didn't load properly. Anything you saved is safe. Try again, and if it keeps happening, let us know at support@tcgboogie.com."}
       </p>
       {!stale && <button type="button" className="btn primary" onClick={() => reset()}>Try again</button>}
+      {!stale && <p className="small" style={{ marginBottom: 0 }}><SuggestIdea source="error" label="Tell us what you were doing" prompt="Sorry about that! What were you trying to do when it went wrong?" context={{ error: String(error?.digest || error?.message || "").slice(0, 120) }} /></p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { revealCard } from "@/lib/reveal";
 import CardRequest from "@/components/CardRequest";
+import { SuggestIdea } from "@/components/IdeaBox";
 import { shrinkImage } from "@/lib/shrink-image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -145,6 +146,10 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       )}
       {error && <div className="hint">{error}</div>}
       {q.trim().length >= 2 && !searching && <CardRequest query={q} />}
+      {q.trim().length >= 2 && !searching && results && results.length === 0 && !photo && (
+        <SuggestIdea source="search" className="link-btn small idea-inline" label="Looking for something else, like a feature or another game? Tell us →"
+          prompt={`You searched for "${q.trim().slice(0, 60)}". What were you hoping to find or do?`} context={{ search: q.trim() }} />
+      )}
       {photo && !reading && photo.unread.slice(0, 3).map((c, i) => (
         <CardRequest key={i} query={`${c.name}${c.number ? ` ${c.number}` : ""}${c.language === "japanese" ? " Japanese" : ""}`}
           label={`Can’t find ${c.name}${c.number ? ` ${c.number}` : ""}? Request it →`} />

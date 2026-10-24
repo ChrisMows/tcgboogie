@@ -4,9 +4,10 @@ import AdminFeatures from "@/components/AdminFeatures";
 import AdminLimits from "@/components/AdminLimits";
 import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard } from "./actions";
+import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard, setIdeas } from "./actions";
 import { gameTotals } from "@/lib/game-interest";
 import { helperReport } from "@/lib/helper";
+import { SOURCES, STATUSES, groupIdeas, ideaCounts, listIdeas } from "@/lib/ideas";
 import { trafficReport } from "@/lib/traffic";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
@@ -37,7 +38,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "traffic", "helper"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -53,6 +54,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=members" className={tab === "members" ? "on" : ""} role="tab" aria-selected={tab === "members"}>Members</Link>
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
+        <Link href="/app/admin?tab=ideas" className={tab === "ideas" ? "on" : ""} role="tab" aria-selected={tab === "ideas"}>Ideas{(await ideaCounts()).new ? <span>{(await ideaCounts()).new}</span> : null}</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
@@ -60,6 +62,7 @@ export default async function Admin({ searchParams }) {
       {tab === "status" && <Status ping={sp?.ping === "1"} test={sp?.test} why={sp?.why} stripe={sp?.stripe} recap={sp?.recap} backup={sp?.backup} />}
       {tab === "members" && <Members q={sp?.q || ""} userId={sp?.user} done={sp?.done} />}
       {tab === "log" && <Log />}
+      {tab === "ideas" && <Ideas show={sp?.show} group={sp?.group === "1"} ok={sp?.ok} emailed={sp?.emailed} err={sp?.err} />}
       {tab === "traffic" && <Traffic />}
       {tab === "helper" && <Helper />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
@@ -391,6 +394,75 @@ async function Log() {
         </div>
       ) : <p className="muted" style={{ margin: 0 }}>No admin changes yet.</p>}
     </div>
+  );
+}
+
+// Ideas: what members wanted to do but couldn't (lib/ideas.js). Set a status per idea or per group; Done emails
+// everyone who asked. "Group similar" has Claude sort the open ones into themes, most-asked first.
+async function Ideas({ show = "open", group, ok, emailed, err }) {
+  const views = [["open", "Open"], ...STATUSES, ["all", "All"]];
+  const view = views.some(([k]) => k === show) ? show : "open";
+  let rows = [];
+  try { rows = await listIdeas({ status: view }); } catch { rows = null; }
+  if (rows === null) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Ideas aren&apos;t available yet (the idea table needs <code>npm run db:push</code>).</p></div>;
+  const counts = await ideaCounts();
+  let groups = null, groupErr = null;
+  if (group && view === "open") { try { groups = await groupIdeas(); } catch (e) { groupErr = e.message; } }
+  const byId = new Map(rows.map((r) => [r.idea.id, r]));
+  const when = (d) => new Date(d).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const StatusForm = ({ ids, current, compact }) => (
+    <form action={setIdeas} className="row" style={{ gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+      <input type="hidden" name="ids" value={ids.join(",")} />
+      <input type="hidden" name="back" value={view} />
+      <select name="status" defaultValue={current || "planned"} aria-label="Status">{STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+      {!compact && <input name="note" placeholder="Note for the Done email (optional)" maxLength={500} style={{ minWidth: 200 }} />}
+      <button className="btn sm primary">Save</button>
+    </form>
+  );
+  const Row = ({ r }) => (
+    <div className="idea-row">
+      <span className="idea-tag">#{r.idea.id}</span>
+      <div>
+        <p>{r.idea.text}</p>
+        <span className="small muted">
+          {when(r.idea.at)} · {r.idea.userId ? <Link href={`/app/admin?user=${r.idea.userId}`}>{r.name || r.email || "member"}</Link> : "visitor"}
+          {" "}({r.idea.plan}) · {SOURCES[r.idea.source] || r.idea.source}{r.idea.page ? ` · ${r.idea.page}` : ""}
+          {r.idea.context ? ` · ${Object.entries(r.idea.context).map(([k, v]) => `${k}: ${v}`).join(", ")}` : ""}
+          {r.idea.notifiedAt ? " · ✉ told them it's live" : ""}
+        </span>
+      </div>
+      <StatusForm ids={[r.idea.id]} current={r.idea.status} />
+    </div>
+  );
+  return (
+    <>
+      {ok && <div className="notice good">Updated {ok} idea{ok === "1" ? "" : "s"}{Number(emailed) ? `, and emailed ${emailed} member${emailed === "1" ? "" : "s"} that it's live` : ""}.</div>}
+      {err && <div className="notice bad">That didn&apos;t save. See Logs.</div>}
+      <div className="tabs-row" role="tablist" style={{ marginBottom: 12 }}>
+        {views.map(([k, l]) => (
+          <Link key={k} href={`/app/admin?tab=ideas&show=${k}`} role="tab" aria-selected={view === k} className={view === k ? "on" : ""}>
+            {l}{k !== "open" && k !== "all" && counts[k] ? <span>{counts[k]}</span> : null}
+          </Link>
+        ))}
+      </div>
+      <div className="panel">
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <h2 style={{ margin: 0 }}>{views.find(([k]) => k === view)[1]} ideas · {rows.length}</h2>
+          {view === "open" && rows.length > 1 && (group
+            ? <Link href="/app/admin?tab=ideas" className="btn sm ghost">Show one by one</Link>
+            : <Link href="/app/admin?tab=ideas&group=1" className="btn sm">✨ Group similar</Link>)}
+        </div>
+        <p className="small muted">From the menu, the footer and the dead ends: a search that finds nothing, a missing filter, Boogie Bot not knowing, an error page. Each new one also comes to you on Discord. Mark one Done and everyone who sent it gets an email that it&apos;s live (add a note to say what changed).</p>
+        {groupErr && <div className="notice warn">Couldn&apos;t group them: {groupErr}</div>}
+        {groups ? groups.map((g) => (
+          <details key={g.ids.join(",")} className="idea-group" open={g.ids.length > 1}>
+            <summary><b>{g.theme} · {g.ids.length}</b></summary>
+            {g.ids.length > 1 && <div style={{ margin: "6px 0" }}><span className="small muted">Whole group: </span><StatusForm ids={g.ids} current="planned" /></div>}
+            {g.ids.map((id) => byId.get(id) && <Row key={id} r={byId.get(id)} />)}
+          </details>
+        )) : rows.length ? rows.map((r) => <Row key={r.idea.id} r={r} />) : <p className="small muted" style={{ margin: 0 }}>No ideas here yet.</p>}
+      </div>
+    </>
   );
 }
 

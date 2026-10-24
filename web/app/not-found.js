@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SuggestIdea } from "@/components/IdeaBox";
 
 export const metadata = { title: "Page not found", robots: { index: false } };
 
@@ -16,6 +17,7 @@ export default function NotFound() {
         <Link href="/app/collection" className="btn">My collection</Link>
         <Link href="/faq" className="btn ghost">FAQ</Link>
       </div>
+      <p className="small muted">Expected something here? <SuggestIdea source="notfound" label="Tell us what you were looking for" prompt="What were you looking for? We'll see if we can add it." /></p>
     </div>
   );
 }

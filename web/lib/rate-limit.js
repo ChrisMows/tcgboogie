@@ -22,6 +22,8 @@ export const LIMITS = {
   importAdd: { max: 100, windowMs: 60 * 60 * 1000 }, // collection import: batches added
   importColumns: { max: 20, windowMs: 24 * 60 * 60 * 1000, persist: true }, // collection import: unfamiliar files read by Claude
   photoSearch: { max: 60, windowMs: 24 * 60 * 60 * 1000, persist: true }, // Add cards: search by picture (one photo read each)
+  idea: { max: 10, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "Suggest an idea" from a member
+  ideaVisitor: { max: 3, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "Suggest an idea" from a visitor (per IP)
   helperVisitor: { max: 8, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions from visitors (per IP)
   helperFree: { max: 25, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Free members
   helperPremium: { max: 80, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Premium members

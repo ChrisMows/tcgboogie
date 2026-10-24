@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { suggestIdea } from "@/components/IdeaBox";
 
 /**
  * Phones and narrow windows: the header's links (hidden there to make room) behind a ☰ button, plus Log in and
@@ -32,6 +33,7 @@ export default function MobileMenu({ links, signedIn }) {
       {open && (
         <nav id="mobile-menu-list" className="mobile-menu-list" aria-label="Menu">
           {links.map((l) => <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</Link>)}
+          <button type="button" className="mobile-menu-idea" onClick={() => { setOpen(false); suggestIdea({ source: "menu" }); }}>💡 Suggest an idea</button>
           {!signedIn && (
             <div className="mobile-menu-auth">
               <Link href="/login" className="btn" onClick={() => setOpen(false)}>Log in</Link>

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { logAdminAction, requireAdmin, updateMember } from "@/lib/admin";
 import { approveAsRead, approveRequest, declineRequests, markRequestDone } from "@/lib/card-requests";
 import { hideMemberCard } from "@/lib/member-cards";
+import { setIdeaStatus } from "@/lib/ideas";
 import { currentFeatures, currentLimits, saveFeatures, saveLimits } from "@/lib/features";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
@@ -176,4 +177,22 @@ export async function connectStripe() {
     msg = `fail:${String(e.message).slice(0, 200)}`;
   }
   redirect(`/app/admin?stripe=${encodeURIComponent(msg)}`);
+}
+
+/** Admin → Ideas: set the status of one idea or a whole group. Done emails each member who asked (once). */
+export async function setIdeas(formData) {
+  const admin = await requireAdmin();
+  const ids = String(formData.get("ids") || "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  const status = String(formData.get("status") || "");
+  const view = String(formData.get("back") || "open").replace(/[^a-z]/g, "");
+  let emailed = 0;
+  try {
+    emailed = await setIdeaStatus(ids, status, String(formData.get("note") || ""));
+    await logAdminAction(admin, "ideas", { ids, status, emailed });
+  } catch (e) {
+    await logError("admin", "Couldn't update ideas", e, { ids, status }, admin.id);
+    redirect(`/app/admin?tab=ideas&show=${view}&err=1`);
+  }
+  revalidatePath("/app/admin");
+  redirect(`/app/admin?tab=ideas&show=${view}&ok=${ids.length}&emailed=${emailed}`);
 }

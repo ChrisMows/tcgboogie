@@ -65,8 +65,8 @@ nav.main a:hover { color: var(--text); text-decoration: none; }
 .ud-who { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
 .ud-who b, .ud-who .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ud-plan { font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
-.user-dropdown a, .ud-signout { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 8px; color: var(--text); font: inherit; font-size: 14px; background: none; border: 0; cursor: pointer; }
-.user-dropdown a:hover, .ud-signout:hover { background: var(--panel-3); text-decoration: none; }
+.user-dropdown a, .ud-signout, .ud-idea { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 8px; color: var(--text); font: inherit; font-size: 14px; background: none; border: 0; cursor: pointer; }
+.user-dropdown a:hover, .ud-signout:hover, .ud-idea:hover { background: var(--panel-3); text-decoration: none; }
 .ud-signout { color: var(--muted); border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; margin-top: 4px; }
 .avatar-choice { display: flex; gap: 12px; flex-wrap: wrap; }
 .avatar-choice label { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 12px; cursor: pointer; min-width: 110px; font-size: 14px; }
@@ -1529,8 +1529,8 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
   font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
 .mobile-menu-list { position: absolute; right: 0; top: calc(100% + 10px); width: min(260px, calc(100vw - 32px)); z-index: 30; display: flex; flex-direction: column;
   padding: 8px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--panel); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); }
-.mobile-menu-list > a { padding: 12px 12px; border-radius: 8px; color: var(--text); font-size: 15px; }
-.mobile-menu-list > a:hover { background: var(--panel-2); text-decoration: none; }
+.mobile-menu-list > a, .mobile-menu-idea { padding: 12px 12px; border-radius: 8px; color: var(--text); font-size: 15px; }
+.mobile-menu-list > a:hover, .mobile-menu-idea:hover { background: var(--panel-2); text-decoration: none; }
 .mobile-menu-auth { display: flex; flex-direction: column; gap: 8px; padding: 10px 4px 4px; margin-top: 6px; border-top: 1px solid var(--border); }
 .mobile-menu-auth .btn { justify-content: center; }
 @media (max-width: 860px) {
@@ -1611,3 +1611,19 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .tour-foot .small { margin-right: auto; }
 .tour-looking { position: fixed; z-index: 1501; left: 50%; bottom: 24px; transform: translateX(-50%); background: #12170f; border: 1px solid var(--accent); border-radius: 999px; padding: 8px 14px; font-size: 13px; }
 body:has(.tour-ring, .tour-center, .tour-looking) .helper-fab { display: none; }
+
+/* Suggest an idea (components/IdeaBox.js) */
+.idea-box { position: relative; width: min(480px, 100%); margin: 0; }
+.idea-box h2 { margin: 0 0 6px; }
+.idea-box textarea { width: 100%; resize: vertical; min-height: 96px; background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; }
+.idea-box textarea:focus { outline: none; border-color: var(--accent); }
+.idea-x { position: absolute; top: 10px; right: 10px; }
+.idea-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; }
+.mobile-menu-idea { display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; font-size: 15px; color: var(--text); cursor: pointer; }
+.footer-idea { color: inherit; font-size: inherit; }
+.idea-inline { display: block; margin-top: 6px; }
+.fs-idea { margin: 14px 0 0; }
+.idea-row { border-top: 1px solid var(--border); padding: 10px 0; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+.idea-row p { margin: 2px 0; white-space: pre-wrap; }
+.idea-tag { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); }
+.idea-group { border-top: 1px solid var(--border); padding: 8px 0; }

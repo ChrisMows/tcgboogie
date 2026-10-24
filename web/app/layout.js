@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import MobileMenu from "@/components/MobileMenu";
 import NavProgress from "@/components/NavProgress";
 import HelperChat from "@/components/HelperChat";
+import IdeaBox, { SuggestIdea } from "@/components/IdeaBox";
 import TourRunner from "@/components/TourRunner";
 import PageViews from "@/components/PageViews";
 import Link from "next/link";
@@ -59,6 +60,7 @@ export default async function RootLayout({ children }) {
         <Suspense fallback={null}><NavProgress /></Suspense>
         <Suspense fallback={null}><PageViews signedIn={Boolean(user)} /></Suspense>
         <HelperChat signedIn={Boolean(user)} />
+        <IdeaBox />
         <Suspense fallback={null}><TourRunner signedIn={Boolean(user)} /></Suspense>
         {demoMode && (
           <div className="demo-bar">
@@ -128,6 +130,7 @@ export default async function RootLayout({ children }) {
               <Link href="/faq">FAQ</Link>
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>
+              <SuggestIdea source="footer" label="Suggest an idea" className="link-btn footer-idea" />
             </nav>
           </div>
         </footer>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
 import { DealGrid } from "@/components/DealTile";
 import { cardOptions, createProfile, deleteProfile, saveProfile, setProfileActive } from "@/app/app/actions";
+import { SuggestIdea } from "@/components/IdeaBox";
 import { FACET_GROUPS, FACETS, activeFacets, hasCards } from "@/lib/facets";
 import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches, ALERT_CHANNELS, ALERT_CHANNEL_LABELS } from "@/lib/filters";
 
@@ -581,6 +582,8 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
                 <FacetControl k={x.key} f={draft} set={set} toggle={toggle} plan={plan} errors={errors} allSets={allSets} ready={ready} />
               </section>
             ))}
+            <p className="small muted fs-idea">Missing a filter you want? <SuggestIdea source="filters" className="link-btn small" label="Tell us"
+              prompt="Which filter or setting would you like? What kind of deals are you trying to catch?" context={{ filter: selected.name }} /></p>
             <div className="fs-drawer-foot">
               <span className="small muted">{deals.filter((d) => matches(draft, d)).length} deals match</span>
               <button type="button" className="btn primary" onClick={() => { setDrawer(false); if (dirty) update(); }}>{dirty ? "Update this filter" : "Done"}</button>
