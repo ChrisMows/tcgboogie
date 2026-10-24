@@ -136,6 +136,14 @@ def heartbeat(value):
          "ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at", (Jsonb(value),))
 
 
+def heartbeat_next(next_ts, calls, budget):
+    """When the next check is due and how much of today's eBay budget is used, added to the last check's heartbeat, so
+    Admin -> Status can tell a bot that's pacing itself (near the daily eBay limit) from one that stopped."""
+    extra = {"nextAt": datetime.fromtimestamp(next_ts, timezone.utc).isoformat(timespec="seconds"),
+             "ebayCalls": int(calls), "ebayBudget": int(budget)}
+    _run("UPDATE app_setting SET value = value || %s WHERE key = 'bot_heartbeat'", (Jsonb(extra),))
+
+
 def log_event(source, level, message, details=None):
     """A line in the website's Logs page (Admin -> Logs), like web/lib/log.js writes."""
     _run("INSERT INTO system_log (source, level, message, details) VALUES (%s, %s, %s, %s)",

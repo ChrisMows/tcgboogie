@@ -39,7 +39,9 @@ export async function sendAdminAlerts() {
   const [hb] = await db.select().from(appSettings).where(eq(appSettings.key, "bot_heartbeat")).limit(1);
   const [lastDeal] = await db.select({ at: deals.foundAt }).from(deals).orderBy(desc(deals.foundAt)).limit(1);
   const botAt = Math.max(hb?.updatedAt ? new Date(hb.updatedAt).getTime() : 0, lastDeal?.at ? new Date(lastDeal.at).getTime() : 0);
-  const botQuiet = botAt > 0 && now - botAt > BOT_QUIET_MS;
+  // Pacing itself near the daily eBay limit isn't quiet: only count it once it misses its own next check.
+  const nextAt = hb?.value?.nextAt ? new Date(hb.value.nextAt).getTime() : 0;
+  const botQuiet = botAt > 0 && now - botAt > BOT_QUIET_MS && !(nextAt && now < nextAt + 30 * 60000);
   const newlyQuiet = botQuiet && !state.botQuiet;
 
   const next = { ...state, checkedAt: new Date(now).toISOString(), botQuiet };

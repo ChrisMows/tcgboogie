@@ -159,9 +159,17 @@ export async function systemStatus({ pingPrices = false } = {}) {
     const b = await botStatus().catch(() => null);
     const hb = b?.heartbeat;
     const mins = hb?.at ? (Date.now() - new Date(hb.at).getTime()) / 60000 : null;
+    // Near its daily eBay limit the bot spaces checks out on purpose and says when the next one is due (nextAt):
+    // it's only "down" once it misses that by 10 minutes (or, without nextAt, 10 minutes after the last check).
+    const due = hb?.nextAt ? new Date(hb.nextAt).getTime() : null;
+    const ok = mins !== null && (due ? Date.now() < due + 10 * 60000 : mins < 10);
+    const paced = ok && due && due - Date.now() > 3 * 60000;
+    const state = !ok ? "Stopped?" : paced
+      ? `Running, paced to save eBay calls (${Number(hb.ebayCalls).toLocaleString()} of ${Number(hb.ebayBudget).toLocaleString()} used today; next check in ${Math.round((due - Date.now()) / 60000)} min)`
+      : "Running";
     if (mins === null) add("Bot", "Deal bot", "off", "Hasn't checked in yet");
-    else add("Bot", "Deal bot", mins < 10 ? "ok" : "down",
-      `${mins < 10 ? "Running" : "Stopped?"}: last check ${ago(hb.at)} (${hb.listings ?? 0} auctions) · ${b.today} deal${b.today === 1 ? "" : "s"} found in 24 h`
+    else add("Bot", "Deal bot", ok ? "ok" : "down",
+      `${state}: last check ${ago(hb.at)} (${hb.listings ?? 0} auctions) · ${b.today} deal${b.today === 1 ? "" : "s"} found in 24 h`
       + (hb.creditsLeft != null ? ` · ${Number(hb.creditsLeft).toLocaleString()} price credits left today` : "")
       + (hb.paused ? ` · lookups waiting: ${hb.paused}` : ""));
   }

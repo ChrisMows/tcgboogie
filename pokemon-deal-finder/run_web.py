@@ -106,8 +106,14 @@ def main():
         used = db.api_calls_today(finder.conn) - before
         if used > 0:
             per_check = used if per_check is None else per_check * 0.8 + used * 0.2
-        wait = next_interval(finder.cfg, db.api_calls_today(finder.conn), per_check)
-        time.sleep(max(5, wait - (time.time() - started)))
+        calls = db.api_calls_today(finder.conn)
+        wait = next_interval(finder.cfg, calls, per_check)
+        pause = max(5, wait - (time.time() - started))
+        try:
+            shared.heartbeat_next(time.time() + pause, calls, finder.cfg["poll"]["daily_call_budget"])
+        except Exception:  # noqa: BLE001 - reporting must never stop the deal finder
+            log.warning("Couldn't record the next check time")
+        time.sleep(pause)
 
 
 if __name__ == "__main__":
