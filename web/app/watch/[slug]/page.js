@@ -1,19 +1,21 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
-// Unlisted video pages for sharing (tcgboogie.com/watch/intro): nothing on the site links here and search engines are
+// Unlisted video pages for sharing (tcgboogie.com/watch/film): nothing on the site links here and search engines are
 // asked not to list them, but anyone with the link can watch, and the link shows a preview when shared. The videos
-// live in public/videos and are made by marketing-video/ (record.mjs, make-video.mjs). Visits show in Admin → Traffic.
+// live in public/videos (a 1080p copy of the product film; the 4K original stays with Chris). Visits show in
+// Admin → Traffic. Old links forward to the current video (MOVED).
 const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
 const VIDEOS = {
-  intro: { file: "tcgboogie-intro-vertical", width: 1080, height: 1920, label: "Phone" },
-  "intro-wide": { file: "tcgboogie-intro-wide", width: 1920, height: 1080, label: "Widescreen" },
+  film: { file: "tcgboogie-film", width: 1920, height: 1080 },
 };
+const MOVED = { intro: "film", "intro-wide": "film" }; // links shared before the product film
 const TITLE = "Meet TCG Boogie";
 const DESCRIPTION = "Pokémon card deals before the auction ends, your collection valued daily, and a pack opening every time you add a card. Free to start.";
 
 export async function generateMetadata({ params }) {
-  const v = VIDEOS[(await params).slug];
+  const slug = MOVED[(await params).slug] || (await params).slug;
+  const v = VIDEOS[slug];
   if (!v) return { title: "Video not found", robots: { index: false } };
   const video = `${SITE}/videos/${v.file}.mp4`;
   const image = `${SITE}/videos/${v.file}.jpg`;
@@ -22,7 +24,7 @@ export async function generateMetadata({ params }) {
     description: DESCRIPTION,
     robots: { index: false, follow: false },
     openGraph: {
-      type: "video.other", title: TITLE, description: DESCRIPTION, url: `${SITE}/watch/${(await params).slug}`, siteName: "TCG Boogie",
+      type: "video.other", title: TITLE, description: DESCRIPTION, url: `${SITE}/watch/${slug}`, siteName: "TCG Boogie",
       images: [{ url: image, width: v.width, height: v.height }],
       videos: [{ url: video, secureUrl: video, type: "video/mp4", width: v.width, height: v.height }],
     },
@@ -32,6 +34,7 @@ export async function generateMetadata({ params }) {
 
 export default async function Watch({ params }) {
   const slug = (await params).slug;
+  if (MOVED[slug]) permanentRedirect(`/watch/${MOVED[slug]}`);
   const v = VIDEOS[slug];
   if (!v) notFound();
   const tall = v.height > v.width;
@@ -50,9 +53,6 @@ export default async function Watch({ params }) {
           <Link href="/?home=1" className="btn lg">See the site</Link>
         </div>
         <p className="hint">Free forever, no card needed. Premium is $9.99/month with 7 days free.</p>
-        <p className="small muted watch-other">
-          {Object.entries(VIDEOS).filter(([k]) => k !== slug).map(([k, o]) => <Link key={k} href={`/watch/${k}`}>{o.label} version</Link>)}
-        </p>
       </div>
     </div>
   );
