@@ -235,6 +235,9 @@ export async function checkoutUrl(user) {
     ...(trial ? { custom_text: { submit: { message: `You won't be charged today. Your first payment of $${PLANS.premium.price} plus tax is on ${firstCharge}, unless you cancel before then in Settings (one click). We email you 3 days before.` } } } : {}),
     allow_promotion_codes: "true",
     customer_update: { name: "auto", address: "auto" },
+    // We're the seller and handle sales tax with Stripe Tax (below), so Stripe's Managed Payments (Stripe as seller
+    // of record, on by default for new accounts) stays off: it also refuses the trial note above.
+    managed_payments: { enabled: "false" },
     // Sales tax from the member's billing address (Stripe Tax), on the first payment and every renewal.
     ...(tax ? { automatic_tax: { enabled: "true" }, billing_address_collection: "required" } : {}),
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
