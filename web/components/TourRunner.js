@@ -12,7 +12,12 @@ const GAP = 12;
 const read = () => { try { return JSON.parse(sessionStorage.getItem(STORE) || "null"); } catch { return null; } };
 const write = (v) => { try { v ? sessionStorage.setItem(STORE, JSON.stringify(v)) : sessionStorage.removeItem(STORE); } catch { /* storage blocked */ } };
 const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-const find = (sel) => { if (!sel) return null; try { return [...document.querySelectorAll(sel)].find(visible) || null; } catch { return null; } };
+const find = (sel) => {
+  if (!sel) return null;
+  if (Array.isArray(sel)) { for (const s of sel) { const el = find(s); if (el) return el; } return null; }
+  try { return [...document.querySelectorAll(sel)].find(visible) || null; } catch { return null; }
+};
+const textOf = (step) => (step.alt && find(step.alt.has) ? step.alt.text : step.text);
 
 /**
  * "Show me how" walkthroughs (lib/tours.js): dims the page, rings the button to tap and points at it with a short
@@ -158,8 +163,8 @@ export default function TourRunner({ signedIn }) {
   let middle = null;
   if (run.done) middle = <p>You&apos;re all set! Ask Boogie Bot anytime if you get stuck.</p>;
   else if (step.path?.startsWith("/app") && !signedIn) middle = <p>This needs a free account. <Link href="/login?mode=signup" onClick={stop}>Sign up free</Link>, then ask Boogie Bot again.</p>;
-  else if (!step.target) middle = <p>{step.text}</p>;
-  else if (!el && step.at && !step.path && !new RegExp(step.at).test(path || "")) middle = <p>{step.text}</p>;
+  else if (!step.target) middle = <p>{textOf(step)}</p>;
+  else if (!el && step.at && !step.path && !new RegExp(step.at).test(path || "")) middle = <p>{textOf(step)}</p>;
   else if (!el && step.wait && !looking) middle = <p>{step.wait}</p>;
   if (middle) {
     return (
@@ -177,7 +182,7 @@ export default function TourRunner({ signedIn }) {
       <div ref={popRef} className={`tour-pop ${pop?.side || "below"}`} role="dialog" aria-label={tour.title}
         style={{ top: pop?.top ?? -9999, left: pop?.left ?? -9999, "--arrow-x": `${pop?.arrowX ?? 20}px` }}>
         {head}
-        <p>{step.text}</p>
+        <p>{textOf(step)}</p>
         {controls}
       </div>
     </>

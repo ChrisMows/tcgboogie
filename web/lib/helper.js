@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { desc, gte, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { ebayAccount } from "@/lib/ebay-sell";
 import { currentFaq } from "@/lib/faq";
 import { log } from "@/lib/log";
 import { effectivePlans, planRows } from "@/lib/plan-copy";
@@ -75,8 +76,9 @@ How to answer:
 - Mind their plan (given at the end). Don't tell a Free member a Premium feature is theirs; say it's part of Premium
   and link [Premium](/app/premium). If they aren't signed in, point to [Sign up free](/login?mode=signup) when an
   answer needs an account.
-- You can't see or change their account, collection, filters or alerts, and you can't take actions for them. Say so
-  if asked, and tell them where to do it themselves.
+- You can't change anything or take actions for them, and you can't see their collection, filters or alerts. You do
+  know which accounts they've connected and which alert channels are on (given at the end): use that to answer
+  questions like "am I connected to eBay?" directly, and link to where they can change it.
 - Never say whether a card is a good buy, what it's worth or will be worth, or whether to bid. Deals and prices are
   automated estimates; they should check every listing themselves before buying (Terms: /terms#prices).
 - Stay on TCG Boogie. Politely decline anything else (general chat, homework, code, other websites), in one sentence.
@@ -84,7 +86,8 @@ How to answer:
 
 Show me how: when your answer explains how to do one of the walkthroughs below, put its tag on the very last line,
 alone, like [[tour:price-alert]]. The site turns it into a "Show me how" button that points at each button on the page.
-Use at most one tag, only from this list, and only when it matches what they asked. Don't mention the tag itself.
+Use at most one tag, only from this list, and only when the walkthrough's goal is exactly what they asked to do (asking
+about connecting eBay is connect-ebay, not sell-ebay). If none fits, use no tag. Don't mention the tag itself.
 ${Object.entries(TOURS).map(([id, x]) => `- ${id}: ${x.about}`).join("\n")}
 `.trim();
 
@@ -100,10 +103,23 @@ async function knowledge() {
   return text;
 }
 
-/** Who's asking, for the end of the prompt (after the cached part). */
-function whoIsAsking(user, page) {
-  const who = !user ? "a visitor who isn't signed in" : `a signed-in member on the ${user.plan.label} plan`;
-  return `The person asking is ${who}. They're on the page ${page || "/"}.`;
+/**
+ * Who's asking, for the end of the prompt (after the cached part): their plan and which accounts and alert channels
+ * are set up (yes/no only), so "am I connected to eBay?" gets a straight answer.
+ */
+async function whoIsAsking(user, page) {
+  if (!user) return `The person asking is a visitor who isn't signed in. They're on the page ${page || "/"}.`;
+  const ebay = user.demo ? null : await ebayAccount(user.id).catch(() => null);
+  const yes = (v) => (v ? "yes" : "no");
+  const facts = [
+    `eBay seller account connected: ${yes(ebay)}`,
+    `Discord connected: ${yes(user.providers?.includes("discord"))}`,
+    `Google connected: ${yes(user.providers?.includes("google"))}`,
+    `Phone number confirmed for text alerts: ${yes(user.phoneVerifiedAt)}`,
+    `Alerts switched on: ${[user.alertEmail !== false && "email", user.alertDiscord && "Discord", user.alertSms && "text"].filter(Boolean).join(", ") || "none"}`,
+  ];
+  return `The person asking is a signed-in member on the ${user.plan.label} plan. They're on the page ${page || "/"}.
+Their account right now: ${facts.join("; ")}.`;
 }
 
 /**
@@ -124,7 +140,7 @@ export async function askHelper({ messages, user, page }) {
       output_config: { effort: "low" },
       system: [
         { type: "text", text: await knowledge(), cache_control: { type: "ephemeral" } },
-        { type: "text", text: whoIsAsking(user, page) },
+        { type: "text", text: await whoIsAsking(user, page) },
       ],
       messages: turns,
     });

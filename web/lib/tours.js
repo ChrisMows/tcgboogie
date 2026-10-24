@@ -4,7 +4,8 @@
 // Each step points at something on the page, marked in the code with data-tour="…" (search for the name):
 //   path    open this page first (if the member isn't on it)
 //   at      instead of opening a page, wait for the member to get to a page matching this (they tap something)
-//   target  CSS selector of what to point at; no target = a message in the middle of the screen
+//   target  CSS selector of what to point at (or a list: the first one on the page); none = a message mid-screen
+//   alt     { has, text }: say this instead when `has` is on the page (e.g. already connected)
 //   open    if the target isn't there, tap this first (e.g. open a filter so its buttons show)
 //   tap     move on when the member taps the target (Next still works)
 //   until   move on when this appears on the page (e.g. after typing a search)
@@ -97,9 +98,18 @@ export const TOURS = {
       { target: "#connections", text: "For Discord alerts, connect your Discord account here." },
     ],
   },
+  "connect-ebay": {
+    title: "Connect your eBay account",
+    about: "connecting (or checking or disconnecting) the eBay seller account in Settings → Connected accounts, so you can sell from your collection",
+    steps: [
+      { path: "/app/account", target: ["#ebay a[href=\"/api/ebay/connect\"]", "#ebay"],
+        text: "Tap Connect eBay. You'll sign in on eBay's own site (we never see your password) and come straight back here.",
+        alt: { has: "#ebay .badge.good", text: "You're already connected to eBay ✓ Use Sell on eBay on any card in your collection. Disconnect is here if you ever need it." } },
+    ],
+  },
   "sell-ebay": {
     title: "Sell a card on eBay",
-    about: "listing a card from your collection on eBay with Sell on eBay",
+    about: "listing a card from your collection for sale on eBay with Sell on eBay (only when they want to sell a card)",
     steps: [
       { path: "/app/collection", target: ".tile-link, .item-row .item-name", text: "Tap a card you own to open its page.", at: "^/app/cards/" },
       { at: "^/app/cards/", target: t("sell-open"), text: "Tap Sell on eBay.", tap: true },
