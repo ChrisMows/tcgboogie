@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // The whole member area: Collection first (it's the home page), then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
+const PHOTO = "/app/collection/photo";
+const inCollection = (p) => (p.startsWith("/app/collection") && !p.startsWith(PHOTO)) || p.startsWith("/app/cards");
 const LINKS = [
-  ["/app/collection", "Collection", "▦", (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards")],
+  ["/app/collection", "Collection", "▦", inCollection],
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
+  [PHOTO, "Photo appraiser", "📷", (p) => p.startsWith(PHOTO)],
   ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
 ];
 // Bottom section, also A–Z. Admin and Logs are for admins only.
@@ -17,8 +20,9 @@ const BOTTOM = [
 ];
 
 const TABS = [
-  { href: "/app/collection", label: "Collection", icon: "▦", isOn: (p) => p.startsWith("/app/collection") || p.startsWith("/app/cards") },
+  { href: "/app/collection", label: "Collection", icon: "▦", isOn: inCollection },
   { href: "/app/deals", label: "Deals", icon: "⚡", isOn: (p) => p.startsWith("/app/deals") },
+  { href: PHOTO, label: "Appraise", icon: "📷", isOn: (p) => p.startsWith(PHOTO) },
   { href: "/app/watches", label: "Alerts", icon: "🔔", isOn: (p) => p.startsWith("/app/watches") },
   { href: "/app/admin", label: "Admin", icon: "🛡", isOn: (p) => p.startsWith("/app/admin") || p.startsWith("/app/logs"), adminOnly: true },
   { href: "/app/account", label: "Settings", icon: "⚙", isOn: (p) => p.startsWith("/app/account") || p.startsWith("/app/premium") },

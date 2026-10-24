@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
 import CardThumb from "@/components/CardThumb";
 import CardRequest from "@/components/CardRequest";
 import { shrinkImage as shrink } from "@/lib/shrink-image";
@@ -17,11 +18,14 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
   const [picked, setPicked] = useState({});
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
+  const [choice, setChoice] = useState(null); // null: ask; "pick": choose which ones below; "later": not now
   const [pending, start] = useTransition();
+  const router = useRouter();
+  const listRef = useRef(null);
 
   const onFile = (file) => {
     if (!file) return;
-    setError(null); setResult(null); setDone(null);
+    setError(null); setResult(null); setDone(null); setChoice(null);
     setPreview(URL.createObjectURL(file));
     start(async () => {
       const fd = new FormData();
@@ -34,11 +38,13 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
     });
   };
 
-  const add = () => start(async () => {
-    const picks = result.cards.map((c, i) => [c, i]).filter(([c, i]) => picked[i] && c.product)
+  // Add the ticked cards (or every card we matched), then go to the collection to see them.
+  const add = (all = false) => start(async () => {
+    const picks = result.cards.map((c, i) => [c, i]).filter(([c, i]) => c.product && (all || picked[i]))
       .map(([c]) => ({ productId: c.product.id, name: c.product.name, graded: c.graded, grader: c.grader, grade: c.grade }));
     const r = await addAppraised(picks);
     setDone(r);
+    if (r.added > 0 && !r.failed.length) router.push(`/app/collection?appraised=${r.added}`);
   });
 
   if (!allowed) {
@@ -60,6 +66,8 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
   }
 
   const chosen = result ? result.cards.filter((c, i) => picked[i] && c.product) : [];
+  const matched = result ? result.cards.filter((c) => c.product) : [];
+  const matchedValue = matched.reduce((t, c) => t + (Number(c.value) || 0), 0);
   return (
     <>
       <div className="panel photo-drop">
@@ -73,8 +81,27 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
       {error && <div className="notice warn">{error}</div>}
       {pending && !result && <div className="notice">Reading your cards… this takes a few seconds.</div>}
 
+      {/* The question first: add what we found? */}
+      {result && matched.length > 0 && !done && choice === null && (
+        <div className="panel photo-ask">
+          <div>
+            <b>We found {matched.length} card{matched.length === 1 ? "" : "s"}{matchedValue ? ` worth about ${money(matchedValue)}` : ""}.</b>
+            <span className="muted"> Add {matched.length === 1 ? "it" : "them"} to your collection?</span>
+          </div>
+          <div className="photo-ask-actions">
+            <button type="button" className="btn primary" disabled={pending} onClick={() => add(true)}>
+              {pending ? "Adding…" : matched.length === 1 ? "Add it" : `Add all ${matched.length}`}
+            </button>
+            {matched.length > 1 && (
+              <button type="button" className="btn" disabled={pending} onClick={() => { setChoice("pick"); setTimeout(() => listRef.current?.scrollIntoView({ block: "start", behavior: "instant" }), 50); }}>Pick which ones</button>
+            )}
+            <button type="button" className="btn ghost" disabled={pending} onClick={() => setChoice("later")}>Not now</button>
+          </div>
+        </div>
+      )}
+
       {result && (
-        <div className="photo-result">
+        <div className="photo-result" ref={listRef}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {preview && <img src={preview} alt="Your photo" className="photo-preview" />}
           <div className="panel" style={{ marginBottom: 0 }}>
@@ -106,8 +133,8 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
               <CardRequest key={i} query={`${c.read.name}${c.read.number ? ` ${c.read.number}` : ""}${c.read.language === "japanese" ? " Japanese" : ""}`}
                 label={`Can’t find ${c.read.name}${c.read.number ? ` ${c.read.number}` : ""}? Request it →`} />
             ))}
-            {chosen.length > 0 && !done && (
-              <button type="button" className="btn primary" disabled={pending} onClick={add} style={{ marginTop: 12 }}>
+            {chosen.length > 0 && !done && choice !== null && (
+              <button type="button" className="btn primary" disabled={pending} onClick={() => add(false)} style={{ marginTop: 12 }}>
                 {pending ? "Adding…" : `Add ${chosen.length} to my collection`}
               </button>
             )}

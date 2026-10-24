@@ -89,6 +89,12 @@ export default async function CollectionPage({ searchParams }) {
         </div>
       )}
 
+      {Number(sp?.appraised) > 0 && (
+        <div className="notice good">
+          📷 Added {Number(sp.appraised)} card{Number(sp.appraised) === 1 ? "" : "s"} from your photo. Raw cards are saved as Near Mint: tap Edit on one to change it.{" "}
+          <Link href="/app/collection/photo">Appraise another photo</Link>
+        </div>
+      )}
       <div className="tabs-row" role="tablist">
         <Link href="/app/collection" role="tab" aria-selected={tab === "owned"} className={tab === "owned" ? "on" : ""}>Collection <span>{c.owned.length}</span></Link>
         <Link href="/app/collection?tab=wishlist" role="tab" aria-selected={tab === "wishlist"} className={tab === "wishlist" ? "on" : ""}>♡ Wishlist <span>{c.wishlist.length}</span></Link>

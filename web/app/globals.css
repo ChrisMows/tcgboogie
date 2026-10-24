@@ -1655,3 +1655,8 @@ body:has(.tour-ring, .tour-center, .tour-looking) .helper-fab { display: none; }
   .watch-copy p { margin-left: auto; margin-right: auto; }
 }
 .fs-pill-wrap.bad .fs-pill { border-color: var(--bad) !important; box-shadow: 0 0 0 1px var(--bad); }
+
+/* Photo appraiser: the "add them?" question after a scan */
+.photo-ask { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border-color: rgba(211,255,102,.45); background: rgba(211,255,102,.06); }
+.photo-ask b { font-size: 17px; }
+.photo-ask-actions { display: flex; gap: 8px; flex-wrap: wrap; }

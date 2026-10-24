@@ -20,7 +20,7 @@ const MAX_TURNS = 8; // earlier messages in the chat the helper sees
 
 // Where everything is. Keep this in step with the site when pages or buttons move.
 const PAGE_MAP = `
-Header (every page): Collection, Deals, Price alerts, Pricing, FAQ. On phones these are in the ☰ menu. Signed-in members
+Header (every page): Collection, Deals, Price alerts, Photo appraiser, Pricing, FAQ. On phones these are in the ☰ menu. Signed-in members
 have a round profile picture at the top right with Collection, Settings, Plan & billing and Sign out.
 
 /app/collection — My collection. Tabs: Collection, ♡ Wishlist, ▤ Binders.
@@ -37,7 +37,8 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
     added) and grid or list view. List view has + / − quantity and Edit on each card; opening a card also has Edit.
   - Binders tab: make binders and sort cards into them.
 /app/collection/sets — every set; open one and tap the cards you own.
-/app/collection/photo — Photo of many cards (photo appraiser): photograph a binder page, every card is found and valued.
+/app/collection/photo — Photo appraiser (in the menu, and "Photo of many cards" under Add cards): photograph a binder page or
+  spread, every card is found and valued, then it asks whether to add them all (or pick which) and opens the collection.
 /app/collection/import — import a CSV from TCGplayer, Collectr, PriceCharting, any app or a spreadsheet.
 /app/collection/grading — Worth Grading?: which raw cards would profit from grading.
 /app/collection/trade — Trade Analyzer: price both sides of a trade and get a fairness grade out of 10.
