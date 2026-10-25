@@ -18,6 +18,8 @@ export const metadata = { title: "Admin", robots: { index: false } };
 const STATE = { ok: ["✅", "OK"], warn: ["⚠️", "Check"], down: ["❌", "Down"], off: ["○", "Not set up"] };
 const DONE = {
   granted: ["good", "Complimentary Premium granted."],
+  granted_emailed: ["good", "Complimentary Premium granted, and they've been emailed."],
+  granted_nomail: ["bad", "Complimentary Premium granted, but the email didn't send (see Logs)."],
   revoked: ["good", "Complimentary Premium removed."],
   plan: ["good", "Plan updated."],
   renamed: ["good", "Name updated."],
@@ -227,6 +229,9 @@ async function Members({ q, userId, done }) {
                     <label className="field" htmlFor="note">Note (optional)</label>
                     <input id="note" name="note" type="text" maxLength={200} placeholder="e.g. Beta tester, giveaway winner" />
                   </div>
+                  <label className="small" style={{ flex: "none", display: "flex", gap: 6, alignItems: "center", paddingBottom: 10 }}>
+                    <input type="checkbox" name="email" defaultChecked /> Email them
+                  </label>
                   <button className="btn primary" style={{ flex: "none" }}>{member.comp ? "Replace with this" : "Grant Premium"}</button>
                 </div>
               </form>

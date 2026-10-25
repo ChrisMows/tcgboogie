@@ -9,7 +9,8 @@ import { setIdeaStatus } from "@/lib/ideas";
 import { currentFeatures, currentLimits, saveFeatures, saveLimits } from "@/lib/features";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { setupStripe } from "@/lib/billing";
-import { logError } from "@/lib/log";
+import { log, logError } from "@/lib/log";
+import { sendEmail } from "@/lib/notify";
 import { sendTestAlert } from "@/lib/price-alerts";
 import { sendRecapPreview } from "@/lib/recap";
 
@@ -111,7 +112,32 @@ export async function grantComp(userId, formData) {
     { length, until: fields.compUntil ? fields.compUntil.toISOString() : "unlimited", note });
   if (!u) back(userId, "missing");
   revalidatePath("/app", "layout");
-  back(userId, "granted");
+  let done = "granted";
+  if (formData.get("email") === "on" && u.email) done = (await emailComp(u, fields)) ? "granted_emailed" : "granted_nomail";
+  back(userId, done);
+}
+
+/** "You've got TCG Boogie Premium": how long it lasts, that it's free, and what it unlocks. The admin note stays private. */
+async function emailComp(u, { compUnlimited, compUntil }) {
+  const until = compUntil?.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" });
+  const site = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
+  try {
+    await sendEmail(u.email, {
+      subject: "You've got TCG Boogie Premium 🎉",
+      heading: `${u.name ? `${u.name.split(" ")[0]}, you've` : "You've"} got Premium`,
+      lines: [
+        compUnlimited ? "We've given your account complimentary Premium with no end date." : `We've given your account complimentary Premium until ${until}.`,
+        "It's on us: no card needed and you won't be charged. Everything Premium is already on: instant deal alerts and the live feed, up to 15 deal filters, unlimited price alerts, Japanese cards, the photo appraiser and your collection's full value history.",
+        compUnlimited ? "Enjoy!" : "When it ends, your account goes back to Free and nothing in your collection is lost. To keep Premium after that, subscribe any time from the Premium page.",
+      ],
+      button: { label: "Open TCG Boogie", url: `${site}/app/collection` },
+      footer: "You're getting this because a TCG Boogie admin added Premium to your account.",
+    });
+    return true;
+  } catch (e) {
+    await log("admin", "warn", `Couldn't email ${u.email} about their complimentary Premium: ${e.message}`, null, u.id);
+    return false;
+  }
 }
 
 export async function revokeComp(userId) {
