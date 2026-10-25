@@ -10,6 +10,7 @@ import { log, logError } from "@/lib/log";
 import { TERMS_VERSION } from "@/lib/terms";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
+import { deviceName, listSubscriptions, pushPublicKey, removeSubscription, saveSubscription, sendPush } from "@/lib/push";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
 import { validateFilters } from "@/lib/filters";
 import { setLinkIntent } from "@/lib/link-intent";
@@ -65,7 +66,7 @@ export async function savePreferences(formData) {
   if (emailRecap === "daily" && user.plan.emailRecap !== "daily") emailRecap = "weekly"; // daily recap is Premium
   await store.updatePrefs(user.id, {
     alertDiscord: formData.get("alertDiscord") === "on",
-    alertWebPush: false,
+    alertWebPush: Boolean(user.alertWebPush), // switched by the push buttons (they need the device's permission)
     alertEmail: formData.get("alertEmail") === "on",
     alertSms: formData.get("alertSms") === "on" && Boolean(user.phoneVerifiedAt) && user.plan.watchAlertChannels.includes("sms"),
     emailRecap,
@@ -81,9 +82,54 @@ export async function toggleAlertChannel(channel, on) {
   if (channel === "email") await store.setAlertChannel(user.id, "alertEmail", on);
   else if (channel === "discord" && can("discord") && user.discordConnected) await store.setAlertChannel(user.id, "alertDiscord", on);
   else if (channel === "sms" && can("sms") && user.phoneVerifiedAt) await store.setAlertChannel(user.id, "alertSms", on);
+  else if (channel === "push" && can("push") && (!on || (await listSubscriptions(user.id)).length)) await store.setAlertChannel(user.id, "alertWebPush", on);
   else return { ok: false };
   revalidatePath("/app", "layout");
   return { ok: true };
+}
+
+// ----- Push alerts on this device (components/PushSetup.js) -----
+/** The public key a browser needs to subscribe, or null when push isn't available (the local preview). */
+export async function pushKey() {
+  await requireUser();
+  return demoMode ? null : pushPublicKey();
+}
+
+/** This device said yes: save its subscription and switch push alerts on. */
+export async function savePush(sub, userAgent) {
+  const user = await requireUser();
+  if (!user.plan.watchAlertChannels.includes("push")) return { ok: false, error: "Push alerts are part of Premium." };
+  try {
+    await saveSubscription(user.id, sub, deviceName(userAgent));
+    await store.setAlertChannel(user.id, "alertWebPush", true);
+    await log("alerts", "info", `Push alerts switched on (${deviceName(userAgent)})`, null, user.id);
+  } catch (e) {
+    await logError("alerts", "Couldn't save a push subscription", e, null, user.id);
+    return { ok: false, error: "We couldn't switch push on for this device. Please try again." };
+  }
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+/** Switch push off for one device; with no devices left, push alerts are off. */
+export async function removePush(endpoint) {
+  const user = await requireUser();
+  await removeSubscription(user.id, endpoint);
+  if (!(await listSubscriptions(user.id)).length) await store.setAlertChannel(user.id, "alertWebPush", false);
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+/** "Send a test": a sample alert to every device this member switched on. */
+export async function testPush() {
+  const user = await requireUser();
+  if (!await allow("pushTest", user.id)) return { ok: false, error: SLOW_DOWN };
+  try {
+    const n = await sendPush(user.id, { title: "🔔 Test alert from TCG Boogie", body: "Push alerts are on. Deals and price alerts will show up just like this.", url: "/app/deals", tag: "test" });
+    return { ok: true, devices: n };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 export async function saveName(formData) {

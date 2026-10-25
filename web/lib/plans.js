@@ -50,7 +50,7 @@ export const PLANS = {
     japanese: true,
     emailRecap: "daily",
     maxPriceWatches: null, // unlimited
-    watchAlertChannels: ["email", "discord", "sms"],
+    watchAlertChannels: ["email", "push", "discord", "sms"],
     collectionHistoryDays: null, // all time
     collectionExport: true,
     collectionAlerts: true,
@@ -118,6 +118,8 @@ export const FEATURES = [
   { key: "liveDeals", group: "Deals", label: "Live deals and instant deal alerts", help: "Deals while the auction is still running. Without it, members see deals after they end.",
     get: (p) => p.liveFeed, set: (p, on) => ({ liveFeed: on, instantAlerts: on }) },
   { key: "japaneseDeals", group: "Deals", label: "Japanese cards in deal filters", get: (p) => p.japanese, set: (p, on) => ({ japanese: on }) },
+  { key: "pushAlerts", group: "Alerts", label: "Push notifications", help: "Instant alerts on members' phones and computers (Settings → Push notifications).",
+    get: (p) => hasChannel(p, "push"), set: (p, on) => withChannel(p, "push", on) },
   { key: "discordAlerts", group: "Alerts", label: "Discord alerts", get: (p) => hasChannel(p, "discord"), set: (p, on) => withChannel(p, "discord", on) },
   { key: "textAlerts", group: "Alerts", label: "Text message alerts", get: (p) => hasChannel(p, "sms"), set: (p, on) => withChannel(p, "sms", on) },
   { key: "dailyRecap", group: "Alerts", label: "Daily email recap", help: "Without it, the recap is weekly.",

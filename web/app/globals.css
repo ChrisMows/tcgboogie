@@ -159,6 +159,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid rgba(211, 255, 10
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 input[type="checkbox"] { accent-color: var(--accent); width: 17px; height: 17px; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 6px 0; cursor: pointer; }
+.push-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 15px; }
 .hint { font-size: 12px; color: var(--faint); margin-top: 6px; }
 .err { font-size: 13px; color: var(--bad); margin-top: 6px; }
 .row { display: flex; gap: 12px; align-items: center; }
@@ -749,7 +750,7 @@ td.num { text-align: right; font-weight: 600; }
 .alert-channels { display: flex; flex-direction: column; gap: 10px; }
 .alert-channels.none { border-color: rgba(210, 153, 34, 0.5); }
 .ac-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.ac-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ac-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .ac-option { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; min-width: 0; background: none; font: inherit; color: var(--text); cursor: pointer; text-align: left; transition: border-color 0.2s, background 0.2s; }
 .ac-option:hover { text-decoration: none; border-color: var(--muted); }
 .ac-option:disabled { cursor: wait; }

@@ -21,7 +21,8 @@ export async function effectivePlans() {
 
 /** "email", "email and Discord", "email, Discord and text": the channels a plan's alerts can use. */
 export function channels(p, sms) {
-  const names = ["email", ...(p.watchAlertChannels.includes("discord") ? ["Discord"] : []), ...(sms && p.watchAlertChannels.includes("sms") ? ["text"] : [])];
+  const names = ["email", ...(p.watchAlertChannels.includes("push") ? ["push notification"] : []),
+    ...(p.watchAlertChannels.includes("discord") ? ["Discord"] : []), ...(sms && p.watchAlertChannels.includes("sms") ? ["text"] : [])];
   return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
 }
 

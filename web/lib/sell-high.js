@@ -6,6 +6,7 @@ import { change } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
+import { sendPush } from "@/lib/push";
 import { planFor } from "@/lib/plans";
 import { loadProducts } from "@/lib/portfolio";
 
@@ -91,6 +92,12 @@ async function alertMember(user, discordId, risers, pct, ready) {
     await attempt("email", () => sendEmail(user.email, risers.length === 1
       ? { subject: title, heading: title, lines: [lineOf(top), "It could be a good time to sell."], button: { label: "Open the card", url: cardUrl(top.p) }, footer }
       : { subject: title, heading: title, items: risers.map((x) => ({ text: lineOf(x), url: cardUrl(x.p) })), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }, { userId: user.id, kind: "alerts" }));
+  }
+  if (ready.push && user.alertWebPush && allowed.includes("push")) {
+    await attempt("push", () => sendPush(user.id, {
+      title, body: risers.length === 1 ? `${lineOf(top)}. It could be a good time to sell.` : risers.slice(0, 3).map(lineOf).join(" · "),
+      url: risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection`, tag: "sell-high",
+    }));
   }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {

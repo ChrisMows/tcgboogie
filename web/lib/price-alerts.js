@@ -5,6 +5,7 @@ import { effectiveTier } from "@/lib/access";
 import { getProduct } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
+import { sendPush } from "@/lib/push";
 import { log } from "@/lib/log";
 import { planFor } from "@/lib/plans";
 import { currentPrice, isRising, isTriggered, targetPrice } from "@/lib/watches";
@@ -108,6 +109,9 @@ async function notify(user, discordId, w, price, ready) {
       footer: `${quiet} Manage alerts: ${SITE}/app/watches`,
     }, { userId: user.id, kind: "alerts" }));
   }
+  if (ready.push && user.alertWebPush && allowed.includes("push")) {
+    await attempt("push", () => sendPush(user.id, { title, body: line, url: cardUrl, tag: `watch-${w.id}` }));
+  }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {
       title, url: cardUrl,
@@ -152,6 +156,8 @@ export async function sendTestAlert(user) {
   }));
   await run("discord", ready.discord && discord?.id, !ready.discord ? "Discord bot isn't set up" : "Your Discord isn't connected (Settings → Connect Discord)",
     () => sendDiscordDM(discord.id, { title, url, description: `Charizard ex · Scarlet & Violet 151\n${line}` }));
+  await run("push", ready.push && user.alertWebPush, !ready.push ? "Push isn't available here" : "No device switched on (Settings → Push notifications)",
+    () => sendPush(user.id, { title, body: line, url, tag: "test" }));
   await run("sms", ready.sms && user.phone && user.phoneVerifiedAt, !ready.sms ? "Texts aren't set up (Twilio)" : "No confirmed phone number on your account",
     () => sendSms(user.phone, `TCG Boogie: test alert. Real price alerts will look like this. ${url}`));
   return results;

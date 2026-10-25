@@ -7,6 +7,7 @@ import { SAMPLE_DEALS } from "@/lib/demo-deals";
 import { ALERT_CHANNELS, clampToPlan, matches, RAW_CONDITIONS } from "@/lib/filters";
 import { log } from "@/lib/log";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
+import { sendPush } from "@/lib/push";
 import { planFor } from "@/lib/plans";
 
 // Real deals from the deal bot (see the `deal` table). Until the bot has found any, pages show the sample deals,
@@ -99,6 +100,7 @@ export async function scanSettings() {
 // the Deals page and by Discord, which is free.
 const EMAIL_CAP = Number(process.env.EMAIL_DEALS_PER_DAY || 25);
 const SMS_CAP = Number(process.env.SMS_DEALS_PER_DAY || 10);
+const PUSH_CAP = Number(process.env.PUSH_DEALS_PER_DAY || 60); // free, but a phone buzzing all day gets switched off
 const PARALLEL = 5; // members alerted at the same time
 
 /**
@@ -219,7 +221,7 @@ function linesOf(d, why) {
   ];
 }
 
-/** One member, one batch of deals: one email, one text, and a Discord message per deal (Discord is free). */
+/** One member, one batch of deals: one email, one text, and a Discord message and a push per deal (both free). */
 async function alertMember(user, discordId, items, ready, counts) {
   const plan = planFor("premium").watchAlertChannels;
   const res = { sent: 0, failed: 0, capped: 0 };
@@ -263,6 +265,21 @@ async function alertMember(user, discordId, items, ready, counts) {
       items: email.map(({ deal: d }) => ({ text: `${d.name} ${gradeOf(d)}: ${money(d.total)}, ${Math.round(d.discountPct)}% below ${money(d.marketValue)}, ~${d.minutesLeft} min left${d.photoCheck === "match" ? " · ✓ photo checked" : ""}`, url: dealUrlOf(d) })),
       button: { label: "See all on your Deals page", url: `${SITE}/app/deals` }, footer: `Manage your filters: ${SITE}/app/deals`,
     }, { userId: user.id, kind: "alerts" }));
+  }
+
+  // Push: one notification per deal (each replaces an older one about the same deal), or one summary for a big batch.
+  const push = pick("push", ready.push && user.alertWebPush, PUSH_CAP);
+  if (push.length > 3) {
+    const best = Math.max(...push.map((x) => Math.round(x.deal.discountPct)));
+    await send("push", push, () => sendPush(user.id, { title: `⚡ ${push.length} new deals for you`, body: `Up to ${best}% below market. Tap to see them.`, url: "/app/deals", tag: "deals" }));
+  } else {
+    for (const x of push) {
+      const d = x.deal;
+      await send("push", [x], () => sendPush(user.id, {
+        title: titleOf(d), url: dealUrlOf(d), tag: `deal-${d.id}`,
+        body: `${money(d.total)} with shipping, ${Math.round(d.discountPct)}% below ${money(d.marketValue)}. ~${d.minutesLeft} min left.${d.photoCheck === "match" ? " ✓ Photo checked." : ""}`,
+      }));
+    }
   }
 
   for (const x of pick("discord", ready.discord && discordId && user.alertDiscord)) {

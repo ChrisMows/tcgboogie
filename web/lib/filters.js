@@ -13,8 +13,8 @@ export const RAW_CONDITION_LABELS = {
 };
 export const GRADE_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 8.5, 9, 9.5, 10];
 // How a filter's deal alerts reach you (each also has to be switched on in Settings -> Where alerts go).
-export const ALERT_CHANNELS = ["email", "discord", "sms"];
-export const ALERT_CHANNEL_LABELS = { email: "Email", discord: "Discord", sms: "Text" };
+export const ALERT_CHANNELS = ["email", "push", "discord", "sms"];
+export const ALERT_CHANNEL_LABELS = { email: "Email", push: "Push", discord: "Discord", sms: "Text" };
 
 export function defaultFilters(plan) {
   return {
@@ -151,6 +151,10 @@ export function clampToPlan(filters, plan) {
   f.maxMinutesLeft = Math.min(f.maxMinutesLeft, plan.maxWindowMinutes);
   f.minMarketValue = Math.max(f.minMarketValue, plan.minValueFloor);
   if (!plan.japanese) f.languages = ["english"];
+  // Filters saved with every channel before push alerts existed get push too (they meant "everything").
+  if (Array.isArray(f.channels) && ["email", "discord", "sms"].every((c) => f.channels.includes(c)) && !f.channels.includes("push")) {
+    f.channels = [...ALERT_CHANNELS];
+  }
   // "Never these" lists were retired from the filter page: you pick what you want, and get just that.
   f.excludePokemon = [];
   f.excludeSets = [];

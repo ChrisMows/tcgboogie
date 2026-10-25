@@ -55,9 +55,10 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
   - History: Premium shows every deal alert sent; Free shows the week's deals after they ended.
 /app/watches — Price alerts. Tabs: Alerts, Performance. Find a card or sealed product at the top, choose
   "📉 Buying: alert when it drops" or "📈 Selling: alert when it climbs", enter the price and add the alert. Which
-  channels alerts use (email, Discord, text) can be switched at the top of this page or in Settings.
-/app/account — Settings: Billing (plan, next charge, card, receipts, cancel), How we reach you (alert channels and the
-  email recap), Text alerts (phone number), Connected accounts (Google, Discord, eBay seller account for Sell on
+  channels alerts use (email, push, Discord, text) can be switched at the top of this page or in Settings.
+/app/account — Settings: Billing (plan, next charge, card, receipts, cancel), How we reach you (alert channels, Push
+  notifications with "Turn on for this device" and "Send a test" (Premium; on iPhone TCG Boogie must be added to the
+  home screen and opened from there first), and the email recap), Text alerts (phone number), Connected accounts (Google, Discord, eBay seller account for Sell on
   eBay), Profile, Delete account. Plan & billing is /app/account#plan.
 /app/premium — upgrade to Premium.
 /#pricing — plans and prices. /faq — FAQ. /how-it-works — how deals work. /terms — Terms. /privacy — Privacy.
@@ -126,7 +127,7 @@ async function whoIsAsking(user, page) {
     `Discord connected: ${yes(user.providers?.includes("discord"))}`,
     `Google connected: ${yes(user.providers?.includes("google"))}`,
     `Phone number confirmed for text alerts: ${yes(user.phoneVerifiedAt)}`,
-    `Alerts switched on: ${[user.alertEmail !== false && "email", user.alertDiscord && "Discord", user.alertSms && "text"].filter(Boolean).join(", ") || "none"}`,
+    `Alerts switched on: ${[user.alertEmail !== false && "email", user.alertWebPush && "push notifications", user.alertDiscord && "Discord", user.alertSms && "text"].filter(Boolean).join(", ") || "none"}`,
   ];
   return `The person asking is a signed-in member on the ${user.plan.label} plan. They're on the page ${page || "/"}.
 Their account right now: ${facts.join("; ")}.`;

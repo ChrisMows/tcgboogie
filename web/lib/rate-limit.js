@@ -12,6 +12,7 @@ export const LIMITS = {
   pageView: { max: 300, windowMs: 10 * 60 * 1000 }, // visit counting beacons (Admin → Traffic)
   search: { max: 120, windowMs: 10 * 60 * 1000 }, // card/product searches and link lookups
   cardPage: { max: 300, windowMs: 60 * 60 * 1000 }, // card pages opened
+  pushTest: { max: 10, windowMs: 60 * 60 * 1000 }, // "Send a test" push alerts
   setLoad: { max: 40, windowMs: 60 * 60 * 1000 }, // whole-set card lists (the expensive one)
   smsCode: { max: 5, windowMs: 24 * 60 * 60 * 1000, persist: true }, // "text me a code" requests
   ebayList: { max: 30, windowMs: 60 * 60 * 1000 }, // eBay listings created

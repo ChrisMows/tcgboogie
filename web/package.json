@@ -24,7 +24,8 @@
     "pg": "8.23.1",
     "react": "19.2.9",
     "react-dom": "19.2.9",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "web-push": "3.6.7"
   },
   "devDependencies": {
     "drizzle-kit": "0.31.11"

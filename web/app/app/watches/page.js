@@ -6,6 +6,7 @@ import { listingsByWatch } from "@/lib/watch-listings";
 import { getProduct } from "@/lib/catalog";
 import { ownedCounts } from "@/lib/collection";
 import { channelsReady } from "@/lib/notify";
+import { listSubscriptions } from "@/lib/push";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -46,6 +47,7 @@ export default async function WatchesPage({ searchParams }) {
           <WatchManager
             side={<AlertChannels user={{
               email: user.email, alertEmail: user.alertEmail, alertDiscord: user.alertDiscord, alertSms: user.alertSms, phone: user.phone,
+              alertWebPush: user.alertWebPush, pushDevices: (await listSubscriptions(user.id).catch(() => [])).length,
               phoneVerifiedAt: Boolean(user.phoneVerifiedAt), discordConnected: Boolean(user.discordConnected),
               plan: { watchAlertChannels: user.plan.watchAlertChannels },
             }} smsReady={Boolean(channelsReady().sms)} />}

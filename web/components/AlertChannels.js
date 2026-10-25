@@ -5,15 +5,20 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toggleAlertChannel } from "@/app/app/actions";
 
-/** "Alerts go to": Email, Discord and Text as on/off switches, or a link to set one up (or unlock it). */
+/** "Alerts go to": Email, Push, Discord and Text as on/off switches, or a link to set one up (or unlock it). */
 export default function AlertChannels({ user, smsReady = true }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const can = (c) => user.plan.watchAlertChannels.includes(c); // Admin → Features decides which plan gets each
-  const [on, setOn] = useState({ email: user.alertEmail !== false, discord: Boolean(user.alertDiscord), sms: Boolean(user.alertSms) });
+  const [on, setOn] = useState({ email: user.alertEmail !== false, push: Boolean(user.alertWebPush), discord: Boolean(user.alertDiscord), sms: Boolean(user.alertSms) });
 
   const channels = [
     { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
+    {
+      key: "push", icon: "📲", label: "Push",
+      ...(!can("push") ? { state: "locked" } : !user.pushDevices ? { state: "todo", action: "Turn on push for this device", href: "/app/account#push" }
+        : { state: "ready", note: `${user.pushDevices} ${user.pushDevices === 1 ? "device" : "devices"}` }),
+    },
     {
       key: "discord", icon: "💬", label: "Discord",
       ...(!can("discord") ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect Discord", href: "/app/account#connections" }

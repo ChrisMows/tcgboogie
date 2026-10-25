@@ -12,6 +12,8 @@ import { AVATAR_SOURCES, avatarFor, avatarOptions, initials } from "@/lib/avatar
 import { PLANS } from "@/lib/plans";
 import { effectivePlans, planHighlights } from "@/lib/plan-copy";
 import { compActive } from "@/lib/access";
+import PushSetup from "@/components/PushSetup";
+import { listSubscriptions } from "@/lib/push";
 
 export const metadata = { title: "Settings" };
 
@@ -60,6 +62,8 @@ export default async function Account({ searchParams }) {
   const premium = user.tier === "premium";
   const canDiscord = user.plan.watchAlertChannels.includes("discord"); // Admin → Features
   const canSms = user.plan.watchAlertChannels.includes("sms");
+  const canPush = user.plan.watchAlertChannels.includes("push");
+  const pushDevices = (await listSubscriptions(user.id).catch(() => [])).map((d) => ({ endpoint: d.endpoint, device: d.device }));
   const pictures = avatarOptions(user);
   const smsReady = channelsReady().sms;
   const current = avatarFor(user);
@@ -252,6 +256,7 @@ export default async function Account({ searchParams }) {
             {canSms && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
           </label>
           {canSms && (smsReady || user.demo) && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
+          <div id="push" style={{ marginTop: 10 }}><PushSetup canPush={canPush} devices={pushDevices} /></div>
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">

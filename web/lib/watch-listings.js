@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { ebayLink } from "@/lib/ebay-link";
 import { log } from "@/lib/log";
 import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
+import { sendPush } from "@/lib/push";
 import { planFor } from "@/lib/plans";
 import { targetPrice } from "@/lib/watches";
 
@@ -67,6 +68,9 @@ export async function dispatchWatchListings() {
         subject: title, heading: title, lines, button: { label: "Open the listing on eBay", url: link.href },
         footer: `${link.affiliate ? "eBay links may earn us a commission. " : ""}Manage price alerts: ${SITE}/app/watches`,
       }, { userId: user.id, kind: "alerts" }));
+    }
+    if (ready.push && user.alertWebPush && allowed.includes("push")) {
+      await attempt("push", () => sendPush(user.id, { title, body: lines.slice(0, 2).join(" "), url: link.href, tag: `listing-${l.itemId}` }));
     }
     if (ready.discord && discordIds[user.id] && user.alertDiscord && allowed.includes("discord")) {
       await attempt("discord", () => sendDiscordDM(discordIds[user.id], { title, url: link.href, description: lines.join("\n") }));

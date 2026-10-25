@@ -8,6 +8,7 @@ import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 //            emails (Amazon SES), so volume doesn't count against the mailbox's daily limit.
 //   Discord: DISCORD_BOT_TOKEN                                        (BoogieBot; members must share a server with it)
 //   Text:    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM        (a Twilio number, e.g. +18885551234)
+//   Push:    nothing: lib/push.js makes and keeps its own keys          (each member switches devices on in Settings)
 
 const alertSmtp = () => Boolean(process.env.ALERT_SMTP_HOST && process.env.ALERT_SMTP_USER && process.env.ALERT_SMTP_PASS);
 
@@ -15,6 +16,7 @@ export const channelsReady = () => ({
   email: alertSmtp() || Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
   discord: Boolean(process.env.DISCORD_BOT_TOKEN),
   sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM),
+  push: Boolean(process.env.DATABASE_URL), // its keys live in the database (lib/push.js): nothing else to set up
 });
 
 /** Which service alert emails go through (Admin -> Status). */

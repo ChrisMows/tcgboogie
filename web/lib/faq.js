@@ -59,6 +59,8 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
         "Pick any card or sealed product and your price. Buying? We tell you when it drops to your price, and (for cards) when someone lists it on eBay at or under your price. Selling? We tell you when it climbs to it. The Performance tab shows how close each alert is."],
       ["How do alerts reach me? Do I need Discord?",
         `No. On Free, alerts come by ${channels(free, sms)}${textSoon(free, sms)}; on Premium, by ${channels(premium, sms)}${textSoon(premium, sms)}. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a ${free.emailRecap} email recap${premium.emailRecap !== free.emailRecap ? ` (${premium.emailRecap} on Premium)` : ""} that you can turn off in Settings.`],
+      ["How do I get push notifications on my phone?",
+        "Push notifications pop up on your phone or computer the moment we send an alert, even when TCG Boogie isn't open (Premium). Go to Settings → How we reach you → Push notifications and tap \"Turn on for this device\", then allow notifications. On iPhone, add TCG Boogie to your home screen first (Share → Add to Home Screen) and open it from there: Apple only allows push for apps on the home screen. Switch on each phone or computer you want alerts on, and use \"Send a test\" to check."],
       ["Do you bid or buy for me?",
         "No. We send the alert; you decide whether to bid or buy. We never bid, buy or message sellers for you. If you connect eBay to sell your own cards, we only create the listings you review and post, and you can disconnect it anytime in Settings."],
     ]],

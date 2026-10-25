@@ -185,6 +185,19 @@ export const catalogCache = pgTable("catalog_cache", {
   fetchedAt: timestamp("fetched_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Phones and browsers that get push alerts (lib/push.js): one row per device a member switched on in Settings.
+// Removed when the member turns that device off, deletes their account, or the browser says it's gone.
+export const pushSubscriptions = pgTable("push_subscription", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(), // the browser's push address (Apple, Google, Mozilla...)
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  device: text("device"), // "iPhone", "Android", "Windows"... for the Settings list
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  lastSentAt: timestamp("last_sent_at", { mode: "date" }),
+}, (t) => [index("push_subscription_user_idx").on(t.userId)]);
+
 // Topps Pokémon cards (lib/topps.js; the checklist ships with the code): the typical eBay asking price for a raw copy,
 // worked out by the deal bot from current Buy It Now listings every few days (pokemon-deal-finder/dealfinder/topps.py).
 export const toppsPrices = pgTable("topps_price", {
