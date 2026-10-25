@@ -316,8 +316,8 @@ export async function botStatus() {
  * Returns null until at least three such sales are known (the homepage then shows clearly labeled examples).
  */
 const REPRINT_TITLE = /celebrations|classic collection|30th (anniversary|celebration)|25th anniversary|reprint/i;
-const realOff = (d) => (d.soldFor > 0 && d.marketValue > 0 ? Math.round((1 - d.soldFor / d.marketValue) * 100) : null);
-const credible = (d) => d.sold === true && d.photoCheck === "match" && !REPRINT_TITLE.test(d.title || "")
+export const realOff = (d) => (d.soldFor > 0 && d.marketValue > 0 ? Math.round((1 - d.soldFor / d.marketValue) * 100) : null);
+export const credible = (d) => d.sold === true && d.photoCheck === "match" && !REPRINT_TITLE.test(d.title || "")
   && realOff(d) >= 15 && realOff(d) <= 70;
 let showcase = globalThis.__tcgShowcase ?? (globalThis.__tcgShowcase = { at: 0, data: null });
 export async function homeShowcase() {

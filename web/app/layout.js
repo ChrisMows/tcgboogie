@@ -53,6 +53,7 @@ export default async function RootLayout({ children }) {
     { href: user ? "/app/deals" : "/#deals", label: "Deals" },
     { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
     { href: user ? "/app/collection/photo" : "/login?next=%2Fapp%2Fcollection%2Fphoto", label: "Photo appraiser" },
+    { href: "/sales", label: "Sales" },
     { href: "/#pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },
   ];
@@ -137,6 +138,7 @@ export default async function RootLayout({ children }) {
             </div>
             <nav aria-label="Footer">
               <Link href="/how-it-works">How it works</Link>
+              <Link href="/sales">Sales</Link>
               <Link href="/#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
               <Link href="/privacy">Privacy</Link>

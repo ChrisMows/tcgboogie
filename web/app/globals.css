@@ -1695,3 +1695,26 @@ body:has(.install-hint) .helper-fab { display: none; }
 .install-steps ol { text-align: left; padding-left: 20px; margin: 0 0 12px; }
 .install-steps li { margin-bottom: 8px; }
 .install-share { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--border-strong); border-radius: 6px; font-size: 12px; }
+
+/* Public market feed (app/sales): new highs, big sales, caught deals */
+.sales-page .eyebrow { font-size: 12px; letter-spacing: 2px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.sales-section { margin: 26px 0; }
+.sales-section h2 { margin: 0 0 4px; }
+.sales-section > p { margin: 0 0 14px; }
+.sales-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.sale-tile { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; min-width: 0; }
+.sale-art { display: flex; justify-content: center; margin-bottom: 6px; }
+.sale-kicker { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.sale-kicker.deal { background: var(--good-soft); color: var(--good); }
+.sale-kicker.big { background: var(--panel-3); color: var(--text); }
+.sale-price { font: 700 24px var(--font-head), sans-serif; }
+.sale-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sale-links { display: flex; gap: 12px; font-size: 13px; margin-top: 4px; }
+.sales-cta { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin-top: 10px; }
+
+/* Admin -> Sales: posts waiting for approval */
+.post-queue { display: grid; gap: 14px; }
+.post-card { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin: 0; }
+.post-card img { width: 260px; height: 260px; border-radius: 10px; display: block; }
+.post-body { flex: 1 1 280px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.post-body textarea { width: 100%; font: inherit; font-size: 14px; }

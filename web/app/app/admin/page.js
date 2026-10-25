@@ -4,7 +4,11 @@ import AdminFeatures from "@/components/AdminFeatures";
 import AdminLimits from "@/components/AdminLimits";
 import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, removeMemberCard, setIdeas } from "./actions";
+import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, postSale, removeMemberCard, setIdeas, skipSale } from "./actions";
+import { desc } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { marketFeed } from "@/lib/market";
+import { xReady } from "@/lib/x";
 import { gameTotals } from "@/lib/game-interest";
 import { helperReport } from "@/lib/helper";
 import { SOURCES, STATUSES, groupIdeas, ideaCounts, listIdeas } from "@/lib/ideas";
@@ -29,7 +33,7 @@ const DONE = {
   missing: ["bad", "That member no longer exists."],
 };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
-const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features", card_request: "Card request" };
+const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features", card_request: "Card request", x_post: "Posted to X" };
 
 function PlanBadge({ m, compact }) {
   if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">Premium</span> : <span className="badge">Free</span>;
@@ -40,7 +44,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -57,6 +61,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=ideas" className={tab === "ideas" ? "on" : ""} role="tab" aria-selected={tab === "ideas"}>Ideas{(await ideaCounts()).new ? <span>{(await ideaCounts()).new}</span> : null}</Link>
+        <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Sales</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
@@ -66,6 +71,7 @@ export default async function Admin({ searchParams }) {
       {tab === "log" && <Log />}
       {tab === "ideas" && <Ideas show={sp?.show} group={sp?.group === "1"} ok={sp?.ok} emailed={sp?.emailed} err={sp?.err} />}
       {tab === "traffic" && <Traffic />}
+      {tab === "sales" && <Sales ok={sp?.ok} err={sp?.err} />}
       {tab === "helper" && <Helper />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
       {tab === "features" && (
@@ -467,6 +473,59 @@ async function Ideas({ show = "open", group, ok, emailed, err }) {
           </details>
         )) : rows.length ? rows.map((r) => <Row key={r.idea.id} r={r} />) : <p className="small muted" style={{ margin: 0 }}>No ideas here yet.</p>}
       </div>
+    </>
+  );
+}
+
+const firstLine = (t) => String(t || "").split(/\n/)[0];
+
+/** Admin → Sales: ready-made X posts from the market feed (new highs, big sales, caught deals); nothing posts without a tap. */
+async function Sales({ ok, err }) {
+  const [feed, done] = await Promise.all([marketFeed(), db ? db.select().from(schema.socialPosts).orderBy(desc(schema.socialPosts.at)).limit(200) : []]);
+  const handled = new Set(done.map((d) => d.key));
+  const queue = [...feed.highs, ...feed.big.slice(0, 8), ...feed.deals.slice(0, 8)].filter((x) => !handled.has(x.id));
+  const posted = done.filter((d) => d.status === "posted").slice(0, 20);
+  const ready = xReady();
+  const ERR = { gone: "That sale isn't in the feed anymore.", already: "That one was already posted or skipped." };
+  return (
+    <>
+      {ok === "posted" && <div className="notice good">Posted to X.</div>}
+      {ok === "skipped" && <div className="notice good">Skipped. It won&apos;t come back here.</div>}
+      {err && <div className="notice bad">{ERR[err] || err}</div>}
+      {!ready && (
+        <div className="notice warn">
+          X isn&apos;t connected yet, so posts can be downloaded but not sent. Add the four X keys (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN,
+          X_ACCESS_SECRET) in Hostinger&apos;s environment variables, then redeploy.
+        </div>
+      )}
+      <p className="muted">New highs, the week&apos;s biggest sales and caught deals, ready to post. Edit the caption if you like, then post or skip. The public page is <Link href="/sales">/sales</Link>.</p>
+      {queue.length === 0 ? <div className="panel muted">Nothing new to post right now.</div> : (
+        <div className="post-queue">
+          {queue.map((x) => (
+            <form key={x.id} action={postSale.bind(null, x.id)} className="panel post-card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <a href={`/sales/image/${x.id}.png`} target="_blank" rel="noopener noreferrer"><img src={`/sales/image/${x.id}.png`} alt="" width={260} height={260} loading="lazy" /></a>
+              <div className="post-body">
+                <span className="badge accent">{x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
+                <textarea name="caption" defaultValue={x.caption} rows={6} maxLength={280} aria-label="Caption" />
+                <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                  <button className="btn primary" style={{ flex: "none" }} disabled={!ready}>Post to X</button>
+                  <a className="btn" style={{ flex: "none" }} href={`/sales/image/${x.id}.png`} download={`tcgboogie-${x.id}.png`}>Download image</a>
+                  <button className="btn ghost" style={{ flex: "none" }} formAction={skipSale.bind(null, x.id)}>Skip</button>
+                </div>
+              </div>
+            </form>
+          ))}
+        </div>
+      )}
+      {posted.length > 0 && (
+        <div className="panel">
+          <h2>Posted</h2>
+          <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+            {posted.map((p) => <li key={p.key}>{p.at.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {p.postUrl ? <a href={p.postUrl} target="_blank" rel="noopener noreferrer">{firstLine(p.caption)}</a> : firstLine(p.caption)}</li>)}
+          </ul>
+        </div>
+      )}
     </>
   );
 }

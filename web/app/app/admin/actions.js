@@ -13,6 +13,11 @@ import { log, logError } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
 import { sendTestAlert } from "@/lib/price-alerts";
 import { sendRecapPreview } from "@/lib/recap";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { marketItem } from "@/lib/market";
+import { saleImage } from "@/lib/sale-image";
+import { postToX } from "@/lib/x";
 
 // Every admin action re-checks that the signed-in member is an admin, and every change is written to the admin log.
 const back = (id, done) => redirect(`/app/admin?tab=members&user=${encodeURIComponent(id)}&done=${done}#member`);
@@ -221,4 +226,31 @@ export async function setIdeas(formData) {
   }
   revalidatePath("/app/admin");
   redirect(`/app/admin?tab=ideas&show=${view}&ok=${ids.length}&emailed=${emailed}`);
+}
+
+// ----- Admin → Sales: post a sale's share image to X, or skip it (lib/market.js, lib/x.js) -----
+export async function postSale(id, formData) {
+  const admin = await requireAdmin();
+  const x = await marketItem(id);
+  if (!x) redirect("/app/admin?tab=sales&err=gone");
+  const [done] = await db.select().from(schema.socialPosts).where(eq(schema.socialPosts.key, id)).limit(1);
+  if (done) redirect("/app/admin?tab=sales&err=already");
+  const caption = String(formData.get("caption") || x.caption).trim().slice(0, 280);
+  let posted;
+  try {
+    const png = Buffer.from(await (await saleImage(x)).arrayBuffer());
+    posted = await postToX(caption, png);
+  } catch (e) {
+    await logError("admin", `Couldn't post ${id} to X`, e);
+    redirect(`/app/admin?tab=sales&err=${encodeURIComponent(String(e.message).slice(0, 180))}`);
+  }
+  await db.insert(schema.socialPosts).values({ key: id, status: "posted", caption, postId: posted.id, postUrl: posted.url, by: admin.email }).onConflictDoNothing();
+  await logAdminAction(admin, "x_post", { id, url: posted.url });
+  redirect("/app/admin?tab=sales&ok=posted");
+}
+
+export async function skipSale(id) {
+  const admin = await requireAdmin();
+  await db.insert(schema.socialPosts).values({ key: id, status: "skipped", by: admin.email }).onConflictDoNothing();
+  redirect("/app/admin?tab=sales&ok=skipped");
 }

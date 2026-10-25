@@ -198,6 +198,17 @@ export const pushSubscriptions = pgTable("push_subscription", {
   lastSentAt: timestamp("last_sent_at", { mode: "date" }),
 }, (t) => [index("push_subscription_user_idx").on(t.userId)]);
 
+// Sales posts for X (Admin -> Sales, lib/market.js): which feed items were posted or skipped, so none goes out twice.
+export const socialPosts = pgTable("social_post", {
+  key: text("key").primaryKey(), // the feed item's id: "high-123", "big-123", "deal-123"
+  status: text("status").notNull(), // posted / skipped
+  caption: text("caption"),
+  postId: text("post_id"), // the post's id on X
+  postUrl: text("post_url"),
+  by: text("by"), // the admin's email
+  at: timestamp("at", { mode: "date" }).notNull().defaultNow(),
+});
+
 // Topps Pokémon cards (lib/topps.js; the checklist ships with the code): the typical eBay asking price for a raw copy,
 // worked out by the deal bot from current Buy It Now listings every few days (pokemon-deal-finder/dealfinder/topps.py).
 export const toppsPrices = pgTable("topps_price", {
