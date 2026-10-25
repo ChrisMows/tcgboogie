@@ -5,6 +5,7 @@ import { gradeKey, money } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { credible, realOff, recentDeals } from "@/lib/deals";
 import { slim } from "@/lib/portfolio";
+import { RELEASES } from "@/lib/release-notes";
 import { setLabel } from "@/lib/sets";
 
 // The market feed (public /sales page, share images, Admin -> Sales posts to X), from sales the bot saw end on eBay:
@@ -146,8 +147,23 @@ export async function marketFeed() {
   return data;
 }
 
-/** One feed item by its id ("high-123", "big-123", "deal-123"), for its share image and X post. */
+/**
+ * Release notes as posts (Admin -> Social media): one per release in lib/release-notes.js, with its share image
+ * (lib/sale-image.js draws kind "release") and a caption listing what's new.
+ */
+export function releasePosts() {
+  return RELEASES.map((r) => {
+    const fresh = r.items.filter((i) => i.tag === "New");
+    const rest = r.items.length - fresh.length;
+    const caption = [`🆕 New on TCG Boogie: ${r.title}`, "", ...fresh.map((i) => `• ${i.title}`),
+      ...(rest ? [`• Plus ${rest} ${rest === 1 ? "improvement" : "improvements and fixes"}`] : []), "", `All the details: ${SITE}/updates`, "#pokemon #pokemontcg #tcgboogie"].join("\n");
+    return { kind: "release", id: `release-${r.date}`, date: r.date, title: r.title, items: r.items.map(({ tag, title }) => ({ tag, title })), caption };
+  });
+}
+
+/** One post by its id ("high-123", "big-123", "deal-123", "release-2026-10-25"), for its share image and X post. */
 export async function marketItem(id) {
+  if (String(id).startsWith("release-")) return releasePosts().find((x) => x.id === String(id)) || null;
   const f = await marketFeed();
   return [...f.highs, ...f.big, ...f.deals].find((x) => x.id === String(id)) || null;
 }

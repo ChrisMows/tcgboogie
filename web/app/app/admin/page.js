@@ -7,7 +7,7 @@ import { listRequests, pendingCount } from "@/lib/card-requests";
 import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, postSale, removeMemberCard, setIdeas, skipSale } from "./actions";
 import { desc } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { marketFeed } from "@/lib/market";
+import { marketFeed, releasePosts } from "@/lib/market";
 import { xReady } from "@/lib/x";
 import { gameTotals } from "@/lib/game-interest";
 import { helperReport } from "@/lib/helper";
@@ -61,7 +61,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=features" className={tab === "features" ? "on" : ""} role="tab" aria-selected={tab === "features"}>Plans</Link>
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=ideas" className={tab === "ideas" ? "on" : ""} role="tab" aria-selected={tab === "ideas"}>Ideas{(await ideaCounts()).new ? <span>{(await ideaCounts()).new}</span> : null}</Link>
-        <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Market Movers</Link>
+        <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Social media</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
@@ -479,11 +479,11 @@ async function Ideas({ show = "open", group, ok, emailed, err }) {
 
 const firstLine = (t) => String(t || "").split(/\n/)[0];
 
-/** Admin → Sales: ready-made X posts from the market feed (new highs, big sales, caught deals); nothing posts without a tap. */
+/** Admin → Social media: ready-made X posts (release notes, then the Market Movers feed); nothing posts without a tap. */
 async function Sales({ ok, err }) {
   const [feed, done] = await Promise.all([marketFeed(), db ? db.select().from(schema.socialPosts).orderBy(desc(schema.socialPosts.at)).limit(200) : []]);
   const handled = new Set(done.map((d) => d.key));
-  const queue = [...feed.highs, ...feed.big.slice(0, 8), ...feed.deals.slice(0, 8)].filter((x) => !handled.has(x.id));
+  const queue = [...releasePosts(), ...feed.deals.slice(0, 8), ...feed.highs, ...feed.big.slice(0, 8)].filter((x) => !handled.has(x.id));
   const posted = done.filter((d) => d.status === "posted").slice(0, 20);
   const ready = xReady();
   const ERR = { gone: "That sale isn't in the feed anymore.", already: "That one was already posted or skipped." };
@@ -498,7 +498,7 @@ async function Sales({ ok, err }) {
           X_ACCESS_SECRET) in Hostinger&apos;s environment variables, then redeploy.
         </div>
       )}
-      <p className="muted">New highs, the week&apos;s biggest sales and caught deals, ready to post. Edit the caption if you like, then post or skip. The public page is <Link href="/sales">/sales</Link>.</p>
+      <p className="muted">Posts ready for X: <Link href="/updates">release notes</Link>, plus <Link href="/sales">Market Movers</Link> (caught deals, new highs and the week&apos;s biggest sales). Edit the caption if you like, then post or skip.</p>
       {queue.length === 0 ? <div className="panel muted">Nothing new to post right now.</div> : (
         <div className="post-queue">
           {queue.map((x) => (
@@ -506,7 +506,7 @@ async function Sales({ ok, err }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <a href={`/sales/image/${x.id}.png`} target="_blank" rel="noopener noreferrer"><img src={`/sales/image/${x.id}.png`} alt="" width={260} height={260} loading="lazy" /></a>
               <div className="post-body">
-                <span className="badge accent">{x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
+                <span className="badge accent">{x.kind === "release" ? "Release notes" : x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
                 <textarea name="caption" defaultValue={x.caption} rows={6} maxLength={280} aria-label="Caption" />
                 <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                   <button className="btn primary" style={{ flex: "none" }} disabled={!ready}>Post to X</button>

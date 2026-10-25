@@ -70,8 +70,46 @@ function Raw({ x, img }) {
     : <div style={{ display: "flex", width: 400, height: 558, alignItems: "center", justifyContent: "center", borderRadius: 18, background: "#11161d", color: "#c9d1dd", fontSize: 36 }}>{x.name}</div>;
 }
 
-/** The share image for one market feed item (lib/market.js), as an ImageResponse (a PNG). */
+const TAG = { New: { bg: LIME, ink: "#15200c" }, Improved: { bg: "#3fb950", ink: "#06180a" }, Fixed: { bg: "#d29922", ink: "#1f1503" } };
+
+/** Release notes on the same background: "What's new", the date and title, then the list (New first). */
+function releaseImage(x, { bg, bold, medium }) {
+  const order = ["New", "Improved", "Fixed"];
+  const items = [...x.items].sort((a, b) => order.indexOf(a.tag) - order.indexOf(b.tag));
+  const shown = items.slice(0, 8);
+  const more = items.length - shown.length;
+  const date = new Date(`${x.date}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return new ImageResponse(
+    (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: S, height: S, fontFamily: "Grotesk", color: "#f4f5ef",
+        backgroundImage: `url(${bg})`, backgroundSize: `${S}px ${S}px` }}>
+        <div style={{ display: "flex", marginTop: 150, padding: "6px 18px", borderRadius: 999, background: LIME, color: "#15200c", fontSize: 26, fontWeight: 700, letterSpacing: 2 }}>WHAT&apos;S NEW</div>
+        <div style={{ display: "flex", fontSize: 24, fontWeight: 500, color: "#929ba7", marginTop: 14 }}>{date}</div>
+        <div style={{ display: "flex", fontSize: 50, fontWeight: 700, lineHeight: 1.1, marginTop: 6, maxWidth: 640, textAlign: "center", justifyContent: "center",
+          textShadow: "0 0 24px rgba(211,255,102,0.35)" }}>{x.title}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 30, width: 560 }}>
+          {shown.map((it) => (
+            <div key={it.title} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ display: "flex", justifyContent: "center", width: 140, padding: "4px 0", borderRadius: 999, fontSize: 18, fontWeight: 700, letterSpacing: 1,
+                background: TAG[it.tag]?.bg || LIME, color: TAG[it.tag]?.ink || "#15200c" }}>{it.tag.toUpperCase()}</span>
+              <span style={{ display: "flex", fontSize: 28, fontWeight: 500 }}>{it.title}</span>
+            </div>
+          ))}
+          {more > 0 && <span style={{ display: "flex", fontSize: 24, color: "#929ba7", marginLeft: 154 }}>+ {more} more</span>}
+        </div>
+      </div>
+    ),
+    {
+      width: S, height: S,
+      fonts: [{ name: "Grotesk", data: bold, weight: 700, style: "normal" }, { name: "Grotesk", data: medium, weight: 500, style: "normal" }],
+      headers: { "Cache-Control": "public, max-age=3600" },
+    },
+  );
+}
+
+/** The share image for one post (lib/market.js: a sale, a caught deal, or release notes), as an ImageResponse (a PNG). */
 export async function saleImage(x) {
+  if (x.kind === "release") return releaseImage(x, await load());
   const [{ bg, bold, medium }, img] = await Promise.all([load(), picture(x.image)]);
   const kicker = x.kind === "high" ? "NEW HIGH" : x.kind === "deal" ? `SOLD ${x.off}% UNDER MARKET` : "BIG SALE";
   const sub = x.kind === "high" ? `Last high ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `Market ${money(x.market, 0)}` : "Sold on eBay";
