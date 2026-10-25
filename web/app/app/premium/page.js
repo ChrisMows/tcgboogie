@@ -98,7 +98,7 @@ export default async function Premium({ searchParams }) {
       </div>
 
       <p className="premium-links small muted">
-        <Link href="/?home=1#pricing">Compare plans</Link> · <Link href="/terms#premium">Billing &amp; cancellation terms</Link> · No refunds for partial months.
+        <Link href="/#pricing">Compare plans</Link> · <Link href="/terms#premium">Billing &amp; cancellation terms</Link> · No refunds for partial months.
       </p>
     </div>
   );

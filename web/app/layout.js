@@ -37,7 +37,7 @@ export const metadata = {
 
 function Brand() {
   return (
-    <Link href="/?home=1" className="brand" aria-label="TCG Boogie home">
+    <Link href="/" className="brand" aria-label="TCG Boogie home">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="brand-card" src="/brand/card.webp" alt="" width={144} height={160} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -50,10 +50,10 @@ export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
   const navLinks = [
     { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
-    { href: user ? "/app/deals" : "/?home=1#deals", label: "Deals" },
+    { href: user ? "/app/deals" : "/#deals", label: "Deals" },
     { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
     { href: user ? "/app/collection/photo" : "/login?next=%2Fapp%2Fcollection%2Fphoto", label: "Photo appraiser" },
-    { href: "/?home=1#pricing", label: "Pricing" },
+    { href: "/#pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },
   ];
   return (
@@ -137,7 +137,7 @@ export default async function RootLayout({ children }) {
             </div>
             <nav aria-label="Footer">
               <Link href="/how-it-works">How it works</Link>
-              <Link href="/?home=1#pricing">Pricing</Link>
+              <Link href="/#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>

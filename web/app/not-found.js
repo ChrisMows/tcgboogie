@@ -13,7 +13,7 @@ export default function NotFound() {
       <h1>This pack was empty.</h1>
       <p className="muted">The page you were looking for isn&apos;t here. It may have moved, or the link has a typo.</p>
       <div className="not-found-actions">
-        <Link href="/?home=1" className="btn primary">Go to the homepage</Link>
+        <Link href="/" className="btn primary">Go to the homepage</Link>
         <Link href="/app/collection" className="btn">My collection</Link>
         <Link href="/faq" className="btn ghost">FAQ</Link>
       </div>

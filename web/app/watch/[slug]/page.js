@@ -50,7 +50,7 @@ export default async function Watch({ params }) {
         <p className="muted">{DESCRIPTION}</p>
         <div className="watch-actions">
           <Link href="/login?mode=signup" className="btn primary lg">Start free ↗</Link>
-          <Link href="/?home=1" className="btn lg">See the site</Link>
+          <Link href="/" className="btn lg">See the site</Link>
         </div>
         <p className="hint">Free forever, no card needed. Premium is $9.99/month with 7 days free.</p>
       </div>

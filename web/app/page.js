@@ -4,6 +4,7 @@ import DealTabs from "@/components/DealTabs";
 import DealCarousel from "@/components/DealCarousel";
 import PlanCards from "@/components/PlanCards";
 import Source from "@/components/Source";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
@@ -92,9 +93,11 @@ export default async function Home({ searchParams }) {
   const user = await getCurrentUser();
   const sp = await searchParams;
   const deleted = sp?.deleted;
-  // Signed-in members go straight to their collection. Links to the homepage's own sections (Explore deals,
-  // Pricing) carry ?home=1 so members can still read them.
-  if (user && sp?.home !== "1" && !deleted) redirect("/app/collection");
+  // Signed-in members who open tcgboogie.com from outside the site (the home-screen app, a bookmark, a typed address,
+  // a link in an email) go straight to their collection. From inside the site (the logo, Pricing, the menus) they get
+  // the homepage, at a clean tcgboogie.com/: the browser says which with Sec-Fetch-Site. Older links carry ?home=1.
+  const fromSite = (await headers()).get("sec-fetch-site") === "same-origin";
+  if (user && !fromSite && sp?.home !== "1" && !deleted) redirect("/app/collection");
   const voted = GAMES[sp?.voted] ? sp.voted : null;
   const [mine, caught, plans] = await Promise.all([user ? myGames(user.id) : [], homeShowcase(), effectivePlans()]);
   const free = plans.free;

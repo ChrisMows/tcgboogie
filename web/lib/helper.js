@@ -60,7 +60,7 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
   email recap), Text alerts (phone number), Connected accounts (Google, Discord, eBay seller account for Sell on
   eBay), Profile, Delete account. Plan & billing is /app/account#plan.
 /app/premium — upgrade to Premium.
-/?home=1#pricing — plans and prices. /faq — FAQ. /how-it-works — how deals work. /terms — Terms. /privacy — Privacy.
+/#pricing — plans and prices. /faq — FAQ. /how-it-works — how deals work. /terms — Terms. /privacy — Privacy.
 /login — sign in or sign up (Google, Discord or an email link). Support: support@tcgboogie.com.
 `.trim();
 
