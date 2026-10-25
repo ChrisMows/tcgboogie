@@ -393,21 +393,22 @@ export async function prefetchProducts(ids) {
   return sales;
 }
 
-async function pricedProduct(id, { cachedOnly = false, language = "english", sales } = {}) {
+// anyAge: use a saved copy however old (pages that only need a card's name, set and picture, like the sales feed).
+async function pricedProduct(id, { cachedOnly = false, language = "english", sales, anyAge = false } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
   // Same request (and cache entry) as the deal bot's price lookups; prices update about once a day.
   // Japanese cards are a separate catalog: the bot adds language=japanese, so we do too and share its copy.
   const japanese = language === "japanese";
-  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { ...PRICE_PARAMS, ...(japanese ? { language: "japanese" } : {}) }, PRICE_TTL, cachedOnly);
+  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { ...PRICE_PARAMS, ...(japanese ? { language: "japanese" } : {}) }, anyAge ? Infinity : PRICE_TTL, cachedOnly);
   if (card === MISS) return undefined;
   if (card?.data) return withOurSales({ ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) }, sales);
   if (japanese) return null;
-  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
+  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, anyAge ? Infinity : 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
   if (s) return withSealedHistory(fromSealed(s));
   // Not an English card or sealed product: Japanese cards (promos included) are a separate catalog, same IDs.
-  return pricedProduct(id, { cachedOnly, language: "japanese", sales });
+  return pricedProduct(id, { cachedOnly, language: "japanese", sales, anyAge });
 }
 
 /**
