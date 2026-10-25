@@ -330,6 +330,18 @@ export async function updateItem(userId, id, fields) {
   return row;
 }
 
+/** Today's market values for many of one member's items, in one write: [{ id, unitValue }]. */
+export async function updateItemValues(userId, values) {
+  if (!values.length) return;
+  if (isDemo(userId)) {
+    for (const v of values) Object.assign(demoCollection().items.find((x) => x.id === v.id) || {}, { unitValue: v.unitValue, valueUpdatedAt: new Date() });
+    return;
+  }
+  const rows = sql.join(values.map((v) => sql`(${Number(v.id)}::integer, ${Number(v.unitValue)}::double precision)`), sql`, `);
+  await db.execute(sql`update ${collectionItems} set unit_value = v.val, value_updated_at = now()
+    from (values ${rows}) as v(id, val) where ${collectionItems.userId} = ${userId} and ${collectionItems.id} = v.id`);
+}
+
 export async function deleteItem(userId, id) {
   if (isDemo(userId)) {
     const d = demoCollection();

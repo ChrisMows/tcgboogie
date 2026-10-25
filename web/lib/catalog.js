@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
@@ -138,7 +138,8 @@ async function cached(key, maxAgeMs, fetcher, cachedOnly = false) {
   const hit = mem.get(key);
   if (hit && Date.now() - hit.at < maxAgeMs) return hit.data;
   if (cachedOnly && !db) return MISS;
-  if (db) {
+  const justRead = hit?.checked && Date.now() - hit.checked < 60000; // prefetchProducts just read the table: nothing newer there
+  if (db && !justRead) {
     const [row] = await db.select().from(schema.catalogCache).where(eq(schema.catalogCache.key, key)).limit(1);
     if (row && Date.now() - row.fetchedAt.getTime() < maxAgeMs) {
       mem.set(key, { at: row.fetchedAt.getTime(), data: row.data });
@@ -155,8 +156,11 @@ async function cached(key, maxAgeMs, fetcher, cachedOnly = false) {
   return data;
 }
 
+const PRICE_PARAMS = { includeHistory: "true", includeEbay: "true", days: "90" };
+const pptKey = (path, params) => `${PPT}${path}?${new URLSearchParams(params)}`;
+
 async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
-  const url = `${PPT}${path}?${new URLSearchParams(params)}`;
+  const url = pptKey(path, params);
   return cached(url, maxAgeMs, async () => {
     const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
     recordStatus(r);
@@ -289,11 +293,12 @@ function weightedMedian(points) {
  * grade with a recent sale gets a value; `sales` says how many it rests on. Grades with no recent sales keep the
  * service's own figure (and its reliability rule).
  */
-async function withOurSales(p) {
+async function withOurSales(p, prefetched) {
   const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 40) }); // the card page filters these by grade
   if (p.type !== "card") return trim(p);
   let rows = [];
-  if (db) {
+  if (prefetched) rows = prefetched.get(p.id) || [];
+  else if (db) {
     try {
       rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), eq(schema.sales.kind, "graded"),
         gte(schema.sales.soldAt, new Date(Date.now() - 90 * DAY_MS))));
@@ -347,30 +352,60 @@ function fromSealed(s) {
 export async function getProduct(id, opts = {}) {
   if (isMemberId(id)) {
     const m = await getMemberCard(id);
-    return m && withOurSales(m);
+    return m && withOurSales(m, opts.sales);
   }
   const p = await pricedProduct(id, opts);
   if (p !== null) return p;
   const m = await getMemberCard(id);
-  return m ? withOurSales(m) : null;
+  return m ? withOurSales(m, opts.sales) : null;
 }
 
-async function pricedProduct(id, { cachedOnly = false, language = "english" } = {}) {
+/**
+ * Many products' cached prices and our graded sales in two database reads, instead of two or more reads per product
+ * one after another (a 50-card collection was 100+ trips to the database). Fills the memory cache that getProduct
+ * reads; returns the graded sales to pass to getProduct as { sales }.
+ */
+export async function prefetchProducts(ids) {
+  const unique = [...new Set(ids.map(String))].filter((id) => !isMemberId(id));
+  if (!db || !unique.length) return null;
+  const now = Date.now();
+  const keys = catalogLive() ? unique.flatMap((id) => [
+    pptKey(`/cards/${encodeURIComponent(id)}`, PRICE_PARAMS),
+    pptKey("/sealed-products", { tcgPlayerId: id, limit: "1" }),
+    pptKey(`/cards/${encodeURIComponent(id)}`, { ...PRICE_PARAMS, language: "japanese" }),
+  ]).filter((k) => { const h = mem.get(k); return !h || now - h.at >= PRICE_TTL; }) : [];
+  const sales = new Map();
+  try {
+    const [rows, sold] = await Promise.all([
+      keys.length ? db.select().from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys)) : [],
+      db.select().from(schema.sales).where(and(inArray(schema.sales.productId, [...new Set(ids.map(String))]), eq(schema.sales.kind, "graded"),
+        gte(schema.sales.soldAt, new Date(now - 90 * DAY_MS)))),
+    ]);
+    const found = new Map(rows.map((r) => [r.key, r]));
+    for (const k of keys) {
+      const r = found.get(k);
+      mem.set(k, r ? { at: r.fetchedAt.getTime(), data: r.data, checked: now } : { at: 0, data: undefined, checked: now });
+    }
+    for (const s of sold) (sales.get(s.productId) || sales.set(s.productId, []).get(s.productId)).push(s);
+  } catch { return null; } // fall back to one product at a time
+  return sales;
+}
+
+async function pricedProduct(id, { cachedOnly = false, language = "english", sales } = {}) {
   if (!catalogLive()) return SAMPLE.find((p) => p.id === String(id)) || null;
   // Same request (and cache entry) as the deal bot's price lookups; prices update about once a day.
   // Japanese cards are a separate catalog: the bot adds language=japanese, so we do too and share its copy.
   const japanese = language === "japanese";
-  const card = await ppt(`/cards/${encodeURIComponent(id)}`,
-    { includeHistory: "true", includeEbay: "true", days: "90", ...(japanese ? { language: "japanese" } : {}) }, PRICE_TTL, cachedOnly);
+  const card = await ppt(`/cards/${encodeURIComponent(id)}`, { ...PRICE_PARAMS, ...(japanese ? { language: "japanese" } : {}) }, PRICE_TTL, cachedOnly);
   if (card === MISS) return undefined;
-  if (card?.data) return withOurSales({ ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) });
+  if (card?.data) return withOurSales({ ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) }, sales);
   if (japanese) return null;
   const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, 12 * HOUR, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
   if (s) return withSealedHistory(fromSealed(s));
   // Not an English card or sealed product: Japanese cards (promos included) are a separate catalog, same IDs.
-  return pricedProduct(id, { cachedOnly, language: "japanese" });
+  return pricedProduct(id, { cachedOnly, language: "japanese", sales });
 }
 
 /**

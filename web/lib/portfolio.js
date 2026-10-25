@@ -1,5 +1,5 @@
 import "server-only";
-import { getProduct } from "@/lib/catalog";
+import { getProduct, prefetchProducts } from "@/lib/catalog";
 import { change, marketValue, summarize } from "@/lib/collection";
 import * as store from "@/lib/store";
 
@@ -20,9 +20,10 @@ export const slim = (p) => p && {
 export async function loadProducts(ids, maxLive = MAX_LIVE_LOOKUPS) {
   const products = {};
   let live = 0;
+  const sales = await prefetchProducts(ids).catch(() => null);
   for (const id of [...new Set(ids)]) {
     try {
-      let p = await getProduct(id, { cachedOnly: true });
+      let p = await getProduct(id, { cachedOnly: true, sales });
       if (p === undefined && live < maxLive) { live++; p = await getProduct(id); }
       if (p) products[id] = slim(p);
     } catch { /* price service unavailable: fall back to saved values */ }
@@ -36,12 +37,13 @@ export async function loadCollection(user) {
   const products = await loadProducts(items.map((it) => it.productId));
   const now = Date.now();
   const enriched = [];
+  const fresh = []; // values to save, in one database write
   for (const it of items) {
     const p = products[it.productId];
     const mv = p ? marketValue(p, it) : null;
     // Save fresh market values so totals still work if the price service is down later.
     if (p && mv !== null && (mv !== it.unitValue || !it.valueUpdatedAt || now - new Date(it.valueUpdatedAt).getTime() > STALE_MS)) {
-      await store.updateItem(user.id, it.id, { unitValue: mv, valueUpdatedAt: new Date() });
+      fresh.push({ id: it.id, unitValue: mv });
       it.unitValue = mv;
       it.valueUpdatedAt = new Date();
     }
@@ -56,7 +58,10 @@ export async function loadCollection(user) {
   }
   const owned = enriched.filter((it) => it.list === "owned");
   const summary = summarize(owned);
-  await store.recordSnapshot(user.id, Math.round(summary.value * 100) / 100, Math.round(summary.cost * 100) / 100);
+  await Promise.all([
+    store.updateItemValues(user.id, fresh),
+    store.recordSnapshot(user.id, Math.round(summary.value * 100) / 100, Math.round(summary.cost * 100) / 100),
+  ]);
   const snapshots = (await store.listSnapshots(user.id)).map((s) => ({ day: String(s.day).slice(0, 10), value: s.value, cost: s.cost }));
   return { items: enriched, owned, wishlist: enriched.filter((it) => it.list === "wishlist"), binders, prefs, products, summary, snapshots };
 }

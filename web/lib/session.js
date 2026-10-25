@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -10,8 +11,11 @@ import * as store from "@/lib/store";
 // Demo mode (local preview only): a fake signed-in member and sample data, used until the database exists.
 export const demoMode = process.env.DEMO_MODE === "1" && !authEnabled;
 
-/** The signed-in member, or null. Includes their plan and alert preferences. */
-export async function getCurrentUser() {
+/**
+ * The signed-in member, or null. Includes their plan and alert preferences. Looked up once per page: the site frame,
+ * the member-area frame and the page all ask, and each lookup is several trips to the database.
+ */
+export const getCurrentUser = cache(async function getCurrentUser() {
   await connection(); // who's signed in differs per request: never bake this into a static page
   await refreshFeatures();
   if (demoMode) {
@@ -48,7 +52,7 @@ export async function getCurrentUser() {
   const isAdmin = isAdminEmail(row.email);
   const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : effectiveTier(row);
   return { ...row, tier, plan: planFor(tier), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
-}
+});
 
 /**
  * Where to go after signing in: only pages inside the member area (no other sites, no "//evil.com" tricks).
