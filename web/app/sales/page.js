@@ -5,15 +5,15 @@ import { ebayLink } from "@/lib/ebay-link";
 import { marketFeed } from "@/lib/market";
 import { getCurrentUser } from "@/lib/session";
 
-// The public market feed: new record highs, the week's biggest sales and deals our members caught under market, from
+// The public market feed: deals our members caught under market (first), new record highs and the week's biggest sales, from
 // sales the deal bot watched end on eBay (lib/market.js). Each one has a share image (app/sales/image/[id]).
 const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
-const TITLE = "Pokémon card sales: new highs and deals";
+const TITLE = "Market Movers: Pokémon card deals and record sales";
 const DESCRIPTION = "Graded Pokémon cards hitting new highs, the week's biggest eBay sales, and deals our members caught under market value.";
 
 export async function generateMetadata() {
   const f = await marketFeed();
-  const top = f.highs[0] || f.big[0] || f.deals[0];
+  const top = f.deals[0] || f.highs[0] || f.big[0];
   const image = top ? `${SITE}/sales/image/${top.id}.png` : undefined;
   return {
     title: TITLE, description: DESCRIPTION, alternates: { canonical: "/sales" },
@@ -61,16 +61,16 @@ export default async function Sales() {
       <div className="page-head">
         <div>
           <div className="eyebrow">POKÉMON CARD MARKET</div>
-          <h1>Sales worth knowing about</h1>
-          <p>New record highs, the week&apos;s biggest eBay sales, and deals our members caught under market. Updated all day from sales our deal bot watches end.</p>
+          <h1>Market Movers</h1>
+          <p>Deals our members caught under market, new record highs and the week&apos;s biggest eBay sales. Updated all day from sales our deal bot watches end.</p>
         </div>
       </div>
+      <Section id="deals" title="⚡ Deals our members caught" intro="Auctions we alerted members to that really sold well under market value, by their final price." list={f.deals}
+        empty="No caught deals in the last two weeks yet." />
       <Section id="highs" title="📈 New highs" intro="Graded cards that just sold for more than any sale of that card and grade we know of." list={f.highs}
         empty="No new highs in the last two weeks. They show up here the moment one sells." />
       <Section id="big" title="💰 Biggest sales this week" intro="The priciest graded Pokémon cards that sold on eBay in the last 7 days." list={f.big}
         empty="No big sales recorded this week yet." />
-      <Section id="deals" title="⚡ Deals our members caught" intro="Auctions we alerted members to that really sold well under market value, by their final price." list={f.deals}
-        empty="No caught deals in the last two weeks yet." />
       <div className="panel sales-cta">
         <b>Get deals like these before the auction ends.</b>
         <span className="muted">TCG Boogie watches eBay all day and alerts you the moment a card you want is listed under market value.</span>
