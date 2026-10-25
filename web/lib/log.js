@@ -42,5 +42,7 @@ export async function log(source, level, message, details = null, userId = null)
   }
 }
 
+// Database errors arrive as "Failed query: ..." with the database's own reason in e.cause, so that goes first.
 export const logError = (source, message, e, details, userId) =>
-  log(source, "error", `${message}: ${e?.message || e}`, { ...details, ...(e?.status ? { status: e.status } : {}) }, userId);
+  log(source, "error", `${message}: ${e?.cause?.message ? `${e.cause.message} (${e.message})` : e?.message || e}`,
+    { ...details, ...(e?.status ? { status: e.status } : {}), ...(e?.cause?.code ? { code: e.cause.code } : {}) }, userId);

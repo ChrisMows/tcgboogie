@@ -61,11 +61,23 @@ export async function POST(req) {
     await log("signin", "warn", `eBay account-deletion notice not verified: ${problem}`);
     return new NextResponse(null, { status: 412 });
   }
+  let username;
   try {
-    const data = JSON.parse(raw)?.notification?.data || {};
-    await forgetEbayUser(data.username);
+    username = (JSON.parse(raw)?.notification?.data || {}).username;
   } catch (e) {
-    await logError("signin", "eBay account-deletion notice failed", e);
+    await logError("signin", "eBay account-deletion notice unreadable", e);
+    return new NextResponse(null, { status: 204 });
   }
-  return new NextResponse(null, { status: 204 });
+  // One retry straight away (a dropped database connection fails only the first try); if that fails too, answer 500
+  // so eBay sends the notice again later.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await forgetEbayUser(username);
+      return new NextResponse(null, { status: 204 });
+    } catch (e) {
+      if (attempt < 2) continue;
+      await logError("signin", "eBay account-deletion notice failed (eBay will resend it)", e, { username });
+      return new NextResponse(null, { status: 500 });
+    }
+  }
 }
