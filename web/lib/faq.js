@@ -38,7 +38,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
       ["Why does a card say \"No pricing data available\"?",
         "It was added by a member and our price service doesn't cover it yet, which is common for Korean and Chinese cards. You can still add it to your collection with your own value, set price alerts, and report eBay sales, which build its graded values. If the price service adds it later, prices appear by themselves."],
       ["What does an amber value with \"✎ Your value\" mean?",
-        "It's a value you typed in yourself (Edit → Your value), not a market price. We show it in amber so you always know which totals rest on your own numbers. Clear the field to go back to the market value."],
+        "It's a value you typed in yourself (Edit → Your value) for a copy we have no market price for, like a card our price service doesn't cover or a graded copy with no recent sales. We show it in amber so you always know which totals rest on your own numbers. As soon as a market price turns up, it replaces your value automatically."],
       ["A price looks wrong. Can I fix it?",
         "Yes. On the card page, tap Price wrong? (or Report a sale we're missing) and paste the eBay link of a sale. It has to be a sold, finished eBay listing for that card. We check it with eBay and add it to the card's sales right away."],
       ["Can I check sold prices myself?",

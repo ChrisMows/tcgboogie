@@ -130,7 +130,7 @@ export default function CollectionView({ items, binders, products, watched: watc
       </div>
 
       {shown.some(isOwnValue) && (
-        <p className="small muted own-value-key"><span className="own-value-tag">✎ Your value</span> Amber values are ones you typed in yourself, not market prices.</p>
+        <p className="small muted own-value-key"><span className="own-value-tag">✎ Your value</span> Amber values are ones you typed in yourself, used until we have a market price.</p>
       )}
       {shown.length === 0 ? (
         <div className="panel empty-state">

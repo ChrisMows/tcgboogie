@@ -131,7 +131,8 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
           )}
           <div>
             <label className="field" htmlFor="if-own">Your own value per copy</label>
-            <input id="if-own" type="number" min="0" step="0.01" placeholder="Use market value" value={customValue} onChange={(e) => setCustomValue(e.target.value)} />
+            <input id="if-own" type="number" min="0" step="0.01" placeholder="Only if there's no market price" value={customValue} onChange={(e) => setCustomValue(e.target.value)} />
+            <span className="small muted">Used only while we have no market price for this copy. A market price always takes over.</span>
             <Err msg={errors.customValue} />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>

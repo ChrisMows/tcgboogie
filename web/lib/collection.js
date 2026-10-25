@@ -46,10 +46,14 @@ export function marketValue(product, item) {
   return byPrinting[item.condition]?.market ?? null;
 }
 
-/** What one copy counts for in totals: the member's own value if they set one, else the market value. */
-export const unitValue = (item) => (item.customValue ?? item.unitValue ?? null);
-/** The member typed this copy's value themselves (it isn't a market price): shown in amber with "Your value". */
-export const isOwnValue = (item) => item.customValue !== null && item.customValue !== undefined;
+/**
+ * What one copy counts for in totals: the market value whenever there is one; the member's own value only while
+ * there's no market price for it (a card the price service doesn't cover, a graded copy without recent sales...).
+ * Once a market price turns up it takes over; the member's figure stays saved underneath in case the price goes away.
+ */
+export const unitValue = (item) => (item.unitValue ?? item.customValue ?? null);
+/** The value shown is one the member typed in (no market price yet): shown in amber with "Your value". */
+export const isOwnValue = (item) => (item.unitValue === null || item.unitValue === undefined) && item.customValue !== null && item.customValue !== undefined;
 
 /** Price change over the last `days` from a product's history (raw Near Mint / sealed only). */
 export function change(product, days = 7) {
