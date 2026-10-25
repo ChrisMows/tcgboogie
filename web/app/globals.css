@@ -1487,7 +1487,7 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .slab-window::before { top: 4cqw; }
 .slab-window::after { bottom: 4cqw; }
 .slab-window img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; border-radius: 3cqw; }
-.slab-noimg { color: var(--muted); font-size: 12cqw; }
+.slab-noimg { color: var(--muted); font-size: 12cqw; text-align: center; padding: 0 6cqw; line-height: 1.2; overflow-wrap: anywhere; }
 
 /* PSA: white label in a thick red frame; light grade numerals; the mark at the bottom in blue and red */
 .slab-psa .slab-label { border: 2.6cqw solid #e3222b; border-radius: 1.2cqw; }

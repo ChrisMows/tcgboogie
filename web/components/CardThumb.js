@@ -3,14 +3,13 @@
  * show slabbed: the card inside a clear case under the grader's label (PSA, BGS, CGC, SGC, TAG) with its grade, so a
  * raw copy and a graded copy of the same card look different side by side.
  */
+import CardPicture from "@/components/CardPicture";
+
 export default function CardThumb({ item, width = 64, className = "" }) {
   const style = { width, minWidth: width };
   if (item?.kind === "graded" && item.grader) return <Slab item={item} style={style} className={className} />;
-  if (item?.image) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img className={`thumb ${className}`} style={style} src={item.image} alt="" loading="lazy" />;
-  }
-  return <Placeholder item={item} width={width} style={style} className={className} />;
+  const placeholder = <Placeholder item={item} width={width} style={style} className={className} />;
+  return <CardPicture className={`thumb ${className}`} style={style} src={item?.image} alt="" fallback={placeholder} />;
 }
 
 function Placeholder({ item, width, style, className = "" }) {
@@ -72,10 +71,8 @@ function Slab({ item, style, className }) {
           {item.grader === "PSA" && <span className="slab-mark">PSA</span>}
         </div>
         <div className="slab-window">
-          {item.image
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={item.image} alt="" loading="lazy" />
-            : <span className="slab-noimg">{item.number ? `#${String(item.number).split("/")[0]}` : ""}</span>}
+          <CardPicture src={item.image} alt="" fallback={<span className="slab-noimg">
+            {item.number ? `#${String(item.number).split("/")[0]}` : String(item.name || "").replace(/\s*\(.*\)$/, "").replace(/\s+-\s+\S+$/, "")}</span>} />
         </div>
       </div>
     </div>
