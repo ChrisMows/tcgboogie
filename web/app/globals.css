@@ -1718,3 +1718,15 @@ body:has(.install-hint) .helper-fab { display: none; }
 .post-card img { width: 260px; height: 260px; border-radius: 10px; display: block; }
 .post-body { flex: 1 1 280px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .post-body textarea { width: 100%; font: inherit; font-size: 14px; }
+
+/* What's new (app/updates) */
+.release { margin: 28px 0; }
+.release-head time { font-size: 13px; color: var(--muted); letter-spacing: 0.5px; }
+.release-head h2 { margin: 2px 0 12px; }
+.release-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.release-items li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+.release-items p { margin: 4px 0 0; color: var(--muted); }
+.release-tag { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; margin-top: 2px; min-width: 70px; text-align: center; }
+.release-tag.new { background: var(--accent-soft); color: var(--accent); }
+.release-tag.improved { background: var(--good-soft); color: var(--good); }
+.release-tag.fixed { background: var(--warn-soft); color: var(--warn); }

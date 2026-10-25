@@ -1,0 +1,34 @@
+// What's new on TCG Boogie (the public /updates page), newest first. Add a release at the top of RELEASES when
+// something members will notice ships: tag is "New", "Improved" or "Fixed"; href (optional) is where to see it.
+export const RELEASES = [
+  {
+    date: "2026-10-25",
+    title: "Push alerts, Market Movers and Topps cards",
+    items: [
+      { tag: "New", title: "Push notifications", href: "/app/account#push",
+        text: "Deal alerts and price alerts can now pop up on your phone or computer the instant we send them, even when TCG Boogie isn't open. Turn them on in Settings → Push notifications, one device at a time. On iPhone, add TCG Boogie to your home screen first and open it from there. Premium." },
+      { tag: "New", title: "Market Movers", href: "/sales",
+        text: "A new page with the deals our members caught under market value, cards that just sold for a new record high, and the week's biggest eBay sales. Updated all day from the auctions our deal bot watches end." },
+      { tag: "New", title: "Topps Pokémon cards", href: "/app/collection/sets",
+        text: "911 cards from all 12 Topps Pokémon sets (1999 to 2004: TV Animation Series 1 to 3, the movie sets, Chrome, Johto and Advanced). Search \"topps\" plus a name, or open them under Sets → Topps. Values are the typical eBay asking price for a raw Near Mint copy, checked every few days." },
+      { tag: "Improved", title: "Faster pages",
+        text: "Every page you open while signed in loads quicker, and the Collection page is much faster: loading a 55-card collection's prices went from about 4 seconds to under half a second." },
+      { tag: "Improved", title: "Market prices come first",
+        text: "A card's value is now always its market price when there is one. A value you typed in yourself is used only while there's no market price, and a market price that turns up later takes over by itself." },
+      { tag: "Improved", title: "Grades that match the grader",
+        text: "Grade menus now follow the company: PSA has no 9.5, while CGC, Beckett, SGC and TAG do, and every grader now has the lower half grades (6.5, 5.5 and so on). Switching grader moves your grade to the nearest real one." },
+      { tag: "Improved", title: "Easier card search",
+        text: "The Add cards search box has a ✕ to clear it, and it clears itself after you add a card, ready for the next one." },
+      { tag: "Improved", title: "Choose a saved photo",
+        text: "On phones, the photo appraiser and Sell on eBay now let you pick a photo from your library, not just take a new one." },
+      { tag: "Improved", title: "eBay app links work",
+        text: "Links shared from the eBay app (\"Check out this listing… ebay.us/…\") now work when you request a card or report a sale. Paste the whole share text; we find the link." },
+      { tag: "Improved", title: "Clearer loading screen",
+        text: "The loading screen now says what's on its way, like \"Loading your collection…\" or \"Finding your deals…\"." },
+      { tag: "Improved", title: "Home-screen app address",
+        text: "The home-screen app opens at tcgboogie.com, and the logo takes you to the homepage without anything extra in the address." },
+      { tag: "Fixed", title: "Missing card pictures",
+        text: "Some cards showed an empty slab where the picture should be. Pictures our price service hosts now load, and a card with no picture anywhere shows its name instead of a blank frame." },
+    ],
+  },
+];

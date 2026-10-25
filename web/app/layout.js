@@ -141,6 +141,7 @@ export default async function RootLayout({ children }) {
               <Link href="/sales">Market Movers</Link>
               <Link href="/#pricing">Pricing</Link>
               <Link href="/faq">FAQ</Link>
+              <Link href="/updates">What&apos;s new</Link>
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>
               <SuggestIdea source="footer" label="Suggest an idea" className="link-btn footer-idea" />
