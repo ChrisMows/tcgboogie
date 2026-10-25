@@ -3,6 +3,7 @@ import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
+import { isToppsId, toppsCard } from "@/lib/topps";
 import { FAMILIES } from "@/lib/pokemon-families";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
@@ -350,6 +351,7 @@ function fromSealed(s) {
  * TCGplayer number gets the service's prices by itself once the service adds it.
  */
 export async function getProduct(id, opts = {}) {
+  if (isToppsId(id)) return toppsCard(id);
   if (isMemberId(id)) {
     const m = await getMemberCard(id);
     return m && withOurSales(m, opts.sales);
@@ -366,7 +368,7 @@ export async function getProduct(id, opts = {}) {
  * reads; returns the graded sales to pass to getProduct as { sales }.
  */
 export async function prefetchProducts(ids) {
-  const unique = [...new Set(ids.map(String))].filter((id) => !isMemberId(id));
+  const unique = [...new Set(ids.map(String))].filter((id) => !isMemberId(id) && !isToppsId(id));
   if (!db || !unique.length) return null;
   const now = Date.now();
   const keys = catalogLive() ? unique.flatMap((id) => [

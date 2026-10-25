@@ -185,6 +185,19 @@ export const catalogCache = pgTable("catalog_cache", {
   fetchedAt: timestamp("fetched_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Topps Pokémon cards (lib/topps.js; the checklist ships with the code): the typical eBay asking price for a raw copy,
+// worked out by the deal bot from current Buy It Now listings every few days (pokemon-deal-finder/dealfinder/topps.py).
+export const toppsPrices = pgTable("topps_price", {
+  productId: text("product_id").primaryKey(), // "t-s1-6" (lib/data/topps.json)
+  price: doublePrecision("price"), // median asking price; null when too few listings matched
+  low: doublePrecision("low"),
+  high: doublePrecision("high"),
+  listings: integer("listings").notNull().default(0), // matching listings the price rests on
+  image: text("image"), // a current listing's photo (i.ebayimg.com)
+  history: jsonb("history"), // [{ date, price }], one point per check, newest last
+  checkedAt: timestamp("checked_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 // A member's saved deal filters (see lib/filters.js for the shape of `filters`).
 export const profiles = pgTable("profile", {
   id: serial("id").primaryKey(),

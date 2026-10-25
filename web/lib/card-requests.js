@@ -5,6 +5,7 @@ import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
 import { linkIn } from "@/lib/report-sale";
+import { asksForTopps, searchTopps } from "@/lib/topps";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -150,15 +151,22 @@ export async function aliasMatches(query, limit = 3) {
   } catch { return []; }
 }
 
-/** The usual search, with products learned from requests first and member-added cards (no prices) after. */
+/**
+ * The usual search, with products learned from requests first and member-added cards (no prices) after. Topps cards
+ * (lib/topps.js) come first when the search asks for them ("topps charizard"), else after the rest when few matched.
+ */
 export async function searchWithRequests(q) {
-  const [learned, members, found] = await Promise.all([
+  const wantTopps = asksForTopps(q);
+  const [learned, members, found, topps] = await Promise.all([
     aliasMatches(q).then((rows) => Promise.all(rows.map((r) => getProduct(r.productId, { language: r.language }).catch(() => null)))),
     searchMemberCards(q),
-    searchProducts(q),
+    wantTopps ? Promise.resolve([]) : searchProducts(q),
+    searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
   ]);
+  const regular = [...learned.filter(Boolean), ...found, ...members];
+  const all = wantTopps ? [...topps, ...regular] : regular.length < 4 ? [...regular, ...topps] : regular;
   const seen = new Set();
-  return [...learned.filter(Boolean), ...found, ...members].filter((p) => {
+  return all.filter((p) => {
     const k = `${p.id}:${p.language || "english"}`;
     return seen.has(k) ? false : seen.add(k);
   });

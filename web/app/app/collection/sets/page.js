@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SetBrowser from "@/components/SetBrowser";
 import { listSets } from "@/lib/catalog";
+import { toppsSets } from "@/lib/topps";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -25,7 +26,8 @@ export default async function SetsPage() {
       {sets === null ? (
         <div className="notice warn">The set list didn&apos;t load from the price service. Please try again in a minute.</div>
       ) : (
-        <SetBrowser sets={sets.map((s) => ({ ...s, have: have[s.name]?.size || 0 }))} />
+        <SetBrowser sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null }))]
+          .map((s) => ({ ...s, have: have[s.name]?.size || 0 }))} />
       )}
     </>
   );

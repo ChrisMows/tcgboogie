@@ -130,7 +130,8 @@ export default async function CardPage({ params, searchParams }) {
   const thinGraded = allGraded.filter(([, g]) => g.reliable === false);
   const isSealed = p.type === "sealed";
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
-  const ebayQuery = `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}${language === "japanese" ? " Japanese" : ""}`.trim();
+  const ebayQuery = p.topps ? p.topps.query
+    : `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}${language === "japanese" ? " Japanese" : ""}`.trim();
   const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
   const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
   // Sold searches per grade ("… PSA 10"), for the graded cells.
@@ -141,8 +142,9 @@ export default async function CardPage({ params, searchParams }) {
     sold: ebaySearch(`${ebayQuery}${deal.kind === "graded" ? ` ${deal.grader} ${deal.grade}` : ""}`, { sold: true, source: "deal-quick-sold" }),
   } : null;
 
-  // Raw condition prices link to that condition's live listings on TCGplayer.
+  // Raw condition prices link to that condition's live listings on TCGplayer (Topps cards: the eBay listings).
   const tcgListings = (printing, cond) => {
+    if (p.topps) return ebay.href;
     const u = new URL(p.tcgplayerUrl);
     u.searchParams.set("Language", "English");
     if (printing) u.searchParams.set("Printing", printing);
@@ -195,7 +197,18 @@ export default async function CardPage({ params, searchParams }) {
             {p.number ? ` · #${p.number}` : ""}{p.rarity && p.rarity !== "None" ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
             {LANGUAGE[p.language || language] ? ` · ${LANGUAGE[p.language || language]}` : ""}
           </div>
-          {p.memberAdded ? (
+          {p.topps && !now ? (
+            <div className="notice no-price">
+              <b>No eBay price yet</b> for this Topps card. We check eBay&apos;s current listings every few days{p.topps.checkedAt ? " and didn't find enough of this card last time" : ""}, so you
+              can add it to your collection with your own value in the meantime.
+            </div>
+          ) : p.topps ? (
+            <div className="hero-price">
+              <span className="small muted">Typical eBay asking price · raw Near Mint</span>
+              <b>{money(now)}</b>
+              <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${money(p.topps.low)} to ${money(p.topps.high)})` : ""}</span>
+            </div>
+          ) : p.memberAdded ? (
             <div className="notice no-price">
               <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
               so you can still add it to your collection with your own value, set price alerts and report sales you see.
@@ -239,9 +252,9 @@ export default async function CardPage({ params, searchParams }) {
                   <div className="cond-grid">
                     {Object.entries(byCond).sort(([a], [b]) => condRank(a) - condRank(b)).map(([cond, v]) => (
                       <a key={cond} className="cond-cell cond-link" href={tcgListings(printing, cond)} target="_blank" rel="noopener noreferrer"
-                        title={`See ${cond} listings on TCGplayer`}>
+                        title={`See ${cond} listings on ${p.topps ? "eBay" : "TCGplayer"}`}>
                         <span className="small muted">{COND_SHORT[cond] || cond}</span><b>{money(v.market)}</b>
-                        <span className="grade-sales">TCGplayer ↗</span>
+                        <span className="grade-sales">{p.topps ? "eBay" : "TCGplayer"} ↗</span>
                       </a>
                     ))}
                   </div>
@@ -284,7 +297,13 @@ export default async function CardPage({ params, searchParams }) {
               {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
             </>
           )}
-          {p.memberAdded ? (
+          {p.topps ? (
+            <p className="hint" style={{ marginBottom: 0 }}>
+              A Topps Pokémon card ({p.topps.year}), not a Pokémon TCG card. Its value is the typical asking price of current eBay Buy It Now
+              listings for a raw copy{p.topps.checkedAt ? `, checked ${new Date(p.topps.checkedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}.
+              Asking prices, not sold prices: check sold listings before you buy or sell. Graded copies keep the value you enter.
+            </p>
+          ) : p.memberAdded ? (
             <p className="hint" style={{ marginBottom: 0 }}>
               Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.
             </p>

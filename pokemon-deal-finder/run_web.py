@@ -19,6 +19,7 @@ from dealfinder.finder import Finder, next_interval
 from dealfinder.health import SiteHealth
 from dealfinder.sales import SaleTracker
 from dealfinder.sealed import SealedScanner
+from dealfinder.topps import ToppsPricer
 from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
 
@@ -45,6 +46,7 @@ def main():
     tracker = SaleTracker(finder.cfg, finder.ebay, finder.conn)
     finder.on_identified = tracker.remember
     site = SiteHealth(finder.cfg)
+    topps = ToppsPricer(finder.cfg, finder.ebay)
 
     def check():
         stats = finder.poll_once()
@@ -73,6 +75,12 @@ def main():
         if found:
             link.notify_watch_listings()
         stats["watch_listings"] = found
+        # Topps cards' typical eBay asking prices (a few cards per check, see config topps).
+        topps.cfg = finder.cfg
+        try:
+            stats["topps_priced"] = topps.run()
+        except Exception as e:  # noqa: BLE001 - Topps prices must never stop the deal finder
+            log.warning("Topps price round skipped: %s", e)
         return stats
 
     if args.once:

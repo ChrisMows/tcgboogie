@@ -17,13 +17,14 @@ const ERAS = [ // newest first: name, first release date
   ["Neo", "2000-12-16"],
   ["Classic (Base to Gym)", "1999-01-01"],
 ];
-export const ERA_NAMES = [...ERAS.map(([n]) => n), "Promos & extras"];
+export const ERA_NAMES = [...ERAS.map(([n]) => n), "Promos & extras", "Topps"];
 
 // Series names the catalog uses, for sets without a release date.
 const SERIES_ERA = {
   "Mega Evolutions": "Mega Evolution", "Scarlet & Violet": "Scarlet & Violet", "Sword & Shield": "Sword & Shield", "Sun & Moon": "Sun & Moon",
   XY: "XY", "Black & White": "Black & White", "HeartGold & SoulSilver": "HeartGold & SoulSilver", Platinum: "Platinum",
   "Diamond & Pearl": "Diamond & Pearl", EX: "EX", "E-Card": "e-Card", Neo: "Neo", "Base Set": "Classic (Base to Gym)",
+  Topps: "Topps", // Topps Pokémon cards (lib/topps.js): not TCG cards, listed after everything else
 };
 
 /** "SWSH09: Brilliant Stars" -> { name: "Brilliant Stars", code: "SWSH09" }; "XY - Fates Collide" -> { "Fates Collide", "XY" }. */

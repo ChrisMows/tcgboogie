@@ -207,6 +207,14 @@ health:
   every_minutes: 5
   admin_email: riggsc96@gmail.com
 
+# Topps Pokémon cards (1999-2004, not TCG cards): the typical eBay asking price of each card for the website's Topps
+# catalog, one eBay search per card every refresh_days. See dealfinder/topps.py.
+topps:
+  enabled: true
+  daily_calls: 300     # out of the same eBay budget as deal searches (911 cards: about 3 days for a full pass)
+  max_per_check: 3
+  refresh_days: 7
+
 sales:
   enabled: true
   daily_calls: 800     # lookups a day (they come out of the same eBay budget as deal searches)

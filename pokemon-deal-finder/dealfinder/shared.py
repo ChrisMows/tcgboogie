@@ -250,3 +250,34 @@ def save_sale(sale):
                 sale.get("language") or "english", sale["price"], sale.get("shipping"), sale["sold_at"], sale.get("title"),
                 sale.get("url")), fetch=True)
     return bool(row and row is not True)
+
+
+# ----- Topps cards' eBay asking prices (web: topps_price, see dealfinder/topps.py) -----
+def topps_checked():
+    """{product_id: last check as a Unix time} for every Topps card priced so far, or None if the database is down."""
+    rows = _run("SELECT product_id, checked_at FROM topps_price", fetch="all")
+    if rows is None:
+        return None
+    return {pid: at.timestamp() for pid, at in (rows if rows is not True else [])}
+
+
+def topps_owned():
+    """Topps cards at least one member has in their collection or wishlist (priced before the rest)."""
+    rows = _run("SELECT DISTINCT product_id FROM collection_item WHERE product_id LIKE 't-%%'", fetch="all")
+    return {r[0] for r in rows} if rows and rows is not True else set()
+
+
+def save_topps_price(product_id, r):
+    """One card's check. A new price replaces the old one and joins its history (last 26 checks); a check that found
+    too few listings keeps the last price and photo, so a quiet week doesn't wipe a card's value."""
+    point = Jsonb([{"date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "price": r["price"]}] if r["price"] else [])
+    return _run("INSERT INTO topps_price AS t (product_id, price, low, high, listings, image, history, checked_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, now()) ON CONFLICT (product_id) DO UPDATE SET "
+                "price = coalesce(excluded.price, t.price), low = CASE WHEN excluded.price IS NULL THEN t.low ELSE excluded.low END, "
+                "high = CASE WHEN excluded.price IS NULL THEN t.high ELSE excluded.high END, "
+                "listings = CASE WHEN excluded.price IS NULL THEN t.listings ELSE excluded.listings END, "
+                "image = coalesce(excluded.image, t.image), "
+                "history = (SELECT coalesce(jsonb_agg(x ORDER BY n), '[]'::jsonb) FROM (SELECT x, n FROM jsonb_array_elements("
+                "coalesce(t.history, '[]'::jsonb) || excluded.history) WITH ORDINALITY AS h(x, n) ORDER BY n DESC LIMIT 26) last), "
+                "checked_at = now()",
+                (product_id, r["price"], r["low"], r["high"], r["listings"], r["image"], point))

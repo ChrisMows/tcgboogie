@@ -14,6 +14,7 @@ export const slim = (p) => p && {
   image: p.image, tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, graded: p.graded || {}, recentSales: p.recentSales || [], history: p.history || [],
   ...(p.language && p.language !== "english" ? { language: p.language } : {}),
   ...(p.memberAdded ? { memberAdded: true, sourceUrl: p.sourceUrl } : {}),
+  ...(p.topps ? { topps: p.topps } : {}),
 };
 
 /** Fetch products for a list of IDs, at most `maxLive` of them from the API; the rest only if already cached. */
