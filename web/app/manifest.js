@@ -1,5 +1,5 @@
-// Makes the site installable: "Add to Home Screen" / "Install app" opens it full-screen like an app, on the
-// collection (signed-out visitors land on the homepage from there). Icons are the pack logo on the site's dark
+// Makes the site installable: "Add to Home Screen" / "Install app" opens it full-screen like an app, at
+// tcgboogie.com (members go straight on to their collection, signed-out visitors see the homepage). Icons are the pack logo on the site's dark
 // background (public/icons; the maskable one has room for Android's round crops). See components/InstallApp.js.
 export default function manifest() {
   return {
@@ -7,7 +7,7 @@ export default function manifest() {
     short_name: "TCG Boogie",
     description: "Pokémon card deals before the auction ends, price alerts, and your collection valued daily.",
     id: "/",
-    start_url: "/app/collection?source=app",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
