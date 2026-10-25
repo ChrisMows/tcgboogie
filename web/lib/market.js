@@ -9,8 +9,9 @@ import { setLabel } from "@/lib/sets";
 
 // The market feed (public /sales page, share images, Admin -> Sales posts to X), from sales the bot saw end on eBay:
 //   - "high": a graded card sold for more than any sale of that card and grade we know of (our own tracked sales
-//     plus the price service's last 90 days), with at least 3 earlier sales to compare against;
-//   - "big": the biggest sales of the week;
+//     plus the price service's last 90 days), with at least 3 earlier sales to compare against, at most 1.5x the old
+//     high, and not a special version (stamped, error, misprint...);
+//   - "big": the biggest sales of the week (special versions left out);
 //   - "deal": deals we alerted that really sold well under market (the homepage's "caught" deals).
 // Each item carries what its page tile, share image and X post need. Cached 15 minutes.
 const { sales } = schema;
@@ -18,6 +19,17 @@ const DAY = 86400000;
 const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
 const HIGH_MIN = 200; // a "new high" worth posting
 const BIG_MIN = 1000; // a "big sale" worth posting
+const HIGH_MAX = 1.5; // a record beats the old high by at most this much; more usually means a different version sold
+// Special versions the bot can mistake for the regular card (a stamped Gengar sold as "Gengar"): their sales aren't
+// records or big sales of the card we'd name. A word that's part of the product's own name or set doesn't count.
+const VARIANT_WORDS = ["stamped", "stamp", "error", "misprint", "miscut", "mis cut", "test print", "prerelease", "pre release", "staff",
+  "promo", "league", "championship", "worlds", "trophy", "1st edition", "first edition", "shadowless", "no symbol", "no rarity",
+  "jumbo", "oversized", "proxy", "custom", "lot", "w stamp", "illustrator", "ink error", "crimp", "wrong back"];
+const norm = (t) => ` ${String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+function specialVersion(title, p) {
+  const t = norm(title), own = norm(`${p?.name || ""} ${p?.setName || ""}`);
+  return VARIANT_WORDS.some((w) => t.includes(` ${w} `) && !own.includes(` ${w} `));
+}
 const shortName = (name) => String(name || "").replace(/\s*\(.*\)$/, "").replace(/\s+-\s+\S+$/, "").trim();
 const gradeText = (grader, grade) => (grader && grade ? `${grader} ${grade}` : "");
 const hashtags = (name, grader, grade) => {
@@ -88,14 +100,15 @@ async function build() {
       ...(p?.recentSales || []).filter((s) => s.grade === key && s.date < r.soldAt.toISOString().slice(0, 10)).map((s) => s.price),
     ].filter((v) => Number.isFinite(v) && v > 0);
     const prev = before.length ? Math.max(...before) : 0;
-    // A real record: enough history, beats it, and not so far above it that it's likely a mislabeled listing.
-    if (before.length >= 3 && r.price > prev && r.price <= prev * 3) {
+    // A real record: enough history, beats it, isn't a special version, and isn't so far above the old high that a
+    // different version probably sold.
+    if (before.length >= 3 && r.price > prev && r.price <= prev * HIGH_MAX && !specialVersion(r.title, p)) {
       highs.push(item("high", p, { id: `high-${r.itemId}`, itemId: r.itemId, title: r.title, grader: r.grader, grade: r.grade, price: r.price, prevHigh: prev, sales: before.length, soldAt: r.soldAt, url: r.url }));
     }
   }
 
   const seen = new Set();
-  const big = rows.filter((r) => r.price >= BIG_MIN && r.soldAt > new Date(Date.now() - 7 * DAY))
+  const big = rows.filter((r) => r.price >= BIG_MIN && r.soldAt > new Date(Date.now() - 7 * DAY) && !specialVersion(r.title, byId[r.productId]))
     .filter((r) => (seen.has(`${r.productId}:${r.grader}:${r.grade}`) ? false : seen.add(`${r.productId}:${r.grader}:${r.grade}`)))
     .slice(0, 24)
     .map((r) => item("big", byId[r.productId], { id: `big-${r.itemId}`, itemId: r.itemId, title: r.title, grader: r.grader, grade: r.grade, price: r.price, soldAt: r.soldAt, url: r.url }));
