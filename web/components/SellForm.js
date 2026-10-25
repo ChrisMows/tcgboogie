@@ -64,7 +64,7 @@ export default function SellForm({ itemId, initial, policies, needsZip, suggeste
           ))}
           {photos.length < 6 && (
             <label className="sell-add">
-              <input type="file" name="photoPicker" accept="image/*" multiple capture="environment" onChange={addPhotos} hidden />
+              <input type="file" name="photoPicker" accept="image/*" multiple onChange={addPhotos} hidden />
               <span>＋ Add photos</span>
             </label>
           )}

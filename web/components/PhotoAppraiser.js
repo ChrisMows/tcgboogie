@@ -83,7 +83,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
       <div className="panel photo-drop">
         <label className="btn primary" style={{ cursor: "pointer" }}>
           📷 {result || preview ? "Try another photo" : "Take or choose a photo"}
-          <input type="file" accept="image/*" capture="environment" hidden disabled={pending} onChange={(e) => onFile(e.target.files?.[0])} />
+          <input type="file" accept="image/*" hidden disabled={pending} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
         <span className="small muted">Works best with cards flat, in good light, numbers visible. Up to 20 cards per photo.{left !== null && ` ${left} of ${quota.limit} photos left this month.`}</span>
       </div>

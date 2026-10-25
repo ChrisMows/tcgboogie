@@ -13,21 +13,44 @@ const norm = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").to
 // Only eBay's own sites (ebay.com, ebay.co.uk, ebay.ca, ...), and eBay app share links (ebay.us), are accepted.
 const EBAY_HOST = /(^|\.)ebay\.(com|ca|co\.uk|com\.au|de|fr|it|es|ie|at|ch|nl|be|pl|com\.sg|com\.my|ph|com\.hk)$/i;
 
-/** The item number from an eBay listing link, or null if it isn't one. Share links (ebay.us) are followed to eBay. */
+const SHARE_HOST = /^(www\.)?ebay\.us$/i;
+const idIn = (url) => (url.pathname.match(/\/itm\/(?:[^/]+\/)?(\d{9,14})(?!\d)/) || url.search.match(/[?&](?:item|itemId)=(\d{9,14})(?!\d)/i))?.[1] || null;
+
+/**
+ * The first web link in what a member pasted, or null. The eBay app's Share → Copy puts words around the link
+ * ("Check out this listing on eBay! https://ebay.us/m/…"), so the link is picked out of the text.
+ */
+export function linkIn(input) {
+  const m = String(input || "").match(/https?:\/\/[^\s<>"']+/i);
+  if (!m) return null;
+  try { return new URL(m[0].replace(/[).,!?;:]+$/, "")); } catch { return null; }
+}
+
+/**
+ * The item number from an eBay listing link, or null if it isn't one. App share links (ebay.us/m/…) are followed
+ * through their redirects (eBay sites only, up to 5), and if eBay lands on a page instead, the page names the item.
+ */
 export async function itemIdFromLink(input) {
-  let url;
-  try { url = new URL(String(input || "").trim()); } catch { return null; }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-  if (/^(www\.)?ebay\.us$/i.test(url.hostname)) {
-    try { // follow the share link one hop, only to an eBay site
-      const r = await fetch(url, { redirect: "manual", cache: "no-store" });
-      const to = r.headers.get("location");
-      url = to ? new URL(to, url) : url;
-    } catch { return null; }
-  }
-  if (!EBAY_HOST.test(url.hostname)) return null;
-  const m = url.pathname.match(/\/itm\/(?:[^/]+\/)?(\d{9,14})(?!\d)/) || url.search.match(/[?&]item=(\d{9,14})(?!\d)/);
-  return m ? m[1] : null;
+  let url = linkIn(input);
+  if (!url || !(SHARE_HOST.test(url.hostname) || EBAY_HOST.test(url.hostname))) return null;
+  if (idIn(url) && EBAY_HOST.test(url.hostname)) return idIn(url);
+  const headers = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", Accept: "text/html,*/*" };
+  try {
+    for (let hop = 0; hop < 5; hop++) {
+      const r = await fetch(url, { redirect: "manual", cache: "no-store", headers, signal: AbortSignal.timeout(8000) });
+      const to = r.status >= 300 && r.status < 400 ? r.headers.get("location") : null;
+      if (to) {
+        url = new URL(to, url);
+        if (!(SHARE_HOST.test(url.hostname) || EBAY_HOST.test(url.hostname))) return null;
+        if (idIn(url) && EBAY_HOST.test(url.hostname)) return idIn(url);
+        continue;
+      }
+      if (!r.ok) return null;
+      const html = (await r.text()).slice(0, 300000); // a landing page: its canonical link or item id names the listing
+      return html.match(/ebay\.[a-z.]+\/itm\/(?:[^/"'?\s]+\/)?(\d{9,14})(?!\d)/i)?.[1] || html.match(/"(?:itemId|legacyItemId)"\s*:\s*"?(\d{9,14})(?!\d)/)?.[1] || null;
+    }
+  } catch { /* eBay didn't answer */ }
+  return null;
 }
 
 function gradeOf(item) {

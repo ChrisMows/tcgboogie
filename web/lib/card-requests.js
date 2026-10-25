@@ -4,6 +4,7 @@ import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
+import { linkIn } from "@/lib/report-sale";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -54,8 +55,8 @@ export async function submitRequest(user, { query, link, note, kind }) {
   const what = kind === "sealed" ? "product" : "card";
   const q = String(query || "").trim().slice(0, 120);
   const raw = String(link || "").trim().slice(0, 500);
-  let url;
-  try { url = new URL(raw); } catch { return { status: "declined", message: "That doesn't look like a link. Paste the full address, starting with https://" }; }
+  const url = linkIn(raw); // the link inside whatever was pasted (app share text has words around it)
+  if (!url) return { status: "declined", message: "That doesn't look like a link. Paste the full address, starting with https://" };
   if (!/^https?:$/.test(url.protocol)) return { status: "declined", message: "Please send a normal web link (https://…)." };
 
   const save = async (fields) => {

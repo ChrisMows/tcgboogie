@@ -46,7 +46,7 @@ export default function ReportSale({ productId, language }) {
     <form className="report-sale" id="report-sale" onSubmit={submit}>
       <label className="small" htmlFor="sale-link">Paste the eBay link of a sold, completed listing for this card (graded)</label>
       <div className="row" style={{ gap: 8 }}>
-        <input id="sale-link" autoFocus type="url" inputMode="url" placeholder="https://www.ebay.com/itm/…" value={link} onChange={(e) => setLink(e.target.value)} required />
+        <input id="sale-link" autoFocus type="text" inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://www.ebay.com/itm/…" value={link} onChange={(e) => setLink(e.target.value)} required />
         <button className="btn sm primary" style={{ flex: "none" }} disabled={pending}>{pending ? "Checking…" : "Add sale"}</button>
       </div>
       {(result?.needDate || soldOn) && (

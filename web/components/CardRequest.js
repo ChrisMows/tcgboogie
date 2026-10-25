@@ -41,7 +41,7 @@ export default function CardRequest({ query, label = "Can’t find it? Request a
             Anything our price service doesn&apos;t cover, like many Korean and Chinese {kind === "sealed" ? "products" : "cards"}, is added without prices.
           </label>
           <div className="row" style={{ gap: 8 }}>
-            <input id="cr-link" data-tour="request-link" type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
+            <input id="cr-link" data-tour="request-link" type="text" inputMode="url" autoCapitalize="off" autoCorrect="off" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.tcgplayer.com/product/…" />
             <button className="btn sm primary" data-tour="request-send" style={{ flex: "none" }} disabled={pending || !link.trim()}>{pending ? "Adding…" : "Send"}</button>
             <button type="button" className="btn sm ghost" style={{ flex: "none" }} onClick={() => setOpen(false)}>Cancel</button>
           </div>

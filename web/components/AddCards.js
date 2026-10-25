@@ -41,6 +41,13 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   const [photo, setPhoto] = useState(null); // { url, unread: [{ name, number, language }] }
   const [reading, setReading] = useState(false);
   const fileRef = useRef(null);
+  const inputRef = useRef(null);
+  // ✕ in the search bar, and after every add: an empty bar, ready for the next card (focused again where there's a
+  // keyboard, but not on a phone, where it would pop the keyboard up over the pack opening).
+  const clearSearch = (refocus = true) => {
+    setQ(""); setResults(null); setError(null); setShown(PAGE);
+    if (refocus && window.matchMedia?.("(pointer: fine)").matches) inputRef.current?.focus();
+  };
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const seq = useRef(0);
@@ -88,6 +95,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       if (!res.ok) return show(res.error, null, "bad");
       revealCard(res.reveal);
       setCounts((c) => ({ ...c, [p.id]: (c[p.id] || 0) + 1 }));
+      clearSearch();
       show(`Added ${p.name.replace(/\s*\(.*\)$/, "")}${p.type === "card" ? " (Near Mint)" : ""}`, { href: `/app/cards/${p.id}`, label: "Open card" });
       router.refresh();
     });
@@ -103,6 +111,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       show(input.list === "wishlist" ? `${picked.name} is on your wishlist` : `Added to your collection${res.value ? ` · worth ${money(res.value * (input.quantity || 1))}` : ""}${res.fromWishlist ? " · taken off your wishlist" : ""}`,
         { href: `/app/cards/${picked.id}`, label: "Open card" });
       setPicked(null);
+      clearSearch();
       router.refresh();
     });
   }
@@ -111,9 +120,10 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     <div className="add-cards">
       <div className="search-box">
         <span aria-hidden="true">⌕</span>
-        <input type="text" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
+        <input ref={inputRef} type="text" enterKeyHint="search" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
           placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" data-tour="add-search" />
         {searching && <span className="small muted">Searching…</span>}
+        {q && <button type="button" className="search-clear" onClick={() => clearSearch()} aria-label="Clear search" title="Clear">✕</button>}
         {photoSearch === true && photoOut ? (
           <Link href="/app/premium?from=photo-search" className="photo-search-btn"
             title={`You've used this month's ${photoQuota.limit} picture searches. Unlimited with Premium.`} aria-label="Search by picture (used up this month)">📷</Link>
