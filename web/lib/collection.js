@@ -6,12 +6,25 @@ export { GRADERS };
 export const KINDS = { raw: "Raw", graded: "Graded", sealed: "Sealed" };
 export const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
 export const COND_SHORT = { "Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP", "Heavily Played": "HP", Damaged: "DMG" };
-export const GRADES = ["10", "9.5", "9", "8.5", "8", "7.5", "7", "6", "5", "4", "3", "2", "1"];
+// Every grade any grader gives, 10 down to 1 in half steps.
+export const GRADES = ["10", "9.5", "9", "8.5", "8", "7.5", "7", "6.5", "6", "5.5", "5", "4.5", "4", "3.5", "3", "2.5", "2", "1.5", "1"];
 // The top grade comes in two labels that sell very differently: CGC Pristine 10 above Gem Mint 10, and Beckett's
 // Black Label 10 (every subgrade a 10) above its regular Pristine 10.
 export const PRISTINE = "10 Pristine";
 export const BLACK_LABEL = "10 Black Label";
-export const gradesFor = (grader) => (grader === "CGC" ? [PRISTINE, ...GRADES] : grader === "BGS" ? [BLACK_LABEL, ...GRADES] : GRADES);
+// Each grader's own scale. PSA gives half grades only from 1.5 to 8.5 (no PSA 9.5); CGC, Beckett, SGC and TAG give
+// them all the way up to 9.5.
+const PSA_GRADES = GRADES.filter((g) => g !== "9.5");
+export const gradesFor = (grader) => (grader === "PSA" ? PSA_GRADES : grader === "CGC" ? [PRISTINE, ...GRADES]
+  : grader === "BGS" ? [BLACK_LABEL, ...GRADES] : GRADES);
+/** The grade to keep when the grader changes: the same one if that grader gives it, else the next one down ("10
+ * Pristine" becomes "10", PSA has no 9.5 so it becomes 9). */
+export function fitGrade(grader, grade) {
+  const list = gradesFor(grader);
+  if (list.includes(String(grade))) return String(grade);
+  const n = parseFloat(grade);
+  return list.find((g) => parseFloat(g) <= n && !/\D{2,}/.test(g)) || list[list.length - 1];
+}
 /** How a grade reads in a menu: "10 Gem Mint" for CGC, "10 Pristine" for BGS. */
 export const gradeOption = (grader, g) => (g === "10" && grader === "CGC" ? "10 Gem Mint" : g === "10" && grader === "BGS" ? "10 Pristine" : g);
 export const SORTS = { value: "Value (high to low)", gain: "Gain (best first)", change: "7-day change", name: "Name", added: "Recently added" };

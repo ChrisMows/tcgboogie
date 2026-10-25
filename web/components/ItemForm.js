@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CONDITIONS, GRADERS, gradeKey, gradeOption, gradesFor, marketValue, money } from "@/lib/collection";
+import { CONDITIONS, GRADERS, fitGrade, gradeKey, gradeOption, gradesFor, marketValue, money } from "@/lib/collection";
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 
@@ -68,7 +68,7 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
           <>
             <div>
               <label className="field" htmlFor="if-grader">Graded by</label>
-              <select id="if-grader" value={grader} onChange={(e) => { setGrader(e.target.value); if (e.target.value !== "CGC" && grade === "10 Pristine") setGrade("10"); }}>
+              <select id="if-grader" value={grader} onChange={(e) => { setGrader(e.target.value); setGrade(fitGrade(e.target.value, grade)); }}>
                 {GRADERS.map((g) => <option key={g}>{g}</option>)}
               </select>
             </div>
