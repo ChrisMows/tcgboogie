@@ -17,6 +17,8 @@ import { SOURCES, STATUSES, groupIdeas, ideaCounts, listIdeas } from "@/lib/idea
 import { trafficReport } from "@/lib/traffic";
 import { usageReport } from "@/lib/usage";
 import UsageCharts from "@/components/UsageCharts";
+import FeatureMap from "@/components/FeatureMap";
+import { featureMap } from "@/lib/feature-map";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -48,7 +50,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales", "releases", "usage"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales", "releases", "usage", "map"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -68,6 +70,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Social media</Link>
         <Link href="/app/admin?tab=releases" className={tab === "releases" ? "on" : ""} role="tab" aria-selected={tab === "releases"}>Release emails</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
+        <Link href="/app/admin?tab=map" className={tab === "map" ? "on" : ""} role="tab" aria-selected={tab === "map"}>Feature map</Link>
         <Link href="/app/admin?tab=usage" className={tab === "usage" ? "on" : ""} role="tab" aria-selected={tab === "usage"}>Usage</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
@@ -78,6 +81,7 @@ export default async function Admin({ searchParams }) {
       {tab === "ideas" && <Ideas show={sp?.show} group={sp?.group === "1"} ok={sp?.ok} emailed={sp?.emailed} err={sp?.err} />}
       {tab === "traffic" && <Traffic />}
       {tab === "usage" && <Usage />}
+      {tab === "map" && <FeatureMap map={await featureMap()} vendor={sp?.vendor} />}
       {tab === "releases" && <Releases r={sp?.r} v={sp?.v} />}
       {tab === "sales" && <Sales ok={sp?.ok} err={sp?.err} />}
       {tab === "helper" && <Helper />}

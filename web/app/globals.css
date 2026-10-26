@@ -1806,6 +1806,32 @@ body:has(.install-hint) .helper-fab { display: none; }
 .release-tag.new { background: var(--accent-soft); color: var(--accent); }
 .release-tag.improved { background: var(--good-soft); color: var(--good); }
 .release-tag.fixed { background: var(--warn-soft); color: var(--warn); }
+/* Admin -> Feature map (components/FeatureMap.js) */
+.fmap-summary { display: flex; flex-wrap: wrap; gap: 14px 36px; }
+.fmap-summary > div { display: grid; gap: 2px; }
+.fmap-big { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.fmap-vendors { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.fmap-vendor { display: grid; gap: 8px; align-content: start; color: inherit; text-decoration: none; transition: border-color 0.15s; }
+.fmap-vendor:hover, .fmap-vendor.on { border-color: var(--accent); }
+.fmap-vendor.on { background: var(--accent-soft); }
+.fmap-vendor.off { opacity: 0.7; }
+.fmap-vendor-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fmap-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font-size: 13px; }
+.fmap-facts dt { color: var(--muted); }
+.fmap-facts dd { margin: 0; }
+.fmap-count { color: var(--accent); }
+.fmap-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-bottom: 12px; color: var(--muted); }
+.fmap-area h3 { margin: 0 0 6px; }
+.fmap-table td { vertical-align: top; }
+.fmap-table td:first-child { min-width: 220px; }
+.fmap-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 160px; }
+.fmap-chip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text); white-space: nowrap; text-decoration: none; }
+.fmap-chip:hover, .fmap-chip.on { border-color: var(--accent); color: var(--accent); }
+.fmap-grow { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.fmap-grow.shared { background: var(--good-soft); color: var(--good); }
+.fmap-grow.member { background: var(--accent-soft); color: var(--accent); }
+.fmap-grow.card { background: var(--warn-soft); color: var(--warn); }
+.fmap-grow.use { background: rgba(255, 122, 122, 0.12); color: #ff8a8a; }
 /* Admin -> Release emails */
 .release-admin { display: grid; gap: 12px; }
 .release-admin-row { display: grid; gap: 10px; }
