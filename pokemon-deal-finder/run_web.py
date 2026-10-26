@@ -42,7 +42,7 @@ def main():
     except EbayError as e:
         log.error("%s", e)
         sys.exit(1)
-    watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos)
+    watcher = EbayWatcher(finder.cfg, finder.ebay, link.photos, fetch=link.ebay_watches)  # Premium alerts only
     sealed = SealedScanner(finder)
     tracker = SaleTracker(finder.cfg, finder.ebay, finder.conn)
     finder.on_identified = tracker.remember

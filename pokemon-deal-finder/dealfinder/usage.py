@@ -24,7 +24,7 @@ LIMITS = {
                     "At the limit, card prices stop updating and new card searches fail until the reset. The bot already "
                     "keeps a reserve for the website; if this keeps happening, the PokemonPriceTracker plan needs an upgrade."),
     "ebay_calls": ("eBay API calls", "calls", True,
-                   "At the limit, deal checks pause until the reset (the bot slows itself down near 4,800). If it's "
+                   "At the limit, deal checks pause until the reset (the bot spreads its own 4,500 over the day, leaving the rest for the website). If it's "
                    "regular, eBay can raise the limit through the Growth Check application."),
     "emails": ("Emails sent", "emails", True,
                "From 90%, alerts and recaps wait until tomorrow so the rest is kept for sign-in links. Time for a bigger "

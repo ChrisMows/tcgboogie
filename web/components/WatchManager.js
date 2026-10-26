@@ -260,7 +260,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                       {w.status === "triggered"
                         ? <span className="badge good" style={{ flex: "none" }}>{up ? "Hit your sell price" : "Hit your buy price"}</span>
                         : <span className="badge" style={{ flex: "none" }}>Watching</span>}
-                      {w.alsoEbay && !up && <span className="badge accent" style={{ flex: "none" }} title="Also alerts you when it's listed on eBay at or under your price">+ eBay</span>}
+                      {w.alsoEbay && !up && plan.ebayListingAlerts !== false && <span className="badge accent" style={{ flex: "none" }} title="Also alerts you when it's listed on eBay at or under your price">+ eBay</span>}
 
                     </div>
                     <div className="small muted">{w.setName}{w.number ? ` · ${w.number}` : ""} · {trackingLabel({ type: w.productType }, w)}</div>

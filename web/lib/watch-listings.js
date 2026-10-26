@@ -98,3 +98,19 @@ export async function listingsByWatch(userId) {
   });
   return out;
 }
+
+/**
+ * The deal bot's list of price alerts to watch eBay for (GET /api/watches/ebay): buying alerts on cards with "also
+ * alert me when it's listed on eBay" on, whose member's plan includes it (Admin → Plans), each with its target and
+ * the card's latest market price (the daily price check), so the bot can check the likeliest first.
+ */
+export async function ebayWatchList() {
+  await refreshFeatures();
+  if (!db) return [];
+  const rows = await db.select({ w: priceWatches, user: users }).from(priceWatches).innerJoin(users, eq(users.id, priceWatches.userId))
+    .where(and(eq(priceWatches.alsoEbay, true), eq(priceWatches.productType, "card"), inArray(priceWatches.mode, ["below", "drop"])));
+  return rows.filter(({ user }) => planFor(effectiveTier(user)).ebayListingAlerts)
+    .map(({ w }) => ({ id: w.id, product_id: w.productId, name: w.name, set_name: w.setName || "", number: w.number || "",
+      target: targetPrice(w), market: w.lastPrice ?? null }))
+    .filter((x) => x.target > 0);
+}

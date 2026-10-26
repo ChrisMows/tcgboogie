@@ -33,7 +33,9 @@ export const PLANS = {
     sellPerMonth: 3, // eBay listings a month through Sell on eBay
     trialDays: 0,
     cardRequests: true, // "Request a card or sealed product"
-    ebayListingAlerts: true, // price alerts that also watch eBay listings at or under the target
+    // Price alerts that also watch eBay listings at or under the target: Premium. Each watched card costs the deal
+    // bot eBay calls every day (per card, not shared like the deal scan), so it's kept to paying members.
+    ebayListingAlerts: false,
     reportSales: true, // "Report a sale we're missing" on card pages
   },
   premium: {
@@ -50,7 +52,7 @@ export const PLANS = {
     minValueFloor: 30,
     japanese: true,
     emailRecap: "daily",
-    maxPriceWatches: null, // unlimited
+    maxPriceWatches: 50, // each one is a daily price check (and, with eBay watching, eBay searches): Admin → Plans
     watchAlertChannels: ["email", "push", "discord", "sms"],
     collectionHistoryDays: null, // all time
     collectionExport: true,

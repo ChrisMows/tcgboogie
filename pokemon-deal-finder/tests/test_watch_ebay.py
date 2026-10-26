@@ -62,5 +62,45 @@ class EbayWatchTests(unittest.TestCase):
         self.assertEqual(sorted({i for _, i, _ in saved}), ["f"])
 
 
+def watch(pid, target, market, wid=None):
+    return {"id": wid or int(pid), "product_id": pid, "name": f"Card {pid}", "set_name": "Set", "number": "1/100",
+            "target": target, "market": market}
+
+
+class SchedulingTests(unittest.TestCase):
+    def test_tiers(self):
+        self.assertEqual(we.tier_of(1100, 1200), "hot")    # 92% of market
+        self.assertEqual(we.tier_of(65, 86), "warm")       # 76%
+        self.assertEqual(we.tier_of(150, 400), "cold")     # 38%: a long shot
+        self.assertEqual(we.tier_of(50, None), "warm")     # no price yet
+
+    def test_hot_first_then_most_watched_and_each_tier_on_its_own_schedule(self):
+        w = we.EbayWatcher(copy.deepcopy(CFG), FakeEbay([]), FakePhotos())
+        watches = [watch("1", 150, 400), watch("2", 1100, 1200), watch("3", 65, 86),
+                   watch("4", 60, 86, wid=40), watch("4", 62, 86, wid=41)]  # card 4: two members
+        due, _ = w.plan(watches, now=10 * we.DAY)
+        self.assertEqual([p for p, _ in due], ["2", "4", "3", "1"])
+        # Searched a day ago: only the hot card is due again; the warm ones wait 3 days, the cold one 7.
+        for pid in "1234":
+            w.state[pid] = {"last": 9 * we.DAY}
+        self.assertEqual([p for p, _ in w.plan(watches, now=10 * we.DAY)[0]], ["2"])
+        self.assertEqual([p for p, _ in w.plan(watches, now=12 * we.DAY)[0]], ["2", "4", "3"])
+
+    def test_quiet_cards_are_checked_half_as_often(self):
+        w = we.EbayWatcher(copy.deepcopy(CFG), FakeEbay([]), FakePhotos())
+        w.state["2"] = {"last": 9 * we.DAY, "empty": 3}
+        self.assertEqual(w.plan([watch("2", 1100, 1200)], now=10 * we.DAY)[0], [])  # every 2 days now
+        self.assertEqual(len(w.plan([watch("2", 1100, 1200)], now=11 * we.DAY)[0]), 1)
+
+    def test_daily_cap_and_empty_streak(self):
+        cfg = copy.deepcopy(CFG)
+        cfg.setdefault("website", {})["ebay_watch"] = {"daily_calls": 2, "max_per_check": 10}
+        ebay = FakeEbay([])
+        w = we.EbayWatcher(cfg, ebay, FakePhotos(), fetch=lambda: [watch(str(i), 90, 100) for i in range(1, 6)])
+        w.run(now=10 * we.DAY)
+        self.assertEqual(len(ebay.queries), 2)  # the day's 2 calls, then it stops
+        self.assertEqual(w.state["1"]["empty"], 1)  # nothing listed: counts toward "quiet"
+
+
 if __name__ == "__main__":
     unittest.main()

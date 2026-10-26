@@ -224,6 +224,17 @@ class WebLink:
             self.new_deals = 0
         self.heartbeat(stats, ppt)
 
+    def ebay_watches(self):
+        """Price alerts to watch eBay for, from the website (only members whose plan includes it), each with its
+        target and the card's market price. [] when the website can't be reached (that round is skipped)."""
+        try:
+            r = self.session.get(f"{self.site}/api/watches/ebay", headers=self.dispatch_headers, timeout=20)
+            r.raise_for_status()
+            return r.json().get("watches") or []
+        except (requests.RequestException, ValueError) as e:
+            log.warning("Couldn't get the eBay watch list from the website (%s); skipping this round", type(e).__name__)
+            return []
+
     def notify_watch_listings(self):
         """Ask the website to alert members about new eBay listings that meet their price alerts."""
         try:

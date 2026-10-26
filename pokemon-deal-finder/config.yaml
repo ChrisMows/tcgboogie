@@ -80,7 +80,7 @@ poll:
   search_window_minutes: 12   # look a little past max_minutes_left so nothing slips between checks
   max_pages: 2                # max search pages (200 listings each) per check. Results are soonest-ending first, so
                               # at peak times a listing just shows up a few minutes later; this keeps eBay calls in budget
-  daily_call_budget: 4800     # eBay's default Browse API limit is 5,000/day; finder slows down near this
+  daily_call_budget: 4500     # of eBay's 5,000/day: the other 500 are kept for the website (reported sales) and spikes
   max_interval_seconds: 540   # never more than 9 minutes between checks, so every auction is seen in its last 10 minutes
   min_details_per_check: 5    # listings opened to identify them, per check, even when the budget is tight. The rest of
                               # the allowance is worked out from the budget left (finder.detail_allowance); listings go
@@ -190,8 +190,13 @@ website:
   url: https://tcgboogie.com
   scan_refresh_seconds: 120   # how often to re-ask the website how wide to scan
   ebay_watch:                 # price alerts with "also alert me when it's listed on eBay"
-    daily_calls: 1000         # most eBay searches a day for these, spread over every watched card
-    min_interval_minutes: 1440  # each card once a day: a Buy It Now listing at your price usually stays up for days
+    daily_calls: 1000         # most eBay searches a day for these (one per card; hot cards first)
+    hot_ratio: 0.85           # target at least 85% of the market price: likely to be listed -> searched every hot_days
+    warm_ratio: 0.65          # 65-85%: every warm_days; under 65% (a long shot): every cold_days
+    hot_days: 1
+    warm_days: 3
+    cold_days: 7
+    quiet_after: 3            # no listings at all this many searches in a row: checked half as often
     max_per_check: 8          # searches per bot check
 
 # Sealed products (booster boxes, ETBs, bundles, tins, collections, packs): scanned on every Nth check so cards keep
