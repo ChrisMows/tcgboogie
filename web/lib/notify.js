@@ -1,59 +1,19 @@
 import "server-only";
-import nodemailer from "nodemailer";
+import { countEmail, emailConfigured, emailFrom, mailer } from "@/lib/mail";
 import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 
 // Sending alerts. Each channel switches on when its settings exist (Hostinger environment variables):
-//   Email:   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM   (the tcgboogie.com mailbox)
-//            Optional ALERT_SMTP_HOST, ALERT_SMTP_PORT, ALERT_SMTP_USER, ALERT_SMTP_PASS: a separate sender for alert
-//            emails (Amazon SES), so volume doesn't count against the mailbox's daily limit.
+//   Email:   lib/mail.js: a sending service (Resend, ALERT_SMTP_*) or the tcgboogie.com mailbox (SMTP_*), EMAIL_FROM
 //   Discord: DISCORD_BOT_TOKEN                                        (BoogieBot; members must share a server with it)
 //   Text:    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM        (a Twilio number, e.g. +18885551234)
 //   Push:    nothing: lib/push.js makes and keeps its own keys          (each member switches devices on in Settings)
 
-const alertSmtp = () => Boolean(process.env.ALERT_SMTP_HOST && process.env.ALERT_SMTP_USER && process.env.ALERT_SMTP_PASS);
-
 export const channelsReady = () => ({
-  email: alertSmtp() || Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+  email: emailConfigured(),
   discord: Boolean(process.env.DISCORD_BOT_TOKEN),
   sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM),
   push: Boolean(process.env.DATABASE_URL), // its keys live in the database (lib/push.js): nothing else to set up
 });
-
-/** Which service alert emails go through (Admin -> Status). */
-export const emailSender = () => (alertSmtp() ? "Amazon SES" : "Hostinger mailbox");
-
-let transport;
-const mailer = () => {
-  if (transport) return transport;
-  const ses = alertSmtp();
-  const port = Number((ses ? process.env.ALERT_SMTP_PORT : process.env.SMTP_PORT) || 465);
-  // A small pool of open connections: many alerts at once go out in parallel instead of one handshake each.
-  transport = nodemailer.createTransport({
-    pool: true, maxConnections: 3, maxMessages: 100,
-    host: ses ? process.env.ALERT_SMTP_HOST : process.env.SMTP_HOST,
-    port, secure: port === 465,
-    auth: ses ? { user: process.env.ALERT_SMTP_USER, pass: process.env.ALERT_SMTP_PASS } : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  return transport;
-};
-
-// Emails sent today (UTC), shared with Admin -> Status so you can see how close the mailbox is to its daily limit.
-async function countEmail() {
-  try {
-    const { db, schema } = await import("@/lib/db");
-    if (!db) return;
-    const { sql } = await import("drizzle-orm");
-    const day = new Date().toISOString().slice(0, 10);
-    await db.insert(schema.appSettings).values({ key: "emails_sent", value: { day, n: 1 } })
-      .onConflictDoUpdate({ target: schema.appSettings.key, set: {
-        value: sql`case when ${schema.appSettings.value}->>'day' = ${day}
-          then jsonb_build_object('day', ${day}::text, 'n', coalesce((${schema.appSettings.value}->>'n')::int, 0) + 1)
-          else jsonb_build_object('day', ${day}::text, 'n', 1) end`,
-        updatedAt: new Date() } });
-    const { bumpUsage, emailCap } = await import("@/lib/usage");
-    bumpUsage("emails", 1, emailCap()); // Admin -> Usage: the same count, kept per day, with the mailbox's limit
-  } catch { /* counting must never stop an email */ }
-}
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -65,7 +25,7 @@ const VERIFY = "Prices and deals are automated estimates and can be wrong. Check
  * unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header.
  */
 export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }, unsub = null) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const from = emailFrom();
   const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || "", unsub ? VERIFY : ""].join("\n").trim();
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b0e12;color:#f4f5ef;border-radius:14px">
     <div style="font-weight:800;font-size:18px;letter-spacing:-0.5px;margin-bottom:18px">TCG <span style="color:#d3ff66">BOOGIE</span></div>

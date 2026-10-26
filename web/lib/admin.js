@@ -2,7 +2,6 @@ import "server-only";
 import os from "node:os";
 import { count, desc, eq, gte, ilike, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import nodemailer from "nodemailer";
 import { compActive, effectiveTier, signupOpen } from "@/lib/access";
 import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
@@ -10,7 +9,8 @@ import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
 import { botStatus } from "@/lib/deals";
 import { log } from "@/lib/log";
-import { channelsReady, emailSender } from "@/lib/notify";
+import { channelsReady } from "@/lib/notify";
+import { emailCap, emailSender, mailer } from "@/lib/mail";
 import { getCurrentUser } from "@/lib/session";
 
 const { users, accounts, collectionItems, priceWatches, profiles, alertLog, adminLog, appSettings } = schema;
@@ -92,24 +92,22 @@ export async function systemStatus({ pingPrices = false } = {}) {
   if (!ready.email) add("Alerts", "Email (SMTP)", "off", "SMTP settings not added yet");
   else {
     const r = await timed(async () => {
-      const t = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 465), secure: Number(process.env.SMTP_PORT || 465) === 465, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } });
-      await t.verify(); // logs in, sends nothing
-      return { ok: true, detail: `Signed in as ${process.env.SMTP_USER}` };
+      await mailer().verify(); // logs in, sends nothing
+      return { ok: true, detail: `Signed in to ${emailSender()}` };
     });
-    add("Alerts", "Email (SMTP)", r.ok ? "ok" : "down", r.ok ? `${r.detail} · ${r.ms} ms` : `Couldn't sign in: ${r.detail}`);
+    add("Alerts", "Email (SMTP)", r.ok ? "ok" : "down", r.ok ? `${r.detail} · ${r.ms} ms` : `Couldn't sign in to ${emailSender()}: ${r.detail}`);
   }
   if (db) {
-    // Emails sent today vs the daily limit (Hostinger mailbox: about 1,000-3,000 a day by plan; set EMAIL_DAILY_LIMIT).
+    // Emails sent today vs the sender's daily limit (lib/mail.js emailCap).
     const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "emails_sent")).limit(1).catch(() => []);
     const today = new Date().toISOString().slice(0, 10);
     const n = row?.value?.day === today ? Number(row.value.n) : 0;
-    const sender = emailSender();
-    if (sender === "Amazon SES") add("Alerts", "Emails sent today", "ok", `${n.toLocaleString()} through Amazon SES`);
+    const sender = emailSender(), limit = emailCap();
+    if (!limit) add("Alerts", "Emails sent today", "ok", `${n.toLocaleString()} through ${sender}`);
     else {
-      const limit = Number(process.env.EMAIL_DAILY_LIMIT || 1000);
       const share = n / limit;
-      add("Alerts", "Emails sent today", share >= 0.9 ? "down" : share >= 0.7 ? "warn" : "ok",
-        `${n.toLocaleString()} of about ${limit.toLocaleString()} (Hostinger mailbox)${share >= 0.7 ? " · time to switch alert emails to Amazon SES" : ""}`);
+      add("Alerts", "Emails sent today", share >= 0.9 ? "down" : share >= 0.75 ? "warn" : "ok",
+        `${n.toLocaleString()} of ${limit.toLocaleString()} (${sender})${share >= 0.75 ? " · time for a bigger email plan" : ""}`);
     }
   }
 

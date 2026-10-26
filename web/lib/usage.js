@@ -1,6 +1,7 @@
 import "server-only";
 import { and, count, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { emailCap } from "@/lib/mail";
 
 // Admin -> Usage: everything we use that has a limit or a bill, day by day (UTC), for the last 60 days.
 //   - counters the website adds to as things happen: emails sent, Claude requests and tokens (bumpUsage);
@@ -32,8 +33,6 @@ export function noteClaude(response) {
   bumpUsage("claude_tokens", (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.output_tokens || 0));
 }
 
-export const emailCap = () => (process.env.ALERT_SMTP_HOST ? null : Number(process.env.EMAIL_DAILY_LIMIT || 1000));
-
 // What the page shows, in order. cap: a fixed daily limit; "row": the limit the bot recorded with the value.
 export const METRICS = [
   { key: "ppt_credits", group: "Daily limits", label: "Price service credits", unit: "credits", cap: 20000,
@@ -41,7 +40,7 @@ export const METRICS = [
   { key: "ebay_calls", group: "Daily limits", label: "eBay API calls", unit: "calls", cap: 5000,
     note: "eBay's Browse API allows 5,000 a day (reset at midnight UTC). The bot slows itself down near 4,800." },
   { key: "emails", group: "Daily limits", label: "Emails sent", unit: "emails", cap: emailCap,
-    note: "Alerts, recaps and sign-in links. The Hostinger mailbox allows about 1,000 a day (EMAIL_DAILY_LIMIT); Amazon SES lifts that once it's switched on." },
+    note: "Sign-in links, alerts and recaps. Resend's free plan allows 100 a day and 3,000 a month (ALERT_EMAIL_DAILY_LIMIT after a plan change); the Hostinger mailbox about 1,000 a day (EMAIL_DAILY_LIMIT)." },
   { key: "vps_disk_gb", group: "Server", label: "Server disk", unit: "GB", cap: "row", decimals: 1,
     note: "The VPS (bot, database, backups, staging). The day's highest reading." },
   { key: "vps_memory_gb", group: "Server", label: "Server memory", unit: "GB", cap: "row", decimals: 2,

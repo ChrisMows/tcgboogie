@@ -85,7 +85,7 @@ class TestUsage(unittest.TestCase):
             self.assertEqual(rec.check_alerts(now=noon), ["emails"])
             self.assertEqual(rec.check_alerts(now=noon), [])  # 90% already sent today
         self.assertEqual(len(sent_msgs), 1)
-        self.assertIn("Amazon SES", sent_msgs[0])
+        self.assertIn("Resend", sent_msgs[0])
         self.assertEqual(store["usage_alert:2026-10-26:emails"], "90")
 
     def test_never_raises(self):
