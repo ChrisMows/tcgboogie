@@ -304,6 +304,11 @@ def usage_add(metric, n=1):
              (_today(), metric, float(n)))
 
 
+def usage_today():
+    """[(metric, value, cap)] recorded today (UTC), from the bot and the website (e.g. emails), or None."""
+    return _run("SELECT metric, value, cap FROM usage_daily WHERE day = %s", (_today(),), fetch="all")
+
+
 def database_size_mb():
     row = _run("SELECT pg_database_size(current_database())", fetch=True)
     return row[0] / 1048576 if row and row is not True else None

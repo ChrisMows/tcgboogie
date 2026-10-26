@@ -207,6 +207,14 @@ health:
   every_minutes: 5
   admin_email: riggsc96@gmail.com
 
+# Admin -> Usage warnings (dealfinder/usage.py): a Discord DM to the health admin when a limit (price credits, eBay
+# calls, emails, server disk/memory) reaches each of these percentages, once per level per day. pace_warning also warns
+# when today's rate would use up a daily limit before midnight UTC.
+usage:
+  alerts: true
+  alert_at: [75, 90]
+  pace_warning: true
+
 # Topps Pokémon cards (1999-2004, not TCG cards): the typical eBay asking price of each card for the website's Topps
 # catalog, one eBay search per card every refresh_days. See dealfinder/topps.py.
 topps:

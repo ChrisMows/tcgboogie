@@ -90,7 +90,7 @@ def main():
     from dealfinder import vision
     log.info("Photo check: %s", f"on ({link.photos.model})" if vision.enabled() else "off (add ANTHROPIC_API_KEY to .env to turn it on)")
     log.info("Deal finder (website mode) started. Ctrl+C to stop.")
-    usage = UsageRecorder(finder.cfg, finder.conn, finder.ppt)
+    usage = UsageRecorder(finder.cfg, finder.conn, finder.ppt, notify=site.notify)  # warnings by Discord DM
     per_check = None  # average eBay calls per check, to spread the daily budget evenly
     while True:
         started = time.time()

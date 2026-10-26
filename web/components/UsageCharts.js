@@ -3,11 +3,11 @@
 const fmt = (v, d = 0) => Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const shortDay = (day) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-/** How close a value is to its limit: ok below 70%, near from 70%, over from 90%. */
+/** How close a value is to its limit: ok below 75%, near from 75%, over from 90%. */
 function level(value, cap) {
   if (!cap) return null;
   const share = value / cap;
-  return share >= 0.9 ? "over" : share >= 0.7 ? "near" : "ok";
+  return share >= 0.9 ? "over" : share >= 0.75 ? "near" : "ok";
 }
 const LEVEL = { ok: ["✓", "Comfortable"], near: ["▲", "Getting close"], over: ["●", "At the limit"] };
 
@@ -84,7 +84,7 @@ export default function UsageCharts({ metrics }) {
       <div className={`panel usage-summary ${watch.length ? "near" : "ok"}`}>
         {watch.length
           ? <><b>▲ Close to a limit today:</b> {watch.map((m) => m.label).join(", ")}</>
-          : <><b>✓ Everything is comfortably under its limits today.</b> <span className="muted">Amber from 70% of a limit, red from 90%. Days run on UTC time (they turn over at 8 PM Eastern, 7 PM in winter), when eBay and the price service reset.</span></>}
+          : <><b>✓ Everything is comfortably under its limits today.</b> <span className="muted">Amber from 75% of a limit, red from 90%. Boogie Bot messages you on Discord at 75% and 90%, and when a day&apos;s pace would run out a limit before the reset. Days run on UTC time (they turn over at 8 PM Eastern, 7 PM in winter), when eBay and the price service reset.</span></>}
       </div>
       {groups.map((g) => (
         <section key={g}>

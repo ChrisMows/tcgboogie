@@ -13,11 +13,15 @@ const DAY = 86400000;
 export const USAGE_DAYS = 60;
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Add n to today's count of a metric. Never throws: counting must not break what's being counted. */
-export function bumpUsage(metric, n = 1) {
+/**
+ * Add n to today's count of a metric, with its daily limit when it has one (the bot's usage warnings read it).
+ * Never throws: counting must not break what's being counted.
+ */
+export function bumpUsage(metric, n = 1, cap = null) {
   if (!db || !Number.isFinite(n) || n <= 0) return;
-  db.insert(usageDaily).values({ day: today(), metric, value: n })
-    .onConflictDoUpdate({ target: [usageDaily.day, usageDaily.metric], set: { value: sql`${usageDaily.value} + ${n}`, updatedAt: new Date() } })
+  db.insert(usageDaily).values({ day: today(), metric, value: n, cap })
+    .onConflictDoUpdate({ target: [usageDaily.day, usageDaily.metric],
+      set: { value: sql`${usageDaily.value} + ${n}`, cap: sql`coalesce(${cap}::double precision, ${usageDaily.cap})`, updatedAt: new Date() } })
     .catch(() => {});
 }
 
@@ -28,10 +32,9 @@ export function noteClaude(response) {
   bumpUsage("claude_tokens", (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.output_tokens || 0));
 }
 
-const emailCap = () => (process.env.ALERT_SMTP_HOST ? null : Number(process.env.EMAIL_DAILY_LIMIT || 1000));
+export const emailCap = () => (process.env.ALERT_SMTP_HOST ? null : Number(process.env.EMAIL_DAILY_LIMIT || 1000));
 
 // What the page shows, in order. cap: a fixed daily limit; "row": the limit the bot recorded with the value.
-// warnAt: the share of the cap where the bar turns amber (red at 90%).
 export const METRICS = [
   { key: "ppt_credits", group: "Daily limits", label: "Price service credits", unit: "credits", cap: 20000,
     note: "PokemonPriceTracker, $9.99 plan: 20,000 a day for the bot and the website together, reset at midnight UTC. The bot keeps a reserve for the website." },

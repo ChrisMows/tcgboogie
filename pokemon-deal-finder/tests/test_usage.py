@@ -1,10 +1,11 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 
 from dealfinder import usage
-from dealfinder.usage import UsageRecorder, memory_used_gb
+from dealfinder.usage import UsageRecorder, memory_used_gb, usage_alerts
 
 
 class FakePPT:
@@ -50,6 +51,42 @@ class TestUsage(unittest.TestCase):
             metrics = [m for m, _, _ in rec.readings()]
         self.assertNotIn("ppt_credits", metrics)
         self.assertNotIn("db_size_mb", metrics)
+
+    def test_alert_levels_once_each(self):
+        noon = datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc)
+        rows = [("ppt_credits", 15200, 20000), ("ebay_calls", 1000, 5000), ("db_size_mb", 900, None)]
+        got = usage_alerts(rows, {}, noon)
+        self.assertEqual([(m, lv) for m, lv, _ in got], [("ppt_credits", 75)])
+        self.assertIn("76%", got[0][2])
+        self.assertIn("15,200 credits of 20,000 credits", got[0][2])
+        self.assertEqual(usage_alerts(rows, {"ppt_credits": 75}, noon), [])  # already sent today
+        rows[0] = ("ppt_credits", 18500, 20000)
+        self.assertEqual([(m, lv) for m, lv, _ in usage_alerts(rows, {"ppt_credits": 75}, noon)], [("ppt_credits", 90)])
+
+    def test_pace_warning(self):
+        # 6 AM UTC (a quarter of the day) with 45% used: on pace for 180% by midnight.
+        six = datetime(2026, 10, 26, 6, 0, tzinfo=timezone.utc)
+        got = usage_alerts([("ebay_calls", 2250, 5000)], {}, six)
+        self.assertEqual([(m, lv) for m, lv, _ in got], [("ebay_calls", "pace")])
+        self.assertIn("on pace to run out", got[0][2])
+        self.assertEqual(usage_alerts([("ebay_calls", 2250, 5000)], {"ebay_calls": "pace"}, six), [])
+        # too early in the day to judge, or disk (no daily reset): no pace warning
+        self.assertEqual(usage_alerts([("ebay_calls", 2250, 5000)], {}, datetime(2026, 10, 26, 3, 0, tzinfo=timezone.utc)), [])
+        self.assertEqual(usage_alerts([("vps_disk_gb", 20, 47)], {}, six), [])
+
+    def test_check_alerts_remembers_what_it_sent(self):
+        sent_msgs = []
+        rec = UsageRecorder({"usage": {"alert_at": [75, 90]}}, conn=object(), notify=lambda t: sent_msgs.append(t) or True)
+        store = {}
+        noon = datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc)
+        with mock.patch.object(usage.shared, "usage_today", return_value=[("emails", 950, 1000)]), \
+                mock.patch.object(usage.db, "get_setting", side_effect=lambda c, k, d=None: store.get(k, d)), \
+                mock.patch.object(usage.db, "set_setting", side_effect=lambda c, k, v: store.__setitem__(k, str(v))):
+            self.assertEqual(rec.check_alerts(now=noon), ["emails"])
+            self.assertEqual(rec.check_alerts(now=noon), [])  # 90% already sent today
+        self.assertEqual(len(sent_msgs), 1)
+        self.assertIn("Amazon SES", sent_msgs[0])
+        self.assertEqual(store["usage_alert:2026-10-26:emails"], "90")
 
     def test_never_raises(self):
         rec = UsageRecorder({}, conn=None)
