@@ -65,7 +65,10 @@ export async function dispatchWatchListings() {
     };
     if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
       await attempt("email", () => sendEmail(user.email, {
-        subject: title, heading: title, lines, button: { label: "Open the listing on eBay", url: link.href },
+        subject: title, heading: title, button: { label: "Open the listing on eBay", url: link.href },
+        items: [{ title: name, sub: [w.setName, w.number ? `#${w.number}` : "", "Buy It Now"].filter(Boolean).join(" · "), image: l.image || w.image || undefined,
+          value: money(l.price), tone: "good", note: `your alert ${money(target)}`, url: link.href }],
+        more: lines.slice(1),
         footer: `${link.affiliate ? "eBay links may earn us a commission. " : ""}Manage price alerts: ${SITE}/app/watches`,
       }, { userId: user.id, kind: "alerts" }));
     }

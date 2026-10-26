@@ -65,6 +65,11 @@ export async function runSellHigh() {
   return out;
 }
 
+// A card as a row in an email (lib/email-layout.js emailRows).
+const rowOf = ({ p, now, up, copies }) => ({
+  title: short(p.name), image: p.image || undefined, url: cardUrl(p), value: `+${Math.round(up * 100)}%`, tone: "up", note: `now ${money(now)}`,
+  sub: [p.setName, p.number ? `#${p.number}` : "", copies > 1 ? `you own ${copies}` : ""].filter(Boolean).join(" · "),
+});
 const lineOf = ({ p, now, up, copies }) => `${short(p.name)} (${p.setName}${p.number ? ` #${p.number}` : ""}): up ${Math.round(up * 100)}% this week to ${money(now)}${copies > 1 ? `, you own ${copies}` : ""}`;
 const cardUrl = (p) => `${SITE}/app/cards/${encodeURIComponent(p.id)}`;
 
@@ -90,8 +95,8 @@ async function alertMember(user, discordId, risers, pct, ready) {
 
   if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
     await attempt("email", () => sendEmail(user.email, risers.length === 1
-      ? { subject: title, heading: title, lines: [lineOf(top), "It could be a good time to sell."], button: { label: "Open the card", url: cardUrl(top.p) }, footer }
-      : { subject: title, heading: title, items: risers.map((x) => ({ text: lineOf(x), url: cardUrl(x.p) })), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }, { userId: user.id, kind: "alerts" }));
+      ? { subject: title, heading: title, items: [rowOf(top)], more: ["It could be a good time to sell."], button: { label: "Open the card", url: cardUrl(top.p) }, footer }
+      : { subject: title, heading: title, items: risers.map(rowOf), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }, { userId: user.id, kind: "alerts" }));
   }
   if (ready.push && user.alertWebPush && allowed.includes("push")) {
     await attempt("push", () => sendPush(user.id, {

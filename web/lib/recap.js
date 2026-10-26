@@ -79,6 +79,7 @@ async function buildRecap(user, days, allDeals, now) {
   const plan = planFor(tier);
   const period = days === 1 ? "today" : "this week";
   const lines = [], items = [];
+  let stat = null;
 
   // Collection value: today's saved values vs the last snapshot from before the period.
   const owned = await db.select().from(collectionItems).where(and(eq(collectionItems.userId, user.id), eq(collectionItems.list, "owned")));
@@ -88,13 +89,19 @@ async function buildRecap(user, days, allDeals, now) {
       .where(and(eq(portfolioSnapshots.userId, user.id), lte(portfolioSnapshots.day, since.toISOString().slice(0, 10))))
       .orderBy(desc(portfolioSnapshots.day)).limit(1);
     const delta = then?.value ? (value - then.value) / then.value : null;
-    lines.push(`Your collection: ${money(value)}${delta !== null ? ` (${pct(delta)} ${period === "today" ? "since yesterday" : "this week"})` : ""}, ${owned.reduce((n, it) => n + it.quantity, 0)} cards.`);
+    const cards = owned.reduce((n, it) => n + it.quantity, 0);
+    stat = { label: `Your collection · ${cards.toLocaleString("en-US")} ${cards === 1 ? "card" : "cards"}`, value: money(value),
+      change: delta !== null ? `${pct(delta)} ${period === "today" ? "since yesterday" : "this week"}` : "", tone: delta > 0 ? "up" : delta < 0 ? "down" : "" };
 
     // Biggest movers among raw cards, from cached prices only (no credits).
     const products = await loadProducts([...new Set(owned.filter((it) => it.kind === "raw" || it.kind === "sealed").map((it) => it.productId))], 0);
     const movers = Object.values(products).map((p) => ({ p, c: change(p, days) })).filter((x) => x.c !== null && Math.abs(x.c) >= 0.05)
       .sort((a, b) => Math.abs(b.c) - Math.abs(a.c)).slice(0, 3);
-    for (const { p, c } of movers) items.push({ text: `${short(p.name)} (${p.setName}): ${pct(c)}`, url: `${SITE}/app/cards/${encodeURIComponent(p.id)}` });
+    for (const { p, c } of movers) {
+      const now = p.history?.length ? p.history[p.history.length - 1].price : null; // the series change() reads
+      items.push({ title: short(p.name), sub: [p.setName, p.number ? `#${p.number}` : ""].filter(Boolean).join(" · "), image: p.image || undefined,
+        value: pct(c), tone: c > 0 ? "up" : "down", note: now ? `now ${money(now)}` : "", url: `${SITE}/app/cards/${encodeURIComponent(p.id)}` });
+    }
   }
 
   // Deals that matched this member's filters in the period (Premium got them live; Free sees what they missed).
@@ -118,7 +125,7 @@ async function buildRecap(user, days, allDeals, now) {
   if (!owned.length && !matched.length && !titles.length) return null;
   const subject = `Your TCG Boogie ${days === 1 ? "daily" : "weekly"} recap`;
   return {
-    subject, heading: subject, lines, items,
+    subject, heading: subject, stat, ...(stat ? { more: lines } : { lines }), items, itemsTitle: items.length ? `Biggest movers ${period}` : undefined,
     button: { label: owned.length ? "Open your collection" : "See deals", url: `${SITE}/app/${owned.length ? "collection" : "deals"}` },
     footer: `You get this ${days === 1 ? "daily" : "weekly"}. Change or turn it off in Settings → Email recap.${tier !== "premium" && matched.length ? ` Premium: ${SITE}/app/premium` : ""}`,
   };

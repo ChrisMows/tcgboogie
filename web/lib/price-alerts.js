@@ -104,7 +104,9 @@ async function notify(user, discordId, w, price, ready) {
     await attempt("email", () => sendEmail(user.email, {
       subject: title,
       heading: title,
-      lines: [`${w.name}${w.setName ? ` · ${w.setName}` : ""}${w.number ? ` · ${w.number}` : ""}`, `${what} · TCGplayer ${w.priceType === "low" ? "lowest listing" : "market price"}`, line],
+      items: [{ title: name, sub: [w.setName, w.number ? `#${w.number}` : "", what, `TCGplayer ${w.priceType === "low" ? "lowest listing" : "market price"}`].filter(Boolean).join(" · "),
+        image: w.image || undefined, value: money(price), tone: selling ? "up" : "good", note: `your ${selling ? "sell" : "buy"} price ${money(target)}`, url: cardUrl }],
+      more: [line],
       button: { label: "Open the card", url: cardUrl },
       footer: `${quiet} Manage alerts: ${SITE}/app/watches`,
     }, { userId: user.id, kind: "alerts" }));

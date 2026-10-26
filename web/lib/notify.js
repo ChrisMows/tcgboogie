@@ -1,5 +1,5 @@
 import "server-only";
-import { BRAND, emailButton, emailLayout, emailText, esc } from "@/lib/email-layout";
+import { BRAND, emailButton, emailLayout, emailRows, emailStat, emailSubhead, emailText, esc } from "@/lib/email-layout";
 import { countEmail, emailConfigured, emailFrom, mailer } from "@/lib/mail";
 import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 
@@ -20,31 +20,46 @@ export const channelsReady = () => ({
 const VERIFY = "Prices and deals are automated estimates and can be wrong. Check every listing yourself before you buy; purchases are your own decision and at your own risk.";
 
 /**
- * A branded email (lib/email-layout.js): heading, a few lines, an optional list of linked items (bundled deals), one button.
- * unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header.
+ * A branded email's text and HTML (lib/email-layout.js), exported so it can be previewed. Every part is optional:
+ *   stat: { label, value, change, tone } a headline number (the recap's collection value);
+ *   lines: paragraphs; items: cards as rows (title, sub, image, value, note, tone, url; text for the plain-text copy),
+ *   or plain linked lines when they have only text and url; itemsTitle: a small heading above them;
+ *   more: paragraphs after the list; button: { label, url }; footer: small print.
+ * off / offLabel: the unsubscribe link.
  */
-export async function sendEmail(to, { subject, heading, lines = [], items = [], button, footer }, unsub = null) {
-  const from = emailFrom();
-  const text = [heading, "", ...lines, ...items.map((i) => `• ${i.text}\n  ${i.url}`), "", button ? `${button.label}: ${button.url}` : "", "", footer || "", unsub ? VERIFY : ""].join("\n").trim();
+export function renderEmail({ heading, stat, lines = [], items = [], itemsTitle, more = [], button, footer }, { site, off, offLabel, verify }) {
+  const itemText = (i) => i.text || [i.title, i.sub, [i.value, i.note].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+  const text = [heading, "", stat ? `${stat.label}: ${stat.value}${stat.change ? ` (${stat.change})` : ""}` : "", ...lines,
+    itemsTitle ? `\n${itemsTitle}:` : "", ...items.map((i) => `• ${itemText(i)}${i.url ? `\n  ${i.url}` : ""}`), ...more,
+    "", button ? `${button.label}: ${button.url}` : "", "", footer || "", verify ? VERIFY : "", "", `${offLabel}: ${off}`]
+    .join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  const rich = items.some((i) => i.title);
+  const html = emailLayout({
+    site, heading, preheader: stat ? `${stat.label}: ${stat.value}${stat.change ? ` (${stat.change})` : ""}` : lines[0] || itemText(items[0] || {}),
+    content: [
+      stat ? emailStat(stat) : "",
+      ...lines.map((l) => emailText(esc(l))),
+      itemsTitle && items.length ? emailSubhead(itemsTitle) : "",
+      rich ? emailRows(items)
+        : items.map((i) => emailText(`<a href="${esc(i.url)}" style="color:${BRAND.accent};text-decoration:none;font-weight:600">${esc(i.text)} &rarr;</a>`, { top: 4 })).join(""),
+      ...more.map((l) => emailText(esc(l), { top: 8 })),
+      button ? emailButton(button.label, button.url) : "",
+    ].join(""),
+    notes: [footer && esc(footer), verify && esc(VERIFY), `Don't want these emails? <a href="${esc(off)}" style="color:${BRAND.muted};text-decoration:underline">${esc(offLabel)}</a>.`].filter(Boolean),
+  });
+  return { text, html };
+}
+
+/** Send a branded email. unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header. */
+export async function sendEmail(to, email, unsub = null) {
   // Every member email can be turned off in one click: a link in the footer, and the standard headers mail apps show
   // as "Unsubscribe" (RFC 8058 one-click). Without a member (e.g. a test) the link opens Settings instead.
   const site = process.env.AUTH_URL || "https://tcgboogie.com";
   const off = unsub ? unsubscribeUrl(unsub.userId, unsub.kind) : `${site}/app/account#alerts`;
   const offLabel = unsub ? `Unsubscribe from ${KINDS[unsub.kind]}` : "Turn off email alerts";
-  const fullText = `${text}
-
-${offLabel}: ${off}`;
-  const fullHtml = emailLayout({
-    site, heading, preheader: lines[0] || items[0]?.text || "",
-    content: [
-      ...lines.map((l) => emailText(esc(l))),
-      ...items.map((i) => emailText(`<a href="${esc(i.url)}" style="color:${BRAND.accent};text-decoration:none;font-weight:600">${esc(i.text)} &rarr;</a>`, { top: 4 })),
-      button ? emailButton(button.label, button.url) : "",
-    ].join(""),
-    notes: [footer && esc(footer), unsub && esc(VERIFY), `Don't want these emails? <a href="${esc(off)}" style="color:${BRAND.muted};text-decoration:underline">${esc(offLabel)}</a>.`].filter(Boolean),
-  });
+  const { text, html } = renderEmail(email, { site, off, offLabel, verify: Boolean(unsub) });
   const headers = unsub ? { "List-Unsubscribe": `<${off}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : { "List-Unsubscribe": `<${off}>` };
-  await mailer().sendMail({ from: `TCG Boogie <${from}>`, to, subject, text: fullText, html: fullHtml, headers });
+  await mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, subject: email.subject, text, html, headers });
   void countEmail();
 }
 

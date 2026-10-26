@@ -211,6 +211,12 @@ const dealUrlOf = (d) => (d.productId
   ? `${SITE}/app/cards/${encodeURIComponent(d.productId)}?deal=${encodeURIComponent(d.id)}${d.language === "japanese" ? "&lang=japanese" : ""}&from=alert`
   : `${SITE}/app/deals`);
 const titleOf = (d) => `⚡ ${d.name} ${gradeOf(d)}: ${money(d.total)} (${Math.round(d.discountPct)}% below)`;
+// A deal as a row in an email (lib/email-layout.js emailRows): picture, price and how far under market.
+const rowOf = (d) => ({
+  title: d.name, image: d.image || undefined, url: dealUrlOf(d), value: money(d.total), tone: "good",
+  note: `${Math.round(d.discountPct)}% below ${money(d.marketValue)}`,
+  sub: [gradeOf(d), d.setName, d.minutesLeft ? `~${d.minutesLeft} min left` : "", d.photoCheck === "match" ? "✓ photo checked" : ""].filter(Boolean).join(" · "),
+});
 function linesOf(d, why) {
   return [
     `${d.name}${d.setName ? ` · ${d.setName}` : ""}${d.number ? ` · ${d.number}` : ""} · ${gradeOf(d)}`,
@@ -255,14 +261,14 @@ async function alertMember(user, discordId, items, ready, counts) {
   if (email.length === 1) {
     const { deal: d, why } = email[0];
     await send("email", email, () => sendEmail(user.email, {
-      subject: titleOf(d), heading: titleOf(d), lines: [...linesOf(d, why), "See recent eBay sales and open the listing from the deal page."],
+      subject: titleOf(d), heading: titleOf(d), items: [rowOf(d)], more: [...linesOf(d, why).slice(1), "See recent eBay sales and open the listing from the deal page."],
       button: { label: "See the deal", url: dealUrlOf(d) }, footer: `Manage your filters: ${SITE}/app/deals`,
     }, { userId: user.id, kind: "alerts" }));
   } else if (email.length > 1) {
     const subject = `⚡ ${email.length} new deals for you, up to ${Math.max(...email.map((x) => Math.round(x.deal.discountPct)))}% below`;
     await send("email", email, () => sendEmail(user.email, {
       subject, heading: subject,
-      items: email.map(({ deal: d }) => ({ text: `${d.name} ${gradeOf(d)}: ${money(d.total)}, ${Math.round(d.discountPct)}% below ${money(d.marketValue)}, ~${d.minutesLeft} min left${d.photoCheck === "match" ? " · ✓ photo checked" : ""}`, url: dealUrlOf(d) })),
+      items: email.map(({ deal: d }) => rowOf(d)),
       button: { label: "See all on your Deals page", url: `${SITE}/app/deals` }, footer: `Manage your filters: ${SITE}/app/deals`,
     }, { userId: user.id, kind: "alerts" }));
   }

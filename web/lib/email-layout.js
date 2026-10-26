@@ -18,6 +18,44 @@ export function emailButton(label, url) {
 export const emailText = (t, { size = 15, color = BRAND.body, top = 0 } = {}) =>
   `<p style="margin:${top}px 0 10px;font-family:${FONT};font-size:${size}px;line-height:1.55;color:${color}">${t}</p>`;
 
+const TONE = { up: "#5ee08a", down: "#ff7a7a", good: BRAND.accent };
+
+/** A headline number (the recap's collection value): small label, big value, a colored change under it. */
+export function emailStat({ label, value, change = "", tone = "" }) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px"><tr>
+    <td bgcolor="${BRAND.bg}" style="background:${BRAND.bg};border:1px solid ${BRAND.line};border-radius:12px;padding:16px 18px;font-family:${FONT}">
+      <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${BRAND.muted}">${esc(label)}</div>
+      <div style="font-size:32px;line-height:1.2;font-weight:800;color:${BRAND.text};margin-top:4px">${esc(value)}</div>
+      ${change ? `<div style="font-size:14px;font-weight:700;color:${TONE[tone] || BRAND.body};margin-top:2px">${esc(change)}</div>` : ""}
+    </td></tr></table>`;
+}
+
+/** A small heading inside the card, above a list. */
+export const emailSubhead = (t) =>
+  `<div style="margin:18px 0 6px;font-family:${FONT};font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${BRAND.muted}">${esc(t)}</div>`;
+
+/**
+ * A list of cards: picture, name (linked), a grey second line, and a number on the right (colored by tone: up, down,
+ * good) with a small note under it. rows: [{ url, title, sub, image, value, note, tone }]; only title is required.
+ */
+export function emailRows(rows) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 6px">${rows.map((r, i) => {
+    const pad = `padding:12px 0;${i ? `border-top:1px solid ${BRAND.line};` : ""}`;
+    const link = (inner) => (r.url ? `<a href="${esc(r.url)}" style="color:${BRAND.text};text-decoration:none">${inner}</a>` : inner);
+    return `<tr>
+      ${r.image ? `<td width="58" valign="top" style="${pad}width:58px">${link(`<img src="${esc(r.image)}" width="46" alt="" style="display:block;border:0;width:46px;height:auto;border-radius:4px">`)}</td>` : ""}
+      <td valign="top" style="${pad}font-family:${FONT}">
+        <div style="font-size:15px;line-height:1.35;font-weight:700;color:${BRAND.text}">${link(esc(r.title))}</div>
+        ${r.sub ? `<div style="font-size:13px;line-height:1.45;color:${BRAND.muted};margin-top:3px">${esc(r.sub)}</div>` : ""}
+      </td>
+      ${r.value ? `<td valign="top" align="right" style="${pad}padding-left:12px;font-family:${FONT};white-space:nowrap">
+        <div style="font-size:15px;font-weight:800;color:${TONE[r.tone] || BRAND.text}">${esc(r.value)}</div>
+        ${r.note ? `<div style="font-size:12px;color:${BRAND.muted};margin-top:3px">${esc(r.note)}</div>` : ""}
+      </td>` : ""}
+    </tr>`;
+  }).join("")}</table>`;
+}
+
 /**
  * A whole email. content: HTML for inside the card (built with emailText / emailButton, values escaped);
  * preheader: the grey line inboxes show after the subject; notes: small print under the card (HTML, escaped).
