@@ -568,11 +568,18 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .set-progress { display: grid; gap: 6px; padding: 8px 0; color: inherit; font-size: 14px; }
 .set-progress:hover { text-decoration: none; }
 .set-progress:hover b { color: var(--accent); }
-.tabs-row { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 8px 0 16px; }
-.tabs-row a { color: var(--muted); padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 600; }
+.tabs-row { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); margin: 8px 0 16px; }
+.tabs-row a { color: var(--muted); padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 600; white-space: nowrap; }
 .tabs-row a span { font-size: 12px; background: var(--panel-3); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
 .tabs-row a.on { color: var(--text); border-color: var(--accent); }
 .tabs-row a:hover { text-decoration: none; color: var(--text); }
+/* Phones: too many tabs for one line (Admin has nine), so they wrap as pills instead of running off the screen, which
+   also stretched the whole page (and the bottom tab bar) wider than the phone. */
+@media (max-width: 760px) {
+  .tabs-row { flex-wrap: wrap; gap: 6px; border-bottom: 0; }
+  .tabs-row a { padding: 6px 12px; margin: 0; border: 1px solid var(--border); border-radius: 999px; font-size: 14px; white-space: nowrap; }
+  .tabs-row a.on { border-color: var(--accent); background: var(--accent-soft); }
+}
 .coll-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
 .coll-toolbar > select { width: auto; padding: 8px 10px; font-size: 14px; }
 .coll-toolbar .search-box { flex: 1 1 220px; }

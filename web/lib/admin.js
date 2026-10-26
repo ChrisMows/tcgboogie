@@ -58,10 +58,10 @@ export async function systemStatus({ pingPrices = false } = {}) {
 
   add("Website", "Web server", "ok", `Up ${Math.round(process.uptime() / 3600 * 10) / 10} h · Node ${process.version} · ${Math.round(process.memoryUsage().rss / 1048576)} MB in use · ${os.platform()}`);
 
-  if (!db) add("Website", "Database (Neon)", "down", "DATABASE_URL isn't set");
+  if (!db) add("Website", "Database", "down", "DATABASE_URL isn't set");
   else {
     const r = await timed(async () => { const [{ n }] = await db.select({ n: count() }).from(users); return { ok: true, detail: `${n} members` }; });
-    add("Website", "Database (Neon)", r.ok ? (r.ms > 1500 ? "warn" : "ok") : "down", r.ok ? `${r.detail} · answered in ${r.ms} ms` : r.detail);
+    add("Website", "Database", r.ok ? (r.ms > 1500 ? "warn" : "ok") : "down", r.ok ? `${r.detail} · answered in ${r.ms} ms` : r.detail);
   }
 
   if (!catalogLive()) add("Data", "Price service (PokemonPriceTracker)", "off", "No PPT_API_KEY: using the sample catalog");

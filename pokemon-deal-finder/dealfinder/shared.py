@@ -1,4 +1,4 @@
-"""The website's database (Neon Postgres), shared with the bot.
+"""The website's database (Postgres on this server since 2026-10-26; Neon before), shared with the bot.
 
 - catalog_cache: PokemonPriceTracker responses, keyed by request URL exactly like the website (web/lib/catalog.js),
   so a card priced by the bot is free for the website's card pages and the other way round.

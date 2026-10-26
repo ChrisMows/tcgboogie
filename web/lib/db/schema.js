@@ -1,4 +1,4 @@
-// Database tables (PostgreSQL on Neon). The four auth tables follow the Auth.js Drizzle adapter layout.
+// Database tables (PostgreSQL on our own server, the VPS; Neon until 2026-10-26). The four auth tables follow the Auth.js Drizzle adapter layout.
 import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("user", {

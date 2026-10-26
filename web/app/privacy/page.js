@@ -6,7 +6,7 @@ export default function Privacy() {
   return (
     <div className="wrap doc">
       <h1>Privacy</h1>
-      <p className="updated">Last updated October 22, 2026</p>
+      <p className="updated">Last updated October 26, 2026</p>
       <p>
         This page explains what TCG Boogie collects, why, who it&apos;s shared with, and how to remove it. We keep it to the
         minimum needed to run the service.
@@ -33,7 +33,7 @@ export default function Privacy() {
       <h2>Who we share it with</h2>
       <p>Only the services that run TCG Boogie, and only what each needs:</p>
       <ul>
-        <li><b>Stripe</b> (payments), <b>Neon</b> (our database), <b>Hostinger</b> (our servers and email) and <b>Amazon Web Services</b> (sending alert emails).</li>
+        <li><b>Stripe</b> (payments), <b>Hostinger</b> (our servers, database and email) and <b>Amazon Web Services</b> (sending alert emails).</li>
         <li><b>Discord</b> and <b>Twilio</b> to deliver your Discord and text alerts, if you turn them on.</li>
         <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
         <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; works out the columns of an import file we don&apos;t recognise, from its first few rows; answers the questions you ask Boogie Bot, our site helper; and, when an admin asks, sorts the ideas you send us into themes. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
