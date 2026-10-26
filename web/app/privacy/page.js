@@ -33,7 +33,7 @@ export default function Privacy() {
       <h2>Who we share it with</h2>
       <p>Only the services that run TCG Boogie, and only what each needs:</p>
       <ul>
-        <li><b>Stripe</b> (payments), <b>Hostinger</b> (our servers, database and email) and <b>Amazon Web Services</b> (sending alert emails).</li>
+        <li><b>Stripe</b> (payments), <b>Hostinger</b> (our servers, database and email) and <b>Resend</b> (sending our emails).</li>
         <li><b>Discord</b> and <b>Twilio</b> to deliver your Discord and text alerts, if you turn them on.</li>
         <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
         <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; works out the columns of an import file we don&apos;t recognise, from its first few rows; answers the questions you ask Boogie Bot, our site helper; and, when an admin asks, sorts the ideas you send us into themes. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
@@ -56,9 +56,9 @@ export default function Privacy() {
 
       <h2>Emails we send</h2>
       <p>
-        Sign-in links, the alerts you turn on, and a collection recap (weekly unless you change it). Every alert and recap
-        email has a one-click unsubscribe link, and you can turn each one off in Settings. We don&apos;t send marketing
-        email from anyone else.
+        Sign-in links, the alerts you turn on, a collection recap (weekly unless you change it), and a short email when we
+        release new features (product updates). Every alert, recap and product update email has a one-click unsubscribe
+        link, and you can turn each one off in Settings. We don&apos;t send marketing email from anyone else.
       </p>
 
       <h2>Links that may earn us a commission</h2>

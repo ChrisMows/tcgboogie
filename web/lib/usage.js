@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, gte, sql } from "drizzle-orm";
+import { and, count, eq, gte, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { emailCap } from "@/lib/mail";
 
@@ -76,7 +76,7 @@ export async function usageReport() {
     const [rows, alerts, posts] = await Promise.all([
       db.select().from(usageDaily).where(gte(usageDaily.day, since)),
       db.select({ day: dayOf(schema.alertLog.sentAt), channel: schema.alertLog.channel, n: count() }).from(schema.alertLog)
-        .where(and(gte(schema.alertLog.sentAt, new Date(since)), eq(schema.alertLog.ok, true))).groupBy(sql`1`, schema.alertLog.channel),
+        .where(and(gte(schema.alertLog.sentAt, new Date(since)), eq(schema.alertLog.ok, true), ne(schema.alertLog.kind, "release"))).groupBy(sql`1`, schema.alertLog.channel),
       db.select({ day: dayOf(schema.socialPosts.at), n: count() }).from(schema.socialPosts)
         .where(and(gte(schema.socialPosts.at, new Date(since)), eq(schema.socialPosts.status, "posted"))).groupBy(sql`1`),
     ]).catch(() => [[], [], []]);

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, setPlan, testAlert, testRecap } from "./actions";
+import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, sendReleaseEmail, setPlan, testAlert, testRecap, testReleaseEmail } from "./actions";
+import { RELEASES } from "@/lib/release-notes";
+import { releaseEmailStatus } from "@/lib/release-email";
 import AdminFeatures from "@/components/AdminFeatures";
 import AdminLimits from "@/components/AdminLimits";
 import { currentFeatures, currentLimits } from "@/lib/features";
@@ -46,7 +48,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales", "usage"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales", "releases", "usage"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -64,6 +66,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=requests" className={tab === "requests" ? "on" : ""} role="tab" aria-selected={tab === "requests"}>Requests{await pendingCount() ? <span>{await pendingCount()}</span> : null}</Link>
         <Link href="/app/admin?tab=ideas" className={tab === "ideas" ? "on" : ""} role="tab" aria-selected={tab === "ideas"}>Ideas{(await ideaCounts()).new ? <span>{(await ideaCounts()).new}</span> : null}</Link>
         <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Social media</Link>
+        <Link href="/app/admin?tab=releases" className={tab === "releases" ? "on" : ""} role="tab" aria-selected={tab === "releases"}>Release emails</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
         <Link href="/app/admin?tab=usage" className={tab === "usage" ? "on" : ""} role="tab" aria-selected={tab === "usage"}>Usage</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
@@ -75,6 +78,7 @@ export default async function Admin({ searchParams }) {
       {tab === "ideas" && <Ideas show={sp?.show} group={sp?.group === "1"} ok={sp?.ok} emailed={sp?.emailed} err={sp?.err} />}
       {tab === "traffic" && <Traffic />}
       {tab === "usage" && <Usage />}
+      {tab === "releases" && <Releases r={sp?.r} v={sp?.v} />}
       {tab === "sales" && <Sales ok={sp?.ok} err={sp?.err} />}
       {tab === "helper" && <Helper />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
@@ -567,6 +571,64 @@ async function Helper() {
 }
 
 // Traffic: our own cookie-free visit counts (lib/traffic.js), the last 30 days.
+/** Admin -> Release emails: email each release in lib/release-notes.js to members (lib/release-email.js). */
+async function Releases({ r, v }) {
+  let status = {};
+  try { status = await releaseEmailStatus(); } catch { status = null; }
+  const day = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+  return (
+    <>
+      {r === "started" && <div className="notice good">Sending v{v} now. It goes out in the background; refresh this page to see how far it&apos;s got.</div>}
+      {r === "test-sent" && <div className="notice good">Test copy of v{v} sent to your email.</div>}
+      {r?.startsWith("fail:") && <div className="notice bad">The test didn&apos;t send: {r.slice(5)}</div>}
+      {!status && <div className="notice warn">Release emails need the email_updates column: run <code>npm run db:push</code>.</div>}
+      <p className="muted">
+        Email a release from <Link href="/updates">What&apos;s new</Link> to every member with product updates on (Settings; on unless they turn it off, and every
+        email has a one-click unsubscribe). Each member gets each release once. If the day&apos;s email limit runs low, it pauses and carries on by itself
+        the next day, keeping room for sign-in links. To add a release, put it at the top of <code>lib/release-notes.js</code> and deploy.
+      </p>
+      <div className="release-admin">
+        {RELEASES.map((rel, i) => {
+          const s = status?.[rel.version] || { state: "new", sent: 0, total: 0 };
+          return (
+            <div key={rel.version} className="panel release-admin-row">
+              <div className="release-admin-head">
+                <span className="release-version">v{rel.version}</span>
+                <div style={{ minWidth: 0 }}>
+                  <b>{rel.title}</b>
+                  <div className="small muted">{rel.date} · {rel.items.length} changes{i === 0 ? " · latest" : ""}</div>
+                </div>
+                <span className={`badge ${s.state === "done" ? "good" : s.state === "sending" ? "accent" : ""}`} style={{ marginLeft: "auto" }}>
+                  {s.state === "done" ? `Sent to ${s.sent}` : s.state === "sending" ? `Sending: ${s.sent} of ${s.total}` : "Not sent"}
+                </span>
+              </div>
+              {s.state === "done" && <p className="small muted" style={{ margin: 0 }}>Finished {s.finishedAt ? day(s.finishedAt) : ""} (Eastern).</p>}
+              {s.note && <p className="small" style={{ margin: 0 }}>{s.note}</p>}
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                <a className="btn sm" style={{ flex: "none" }} href={`/app/admin/release-preview/${rel.version}`} target="_blank" rel="noopener noreferrer">Preview email ↗</a>
+                <form action={testReleaseEmail.bind(null, rel.version)} style={{ flex: "none" }}><button className="btn sm">Send me a test</button></form>
+              </div>
+              {s.state === "new" && status && (
+                <details className="release-admin-send">
+                  <summary className="btn sm primary">Email to {s.total} {s.total === 1 ? "member" : "members"}…</summary>
+                  <form action={sendReleaseEmail.bind(null, rel.version)} className="release-admin-confirm">
+                    <p className="small" style={{ margin: 0 }}>
+                      This emails v{rel.version} to the {s.total} {s.total === 1 ? "member" : "members"} with product updates on. It can&apos;t be called back.
+                      Check the preview or send yourself a test first.
+                    </p>
+                    <input type="hidden" name="confirm" value="yes" />
+                    <button className="btn sm primary" style={{ flex: "none" }}>Yes, send v{rel.version} now</button>
+                  </form>
+                </details>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 async function Usage() {
   let metrics = null;
   try { metrics = await usageReport(); } catch { metrics = null; }

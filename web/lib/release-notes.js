@@ -7,6 +7,8 @@ export const RELEASES = [
     date: "2026-10-26",
     title: "Better-looking emails that reach your inbox",
     items: [
+      { tag: "New", title: "What's new, by email", href: "/app/account#alerts",
+        text: "When we release new features and fixes, we'll send you a short email like this one. Prefer not to get them? Turn off Product updates in Settings, or use the unsubscribe link at the bottom." },
       { tag: "Improved", title: "New email design",
         text: "Sign-in links, deal and price alerts and your recap now come in the TCG Boogie look, with card pictures, prices and green or red changes at a glance. The recap opens with your collection's value and its biggest movers." },
       { tag: "Fixed", title: "Emails landing in spam",

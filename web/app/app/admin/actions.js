@@ -13,6 +13,7 @@ import { log, logError } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
 import { sendTestAlert } from "@/lib/price-alerts";
 import { sendRecapPreview } from "@/lib/recap";
+import { releaseByVersion, sendRelease, sendReleaseTest } from "@/lib/release-email";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { marketItem } from "@/lib/market";
@@ -194,6 +195,26 @@ export async function testRecap() {
   let r;
   try { r = await sendRecapPreview(admin); } catch (e) { r = `fail:${String(e.message).slice(0, 200)}`; }
   redirect(`/app/admin?recap=${encodeURIComponent(r)}`);
+}
+
+/** Admin -> Release emails: a [Test] copy of a release email to the signed-in admin. */
+export async function testReleaseEmail(version) {
+  const admin = await requireAdmin();
+  let r = "test-sent";
+  try { await sendReleaseTest(version, admin); } catch (e) { r = `fail:${String(e.message).slice(0, 200)}`; }
+  redirect(`/app/admin?tab=releases&r=${encodeURIComponent(r)}&v=${encodeURIComponent(version)}`);
+}
+
+/**
+ * Admin -> Release emails: email a release to every member with product updates on. The send carries on in the
+ * background (and on the next price-alert run if it stops); the page shows its progress.
+ */
+export async function sendReleaseEmail(version, formData) {
+  const admin = await requireAdmin();
+  if (!releaseByVersion(version) || formData.get("confirm") !== "yes") redirect("/app/admin?tab=releases");
+  await logAdminAction(admin, "release_email", { version });
+  void sendRelease(version, { by: admin.id }).catch((e) => logError("admin", `Release email v${version} crashed`, e));
+  redirect(`/app/admin?tab=releases&r=started&v=${encodeURIComponent(version)}`);
 }
 
 /** Create the Premium price and the payment webhook in Stripe (safe to press again: it updates instead). */

@@ -12,7 +12,7 @@ function demo() {
     const f = defaultFilters(PLANS.premium);
     g.__tcgDemo = {
       nextId: 3,
-      prefs: { alertDiscord: true, alertWebPush: false, alertEmail: true, alertSms: false, phone: null, phoneVerifiedAt: null, emailRecap: "daily", discordConnected: false },
+      prefs: { alertDiscord: true, alertWebPush: false, alertEmail: true, alertSms: false, phone: null, phoneVerifiedAt: null, emailRecap: "daily", emailUpdates: true, discordConnected: false },
       profiles: [
         { id: 1, userId: "demo", name: "My deals", active: true, filters: f, createdAt: new Date(), updatedAt: new Date() },
         {
@@ -151,6 +151,7 @@ export async function updatePrefs(userId, prefs) {
     alertEmail: Boolean(prefs.alertEmail),
     alertSms: Boolean(prefs.alertSms),
     emailRecap: ["off", "weekly", "daily"].includes(prefs.emailRecap) ? prefs.emailRecap : "weekly",
+    emailUpdates: Boolean(prefs.emailUpdates),
   };
   if (isDemo(userId)) return Object.assign(demo().prefs, clean);
   await db.update(users).set(clean).where(eq(users.id, userId));

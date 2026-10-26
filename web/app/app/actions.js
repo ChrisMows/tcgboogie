@@ -70,6 +70,7 @@ export async function savePreferences(formData) {
     alertEmail: formData.get("alertEmail") === "on",
     alertSms: formData.get("alertSms") === "on" && Boolean(user.phoneVerifiedAt) && user.plan.watchAlertChannels.includes("sms"),
     emailRecap,
+    emailUpdates: formData.get("emailUpdates") === "on",
   });
   revalidatePath("/app", "layout");
   redirect("/app/account?saved=alerts#alerts");

@@ -266,6 +266,10 @@ export default async function Account({ searchParams }) {
             </select>
             <div className="hint" id="recap-hint">Your collection value and biggest movers, deals that matched your filters, and alerts that hit. Sent early morning.</div>
           </div>
+          <label className="check" style={{ marginTop: 14 }}>
+            <input type="checkbox" name="emailUpdates" defaultChecked={user.emailUpdates !== false} /> 🆕 Product updates by email
+          </label>
+          <div className="hint" style={{ marginLeft: 27 }}>A short email when we release new features and fixes. A few times a month at most.</div>
           <button className="btn primary" style={{ marginTop: 16 }}>Save alert settings</button>
           {params?.saved === "alerts" && <span className="small good" style={{ marginLeft: 10 }}>Saved.</span>}
         </div>

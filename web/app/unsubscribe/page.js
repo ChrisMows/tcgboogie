@@ -18,7 +18,7 @@ export default async function Unsubscribe({ searchParams }) {
   if (done && KINDS[done]) {
     return box(<>
       <h1>You&apos;re unsubscribed</h1>
-      <p className="muted">We won&apos;t send you {KINDS[done]} anymore. You can turn {done === "recap" ? "it" : "them"} back on any time in Settings.</p>
+      <p className="muted">We won&apos;t send you {KINDS[done]} anymore. You can turn {done === "alerts" || done === "updates" ? "them" : "it"} back on any time in Settings.</p>
       <Link href="/app/account#alerts" className="btn">Open Settings</Link>
     </>);
   }
@@ -33,7 +33,8 @@ export default async function Unsubscribe({ searchParams }) {
     <h1>Unsubscribe from {KINDS[k]}?</h1>
     <p className="muted">
       {k === "recap" ? "You'll stop getting the collection recap email. Price and deal alerts aren't affected."
-        : "You'll stop getting deal and price alerts by email. Discord and text alerts, if you use them, keep working."}
+        : k === "updates" ? "You'll stop getting emails about new features and fixes. Your alerts and recap aren't affected."
+          : "You'll stop getting deal and price alerts by email. Discord and text alerts, if you use them, keep working."}
     </p>
     <form action={confirm}>
       <input type="hidden" name="u" value={u} />

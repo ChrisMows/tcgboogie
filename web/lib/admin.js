@@ -1,6 +1,6 @@
 import "server-only";
 import os from "node:os";
-import { count, desc, eq, gte, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, ne, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { compActive, effectiveTier, signupOpen } from "@/lib/access";
 import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog";
@@ -83,7 +83,7 @@ export async function systemStatus({ pingPrices = false } = {}) {
       !v ? "Hasn't run yet: add the Hostinger cron job" : v.error ? `Last run failed ${ago(v.at)}: ${v.error}`
         : `Last run ${ago(v.at)} · ${v.checked ?? 0} alerts checked · ${v.fired ?? 0} fired${age > 6 * 3600 * 1000 ? " · overdue: is the cron job set up?" : ""}`);
     const since = new Date(Date.now() - 24 * 3600 * 1000);
-    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, n: count() }).from(alertLog).where(gte(alertLog.sentAt, since)).groupBy(alertLog.channel, alertLog.ok);
+    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, n: count() }).from(alertLog).where(and(gte(alertLog.sentAt, since), ne(alertLog.kind, "release"))).groupBy(alertLog.channel, alertLog.ok);
     const failed = sent.filter((x) => !x.ok).reduce((s, x) => s + Number(x.n), 0);
     add("Alerts", "Alerts sent (24 h)", failed ? "warn" : "ok",
       sent.length ? sent.map((x) => `${x.channel}${x.ok ? "" : " failed"}: ${x.n}`).join(" · ") : "None in the last 24 hours");
