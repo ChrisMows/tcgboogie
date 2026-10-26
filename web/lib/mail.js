@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { BRAND, emailButton, emailLayout, emailText, esc } from "@/lib/email-layout";
 
 // Every email the site sends (sign-in links, alerts, recaps) goes out through one sender:
 //   - a sending service when ALERT_SMTP_HOST, ALERT_SMTP_USER and ALERT_SMTP_PASS are set (Resend: smtp.resend.com,
@@ -63,18 +64,40 @@ export async function countEmail() {
   } catch { /* counting must never stop an email */ }
 }
 
+/** The sign-in email's subject, plain text and HTML (exported so it can be previewed). */
+export function loginEmail(to, url) {
+  const site = new URL(url).origin;
+  const html = emailLayout({
+    site, heading: "Sign in to TCG Boogie", preheader: "Your one-time sign-in link. It expires in 24 hours.",
+    content: [
+      emailText("Tap the button below to sign in. No password needed."),
+      emailButton("Sign in to TCG Boogie", url),
+      emailText("The link works once and expires in 24 hours.", { size: 13, color: BRAND.muted }),
+      `<div style="border-top:1px solid ${BRAND.line};margin:22px 0 16px"></div>`,
+      emailText("Button not working? Copy this link into your browser:", { size: 13, color: BRAND.muted }),
+      emailText(`<a href="${esc(url)}" style="color:${BRAND.accent};word-break:break-all;text-decoration:none">${esc(url)}</a>`, { size: 12 }),
+    ].join(""),
+    notes: [`This link was requested for ${esc(to)}. If that wasn't you, ignore this email: no one can sign in without the link.`],
+  });
+  const text = `Sign in to TCG Boogie
+
+Open this link to sign in (no password needed):
+${url}
+
+The link works once and expires in 24 hours.
+
+This link was requested for ${to}. If that wasn't you, ignore this email: no one can sign in without the link.
+
+TCG Boogie · ${site.replace(/^https?:\/\//, "")} · support@tcgboogie.com`;
+  return { subject: "Your TCG Boogie sign-in link", text, html };
+}
+
 export async function sendLoginEmail(to, url) {
-  const host = new URL(url).host;
-  await mailer().sendMail({
-    from: `TCG Boogie <${emailFrom()}>`,
-    to,
-    subject: "Your TCG Boogie sign-in link",
-    text: `Sign in to TCG Boogie:\n${url}\n\nThis link expires in 24 hours and can be used once. If you didn't ask for it, you can ignore this email.`,
-    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;background:#0b0d12;color:#e8ecf3;border-radius:12px">
-      <h2 style="margin:0 0 12px">Sign in to TCG <span style="color:#f5c518">Boogie</span></h2>
-      <p style="color:#98a2b3">Click the button to sign in to ${host}. The link expires in 24 hours and works once.</p>
-      <p><a href="${url}" style="display:inline-block;background:#f5c518;color:#1a1400;font-weight:600;padding:12px 22px;border-radius:10px;text-decoration:none">Sign in</a></p>
-      <p style="color:#98a2b3;font-size:13px">If you didn't ask for this, you can ignore this email.</p></div>`,
+  // A failed send shows the member "Sign-in didn't work"; the sender's reason goes to Admin -> Logs.
+  await mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, ...loginEmail(to, url) }).catch(async (e) => {
+    const { log } = await import("@/lib/log");
+    await log("signin", "error", `Couldn't email a sign-in link through ${emailSender()}: ${e?.message || e}`, { to, code: e?.responseCode || e?.code || null });
+    throw e;
   });
   void countEmail();
 }
