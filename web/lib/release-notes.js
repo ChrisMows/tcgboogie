@@ -1,7 +1,9 @@
 // What's new on TCG Boogie (the public /updates page), newest first. Add a release at the top of RELEASES when
-// something members will notice ships: tag is "New", "Improved" or "Fixed"; href (optional) is where to see it.
+// something members will notice ships, with the next version (1.2 after 1.1; 2.0 for something big): tag is "New",
+// "Improved" or "Fixed"; href (optional) is where to see it.
 export const RELEASES = [
   {
+    version: "1.1",
     date: "2026-10-26",
     title: "Better-looking emails that reach your inbox",
     items: [
@@ -9,11 +11,20 @@ export const RELEASES = [
         text: "Sign-in links, deal and price alerts and your recap now come in the TCG Boogie look, with card pictures, prices and green or red changes at a glance. The recap opens with your collection's value and its biggest movers." },
       { tag: "Fixed", title: "Emails landing in spam",
         text: "Our emails now go out through a dedicated email service, so sign-in links and alerts land in your inbox instead of spam. If an older one went to spam, marking it \"Not spam\" helps too." },
-      { tag: "Fixed", title: "Market Movers eBay links",
-        text: "The eBay link on a sale now opens that exact sale in eBay's sold listings, instead of whatever is for sale today." },
+      { tag: "Improved", title: "Faster, on our own server",
+        text: "Your collection, filters and alerts now live on TCG Boogie's own server instead of a third-party database, so pages that read them load quicker and there's no outside limit that could slow the site down. Every record was copied and checked one by one; nothing was lost." },
+      { tag: "Improved", title: "Privacy policy update", href: "/privacy",
+        text: "The privacy policy now says your data is stored on our own server at Hostinger, who also host the website and our email. Nothing about what we collect or how we use it changed." },
+      { tag: "Fixed", title: "Tabs on phones", href: "/app/collection",
+        text: "Page tabs (Collection, Deals, Price alerts and others) now wrap onto a second line on phones instead of running off the right edge and stretching the page sideways." },
+      { tag: "Fixed", title: "Menu on tablets and small laptops",
+        text: "On screens a little narrower than a laptop, the top menu moves behind the menu button instead of pushing your profile picture off the edge." },
+      { tag: "Fixed", title: "Market Movers eBay links", href: "/sales",
+        text: "The eBay link on a sale now opens that exact sale in eBay's sold listings, instead of whatever is for sale today. The page's title also has a little more room under the menu bar." },
     ],
   },
   {
+    version: "1.0",
     date: "2026-10-25",
     title: "Push alerts, Market Movers and Topps cards",
     items: [

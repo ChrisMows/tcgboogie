@@ -1763,14 +1763,38 @@ body:has(.install-hint) .helper-fab { display: none; }
 .post-body { flex: 1 1 280px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .post-body textarea { width: 100%; font: inherit; font-size: 14px; }
 
-/* What's new (app/updates) */
-.release { margin: 28px 0; }
-.release-head time { font-size: 13px; color: var(--muted); letter-spacing: 0.5px; }
-.release-head h2 { margin: 2px 0 12px; }
-.release-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
-.release-items li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+/* What's new (app/updates): one row per release that opens to its changes */
+.releases { display: grid; gap: 12px; margin-top: 24px; }
+.release { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.release[open] { border-color: var(--border-strong); }
+.release summary { display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; list-style: none; }
+.release summary::-webkit-details-marker { display: none; }
+.release summary:hover { background: var(--panel-2); }
+.release summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.release-version { flex: none; font-family: var(--font-display, inherit); font-weight: 800; font-size: 15px; color: var(--accent); background: var(--accent-soft); border-radius: 8px; padding: 6px 10px; min-width: 52px; text-align: center; }
+.release-summary { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.release-summary b { font-size: 16px; }
+.release-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.release-latest { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 1px 7px; }
+.release-counts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.release-chevron { flex: none; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin: -4px 4px 0 2px; transition: transform 0.2s; }
+.release[open] .release-chevron { transform: rotate(225deg); margin-top: 4px; }
+.release-body { padding: 4px 18px 18px; border-top: 1px solid var(--border); }
+.release-group { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin: 18px 0 8px; }
+.release-group::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.release-group.new { color: var(--accent); }
+.release-group.improved { color: var(--good); }
+.release-group.fixed { color: var(--warn); }
+.release-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+.release-items li { padding: 10px 0 10px 16px; border-left: 2px solid var(--border); }
+.release-items li + li { margin-top: 2px; }
 .release-items p { margin: 4px 0 0; color: var(--muted); }
-.release-tag { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; margin-top: 2px; min-width: 70px; text-align: center; }
+.release-tag { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
 .release-tag.new { background: var(--accent-soft); color: var(--accent); }
 .release-tag.improved { background: var(--good-soft); color: var(--good); }
 .release-tag.fixed { background: var(--warn-soft); color: var(--warn); }
+@media (max-width: 640px) {
+  .release summary { flex-wrap: wrap; gap: 10px 12px; padding: 14px; }
+  .release-counts { order: 3; width: 100%; justify-content: flex-start; padding-left: 64px; }
+  .release-body { padding: 2px 14px 14px; }
+}
