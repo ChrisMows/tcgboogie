@@ -1,7 +1,7 @@
 import Link from "next/link";
 import CardThumb from "@/components/CardThumb";
 import { money } from "@/lib/collection";
-import { ebayLink } from "@/lib/ebay-link";
+import { dealSoldSearch } from "@/lib/ebay-link";
 import { marketFeed } from "@/lib/market";
 import { getCurrentUser } from "@/lib/session";
 
@@ -25,7 +25,10 @@ export async function generateMetadata() {
 const day = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 function Tile({ x }) {
-  const link = x.url ? ebayLink(x.url, `sales-${x.kind}`) : null;
+  // Every sale here has ended, and eBay sends an ended listing's own link to whatever is for sale now (other grades):
+  // the sold-listings search by its item number shows this sale.
+  const link = x.itemId || x.url ? dealSoldSearch({ id: x.itemId, name: x.fullName, number: x.number, grader: x.grader, grade: x.grade,
+    kind: x.grader ? "graded" : x.condition === "Sealed" ? "sealed" : "raw" }, `sales-${x.kind}`) : null;
   const thumb = x.grader ? { kind: "graded", grader: x.grader, grade: x.grade, image: x.image, name: x.name, number: x.number } : { image: x.image, name: x.name, number: x.number };
   return (
     <li className="sale-tile">
