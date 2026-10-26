@@ -86,7 +86,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
       ["Can I cancel anytime?",
         "Yes, in one click from Settings → Billing. You keep Premium until the end of the month you paid for (or the end of your free trial), then you're back on Free with your collection and settings intact. Anything over the Free limits is paused, not deleted. Months aren't refunded part-way, and deleting your account cancels your subscription too."],
       ["What are the monthly limits on Free?",
-        `Free includes ${free.photoSearchPerMonth === null ? "unlimited" : free.photoSearchPerMonth} search-by-picture photos and ${free.sellPerMonth === null ? "unlimited" : free.sellPerMonth} Sell on eBay listings a month, counted from the 1st. The Add cards box and the Sell page show how many you have left. Premium has no monthly limits.`],
+        `Free includes ${free.photoSearchPerMonth === null ? "unlimited" : free.photoSearchPerMonth} search-by-picture photos and ${free.sellPerMonth === null ? "unlimited" : free.sellPerMonth} Sell on eBay listings a month, counted from the 1st. The Add cards box and the Sell page show how many you have left. Premium includes ${premium.photoSearchPerMonth === null ? "unlimited" : premium.photoSearchPerMonth} search-by-picture and ${premium.appraisePerMonth === null ? "unlimited" : premium.appraisePerMonth} photo appraiser photos a month, and ${premium.sellPerMonth === null ? "unlimited" : premium.sellPerMonth} Sell on eBay listings. A photo can hold up to 20 cards (a whole binder page) and counts as one.`],
     ]],
     ["account", "Your account and data", [
       ["Who can see my collection?",

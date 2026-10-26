@@ -15,11 +15,11 @@ const FROM = {
   alerts: "Text and Discord alerts are part of Premium.",
   "collection-alerts": "Collection alerts are part of Premium.",
   filters: "More deal filters are part of Premium.",
-  watches: "Unlimited price alerts are part of Premium.",
+  watches: "More price alerts are part of Premium.",
   deals: "Live deals are part of Premium.",
   grading: "The full grading check is part of Premium.",
   photo: "The photo appraiser is part of Premium.",
-  "photo-search": "Unlimited search by picture is part of Premium.",
+  "photo-search": "More search-by-picture photos are part of Premium.",
   sell: "Unlimited Sell on eBay listings are part of Premium.",
   "filter-cards": "More cards per deal filter are part of Premium.",
 };

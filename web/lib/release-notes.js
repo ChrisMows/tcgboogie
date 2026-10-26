@@ -13,6 +13,8 @@ export const RELEASES = [
         text: "See an empty slab where a card's picture should be? Tap Missing picture? on the card page. We look for the picture right away and add it for everyone, and if we can't find one, a person adds it, usually within a day or two." },
       { tag: "Improved", title: "Faster deal checks", href: "/app/deals",
         text: "We now check eBay for ending auctions at least every 9 minutes all day long, even at the busiest times, so you hear about deals while there's time to bid. Most valuable listings are checked first. To make room, deals now cover cards worth $30 or more; price alerts and your collection still cover every card." },
+      { tag: "Improved", title: "Photo tools: a whole binder page per photo", href: "/app/collection/photo",
+        text: "The photo appraiser and search by picture read up to 20 cards from one photo, and each photo counts once. Premium now includes 100 photos a month for each, and we'll remind you to fit more cards in each photo when you're running low." },
       { tag: "Improved", title: "Smarter eBay listing alerts", href: "/app/watches",
         text: "Price alerts that also watch eBay are now part of Premium, with up to 50 price alerts. We check eBay for each card by how close your price is to what it sells for: close ones every day, long shots about once a week, and a card speeds up by itself if its price drops toward yours." },
       { tag: "Improved", title: "New email design",

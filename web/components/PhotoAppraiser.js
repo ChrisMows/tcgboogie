@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PHOTO_TIP, runningLow } from "@/lib/quota-tips";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import CardThumb from "@/components/CardThumb";
@@ -69,7 +70,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
     return (
       <div className="panel">
         <p style={{ marginTop: 0 }}>You&apos;ve used all {quota.limit} photo appraiser photos for this month. They reset on the 1st.</p>
-        <Link href="/app/premium?from=photo" className="btn primary">Unlimited with Premium</Link>
+        {quota.canUpgrade && <Link href="/app/premium?from=photo" className="btn primary">More with Premium</Link>}
       </div>
     );
   }
@@ -87,6 +88,9 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
         </label>
         <span className="small muted">Works best with cards flat, in good light, numbers visible. Up to 20 cards per photo.{left !== null && ` ${left} of ${quota.limit} photos left this month.`}</span>
       </div>
+      {runningLow({ limit: quota?.limit, left }) && (
+        <div className="notice warn">Only {left} photo{left === 1 ? "" : "s"} left this month. {PHOTO_TIP}</div>
+      )}
 
       {error && <div className="notice warn">{error}</div>}
       {pending && !result && <div className="panel photo-loading"><PackLoader label="Reading your cards… this takes a few seconds." /></div>}

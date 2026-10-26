@@ -6,10 +6,12 @@ import { db, schema } from "@/lib/db";
 // photos, Sell on eBay listings. Counted per calendar month (UTC) in the database, so deploys don't reset them.
 // A plan limit of null is unlimited (nothing is counted); 0 means the feature isn't included.
 export const QUOTAS = {
-  photoSearch: { limit: "photoSearchPerMonth", noun: "search-by-picture photos" },
-  appraise: { limit: "appraisePerMonth", noun: "photo appraiser photos" },
+  photoSearch: { limit: "photoSearchPerMonth", noun: "search-by-picture photos", photos: true },
+  appraise: { limit: "appraisePerMonth", noun: "photo appraiser photos", photos: true },
   ebayListing: { limit: "sellPerMonth", noun: "eBay listings" },
 };
+
+const canUpgrade = (user) => user.plan?.key !== "premium";
 
 const { rateLimits } = schema;
 const month = (d = new Date()) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -20,7 +22,7 @@ const demo = globalThis.__tcgQuotaDemo ?? (globalThis.__tcgQuotaDemo = new Map()
 /** { limit, used, left } this month (limit/left null = unlimited). */
 export async function quotaStatus(name, user) {
   const limit = user.plan?.[QUOTAS[name].limit] ?? null;
-  if (limit === null) return { limit: null, used: 0, left: null };
+  if (limit === null) return { limit: null, used: 0, left: null, canUpgrade: false };
   let used = 0;
   if (!db) used = demo.get(idFor(name, user.id)) || 0;
   else {
@@ -29,7 +31,7 @@ export async function quotaStatus(name, user) {
       used = row?.count || 0;
     } catch { used = 0; }
   }
-  return { limit, used, left: Math.max(0, limit - used) };
+  return { limit, used, left: Math.max(0, limit - used), canUpgrade: canUpgrade(user) };
 }
 
 /** Whether there's any of this month's allowance left, without using it: { ok, left } or { ok: false, message }. */
@@ -39,7 +41,7 @@ export async function checkQuota(name, user) {
   if (s.left > 0) return { ok: true, left: s.left };
   return { ok: false, message: s.limit === 0
     ? `${QUOTAS[name].noun[0].toUpperCase()}${QUOTAS[name].noun.slice(1)} aren't part of your plan.`
-    : `You've used all ${s.limit} ${QUOTAS[name].noun} for this month. They reset on the 1st, or get unlimited with Premium.` };
+    : `You've used all ${s.limit} ${QUOTAS[name].noun} for this month. They reset on the 1st${s.canUpgrade ? ", or get more with Premium" : ""}.` };
 }
 
 /**

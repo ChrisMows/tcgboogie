@@ -60,8 +60,8 @@ export const PLANS = {
     gradingCheck: true,
     photoAppraiser: true,
     photoSearch: true,
-    photoSearchPerMonth: null,
-    appraisePerMonth: null,
+    photoSearchPerMonth: 100, // each photo is a paid Claude call; a photo can hold up to 20 cards
+    appraisePerMonth: 100,
     collectionImport: true,
     tradeAnalyzer: true,
     sellOnEbay: true,

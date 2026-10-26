@@ -1,6 +1,7 @@
 "use client";
 
 import { revealCard } from "@/lib/reveal";
+import { PHOTO_TIP, runningLow } from "@/lib/quota-tips";
 import CardRequest from "@/components/CardRequest";
 import { SuggestIdea } from "@/components/IdeaBox";
 import { shrinkImage } from "@/lib/shrink-image";
@@ -126,7 +127,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         {q && <button type="button" className="search-clear" onClick={() => clearSearch()} aria-label="Clear search" title="Clear">✕</button>}
         {photoSearch === true && photoOut ? (
           <Link href="/app/premium?from=photo-search" className="photo-search-btn"
-            title={`You've used this month's ${photoQuota.limit} picture searches. Unlimited with Premium.`} aria-label="Search by picture (used up this month)">📷</Link>
+            title={`You've used this month's ${photoQuota.limit} picture searches.${photoQuota.canUpgrade ? " More with Premium." : " They reset on the 1st."}`} aria-label="Search by picture (used up this month)">📷</Link>
         ) : photoSearch === true ? (
           <>
             <button type="button" className="photo-search-btn" onClick={() => fileRef.current?.click()} disabled={reading}
@@ -141,8 +142,8 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       </div>
       {photoSearch === true && photoLeft !== null && (
         <div className="hint">
-          📷 Search by picture: {photoOut ? <>you&apos;ve used all {photoQuota.limit} this month (they reset on the 1st). <Link href="/app/premium?from=photo-search">Unlimited with Premium</Link></>
-            : <>{photoLeft} of {photoQuota.limit} left this month</>}
+          📷 Search by picture: {photoOut ? <>you&apos;ve used all {photoQuota.limit} this month (they reset on the 1st).{photoQuota.canUpgrade && <> <Link href="/app/premium?from=photo-search">More with Premium</Link></>}</>
+            : <>{photoLeft} of {photoQuota.limit} left this month{runningLow({ limit: photoQuota.limit, left: photoLeft }) ? `. ${PHOTO_TIP}` : ""}</>}
         </div>
       )}
       {isDemo && !q && !photo && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}

@@ -134,7 +134,7 @@ async function emailComp(u, { compUnlimited, compUntil }) {
       heading: `${u.name ? `${u.name.split(" ")[0]}, you've` : "You've"} got Premium`,
       lines: [
         compUnlimited ? "We've given your account complimentary Premium with no end date." : `We've given your account complimentary Premium until ${until}.`,
-        "It's on us: no card needed and you won't be charged. Everything Premium is already on: instant deal alerts and the live feed, up to 15 deal filters, unlimited price alerts, Japanese cards, the photo appraiser and your collection's full value history.",
+        "It's on us: no card needed and you won't be charged. Everything Premium is already on: instant deal alerts and the live feed, up to 15 deal filters, many more price alerts, Japanese cards, the photo appraiser and your collection's full value history.",
         compUnlimited ? "Enjoy!" : "When it ends, your account goes back to Free and nothing in your collection is lost. To keep Premium after that, subscribe any time from the Premium page.",
       ],
       button: { label: "Open TCG Boogie", url: `${site}/app/collection` },
