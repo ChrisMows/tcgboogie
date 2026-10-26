@@ -477,6 +477,19 @@ const isTagSearch = (s) => /&|\band\b|\btag\s*team\b/i.test(s);
  * number still being typed), then how many of the name's words it has. A card with the right number but another
  * name (Eiscue 020/108 for "Black Kyurem 020") ranks below every card with the right name.
  */
+// Sealed products: the abbreviations people type, and the product types that mean "sealed, not a card". The price
+// service's search only matches words in order ("charizard ultra-premium" finds nothing, though "Sword & Shield
+// Ultra-Premium Collection: Charizard" exists) and spells some types two ways, so a sealed search also looks up the
+// type on its own and keeps the products that have the member's other words anywhere in the name.
+const SEALED_ABBR = [[/\bpc\s*etb\b/gi, "pokemon center elite trainer box"], [/\betbs?\b/gi, "elite trainer box"], [/\bbbs?\b/gi, "booster box"],
+  [/\bupcs?\b/gi, "ultra premium collection"], [/\bspcs?\b/gi, "super premium collection"]];
+const SEALED_TYPES = ["elite trainer box", "booster box", "booster bundle", "booster pack", "sleeved booster", "ultra premium collection",
+  "super premium collection", "premium collection", "collection box", "build & battle", "blister", "tin", "bundle", "booster display", "case"];
+const typeSpellings = (t) => (/ultra premium|super premium/.test(t) ? [t, t.replace(/(ultra|super) premium/, "$1-premium")] : [t]);
+export const expandSealed = (s) => SEALED_ABBR.reduce((t, [re, to]) => t.replace(re, to), String(s || ""));
+const typeRe = (t) => new RegExp(`\\b${t}s?\\b`, "i");
+const sealedTypeIn = (s) => SEALED_TYPES.find((t) => typeRe(t).test(s)) || null;
+
 function matchScore(p, { name, number, tag }) {
   const want = nameWords(name.replace(TAG_WORDS, " "));
   const have = [...new Set(nameWords(p.name))];
@@ -507,8 +520,15 @@ export async function searchProducts(q) {
   const raw = String(q || "").trim().slice(0, 80);
   const wantsJapanese = /\b(japanese|japan|jp|jpn)\b/i.test(raw);
   const wantsEnglish = /\b(english|eng)\b/i.test(raw);
-  const term = spellVariants(raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ")).replace(/\s+/g, " ").trim();
+  const term = expandSealed(spellVariants(raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " "))).replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
+  // Named a sealed product type ("surging sparks etb", "151 booster box"): sealed only, and a number like 151 is part
+  // of the name, not a card number.
+  const sealedType = wantsJapanese ? null : sealedTypeIn(term);
+  if (sealedType && catalogLive()) {
+    const found = await searchSealed(term, sealedType);
+    if (found.length) return found; // nothing sealed by that name: the usual search below (cards and sealed)
+  }
   const tag = isTagSearch(term);
   const parsed = { ...splitQuery(term), tag };
   if (!catalogLive()) {
@@ -574,6 +594,26 @@ export async function searchProducts(q) {
     const lang = p.language === "japanese" ? "japanese" : "english";
     return { p, s: matchScore(p, parsed), at: pos[lang]++, jp: lang === "japanese" ? 1 : 0 };
   }).sort((x, y) => y.s - x.s || x.at - y.at || x.jp - y.jp).map((x) => x.p).slice(0, 24);
+}
+
+/** Sealed products for a search that names a product type: the whole search, plus the type alone filtered by the rest. */
+async function searchSealed(term, type) {
+  const week = 7 * 24 * HOUR;
+  const sealed = (search, limit) => ppt("/sealed-products", { search: search.slice(0, 80), limit: String(limit) }, week)
+    .then((j) => (j?.data || []).map(fromSealed)).catch(() => []);
+  const rest = nameWords(term.replace(typeRe(type), " "));
+  const lookups = [sealed(term, 10)];
+  if (rest.length) for (const t of typeSpellings(type)) lookups.push(sealed(t, 50));
+  const seen = new Set();
+  const found = (await Promise.all(lookups)).flat().filter((p) => (seen.has(p.id) ? false : seen.add(p.id)));
+  const has = (p) => {
+    const w = nameWords(`${p.name} ${p.setName || ""}`.replace(/-/g, " "));
+    return rest.every((r) => w.some((x) => wordMatches(r, x)));
+  };
+  return found.filter((p) => !rest.length || has(p))
+    // A case (several boxes) comes after the box itself, unless the member asked for a case; then the service's order.
+    .map((p, i) => ({ p, s: /\bcase\b/i.test(p.name) && !/\bcase\b/i.test(term) ? 0 : 1, i }))
+    .sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.p).slice(0, 24);
 }
 
 /** One-word spellings of pattern variants, as TCGplayer names them: "masterball" -> "master ball". */

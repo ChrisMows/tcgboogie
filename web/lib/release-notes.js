@@ -33,6 +33,8 @@ export const RELEASES = [
         text: "Page tabs (Collection, Deals, Price alerts and others) now wrap onto a second line on phones instead of running off the right edge and stretching the page sideways." },
       { tag: "Fixed", title: "Menu on tablets and small laptops",
         text: "On screens a little narrower than a laptop, the top menu moves behind the menu button instead of pushing your profile picture off the edge." },
+      { tag: "Fixed", title: "Finding sealed products", href: "/app/collection",
+        text: "Searching for sealed product works the way you type it: \"Surging Sparks ETB\", \"151 booster bundle\" or \"Charizard UPC\" now finds the right box, in any word order, with the box listed before its case." },
       { tag: "Fixed", title: "Market Movers eBay links", href: "/sales",
         text: "The eBay link on a sale now opens that exact sale in eBay's sold listings, instead of whatever is for sale today. The page's title also has a little more room under the menu bar." },
     ],
