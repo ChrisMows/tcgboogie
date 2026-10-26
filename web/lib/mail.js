@@ -45,9 +45,45 @@ export function mailer() {
   return transport;
 }
 
+// Emails sent today (UTC): kept in memory as they go out (alerts go out in parallel, faster than the database count
+// updates), read from the database once a day or after a restart.
+const g = globalThis;
+g.__tcgMailToday ??= { day: "", n: null };
+const utcDay = () => new Date().toISOString().slice(0, 10);
+
+async function sentToday() {
+  const day = utcDay();
+  if (g.__tcgMailToday.day !== day || g.__tcgMailToday.n === null) {
+    let n = 0;
+    try {
+      const { db, schema } = await import("@/lib/db");
+      const { eq } = await import("drizzle-orm");
+      const [row] = db ? await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, "emails_sent")).limit(1) : [];
+      n = row?.value?.day === day ? Number(row.value.n) || 0 : 0;
+    } catch { /* unknown: count from zero */ }
+    g.__tcgMailToday = { day, n };
+  }
+  return g.__tcgMailToday.n;
+}
+
+/** Emails kept back each day for sign-in links: a tenth of the limit, at least 10. */
+export const signInReserve = (cap) => Math.max(10, Math.round(cap * 0.1));
+
+/**
+ * May a member email (an alert or a recap) go out now? Not once today's count reaches the limit minus the sign-in
+ * reserve: alerts can wait until tomorrow, but without sign-in links nobody new can join or sign in. Sign-in links
+ * and account emails (billing, admin) don't ask.
+ */
+export async function memberEmailAllowed() {
+  const cap = emailCap();
+  if (!cap) return true;
+  return (await sentToday()) < cap - signInReserve(cap);
+}
+
 // Emails sent today (UTC), shared with Admin -> Status and Admin -> Usage so you can see how close the sender is to
 // its daily limit.
 export async function countEmail() {
+  if (g.__tcgMailToday.day === utcDay() && g.__tcgMailToday.n !== null) g.__tcgMailToday.n++;
   try {
     const { db, schema } = await import("@/lib/db");
     if (!db) return;

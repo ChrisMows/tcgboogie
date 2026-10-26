@@ -27,7 +27,10 @@ def problem_of(resp_json, status):
         return ""
     parts = []
     if j.get("database") is False:
-        parts.append("it can't reach the database")
+        # The database's firewall only lets in the website's server address (Hostinger, 212.85.28.115); if Postgres is
+        # up, the likely cause is Hostinger changing that address.
+        parts.append("it can't reach the database (if the database is running, Hostinger may have changed the website's "
+                     "address: the bot server's firewall only lets 212.85.28.115 in on port 5432; `ufw status` shows it)")
     if j.get("signIn") is False:
         parts.append("sign-in is switched off")
     if j.get("missingEssential"):

@@ -1,6 +1,6 @@
 import "server-only";
 import { BRAND, emailButton, emailLayout, emailRows, emailStat, emailSubhead, emailText, esc } from "@/lib/email-layout";
-import { countEmail, emailConfigured, emailFrom, mailer } from "@/lib/mail";
+import { countEmail, emailConfigured, emailFrom, mailer, memberEmailAllowed } from "@/lib/mail";
 import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 
 // Sending alerts. Each channel switches on when its settings exist (Hostinger environment variables):
@@ -50,8 +50,14 @@ export function renderEmail({ heading, stat, lines = [], items = [], itemsTitle,
   return { text, html };
 }
 
-/** Send a branded email. unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and header. */
+/**
+ * Send a branded email. unsub: { userId, kind: "alerts" | "recap" } adds that member's one-click unsubscribe link and
+ * header; those member emails stop for the day near the sender's limit (lib/mail.js memberEmailAllowed).
+ */
 export async function sendEmail(to, email, unsub = null) {
+  if (unsub && !(await memberEmailAllowed())) {
+    throw new Error("Held back: today's email limit is nearly used up, and the rest is kept for sign-in links");
+  }
   // Every member email can be turned off in one click: a link in the footer, and the standard headers mail apps show
   // as "Unsubscribe" (RFC 8058 one-click). Without a member (e.g. a test) the link opens Settings instead.
   const site = process.env.AUTH_URL || "https://tcgboogie.com";

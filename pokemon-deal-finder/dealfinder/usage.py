@@ -27,8 +27,8 @@ LIMITS = {
                    "At the limit, deal checks pause until the reset (the bot slows itself down near 4,800). If it's "
                    "regular, eBay can raise the limit through the Growth Check application."),
     "emails": ("Emails sent", "emails", True,
-               "At the limit, emails stop sending, including sign-in links. Time for a bigger plan (Resend: about $20/month for "
-               "50,000), then set ALERT_EMAIL_DAILY_LIMIT on the website."),
+               "From 90%, alerts and recaps wait until tomorrow so the rest is kept for sign-in links. Time for a bigger "
+               "plan (Resend), then set ALERT_EMAIL_DAILY_LIMIT on the website to its daily allowance."),
     "vps_disk_gb": ("Server disk", "GB", False,
                     "If the disk fills, the database and backups stop working. Clear old files or move to a bigger VPS."),
     "vps_memory_gb": ("Server memory", "GB", False,

@@ -6,7 +6,12 @@
 //    changed types). With no terminal to ask, it refuses - this script turns that refusal into a clear BLOCKED.
 //
 // A change that really must remove or rename something needs a planned migration (copy the data first), not --force.
-import { execFileSync, spawnSync } from "node:child_process";
+//
+// The database only accepts the website's server from outside (the bot server's firewall), so this reaches it through
+// an SSH tunnel: localhost:15432 on this PC -> the database on the bot server.
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
@@ -26,10 +31,34 @@ if (!skipBackup) {
 }
 
 console.log("2/2  Applying safe changes...");
-const r = spawnSync("npx drizzle-kit push --verbose", { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", shell: true });
+if (!process.env.DATABASE_URL && fs.existsSync(".env.db")) process.loadEnvFile(".env.db");
+const url = new URL(process.env.DATABASE_URL);
+const TUNNEL_PORT = 15432;
+const tunnel = spawn("ssh", ["-i", KEY, "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes", "-N", "-L", `${TUNNEL_PORT}:127.0.0.1:${url.port || 5432}`, HOST], { stdio: "ignore" });
+const open = () => new Promise((ok) => { const s = net.connect(TUNNEL_PORT, "127.0.0.1", () => { s.end(); ok(true); }); s.on("error", () => ok(false)); });
+let up = false;
+for (let i = 0; i < 40 && !up; i++) { up = await open(); if (!up) await new Promise((w) => setTimeout(w, 250)); }
+if (!up) {
+  tunnel.kill();
+  console.error("STOPPED: couldn't open the SSH tunnel to the database, so nothing was changed.");
+  process.exit(1);
+}
+// Through the tunnel the address is localhost, which the certificate doesn't name; SSH already encrypts the trip.
+url.hostname = "127.0.0.1";
+url.port = String(TUNNEL_PORT);
+url.searchParams.set("sslmode", "require");
+url.searchParams.set("uselibpqcompat", "true"); // node-postgres otherwise treats "require" as a full certificate check
+const r = spawnSync("npx drizzle-kit push --verbose", { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", shell: true,
+  env: { ...process.env, DATABASE_URL: url.toString() } });
+tunnel.kill();
 const out = `${r.stdout || ""}\n${r.stderr || ""}`.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/postgres(ql)?:\/\/\S+/g, "[hidden]");
 const blocked = /still want to push|data loss|Interactive prompts require|truncate|Are you sure/i.test(out);
-if (blocked || r.status !== 0) {
+if (!blocked && r.status !== 0) {
+  console.error("\nFAILED: drizzle-kit stopped before changing anything:");
+  console.error(out.split("\n").filter((l) => l.trim() && !/Pulling schema|SECURITY WARNING|pg-connection-string|explicitly use|libpq|trace-warnings|To prepare/.test(l)).slice(-8).join("\n"));
+  process.exit(1);
+}
+if (blocked) {
   const risky = out.split("\n").filter((l) => /DROP|ALTER .* TYPE|RENAME|TRUNCATE|delete|lose|data loss/i.test(l)).slice(0, 20);
   console.error("\nBLOCKED: this change would delete or rewrite existing data, so nothing was applied.");
   if (risky.length) console.error(risky.map((l) => `  ${l.trim()}`).join("\n"));
