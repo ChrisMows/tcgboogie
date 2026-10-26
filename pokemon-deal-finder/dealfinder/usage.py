@@ -86,6 +86,10 @@ class UsageRecorder:
     def readings(self):
         """[(metric, value, cap)] right now; anything that can't be read is left out."""
         out = [("ebay_calls", db.api_calls_today(self.conn), EBAY_DAILY_LIMIT)]
+        try:  # the same calls by purpose (Admin -> Usage shows where the budget goes): ebay_search, ebay_listing, ...
+            out += [(f"ebay_{purpose}", n, None) for purpose, n in sorted(db.api_calls_by_purpose(self.conn).items())]
+        except Exception:  # noqa: BLE001 - optional detail
+            pass
         daily = (self.cfg.get("auto") or {}).get("daily_credits")
         left = self.ppt.credits_remaining() if self.ppt else None
         if daily and left is not None:

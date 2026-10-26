@@ -187,7 +187,7 @@ class ToppsPricer:
         for card in self.due(min(per_check, daily - self.calls), refresh_days):
             self.calls += 1
             try:
-                j = self.ebay._get(SEARCH_URL, {"q": query_for(card), "filter": "buyingOptions:{FIXED_PRICE},deliveryCountry:US", "limit": 100})
+                j = self.ebay._get(SEARCH_URL, {"q": query_for(card), "filter": "buyingOptions:{FIXED_PRICE},deliveryCountry:US", "limit": 100}, purpose="topps")
             except Exception as e:  # noqa: BLE001 - one card's search must not stop the others
                 log.warning("Topps price search failed for %s: %s", card["id"], e)
                 continue

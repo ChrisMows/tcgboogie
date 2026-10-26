@@ -1600,6 +1600,7 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .usage-meter span.over { background: var(--bad); }
 .usage-chart-wrap { position: relative; }
 .usage-chart { width: 100%; height: 110px; display: block; }
+.usage-parts { margin: 0; }
 .usage-cap-label { position: absolute; right: 0; font-size: 11px; color: var(--muted); background: var(--panel); padding: 0 4px; pointer-events: none; }
 .usage-days { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
 .usage-bar { fill: var(--accent); opacity: 0.85; }

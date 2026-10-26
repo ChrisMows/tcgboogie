@@ -40,7 +40,7 @@ class TrackerTests(unittest.TestCase):
     def setUp(self):
         self.ebay = mock.Mock()
         self.ebay.get_item.return_value = SOLD
-        self.t = SaleTracker({"sales": {"daily_calls": 2, "max_per_check": 10, "wait_minutes": 10}}, self.ebay)
+        self.t = SaleTracker({"sales": {"min_value": 0, "daily_calls": 2, "max_per_check": 10, "wait_minutes": 10}}, self.ebay)
         self.now = datetime(2026, 10, 21, 19, 0, tzinfo=timezone.utc)
         self.ident = {"kind": "graded", "product_id": "517045", "grader": "PSA", "grade": "10", "language": "english"}
 
@@ -68,9 +68,21 @@ class TrackerTests(unittest.TestCase):
         save.assert_not_called()
 
 
+class MinValueTests(unittest.TestCase):
+    def test_cheap_cards_are_not_looked_up(self):
+        t = SaleTracker({"sales": {"min_value": 25}}, mock.Mock())
+        end = "2026-10-26T12:00:00Z"
+        t.remember({"itemId": "v1|1|0", "itemEndDate": end, "title": "x"}, {"product_id": "1"}, value=12)
+        t.remember({"itemId": "v1|2|0", "itemEndDate": end, "title": "x"}, {"product_id": "2"}, value=40)
+        # No value known: the current bid decides.
+        t.remember({"itemId": "v1|3|0", "itemEndDate": end, "title": "x", "currentBidPrice": {"value": "8.00"}}, {"product_id": "3"})
+        t.remember({"itemId": "v1|4|0", "itemEndDate": end, "title": "x", "currentBidPrice": {"value": "60.00"}}, {"product_id": "4"})
+        self.assertEqual(sorted(t.pending), ["v1|2|0", "v1|4|0"])
+
+
 class PristineTests(unittest.TestCase):
     def test_cgc_pristine_10_is_its_own_grade(self):
-        t = SaleTracker({"sales": {}}, mock.Mock())
+        t = SaleTracker({"sales": {"min_value": 0}}, mock.Mock())
         end = "2030-01-01T00:00:00Z"
         t.remember({"itemId": "v1|1|0", "itemEndDate": end, "title": "Umbreon VMAX CGC 10 PRISTINE"}, {"product_id": "1", "grader": "CGC", "grade": "10"})
         t.remember({"itemId": "v1|2|0", "itemEndDate": end, "title": "Umbreon VMAX CGC 10 Gem Mint"}, {"product_id": "1", "grader": "CGC", "grade": "10"})
@@ -89,22 +101,22 @@ class PersistenceTests(unittest.TestCase):
         conn = db.connect(Path(tmp.name) / "bot.db")
         self.addCleanup(conn.close)
         ebay = mock.Mock()
-        t = SaleTracker({"sales": {}}, ebay, conn)
+        t = SaleTracker({"sales": {"min_value": 0}}, ebay, conn)
         end = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
         t.remember({"itemId": "v1|9|0", "itemEndDate": end, "title": "x"}, {"product_id": "1", "kind": "graded"})
         with mock.patch.object(sales.shared, "enabled", return_value=True):
             t.run()
-        self.assertIn("v1|9|0", SaleTracker({"sales": {}}, ebay, conn).pending)
+        self.assertIn("v1|9|0", SaleTracker({"sales": {"min_value": 0}}, ebay, conn).pending)
 
 
 class DealOutcomeTests(unittest.TestCase):
     """Every deal we published gets one lookup after it ends: did it sell, and for how much with shipping."""
     def setUp(self):
         self.ebay = mock.Mock()
-        self.t = SaleTracker({"sales": {"daily_calls": 10, "max_per_check": 10, "wait_minutes": 10}}, self.ebay)
+        self.t = SaleTracker({"sales": {"min_value": 0, "daily_calls": 10, "max_per_check": 10, "wait_minutes": 10}}, self.ebay)
 
     def run_with(self, due, items):
-        self.ebay.get_item.side_effect = lambda i: items[i] if not isinstance(items[i], Exception) else (_ for _ in ()).throw(items[i])
+        self.ebay.get_item.side_effect = lambda i, purpose=None: items[i] if not isinstance(items[i], Exception) else (_ for _ in ()).throw(items[i])
         with mock.patch.object(sales.shared, "enabled", return_value=True),                 mock.patch.object(sales.shared, "deals_needing_outcome", return_value=due),                 mock.patch.object(sales.shared, "save_deal_outcome") as save, \
                 mock.patch.object(sales.shared, "save_deal_gone") as gone:
             self.t.run()

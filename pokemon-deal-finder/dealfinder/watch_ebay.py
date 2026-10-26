@@ -41,7 +41,7 @@ class EbayWatcher:
 
     def settings(self):
         s = (self.cfg.get("website") or {}).get("ebay_watch") or {}
-        return int(s.get("daily_calls", 1000)), int(s.get("min_interval_minutes", 30)), int(s.get("max_per_check", 8))
+        return int(s.get("daily_calls", 1000)), int(s.get("min_interval_minutes", 1440)), int(s.get("max_per_check", 8))
 
     def run(self):
         """One round: search the cards that are due. Returns how many new matches were saved."""

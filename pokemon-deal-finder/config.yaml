@@ -25,7 +25,7 @@ tcgplayer:
 scan_limits:
   min_discount_pct: 10
   max_minutes_left: 60
-  min_market_value: 0         # no minimum card value; price lookups are paced (most valuable first) instead
+  min_market_value: 30        # deal alerts cover cards worth $30+ (the website's plans say the same: Admin -> Plans)
 
 # Plans. A member's Discord role picks the plan (highest rank wins). "owner" is you.
 plans:
@@ -36,7 +36,7 @@ plans:
     alert_delay_seconds: 0
     min_discount_floor: 10    # lowest "% below market" a profile on this plan may use
     max_window_minutes: 60    # longest "minutes left" a profile on this plan may use
-    min_value_floor: 0       # lowest "minimum card value" a profile on this plan may use
+    min_value_floor: 30      # lowest "minimum card value" a profile on this plan may use
     features: [japanese]
   premium:
     label: Premium
@@ -46,7 +46,7 @@ plans:
     alert_delay_seconds: 0
     min_discount_floor: 15
     max_window_minutes: 60
-    min_value_floor: 0
+    min_value_floor: 30
     features: [japanese]
   standard:
     label: Standard
@@ -56,7 +56,7 @@ plans:
     alert_delay_seconds: 120  # Standard alerts arrive 2 minutes after Premium
     min_discount_floor: 35
     max_window_minutes: 10
-    min_value_floor: 0
+    min_value_floor: 30
     features: []
 
 membership:
@@ -81,6 +81,10 @@ poll:
   max_pages: 2                # max search pages (200 listings each) per check. Results are soonest-ending first, so
                               # at peak times a listing just shows up a few minutes later; this keeps eBay calls in budget
   daily_call_budget: 4800     # eBay's default Browse API limit is 5,000/day; finder slows down near this
+  max_interval_seconds: 540   # never more than 9 minutes between checks, so every auction is seen in its last 10 minutes
+  min_details_per_check: 5    # listings opened to identify them, per check, even when the budget is tight. The rest of
+                              # the allowance is worked out from the budget left (finder.detail_allowance); listings go
+                              # most valuable first, so it's the cheapest ones without the card in the title that wait
 
 ebay:
   marketplace_id: EBAY_US
@@ -186,8 +190,8 @@ website:
   url: https://tcgboogie.com
   scan_refresh_seconds: 120   # how often to re-ask the website how wide to scan
   ebay_watch:                 # price alerts with "also alert me when it's listed on eBay"
-    daily_calls: 1000         # eBay searches a day for these, spread over every watched card
-    min_interval_minutes: 30  # never search the same card more often than this
+    daily_calls: 1000         # most eBay searches a day for these, spread over every watched card
+    min_interval_minutes: 1440  # each card once a day: a Buy It Now listing at your price usually stays up for days
     max_per_check: 8          # searches per bot check
 
 # Sealed products (booster boxes, ETBs, bundles, tins, collections, packs): scanned on every Nth check so cards keep
@@ -219,13 +223,14 @@ usage:
 # catalog, one eBay search per card every refresh_days. See dealfinder/topps.py.
 topps:
   enabled: true
-  daily_calls: 300     # out of the same eBay budget as deal searches (911 cards: about 3 days for a full pass)
+  daily_calls: 150     # out of the same eBay budget as deal searches (911 cards: about 6 days for a full pass)
   max_per_check: 3
-  refresh_days: 7
+  refresh_days: 14     # Topps prices barely move: every two weeks is plenty
 
 sales:
   enabled: true
   daily_calls: 800     # lookups a day (they come out of the same eBay budget as deal searches)
+  min_value: 25        # only cards worth $25+ (or bid at $25+ when the value isn't known): each lookup is an eBay call
   max_per_check: 25
   wait_minutes: 10     # after the auction ends
 

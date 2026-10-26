@@ -106,6 +106,18 @@ class EbayPacingTests(unittest.TestCase):
         self.assertEqual(next_interval(cfg, 0, 1, noon), 75)
         # Budget used: wait for the reset.
         self.assertGreater(next_interval(cfg, 4800, 10, noon), 12 * 3600)
+        # Expensive checks: never more than max_interval_seconds apart while there's budget left.
+        self.assertEqual(next_interval(cfg, 3600, 150, noon), 540)
+
+    def test_listing_allowance_keeps_checks_every_9_minutes(self):
+        from datetime import datetime, timezone
+        from dealfinder.finder import detail_allowance
+        cfg = {"poll": {"interval_seconds": 75, "daily_call_budget": 4800, "max_interval_seconds": 540, "max_pages": 2}}
+        six_pm = datetime(2026, 10, 20, 18, 0, tzinfo=timezone.utc)
+        # 1,200 calls left for 6 hours = 40 checks of 30; 10 of those go to searches and the other jobs.
+        self.assertEqual(detail_allowance(cfg, 3600, 10, six_pm), 20)
+        # Nearly out: still a few, for the most valuable listings.
+        self.assertEqual(detail_allowance(cfg, 4790, 10, six_pm), 5)
 
 
 if __name__ == "__main__":

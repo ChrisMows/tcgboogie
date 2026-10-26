@@ -62,6 +62,9 @@ function Card({ m }) {
         <span className="muted">{cap ? ` of ${fmt(cap, m.decimals)} ${m.unit} today · ${Math.round((today.value / cap) * 100)}%` : ` ${m.unit} today`}</span>
       </div>
       {cap ? <div className="usage-meter" aria-hidden="true"><span className={lv} style={{ width: `${Math.min(100, (today.value / cap) * 100)}%` }} /></div> : null}
+      {m.parts?.length ? (
+        <p className="small muted usage-parts">Today: {m.parts.map((x) => `${x.label} ${fmt(x.today)}`).join(" · ")}</p>
+      ) : null}
       {m.recorded ? <Chart m={m} /> : <p className="small muted usage-empty">No readings yet. They start with the next deploy and fill in day by day.</p>}
       {m.recorded && (
         <p className="small muted" style={{ margin: 0 }}>

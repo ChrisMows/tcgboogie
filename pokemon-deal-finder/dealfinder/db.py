@@ -73,6 +73,12 @@ CREATE TABLE IF NOT EXISTS api_calls (
     day TEXT PRIMARY KEY,
     count INTEGER DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS api_calls_by (    -- the same calls by what they were for (search, listing, ...)
+    day TEXT,
+    purpose TEXT,
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (day, purpose)
+);
 CREATE TABLE IF NOT EXISTS members (
     discord_id TEXT PRIMARY KEY,
     display_name TEXT,
@@ -433,11 +439,20 @@ def set_delivery_outcome(conn, discord_id, item_id, outcome):
 
 
 # ---- api usage ----
-def count_api_call(conn, n=1):
+def count_api_call(conn, n=1, purpose=None):
     day = date.today().isoformat()
     conn.execute("INSERT INTO api_calls (day, count) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET count = count + ?",
                  (day, n, n))
+    if purpose:
+        conn.execute("INSERT INTO api_calls_by (day, purpose, count) VALUES (?, ?, ?) "
+                     "ON CONFLICT(day, purpose) DO UPDATE SET count = count + ?", (day, purpose, n, n))
     conn.commit()
+
+
+def api_calls_by_purpose(conn):
+    """Today's eBay calls by purpose: {"search": 812, "listing": 2930, ...}."""
+    rows = conn.execute("SELECT purpose, count FROM api_calls_by WHERE day = ?", (date.today().isoformat(),)).fetchall()
+    return {r["purpose"]: r["count"] for r in rows}
 
 
 def api_calls_today(conn):

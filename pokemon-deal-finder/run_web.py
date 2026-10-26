@@ -95,11 +95,14 @@ def main():
     while True:
         started = time.time()
         before = db.api_calls_today(finder.conn)
+        stats = {}
         try:
             stats = check()
-            log.info("Checked %d ending auctions, %d deals | price lookups: %d new, %d reused | eBay calls today: %d of %d",
+            log.info("Checked %d ending auctions, %d deals | price lookups: %d new, %d reused | listings opened: %d of %d "
+                     "allowed (%d left for later, cheapest first) | eBay calls today: %d of %d",
                      stats.get("listings", 0), stats.get("alerts", 0), stats.get("price_calls", 0),
-                     stats.get("cache_hits", 0), db.api_calls_today(finder.conn), finder.cfg["poll"]["daily_call_budget"])
+                     stats.get("cache_hits", 0), stats.get("details_used", 0), stats.get("detail_allowance", 0),
+                     stats.get("details_capped", 0), db.api_calls_today(finder.conn), finder.cfg["poll"]["daily_call_budget"])
         except EbayError as e:
             log.error("%s", e)
         except KeyboardInterrupt:
@@ -118,6 +121,9 @@ def main():
         used = db.api_calls_today(finder.conn) - before
         if used > 0:
             per_check = used if per_check is None else per_check * 0.8 + used * 0.2
+            # Everything but identifying listings (searches, final prices, Topps...): what the next allowance leaves for.
+            other = max(0, used - int(stats.get("details_used") or 0))
+            finder.other_per_check = other if finder.other_per_check is None else finder.other_per_check * 0.8 + other * 0.2
         calls = db.api_calls_today(finder.conn)
         wait = next_interval(finder.cfg, calls, per_check)
         pause = max(5, wait - (time.time() - started))

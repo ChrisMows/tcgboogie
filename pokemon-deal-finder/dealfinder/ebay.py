@@ -67,10 +67,12 @@ class EbayClient:
             "Accept": "application/json",
         }
 
-    def _get(self, url, params=None):
+    def _get(self, url, params=None, purpose="other"):
+        """purpose: what the call is for (search, sealed, listing, final_price, watch, topps), counted per day so
+        Admin -> Usage can show where the eBay budget goes."""
         for attempt in range(3):
             r = self.session.get(url, params=params, headers=self._headers(), timeout=25)
-            db.count_api_call(self.conn)
+            db.count_api_call(self.conn, purpose=purpose)
             if r.status_code == 200:
                 return r.json()
             if r.status_code == 401:
@@ -112,7 +114,7 @@ class EbayClient:
         items = []
         for page in range(max_pages):
             params["offset"] = page * 200
-            j = self._get(SEARCH_URL, params)
+            j = self._get(SEARCH_URL, params, purpose="search")
             for w in j.get("warnings", []) or []:
                 log.warning("eBay search warning: %s", w.get("message"))
             batch = j.get("itemSummaries", []) or []
@@ -129,7 +131,7 @@ class EbayClient:
             "q": "pokemon", "category_ids": str(category_id), "sort": "endingSoonest", "limit": 200,
             "filter": ",".join(["buyingOptions:{AUCTION}", f"itemEndDate:[..{iso_z(end)}]", "deliveryCountry:US"]),
         }
-        j = self._get(SEARCH_URL, params)
+        j = self._get(SEARCH_URL, params, purpose="sealed")
         return j.get("itemSummaries", []) or []
 
     def search_listings(self, query, max_price, raw=True, limit=50):
@@ -145,8 +147,8 @@ class EbayClient:
         params = {"q": query, "category_ids": e["category_id"], "filter": ",".join(filters), "sort": "newlyListed", "limit": limit}
         if e.get("aspect_filter"):
             params["aspect_filter"] = e["aspect_filter"]
-        j = self._get(SEARCH_URL, params)
+        j = self._get(SEARCH_URL, params, purpose="watch")
         return j.get("itemSummaries", []) or []
 
-    def get_item(self, item_id):
-        return self._get(ITEM_URL.format(quote(item_id, safe="")))
+    def get_item(self, item_id, purpose="listing"):
+        return self._get(ITEM_URL.format(quote(item_id, safe="")), purpose=purpose)

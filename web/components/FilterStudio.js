@@ -205,11 +205,16 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
           <label>to $<input type="number" min={0} placeholder="Any" value={f.maxMarketValue ?? ""} onChange={(e) => set("maxMarketValue", e.target.value === "" ? null : Number(e.target.value))} /></label>
         </div>
         <Err msg={errors.minMarketValue || errors.maxMarketValue} />
+        {plan.minValueFloor > 0 && (
+          <div className="hint">
+            Deals cover cards worth ${plan.minValueFloor} or more. Cheaper cards rarely make a deal worth chasing, and skipping them
+            lets us check eBay more often for the ones that are.
+          </div>
+        )}
         <label className="fs-field">Most I&apos;ll pay, with shipping ($)
           <input type="number" min={0} placeholder="No limit" value={f.maxPrice ?? ""} onChange={(e) => set("maxPrice", e.target.value === "" ? null : Number(e.target.value))} />
         </label>
         <Err msg={errors.maxPrice} />
-        {!premium && plan.minValueFloor > 0 && <Lock>Free covers cards worth ${plan.minValueFloor}+.</Lock>}
       </>);
     case "discount":
       return (<>

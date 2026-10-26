@@ -95,10 +95,16 @@ class SaleTracker:
         return (bool(s.get("enabled", True)), int(s.get("daily_calls", 800)), int(s.get("max_per_check", 25)),
                 int(s.get("wait_minutes", 10)))
 
-    def remember(self, summary, ident):
-        """The bot identified this auction (card + grade). Look up how it ended, later."""
+    def remember(self, summary, ident, value=None):
+        """The bot identified this auction (card + grade). Look up how it ended, later: only cards worth at least
+        sales.min_value (by value, or by the current bid when the value isn't known), since each lookup is an eBay call
+        and cheap sales matter little (Market Movers starts at $200)."""
         item_id = summary.get("itemId")
         if not item_id or item_id in self.pending or not ident.get("product_id"):
+            return
+        floor = float((self.cfg.get("sales") or {}).get("min_value", 25) or 0)
+        bid = _money(summary.get("currentBidPrice")) or _money(summary.get("price")) or 0
+        if floor and (value if value is not None else bid) < floor:
             return
         try:
             ends = datetime.fromisoformat(summary["itemEndDate"].replace("Z", "+00:00"))
@@ -133,7 +139,7 @@ class SaleTracker:
             p = self.pending.pop(item_id)
             self.used += 1
             try:
-                item = self.ebay.get_item(item_id)
+                item = self.ebay.get_item(item_id, purpose="final_price")
             except Exception as e:  # noqa: BLE001 - one lookup failing must not stop the rest
                 log.info("Final price lookup failed for %s: %s", item_id, e)
                 continue
@@ -167,7 +173,7 @@ class SaleTracker:
                     break
                 self.used += 1
                 try:
-                    item = self.ebay.get_item(item_id)
+                    item = self.ebay.get_item(item_id, purpose="final_price")
                 except Exception as e:  # noqa: BLE001 - eBay drops ended listings after a while: record that we tried
                     log.info("Deal outcome lookup failed for %s: %s", item_id, e)
                     item = None

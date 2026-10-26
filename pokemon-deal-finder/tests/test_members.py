@@ -134,7 +134,7 @@ class ScanTests(DBCase):
         s = members.scan_settings(CFG, members.active_profiles(self.conn, CFG))
         self.assertEqual(s["deal"]["min_discount_pct"], 15)
         self.assertEqual(s["deal"]["max_minutes_left"], 45)
-        self.assertEqual(s["auto"]["min_market_value"], 10)
+        self.assertEqual(s["auto"]["min_market_value"], 30)  # a $10 filter is lifted to the $30 minimum
         self.assertEqual(s["auto"]["min_grade"], 5)
         self.assertIn("japanese", s["auto"]["languages"])
 

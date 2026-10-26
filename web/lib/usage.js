@@ -38,7 +38,10 @@ export const METRICS = [
   { key: "ppt_credits", group: "Daily limits", label: "Price service credits", unit: "credits", cap: 20000,
     note: "PokemonPriceTracker, $9.99 plan: 20,000 a day for the bot and the website together, reset at midnight UTC. The bot keeps a reserve for the website." },
   { key: "ebay_calls", group: "Daily limits", label: "eBay API calls", unit: "calls", cap: 5000,
-    note: "eBay's Browse API allows 5,000 a day (reset at midnight UTC). The bot slows itself down near 4,800." },
+    note: "eBay's Browse API allows 5,000 a day (reset at midnight UTC). The bot spreads 4,800 over the day, checking at least every 9 minutes; when they run short, the cheapest listings wait.",
+    // Today's calls by what they were for (the bot counts each one: pokemon-deal-finder/dealfinder/ebay.py).
+    parts: [["ebay_listing", "Listings opened"], ["ebay_search", "Auction searches"], ["ebay_final_price", "Final prices"],
+      ["ebay_sealed", "Sealed searches"], ["ebay_topps", "Topps prices"], ["ebay_watch", "Watched cards"], ["ebay_other", "Other"]] },
   { key: "emails", group: "Daily limits", label: "Emails sent", unit: "emails", cap: emailCap,
     note: "Sign-in links, alerts and recaps. Resend's free plan allows 100 a day and 3,000 a month (ALERT_EMAIL_DAILY_LIMIT after a plan change); the Hostinger mailbox about 1,000 a day (EMAIL_DAILY_LIMIT)." },
   { key: "vps_disk_gb", group: "Server", label: "Server disk", unit: "GB", cap: "row", decimals: 1,
@@ -96,6 +99,8 @@ export async function usageReport() {
       put("claude_requests", day, Math.round(30 * wave(i, 4)));
       put("claude_tokens", day, Math.round(90000 * wave(i, 4)));
       if (i % 3) put("alerts_email", day, Math.round(6 * wave(i, 5)));
+      if (i === days.length - 1) [["ebay_listing", 2900], ["ebay_search", 880], ["ebay_final_price", 240], ["ebay_topps", 120], ["ebay_watch", 48]]
+        .forEach(([k, v]) => put(k, day, v));
     });
   }
   return METRICS.map((m) => {
@@ -104,7 +109,9 @@ export async function usageReport() {
       const v = byKey.get(m.key)?.get(day);
       return { day, value: v?.value || 0, cap: m.cap === "row" ? v?.cap ?? null : fixed };
     });
-    const { cap: _c, ...rest } = m;
-    return { ...rest, cap: m.cap === "row" ? [...series].reverse().find((s) => s.cap)?.cap ?? null : fixed, series, recorded: byKey.has(m.key) };
+    const { cap: _c, parts, ...rest } = m;
+    const today = days[days.length - 1];
+    return { ...rest, cap: m.cap === "row" ? [...series].reverse().find((s) => s.cap)?.cap ?? null : fixed, series, recorded: byKey.has(m.key),
+      ...(parts ? { parts: parts.map(([k, label]) => ({ label, today: byKey.get(k)?.get(today)?.value || 0 })).filter((x) => x.today > 0).sort((a, b) => b.today - a.today) } : {}) };
   });
 }

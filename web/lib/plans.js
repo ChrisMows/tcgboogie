@@ -12,7 +12,8 @@ export const PLANS = {
     liveFeed: false, // free members see deals only after the auction ends
     minDiscountFloor: 30,
     maxWindowMinutes: 10,
-    minValueFloor: 0, // no minimum card value (Admin → Plans can set one)
+    minValueFloor: 30, // deals on cards worth $30+: cheaper cards rarely make a deal worth chasing, and skipping them
+                       // keeps the deal bot's eBay calls for the cards that matter (Admin → Plans can change it)
     japanese: false,
     emailRecap: "weekly",
     maxPriceWatches: 1, // always active; removing one frees a slot
@@ -46,7 +47,7 @@ export const PLANS = {
     liveFeed: true,
     minDiscountFloor: 15,
     maxWindowMinutes: 60,
-    minValueFloor: 0,
+    minValueFloor: 30,
     japanese: true,
     emailRecap: "daily",
     maxPriceWatches: null, // unlimited

@@ -23,7 +23,7 @@ export default async function DealsPage({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Deals</h1>
-          <p>Underpriced eBay auctions that match your filters.</p>
+          <p>Underpriced eBay auctions that match your filters{user.plan.minValueFloor > 0 ? `, on cards worth $${user.plan.minValueFloor} or more` : ""}.</p>
         </div>
       </div>
       <div className="tabs-row" role="tablist">

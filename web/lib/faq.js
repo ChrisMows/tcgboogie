@@ -51,6 +51,8 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
         "Yes. They're real eBay auctions our deal finder caught that actually sold below market. The price shown is the winning bid plus shipping (for example \"Won at $455.00 + $6.25 shipping · 27 bids\"), compared with what that card usually sells for. \"See this sale on eBay\" finds that exact sale by its item number; eBay may ask you to sign in to see sold listings."],
       ["Do deals include reprints like Celebrations or Classic Collection?",
         "A reprint is matched to the reprint version and valued as the reprint, never as the original card, so a $15 Celebrations Blastoise won't show up as a 90%-off Base Set one. If we can't tell which version a listing is, we skip it."],
+      ["Why don't I get deals on cheaper cards?",
+        `Deals cover cards worth $${free.minValueFloor} or more. A deal on a $5 card saves you a dollar or two, and checking every cheap auction would use up our daily eBay allowance. Skipping them lets us check eBay more often, so you hear about the cards that matter sooner. Price alerts and your collection cover every card, whatever it's worth.`],
       ["How do I pick which cards I get deals on?",
         "In Deals → My filters, open a filter and tap + Add cards: search by name or number and tick the ones you want, or choose \"Any card named …\" to cover every version of a Pokémon. The cards show as pictures on the filter, and if nothing has matched yet, the filter suggests ways to widen it. Tap Update this filter to save."],
       ["What's the History tab?",

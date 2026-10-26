@@ -11,6 +11,8 @@ export const RELEASES = [
         text: "When we release new features and fixes, we'll send you a short email with what's new. Prefer not to get them? Turn off Product updates in Settings, or use the unsubscribe link at the bottom." },
       { tag: "New", title: "Missing picture? button",
         text: "See an empty slab where a card's picture should be? Tap Missing picture? on the card page. We look for the picture right away and add it for everyone, and if we can't find one, a person adds it, usually within a day or two." },
+      { tag: "Improved", title: "Faster deal checks", href: "/app/deals",
+        text: "We now check eBay for ending auctions at least every 9 minutes all day long, even at the busiest times, so you hear about deals while there's time to bid. Most valuable listings are checked first. To make room, deals now cover cards worth $30 or more; price alerts and your collection still cover every card." },
       { tag: "Improved", title: "New email design",
         text: "Sign-in links, deal and price alerts and your recap now come in the TCG Boogie look, with card pictures, prices and green or red changes at a glance. The recap opens with your collection's value and its biggest movers." },
       { tag: "Fixed", title: "Emails landing in spam",

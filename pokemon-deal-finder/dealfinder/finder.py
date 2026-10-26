@@ -106,18 +106,37 @@ def search_window(cfg):
     return max(cfg["poll"]["search_window_minutes"], cfg["deal"]["max_minutes_left"] + 2)
 
 
+def _secs_left_today(now=None):
+    now = now or datetime.now()
+    return 86400 - (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+
+
+def detail_allowance(cfg, calls_today, other_per_check=None, now=None):
+    """How many listings this check may open just to identify them. Checks must come at least every
+    poll.max_interval_seconds (so every auction is seen inside its last minutes), so what's left of the day's budget is
+    split over that many checks; searches and the other jobs (final prices, Topps...) come off first. Listings are
+    handled most valuable first, so it's the cheapest ones that wait when the allowance runs out."""
+    p = cfg["poll"]
+    budget, max_iv = p["daily_call_budget"], p.get("max_interval_seconds", 540)
+    checks_left = max(1.0, _secs_left_today(now) / max_iv)
+    per_check = (budget - calls_today) / checks_left
+    other = other_per_check if other_per_check is not None else p.get("max_pages", 2) + 5
+    return max(int(p.get("min_details_per_check", 5)), int(per_check - other))
+
+
 def next_interval(cfg, calls_today, calls_per_check=None, now=None):
     """Seconds until the next check. With calls_per_check known, checks are spread so the day's eBay call budget
-    lasts until the counter resets (local midnight, like db.api_calls_today); never faster than poll.interval_seconds."""
+    lasts until the counter resets (local midnight, like db.api_calls_today); never faster than poll.interval_seconds,
+    and never slower than poll.max_interval_seconds while there's budget left (detail_allowance keeps checks cheap
+    enough for that)."""
     interval = cfg["poll"]["interval_seconds"]
     budget = cfg["poll"]["daily_call_budget"]
     if calls_per_check:
-        now = now or datetime.now()
-        secs_left = 86400 - (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+        secs_left = _secs_left_today(now)
         checks_left = max(1.0, (budget - calls_today) / calls_per_check)
         paced = secs_left / checks_left
         if paced > interval:
-            interval = paced
+            interval = min(paced, cfg["poll"].get("max_interval_seconds", 540))
     elif calls_today >= budget * 0.9:
         log.warning("Near daily eBay call budget (%d) - slowing checks", calls_today)
         interval *= 4
@@ -144,13 +163,22 @@ class Finder:
         self.after_check = after_check  # after_check(stats): once each check is done
         self.on_identified = None  # on_identified(summary, ident): every auction identified (for our sales history)
         self.detail_cache = {}  # item_id -> (fetched_at, detail json)
+        self.other_per_check = None  # average eBay calls per check besides identifying listings (run loop sets it)
+        self._details_left, self._details_capped = 10 ** 6, 0
         self.ppt = None
         self._auto_blocked = False
 
-    def _detail(self, item_id):
+    def _detail(self, item_id, identify=False):
+        """The full listing (item specifics, all photos). identify=True: only needed to work out which card it is,
+        so it comes out of this check's allowance (see detail_allowance) and returns None once that's used up."""
         hit = self.detail_cache.get(item_id)
         if hit and time.time() - hit[0] < DETAIL_CACHE_SECONDS:
             return hit[1]
+        if identify:
+            if self._details_left <= 0:
+                self._details_capped += 1
+                return None
+            self._details_left -= 1
         d = self.ebay.get_item(item_id)
         self.detail_cache[item_id] = (time.time(), d)
         return d
@@ -183,6 +211,9 @@ class Finder:
 
         summaries = self.ebay.search_ending_auctions(search_window(self.cfg), self.cfg["poll"]["max_pages"])
         stats["listings"] = len(summaries)
+        self._details_left = detail_allowance(self.cfg, db.api_calls_today(self.conn), getattr(self, "other_per_check", None))
+        self._details_capped = 0
+        stats["detail_allowance"] = self._details_left
         if getattr(self, "on_listings", None):
             self.on_listings(summaries)
         self._auto_blocked = False
@@ -221,6 +252,8 @@ class Finder:
                 self._auto_path(s, mins, ppt, stats)
 
         self._prune_cache()
+        stats["details_capped"] = self._details_capped
+        stats["details_used"] = stats["detail_allowance"] - self._details_left
         if ppt:
             stats["price_calls"] = getattr(ppt, "network_calls", 0)
             stats["cache_hits"] = getattr(ppt, "cache_hits", 0)
@@ -294,7 +327,10 @@ class Finder:
         gr_struct, gr_title = listing.grade()
         # Fetch item details only when the title lacks what we need to identify the card.
         if not (g_title and gr_title and listing.card_numbers()):
-            listing = Listing(s, self._detail(item_id))
+            d = self._detail(item_id, identify=True)
+            if d is None:
+                return  # this check's allowance is used up (pricier listings went first); next check, if still on
+            listing = Listing(s, d)
             g_struct, g_title = listing.grader()
             gr_struct, gr_title = listing.grade()
         if g_struct and g_title and g_struct != g_title:
@@ -341,12 +377,12 @@ class Finder:
         ident = {"id": None, "kind": "graded", "name": _base_name(card.get("name", "")), "set_name": card.get("setName", ""),
                  "card_number": card.get("cardNumber", ""), "variants": ", ".join(sorted(listing.variants())),
                  "language": lang, "grader": grader, "grade": grade, "product_id": card.get("tcgPlayerId")}
-        if getattr(self, "on_identified", None):
-            self.on_identified(s, ident)  # whatever its price: we want how every identified slab sells
         ours = None
         if self.cfg["deal"].get("use_our_sales", True) and shared.enabled():
             ours = shared.our_sales(card.get("tcgPlayerId"), grader, grade, lang, int(self.cfg["deal"]["comp_lookback_days"]))
         mv = auto_market_value(priced.get("card"), int(priced.get("history_days") or 0), grader, grade, self.cfg, our_sales=ours)
+        if getattr(self, "on_identified", None):
+            self.on_identified(s, ident, mv.value if mv.ok else None)  # for our sales history (sales.py decides)
         if not mv.ok:
             return skip(mv.reason, label=card_label(ident), mv=mv)
 
@@ -382,7 +418,10 @@ class Finder:
             return
         queries = number_queries(listing.title)
         if not queries:
-            listing = Listing(s, self._detail(item_id))  # the card number may be in the item specifics
+            d = self._detail(item_id, identify=True)  # the card number may be in the item specifics
+            if d is None:
+                return  # this check's allowance is used up (pricier listings went first)
+            listing = Listing(s, d)
             queries = number_queries(listing.title, listing.aspects.get("card number", ""))
 
         def skip(reason, label="(auto) Raw", mv=None):
