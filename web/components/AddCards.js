@@ -127,7 +127,9 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         {q && <button type="button" className="search-clear" onClick={() => clearSearch()} aria-label="Clear search" title="Clear">✕</button>}
         {photoSearch === true && photoOut ? (
           <Link href="/app/premium?from=photo-search" className="photo-search-btn"
-            title={`You've used this month's ${photoQuota.limit} picture searches.${photoQuota.canUpgrade ? " More with Premium." : " They reset on the 1st."}`} aria-label="Search by picture (used up this month)">📷</Link>
+            title={photoQuota.lifetime ? `You've used your ${photoQuota.limit} free picture searches. Search by picture continues on Premium.`
+              : `You've used this month's ${photoQuota.limit} picture searches.${photoQuota.canUpgrade ? " More with Premium." : " They reset on the 1st."}`}
+            aria-label={photoQuota.lifetime ? "Search by picture (free photos used up)" : "Search by picture (used up this month)"}>📷</Link>
         ) : photoSearch === true ? (
           <>
             <button type="button" className="photo-search-btn" onClick={() => fileRef.current?.click()} disabled={reading}
@@ -142,8 +144,10 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       </div>
       {photoSearch === true && photoLeft !== null && (
         <div className="hint">
-          📷 Search by picture: {photoOut ? <>you&apos;ve used all {photoQuota.limit} this month (they reset on the 1st).{photoQuota.canUpgrade && <> <Link href="/app/premium?from=photo-search">More with Premium</Link></>}</>
-            : <>{photoLeft} of {photoQuota.limit} left this month{runningLow({ limit: photoQuota.limit, left: photoLeft }) ? `. ${PHOTO_TIP}` : ""}</>}
+          📷 Search by picture: {photoOut ? (photoQuota.lifetime
+            ? <>you&apos;ve used all {photoQuota.limit} free photos. <Link href="/app/premium?from=photo-search">Keep using it with Premium</Link></>
+            : <>you&apos;ve used all {photoQuota.limit} this month (they reset on the 1st).{photoQuota.canUpgrade && <> <Link href="/app/premium?from=photo-search">More with Premium</Link></>}</>)
+            : <>{photoLeft} of {photoQuota.limit} {photoQuota.lifetime ? "free photos left (after that, it's part of Premium)" : "left this month"}{runningLow({ limit: photoQuota.limit, left: photoLeft }) ? `. ${PHOTO_TIP}` : ""}</>}
         </div>
       )}
       {isDemo && !q && !photo && <div className="hint">Preview catalog (a few sample cards): try “Charizard”, “151”, “Umbreon”, “Base Set”, or “Elite Trainer Box”.</div>}

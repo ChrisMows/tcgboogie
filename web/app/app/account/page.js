@@ -259,10 +259,9 @@ export default async function Account({ searchParams }) {
           <div id="push" style={{ marginTop: 10 }}><PushSetup canPush={canPush} devices={pushDevices} /></div>
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
-            <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap || "weekly"} aria-describedby="recap-hint">
+            <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap === "off" ? "off" : "on"} aria-describedby="recap-hint">
               <option value="off">Off</option>
-              <option value="weekly">Weekly (Mondays)</option>
-              <option value="daily" disabled={user.plan.emailRecap !== "daily"}>Daily{user.plan.emailRecap === "daily" ? "" : " (Premium)"}</option>
+              <option value="on">{user.plan.emailRecap === "daily" ? "Daily" : user.plan.emailRecap === "weekly" ? "Weekly (Mondays)" : "Monthly (early each month)"}</option>
             </select>
             <div className="hint" id="recap-hint">Your collection value and biggest movers, deals that matched your filters, and alerts that hit. Sent early morning.</div>
           </div>

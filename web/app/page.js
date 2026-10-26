@@ -101,8 +101,9 @@ export default async function Home({ searchParams }) {
   const voted = GAMES[sp?.voted] ? sp.voted : null;
   const [mine, caught, plans] = await Promise.all([user ? myGames(user.id) : [], homeShowcase(), effectivePlans()]);
   const free = plans.free;
-  const photoSearchTag = !plans.free.photoSearch || plans.free.photoSearchPerMonth === 0 ? "Premium"
-    : plans.free.photoSearchPerMonth === null ? null : `${plans.free.photoSearchPerMonth} a month free`;
+  const photoSearchTag = !plans.free.photoSearch || plans.free.photoSearchPerMonth === 0 || plans.free.photoSearchTotal === 0 ? "Premium"
+    : plans.free.photoSearchTotal != null ? `${plans.free.photoSearchTotal} free photos`
+      : plans.free.photoSearchPerMonth === null ? null : `${plans.free.photoSearchPerMonth} a month free`;
   const trial = billingLive() ? trialDays(plans) : 0;
   const cards = Object.fromEntries(
     EXAMPLES.map((d) => [d.name, <CardArt key={d.name} name={d.art} className="art-img" alt={`${d.name} card`} />]),

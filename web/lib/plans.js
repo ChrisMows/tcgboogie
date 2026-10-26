@@ -15,7 +15,7 @@ export const PLANS = {
     minValueFloor: 30, // deals on cards worth $30+: cheaper cards rarely make a deal worth chasing, and skipping them
                        // keeps the deal bot's eBay calls for the cards that matter (Admin → Plans can change it)
     japanese: false,
-    emailRecap: "weekly",
+    emailRecap: "monthly", // first week of each month (lib/recap.js); "weekly" or "daily" also work
     maxPriceWatches: 1, // always active; removing one frees a slot
     watchAlertChannels: ["email"],
     // Collection tracker: the core is free for everyone.
@@ -25,7 +25,8 @@ export const PLANS = {
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
     photoAppraiser: false, // snap a photo of cards: identify, price, add
     photoSearch: true, // Add cards: search by picture (camera or upload)
-    photoSearchPerMonth: 5, // search-by-picture photos a month (null = unlimited)
+    photoSearchPerMonth: null, // search-by-picture photos a month (null = no monthly limit)
+    photoSearchTotal: 75, // ...or in total, for good: Free gets 75 to try it, then it's Premium (null = none)
     appraisePerMonth: 0, // photo appraiser photos a month
     collectionImport: true, // CSV import from other apps
     tradeAnalyzer: true,
@@ -53,7 +54,7 @@ export const PLANS = {
     maxWindowMinutes: 20,
     minValueFloor: 30,
     japanese: true,
-    emailRecap: "daily",
+    emailRecap: "monthly",
     maxPriceWatches: 25, // each card is a daily price check (~3 credits, shared) plus eBay watching: Admin → Plans
     watchAlertChannels: ["email", "push", "discord", "sms"],
     collectionHistoryDays: null, // all time
@@ -62,6 +63,7 @@ export const PLANS = {
     gradingCheck: true,
     photoAppraiser: true,
     photoSearch: true,
+    photoSearchTotal: null, // no lifetime total: 100 a month
     photoSearchPerMonth: 100, // each photo is a paid Claude call; a photo can hold up to 20 cards
     appraisePerMonth: 100,
     collectionImport: true,
@@ -85,6 +87,7 @@ export const LIMITS = [
   { key: "maxWindowMinutes", group: "Deals", label: "Earliest warning before an auction ends", unit: "minutes", min: 1, max: 60, unlimited: false },
   { key: "maxPriceWatches", group: "Alerts", label: "Price alerts", min: 0, max: 500, unlimited: true },
   { key: "photoSearchPerMonth", group: "Collection", label: "Search by picture photos a month", min: 0, max: 1000, unlimited: true },
+  { key: "photoSearchTotal", group: "Collection", label: "Search by picture photos in total (instead of a month)", help: "Free's lifetime allowance: once it's used, search by picture is Premium. Unlimited = no total, the monthly limit applies.", min: 0, max: 10000, unlimited: true },
   { key: "appraisePerMonth", group: "Collection", label: "Photo appraiser photos a month", min: 0, max: 1000, unlimited: true },
   { key: "sellPerMonth", group: "Collection", label: "Sell on eBay listings a month", min: 0, max: 1000, unlimited: true },
   { key: "trialDays", group: "Billing", label: "Free trial before the first charge", unit: "days", help: "Card required, first subscription only. 0 = no trial.", min: 0, max: 30, unlimited: false, premiumOnly: true },
@@ -127,8 +130,8 @@ export const FEATURES = [
     get: (p) => hasChannel(p, "push"), set: (p, on) => withChannel(p, "push", on) },
   { key: "discordAlerts", group: "Alerts", label: "Discord alerts", get: (p) => hasChannel(p, "discord"), set: (p, on) => withChannel(p, "discord", on) },
   { key: "textAlerts", group: "Alerts", label: "Text message alerts", get: (p) => hasChannel(p, "sms"), set: (p, on) => withChannel(p, "sms", on) },
-  { key: "dailyRecap", group: "Alerts", label: "Daily email recap", help: "Without it, the recap is weekly.",
-    get: (p) => p.emailRecap === "daily", set: (p, on) => ({ emailRecap: on ? "daily" : "weekly" }) },
+  { key: "weeklyRecap", group: "Alerts", label: "Weekly email recap", help: "Without it, the recap is monthly.",
+    get: (p) => p.emailRecap === "weekly" || p.emailRecap === "daily", set: (p, on) => ({ emailRecap: on ? "weekly" : "monthly" }) },
   { key: "collectionAlerts", group: "Alerts", label: "Sell-high alerts and set-completion deals", get: (p) => p.collectionAlerts, set: (p, on) => ({ collectionAlerts: on }) },
   { key: "ebayListingAlerts", group: "Alerts", label: "Price alerts that also watch eBay listings", help: "Alerts when a watched card is listed on eBay at or under the target price.",
     get: (p) => p.ebayListingAlerts, set: (p, on) => ({ ebayListingAlerts: on }) },

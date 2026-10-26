@@ -1,6 +1,6 @@
 import "server-only";
 import { refreshFeatures } from "@/lib/features";
-import { and, desc, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, ne } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
 import { change, unitValue } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
@@ -11,8 +11,9 @@ import { channelsReady, sendEmail } from "@/lib/notify";
 import { planFor } from "@/lib/plans";
 import { loadProducts } from "@/lib/portfolio";
 
-// The email recap (Settings -> Email recap): weekly for everyone who leaves it on, daily on Premium. Runs with the
-// daily price-alert check. Uses saved values and cached prices only, so it costs no price-service credits.
+// The email recap (Settings -> Email recap): monthly for everyone who leaves it on, sent in the first days of each
+// month (spread over a few days by RECAPS_PER_RUN). Runs with the daily price-alert check. Uses saved values and
+// cached prices only, so it costs no price-service credits. A plan can still say "weekly" or "daily" (lib/plans.js).
 const { users, collectionItems, portfolioSnapshots, profiles, alertLog } = schema;
 const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
 const PER_RUN = Number(process.env.RECAPS_PER_RUN || 400); // keeps a big Monday inside the mailbox's daily limit; the rest go tomorrow
@@ -20,12 +21,21 @@ const DAY = 86400000;
 const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
 const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
+const DAYS = { daily: 1, weekly: 7, monthly: 30 };
+const PERIOD = { 1: ["today", "since yesterday", "daily"], 7: ["this week", "this week", "weekly"], 30: ["this month", "this month", "monthly"] };
+/** How often this member's recap goes: their plan's (monthly for everyone now); "daily" only if they chose it too. */
+function cadence(u) {
+  const plan = planFor(effectiveTier(u)).emailRecap || "monthly";
+  if (plan === "daily") return u.emailRecap === "daily" ? "daily" : "weekly";
+  return plan === "weekly" ? "weekly" : "monthly";
+}
 
 export async function runRecaps(now = new Date()) {
   await refreshFeatures(); // Admin → Features choices
   const out = { due: 0, sent: 0, skipped: 0, failed: 0 };
   if (!db || !channelsReady().email) return out;
-  const people = (await db.select().from(users).where(inArray(users.emailRecap, ["weekly", "daily"]))).filter((u) => u.email);
+  // Any setting but "off" means on (accounts from before the monthly recap still say "weekly" or "daily").
+  const people = (await db.select().from(users).where(ne(users.emailRecap, "off"))).filter((u) => u.email);
   if (!people.length) return out;
 
   // Last recap per member, to space them out.
@@ -36,19 +46,20 @@ export async function runRecaps(now = new Date()) {
   }
   const monday = now.getUTCDay() === 1;
   const due = people.filter((u) => {
-    const daily = u.emailRecap === "daily" && planFor(effectiveTier(u)).emailRecap === "daily";
+    const every = cadence(u);
     const prev = last[u.id];
-    if (daily) return !prev || now - prev > 20 * 3600000;
-    return prev ? now - prev > 6.5 * DAY : monday; // weekly recaps start on a Monday
+    if (every === "daily") return !prev || now - prev > 20 * 3600000;
+    if (every === "weekly") return prev ? now - prev > 6.5 * DAY : monday; // weekly recaps start on a Monday
+    // Monthly: in the first week of the month, once (a big list goes out over a few days, PER_RUN at a time).
+    return now.getUTCDate() <= 7 && !(prev && new Date(prev).getUTCMonth() === now.getUTCMonth() && now - prev < 31 * DAY);
   }).slice(0, PER_RUN);
   out.due = due.length;
   if (!due.length) return out;
 
-  const deals = await recentDeals({ days: 7, limit: 1000 });
+  const deals = await recentDeals({ days: 30, limit: 3000 });
   for (const user of due) {
     try {
-      const daily = user.emailRecap === "daily" && planFor(effectiveTier(user)).emailRecap === "daily";
-      const email = await buildRecap(user, daily ? 1 : 7, deals, now);
+      const email = await buildRecap(user, DAYS[cadence(user)], deals, now);
       if (!email) { out.skipped++; continue; }
       await sendEmail(user.email, email, { userId: user.id, kind: "recap" });
       await db.insert(alertLog).values({ userId: user.id, kind: "recap", channel: "email", title: email.subject, ok: true });
@@ -63,10 +74,9 @@ export async function runRecaps(now = new Date()) {
   return out;
 }
 
-/** Admin preview: send this member their recap now (weekly unless they're on daily). Returns "sent" or "empty". */
+/** Admin preview: send this member their recap now, covering their plan's period. Returns "sent" or "empty". */
 export async function sendRecapPreview(user) {
-  const daily = user.emailRecap === "daily" && planFor(effectiveTier(user)).emailRecap === "daily";
-  const email = await buildRecap(user, daily ? 1 : 7, await recentDeals({ days: 7, limit: 1000 }), new Date());
+  const email = await buildRecap(user, DAYS[cadence(user)], await recentDeals({ days: 30, limit: 3000 }), new Date());
   if (!email) return "empty";
   await sendEmail(user.email, { ...email, subject: `[Preview] ${email.subject}` }, { userId: user.id, kind: "recap" });
   return "sent";
@@ -77,7 +87,7 @@ async function buildRecap(user, days, allDeals, now) {
   const since = new Date(now - days * DAY);
   const tier = effectiveTier(user);
   const plan = planFor(tier);
-  const period = days === 1 ? "today" : "this week";
+  const [period, sinceLabel, word] = PERIOD[days] || PERIOD[30];
   const lines = [], items = [];
   let stat = null;
 
@@ -91,7 +101,7 @@ async function buildRecap(user, days, allDeals, now) {
     const delta = then?.value ? (value - then.value) / then.value : null;
     const cards = owned.reduce((n, it) => n + it.quantity, 0);
     stat = { label: `Your collection · ${cards.toLocaleString("en-US")} ${cards === 1 ? "card" : "cards"}`, value: money(value),
-      change: delta !== null ? `${pct(delta)} ${period === "today" ? "since yesterday" : "this week"}` : "", tone: delta > 0 ? "up" : delta < 0 ? "down" : "" };
+      change: delta !== null ? `${pct(delta)} ${sinceLabel}` : "", tone: delta > 0 ? "up" : delta < 0 ? "down" : "" };
 
     // Biggest movers among raw cards, from cached prices only (no credits).
     const products = await loadProducts([...new Set(owned.filter((it) => it.kind === "raw" || it.kind === "sealed").map((it) => it.productId))], 0);
@@ -123,10 +133,10 @@ async function buildRecap(user, days, allDeals, now) {
   if (titles.length) lines.push(`Alerts ${period}: ${titles.slice(0, 3).join("; ")}${titles.length > 3 ? `, and ${titles.length - 3} more` : ""}.`);
 
   if (!owned.length && !matched.length && !titles.length) return null;
-  const subject = `Your TCG Boogie ${days === 1 ? "daily" : "weekly"} recap`;
+  const subject = `Your TCG Boogie ${word} recap`;
   return {
     subject, heading: subject, stat, ...(stat ? { more: lines } : { lines }), items, itemsTitle: items.length ? `Biggest movers ${period}` : undefined,
     button: { label: owned.length ? "Open your collection" : "See deals", url: `${SITE}/app/${owned.length ? "collection" : "deals"}` },
-    footer: `You get this ${days === 1 ? "daily" : "weekly"}. Change or turn it off in Settings → Email recap.${tier !== "premium" && matched.length ? ` Premium: ${SITE}/app/premium` : ""}`,
+    footer: `You get this ${word}. Turn it off any time in Settings → Email recap.${tier !== "premium" && matched.length ? ` Premium: ${SITE}/app/premium` : ""}`,
   };
 }

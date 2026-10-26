@@ -16,6 +16,7 @@ import { xReady } from "@/lib/x";
 const n = (v) => Number(v || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const per = (v, unit) => (v === null || v === undefined ? "Unlimited" : v === 0 ? "—" : `${n(v)} ${unit}`);
 const yes = (on, text = "✓") => (on ? text : "—");
+const cap1 = (s) => s[0].toUpperCase() + s.slice(1);
 
 // Haiku 5.5: $0.10 per million input tokens, $0.50 per million output. The site only counts total tokens, and most
 // are input (photos), so the estimate assumes 90% input.
@@ -90,7 +91,8 @@ function features(free, premium, sms) {
       free: per(free.photoAppraiser ? free.appraisePerMonth : 0, "photos a month"), premium: per(premium.photoAppraiser ? premium.appraisePerMonth : 0, "photos a month") },
     { area: "Collection", name: "Search by picture", link: "/app/collection", grows: "use", vendors: ["claude", "ppt"],
       what: "The 📷 in Add cards: photograph cards to find them.",
-      free: per(free.photoSearch ? free.photoSearchPerMonth : 0, "photos a month"), premium: per(premium.photoSearch ? premium.photoSearchPerMonth : 0, "photos a month") },
+      free: free.photoSearch && free.photoSearchTotal != null ? `${n(free.photoSearchTotal)} photos in total, then Premium` : per(free.photoSearch ? free.photoSearchPerMonth : 0, "photos a month"),
+      premium: premium.photoSearch && premium.photoSearchTotal != null ? `${n(premium.photoSearchTotal)} photos in total` : per(premium.photoSearch ? premium.photoSearchPerMonth : 0, "photos a month") },
     { area: "Collection", name: "Import from other apps", link: "/app/collection/import", grows: "use", vendors: ["claude", "ppt"],
       what: "CSV files from other apps; Claude reads columns we don't recognise.", free: yes(free.collectionImport), premium: yes(premium.collectionImport) },
     { area: "Collection", name: "Sell on eBay", link: "/app/collection", grows: "use", vendors: ["ebay"],
@@ -115,7 +117,7 @@ function features(free, premium, sms) {
     { area: "Email and help", name: "Sign-in links", link: "/login", grows: "member", vendors: ["resend"],
       what: "Passwordless email sign-in. 10% of the daily email limit is always kept for these.", free: "✓", premium: "✓" },
     { area: "Email and help", name: "Email recap", link: "/app/account#alerts", grows: "member", vendors: ["resend", "ppt"],
-      what: "Collection value, biggest movers, deals and alerts.", free: free.emailRecap === "daily" ? "Daily" : "Weekly", premium: premium.emailRecap === "daily" ? "Daily or weekly" : "Weekly" },
+      what: "Collection value, biggest movers, deals and alerts.", free: cap1(free.emailRecap || "monthly"), premium: cap1(premium.emailRecap || "monthly") },
     { area: "Email and help", name: "Release emails", link: "/app/admin?tab=releases", grows: "member", vendors: ["resend"],
       what: "What's new, sent from Admin -> Release emails to members with product updates on.", free: "✓", premium: "✓" },
     { area: "Email and help", name: "Boogie Bot", link: "/app/admin?tab=helper", grows: "use", vendors: ["claude"],

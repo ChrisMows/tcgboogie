@@ -35,7 +35,7 @@ export const users = pgTable("user", {
   alertSms: boolean("alert_sms").notNull().default(false),
   smsCodeHash: text("sms_code_hash"),
   smsCodeExpires: timestamp("sms_code_expires", { mode: "date" }),
-  emailRecap: text("email_recap").notNull().default("weekly"), // off / weekly / daily
+  emailRecap: text("email_recap").notNull().default("weekly"), // "off", or on (how often comes from the plan: monthly)
   emailUpdates: boolean("email_updates").notNull().default(true), // release notes by email (Admin -> Release emails)
   // Collection alert settings (Premium): { setDeals: bool, sellHigh: bool, sellHighPct: number }
   collectionPrefs: jsonb("collection_prefs"),

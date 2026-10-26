@@ -56,7 +56,7 @@ export default function Privacy() {
 
       <h2>Emails we send</h2>
       <p>
-        Sign-in links, the alerts you turn on, a collection recap (weekly unless you change it), and a short email when we
+        Sign-in links, the alerts you turn on, a monthly collection recap, and a short email when we
         release new features (product updates). Every alert, recap and product update email has a one-click unsubscribe
         link, and you can turn each one off in Settings. We don&apos;t send marketing email from anyone else.
       </p>

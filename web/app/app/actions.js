@@ -62,8 +62,8 @@ export async function deleteProfile(id) {
 
 export async function savePreferences(formData) {
   const user = await requireUser();
-  let emailRecap = formData.get("emailRecap");
-  if (emailRecap === "daily" && user.plan.emailRecap !== "daily") emailRecap = "weekly"; // daily recap is Premium
+  // On or off; how often comes from the plan (monthly for everyone, lib/recap.js).
+  const emailRecap = formData.get("emailRecap") === "off" ? "off" : user.plan.emailRecap || "monthly";
   await store.updatePrefs(user.id, {
     alertDiscord: formData.get("alertDiscord") === "on",
     alertWebPush: Boolean(user.alertWebPush), // switched by the push buttons (they need the device's permission)

@@ -50,11 +50,11 @@ export function planRows({ free, premium, sms }) {
     ["Export your collection as CSV", (p) => yes(p.collectionExport)],
     ["Trade Analyzer, with a fairness grade", (p) => yes(p.tradeAnalyzer)],
     ["Worth Grading?", (p) => (p.gradingCheck ? "Full list" : "Top 3")],
-    ["Search by picture (camera or upload)", (p) => allowance(p.photoSearch, p.photoSearchPerMonth)],
+    ["Search by picture (camera or upload)", (p) => (p.photoSearch && p.photoSearchTotal != null ? `${p.photoSearchTotal} photos to try it` : allowance(p.photoSearch, p.photoSearchPerMonth))],
     ["Photo appraiser: a binder page, every card found", (p) => allowance(p.photoAppraiser, p.appraisePerMonth)],
     ["Sell on eBay from your collection", (p) => allowance(p.sellOnEbay, p.sellPerMonth).replace(/a month$/, "listings a month")],
     ["Set-completion deals and sell-high alerts", (p) => yes(p.collectionAlerts)],
-    ["Email recap", (p) => (p.emailRecap === "daily" ? "Daily or weekly" : "Weekly")],
+    ["Email recap", (p) => (p.emailRecap === "daily" ? "Daily" : p.emailRecap === "weekly" ? "Weekly" : "Monthly")],
   ];
   return rows.map(([what, cell]) => [what, cell(free), cell(premium)]);
 }
@@ -69,7 +69,9 @@ function lines(p, sms) {
     ["filters", true, `${plural(p.maxProfiles, "deal filter")}${p.maxCardsPerFilter === null ? ", any number of cards" : ` (up to ${plural(p.maxCardsPerFilter, "card")} each)`}${p.japanese ? ", Japanese cards" : ""}`],
     ["trade", p.tradeAnalyzer, "Trade Analyzer"],
     ["import", p.collectionImport, "Import from any app"],
-    ["photoSearch", p.photoSearch && p.photoSearchPerMonth !== 0, p.photoSearchPerMonth == null ? "Unlimited search by picture" : `Search by picture (${p.photoSearchPerMonth} photos a month)`],
+    ["photoSearch", p.photoSearch && p.photoSearchPerMonth !== 0 && p.photoSearchTotal !== 0,
+      p.photoSearchTotal != null ? `Search by picture (${p.photoSearchTotal} photos to try it)`
+        : p.photoSearchPerMonth == null ? "Unlimited search by picture" : `Search by picture (${p.photoSearchPerMonth} photos a month)`],
     ["appraiser", p.photoAppraiser && p.appraisePerMonth !== 0, p.appraisePerMonth == null ? "Photo appraiser" : `Photo appraiser (${p.appraisePerMonth} photos a month)`],
     ["grading", true, p.gradingCheck ? "Every Worth Grading? pick" : "Worth Grading? top 3 picks"],
     ["history", true, p.collectionHistoryDays === null ? "Full collection history" : `${p.collectionHistoryDays}-day collection history`],
