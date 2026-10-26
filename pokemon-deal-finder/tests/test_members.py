@@ -47,7 +47,9 @@ class FilterTests(unittest.TestCase):
             members.set_filter(CFG, f, "languages", "english, japanese", STANDARD)
         p = members.default_filters(CFG, PREMIUM)
         self.assertEqual(members.set_filter(CFG, p, "min_discount_pct", "20%", PREMIUM)["min_discount_pct"], 20)
-        self.assertEqual(members.set_filter(CFG, p, "max_minutes_left", "45", PREMIUM)["max_minutes_left"], 45)
+        self.assertEqual(members.set_filter(CFG, p, "max_minutes_left", "20", PREMIUM)["max_minutes_left"], 20)
+        with self.assertRaisesRegex(ValueError, "Upgrade"):
+            members.set_filter(CFG, p, "max_minutes_left", "45", PREMIUM)  # Premium's longest window is 20 minutes
 
     def test_list_and_optional_values(self):
         f = members.default_filters(CFG, PREMIUM)
@@ -65,7 +67,7 @@ class FilterTests(unittest.TestCase):
             members.set_filter(CFG, {**f, "max_grade": 8}, "min_grade", "9", PREMIUM)
 
     def test_downgrade_clamps(self):
-        f = members.set_filter(CFG, members.default_filters(CFG, PREMIUM), "min_discount_pct", "15", PREMIUM)
+        f = members.set_filter(CFG, members.default_filters(CFG, PREMIUM), "min_discount_pct", "20", PREMIUM)
         c = members.clamp_to_plan(CFG, f, STANDARD)
         self.assertEqual(c["min_discount_pct"], STANDARD["min_discount_floor"])
         self.assertEqual(c["languages"], ["english"])
@@ -132,8 +134,8 @@ class ScanTests(DBCase):
         self.add("1", "premium", min_discount_pct=15, max_minutes_left=45, min_market_value=10, min_grade=5)
         self.add("2", "standard")
         s = members.scan_settings(CFG, members.active_profiles(self.conn, CFG))
-        self.assertEqual(s["deal"]["min_discount_pct"], 15)
-        self.assertEqual(s["deal"]["max_minutes_left"], 45)
+        self.assertEqual(s["deal"]["min_discount_pct"], 20)  # a 15% / 45-minute filter is held to Premium's 20 / 20
+        self.assertEqual(s["deal"]["max_minutes_left"], 20)
         self.assertEqual(s["auto"]["min_market_value"], 30)  # a $10 filter is lifted to the $30 minimum
         self.assertEqual(s["auto"]["min_grade"], 5)
         self.assertIn("japanese", s["auto"]["languages"])

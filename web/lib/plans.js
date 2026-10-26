@@ -47,12 +47,14 @@ export const PLANS = {
     maxCardsPerFilter: null, // unlimited (the filter itself stops at 100)
     instantAlerts: true,
     liveFeed: true,
-    minDiscountFloor: 15,
-    maxWindowMinutes: 60,
+    // The loosest filter sets how wide the deal bot scans for everyone (lib/deals.js scanSettings): a lower discount
+    // means more price lookups, a longer window more listings to open per check. 20/20 keeps both in budget.
+    minDiscountFloor: 20,
+    maxWindowMinutes: 20,
     minValueFloor: 30,
     japanese: true,
     emailRecap: "daily",
-    maxPriceWatches: 50, // each one is a daily price check (and, with eBay watching, eBay searches): Admin → Plans
+    maxPriceWatches: 25, // each card is a daily price check (~3 credits, shared) plus eBay watching: Admin → Plans
     watchAlertChannels: ["email", "push", "discord", "sms"],
     collectionHistoryDays: null, // all time
     collectionExport: true,

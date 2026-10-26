@@ -224,7 +224,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
         </div>
         <div className="hint">Price + shipping at least this far below what it sells for.</div>
         <Err msg={errors.minDiscountPct} />
-        {!premium && <Lock>Premium goes down to 15%.</Lock>}
+        {!premium && <Lock>Premium goes down to 20%.</Lock>}
       </>);
     case "time":
       return (<>
@@ -233,7 +233,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
           <output>{f.maxMinutesLeft} min</output>
         </div>
         <Err msg={errors.maxMinutesLeft} />
-        {!premium && <Lock>Premium alerts up to 60 minutes before the end.</Lock>}
+        {!premium && <Lock>Premium alerts up to 20 minutes before the end.</Lock>}
       </>);
     case "language":
       return (<>

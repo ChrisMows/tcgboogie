@@ -24,7 +24,7 @@ tcgplayer:
 # Hard limits on what any profile can ask for. These cap eBay calls and price-lookup credits.
 scan_limits:
   min_discount_pct: 10
-  max_minutes_left: 60
+  max_minutes_left: 20        # longest "minutes left" any filter can make the scan (the website's Premium limit)
   min_market_value: 30        # deal alerts cover cards worth $30+ (the website's plans say the same: Admin -> Plans)
 
 # Plans. A member's Discord role picks the plan (highest rank wins). "owner" is you.
@@ -44,8 +44,8 @@ plans:
     rank: 2
     max_profiles: 15
     alert_delay_seconds: 0
-    min_discount_floor: 15
-    max_window_minutes: 60
+    min_discount_floor: 20
+    max_window_minutes: 20
     min_value_floor: 30
     features: [japanese]
   standard:
