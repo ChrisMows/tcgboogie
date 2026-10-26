@@ -30,33 +30,49 @@ export function channels(p, sms) {
 export const textSoon = (p, sms) => (!sms && p.watchAlertChannels.includes("sms") ? " (text alerts coming soon)" : "");
 
 /** Rows of the Free vs Premium comparison table: [what, free, premium]. */
-export function planRows({ free, premium, sms }) {
-  const rows = [
-    ["Deals", (p) => (p.liveFeed ? "Live, while you can still bid" : "After the auction ends, with the last bid")],
-    ["How early you hear about a deal", (p) => (p.liveFeed ? `Up to ${p.maxWindowMinutes} minutes before it ends` : "—")],
-    ["Smallest discount we alert", (p) => `${p.minDiscountFloor}% below market`],
-    ...(free.minValueFloor || premium.minValueFloor ? [["Card values covered", (p) => (p.minValueFloor ? `$${p.minValueFloor}+` : "Any value")]] : []),
-    ["Deal filters", (p) => String(p.maxProfiles)],
-    ["Cards per deal filter (\"any card named …\" counts as one)", (p) => (p.maxCardsPerFilter === null ? "Unlimited" : String(p.maxCardsPerFilter))],
-    ["Japanese cards in deal alerts", (p) => yes(p.japanese)],
-    ["Price alerts (buying or selling)", (p) => (p.maxPriceWatches === null ? "Unlimited" : String(p.maxPriceWatches))],
-    ["Alerts by", (p) => `${channels(p, sms).replace(/^e/, "E")}${textSoon(p, sms)}`],
-    ["eBay listing alerts: a watched card listed at or under your price", (p) => yes(p.ebayListingAlerts)],
-    ["Photo check on deals (listing photos compared with the card)", () => "✓"],
-    ["Collection tracker: unlimited cards, daily values, sets, wishlist", () => "✓"],
-    ["Every language: English and Japanese, plus Korean, Chinese and more on request", () => "✓"],
-    ["Collection value history", (p) => (p.collectionHistoryDays === null ? "All time" : `Last ${p.collectionHistoryDays} days`)],
-    ["Import a collection from any app", (p) => yes(p.collectionImport)],
-    ["Export your collection as CSV", (p) => yes(p.collectionExport)],
-    ["Trade Analyzer, with a fairness grade", (p) => yes(p.tradeAnalyzer)],
-    ["Worth Grading?", (p) => (p.gradingCheck ? "Full list" : "Top 3")],
-    ["Search by picture (camera or upload)", (p) => (p.photoSearch && p.photoSearchTotal != null ? `${p.photoSearchTotal} photos to try it` : allowance(p.photoSearch, p.photoSearchPerMonth))],
-    ["Photo appraiser: a binder page, every card found", (p) => allowance(p.photoAppraiser, p.appraisePerMonth)],
-    ["Sell on eBay from your collection", (p) => allowance(p.sellOnEbay, p.sellPerMonth).replace(/a month$/, "listings a month")],
-    ["Set-completion deals and sell-high alerts", (p) => yes(p.collectionAlerts)],
-    ["Email recap", (p) => (p.emailRecap === "daily" ? "Daily" : p.emailRecap === "weekly" ? "Weekly" : "Monthly")],
+/** The comparison, grouped: [{ group, rows: [[what, free, premium]] }] (the Compare plans pop-up). */
+export function planGroups({ free, premium, sms }) {
+  const groups = [
+    ["Deals", [
+      ["Deals", (p) => (p.liveFeed ? "Live, while you can still bid" : "After the auction ends, with the last bid")],
+      ["How early you hear about a deal", (p) => (p.liveFeed ? `Up to ${p.maxWindowMinutes} minutes before it ends` : "—")],
+      ["Smallest discount we alert", (p) => `${p.minDiscountFloor}% below market`],
+      ...(free.minValueFloor || premium.minValueFloor ? [["Card values covered", (p) => (p.minValueFloor ? `$${p.minValueFloor}+` : "Any value")]] : []),
+      ["Deal filters", (p) => String(p.maxProfiles)],
+      ["Cards per deal filter (\"any card named …\" counts as one)", (p) => (p.maxCardsPerFilter === null ? "Unlimited" : String(p.maxCardsPerFilter))],
+      ["Japanese cards in deal alerts", (p) => yes(p.japanese)],
+      ["Photo check on deals (listing photos compared with the card)", () => "✓"],
+    ]],
+    ["Price alerts", [
+      ["Price alerts (buying or selling)", (p) => (p.maxPriceWatches === null ? "Unlimited" : String(p.maxPriceWatches))],
+      ["Alerts by", (p) => `${channels(p, sms).replace(/^e/, "E")}${textSoon(p, sms)}`],
+      ["eBay listing alerts: a watched card listed at or under your price", (p) => yes(p.ebayListingAlerts)],
+      ["Set-completion deals and sell-high alerts", (p) => yes(p.collectionAlerts)],
+    ]],
+    ["Collection", [
+      ["Collection tracker: unlimited cards, daily values, sets, wishlist", () => "✓"],
+      ["Every language: English and Japanese, plus Korean, Chinese and more on request", () => "✓"],
+      ["Collection value history", (p) => (p.collectionHistoryDays === null ? "All time" : `Last ${p.collectionHistoryDays} days`)],
+      ["Import from other apps", (p) => yes(p.collectionImport)],
+      ["Export your collection as CSV", (p) => yes(p.collectionExport)],
+      ["Trade Analyzer, with a fairness grade", (p) => yes(p.tradeAnalyzer)],
+      ["Worth Grading?", (p) => (p.gradingCheck ? "Full list" : "Top 3")],
+      ["Sell on eBay from your collection", (p) => allowance(p.sellOnEbay, p.sellPerMonth).replace(/a month$/, "listings a month")],
+    ]],
+    ["Photo tools", [
+      ["Search by picture (camera or upload)", (p) => (p.photoSearch && p.photoSearchTotal != null ? `${p.photoSearchTotal} photos to try it` : allowance(p.photoSearch, p.photoSearchPerMonth))],
+      ["Photo appraiser: a binder page, every card found", (p) => allowance(p.photoAppraiser, p.appraisePerMonth)],
+    ]],
+    ["Emails", [
+      ["Email recap", (p) => (p.emailRecap === "daily" ? "Daily" : p.emailRecap === "weekly" ? "Weekly" : "Monthly")],
+    ]],
   ];
-  return rows.map(([what, cell]) => [what, cell(free), cell(premium)]);
+  return groups.map(([group, rows]) => ({ group, rows: rows.map(([what, cell]) => [what, cell(free), cell(premium)]) }));
+}
+
+/** Every comparison row, in one list: [[what, free, premium]] (the pricing table, Boogie Bot). */
+export function planRows(plans) {
+  return planGroups(plans).flatMap((g) => g.rows);
 }
 
 /** Short lines for one plan's card: what it includes. */

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { billingLive } from "@/lib/billing";
-import { effectivePlans, planHighlights, planRows, trialDays } from "@/lib/plan-copy";
+import ComparePlans from "@/components/ComparePlans";
+import { effectivePlans, planGroups, planHighlights, trialDays } from "@/lib/plan-copy";
 
-/** Free vs Premium cards plus the full comparison table (homepage #pricing). */
+/** Free vs Premium cards plus the full comparison in a pop-up (homepage #pricing). */
 // What each plan includes comes from lib/plan-copy.js (the plans as Admin → Features left them).
 export default async function PlanCards({ signedIn = false }) {
   const plans = await effectivePlans();
@@ -40,19 +41,10 @@ export default async function PlanCards({ signedIn = false }) {
           </div>
         </div>
       </div>
-      <details className="compare-all">
-        <summary>Compare every feature</summary>
-        <div className="table-wrap">
-          <table className="list">
-            <thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead>
-            <tbody>
-              {planRows(plans).map(([name, a, b]) => (
-                <tr key={name}><td>{name}</td><td className="muted">{a}</td><td>{b}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <div className="compare-all">
+        <ComparePlans groups={planGroups(plans)} free={{ label: free.label }} premium={{ label: premium.label, price: premium.price }}
+          trial={trial} signedIn={signedIn} label="Compare every feature" />
+      </div>
     </>
   );
 }
