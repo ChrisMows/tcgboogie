@@ -29,7 +29,7 @@ export function releaseEmail(r) {
     heading: `What's new in TCG Boogie v${r.version}`,
     lines: [`${r.title}. ${counts.map(([t, n]) => `${n} ${t.toLowerCase()}`).join(", ")}:`],
     items: ["New", "Improved", "Fixed"].flatMap((t) => r.items.filter((i) => i.tag === t)).map((i) => ({ title: i.title, sub: i.text, value: i.tag, tone: TONE[i.tag] || "",
-      url: i.href ? `${SITE}${i.href}` : anchor(r) })),
+      url: i.href ? (/^https?:/.test(i.href) ? i.href : `${SITE}${i.href}`) : anchor(r) })),
     button: { label: "See the full release notes", url: anchor(r) },
     footer: "You're getting this because product updates are on in your TCG Boogie settings.",
   };

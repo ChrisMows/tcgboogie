@@ -5,10 +5,16 @@ export const RELEASES = [
   {
     version: "1.1",
     date: "2026-10-26",
-    title: "Better-looking emails that reach your inbox",
+    title: "Faster deals, better emails and clearer plans",
     items: [
       { tag: "New", title: "What's new, by email", href: "/app/account#alerts",
         text: "When we release new features and fixes, we'll send you a short email with what's new. Prefer not to get them? Turn off Product updates in Settings, or use the unsubscribe link at the bottom." },
+      { tag: "New", title: "Compare plans", href: "/",
+        text: "See Free and Premium side by side: tap Compare plans on the homepage (or Compare every feature under pricing). Features only in Premium are marked, and everything Premium adds stands out." },
+      { tag: "New", title: "Follow us on X", href: "https://x.com/TCGBoogie",
+        text: "Follow @TCGBoogie on X for record sales, deals our members caught and new features as they ship. The link is at the bottom of every page and every email." },
+      { tag: "Improved", title: "Release notes by version", href: "/updates",
+        text: "What's new now lists each version of TCG Boogie. Open one to see its new features, improvements and fixes; the latest opens by itself." },
       { tag: "New", title: "Missing picture? button",
         text: "See an empty slab where a card's picture should be? Tap Missing picture? on the card page. We look for the picture right away and add it for everyone, and if we can't find one, a person adds it, usually within a day or two." },
       { tag: "Improved", title: "Faster deal checks", href: "/app/deals",
