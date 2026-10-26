@@ -1,6 +1,6 @@
 # TCG Boogie website: rules that protect member data
 
-Members' collections, filters, price alerts, accounts and history live in the Neon Postgres database, not in this code.
+Members' collections, filters, price alerts, accounts and history live in the Postgres database on the bot server (VPS, database `tcgboogie`; moved off Neon 2026-10-26), not in this code.
 Deploys (push to main -> Hostinger rebuild) replace code only and never touch data. Keep it that way:
 
 - **Database structure changes: only `npm run db:push`.** It backs up first and refuses anything that would delete data.

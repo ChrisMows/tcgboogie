@@ -1,5 +1,5 @@
 #!/bin/bash
-# Nightly backup of the website's database (Neon) to this server. Run by the dbbackup systemd timer; safe to run by hand:
+# Nightly backup of the website's database (Postgres database tcgboogie on this server since 2026-10-26; Neon before). Run by the dbbackup systemd timer; safe to run by hand:
 #   systemctl start dbbackup      (then: journalctl -u dbbackup -n 20)
 #
 # Keeps the last 30 nightly copies plus the copy from the 1st of each month for a year, in /var/backups/tcgboogie.

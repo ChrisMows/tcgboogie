@@ -30,3 +30,5 @@ Thumbs.db
 
 # Original logo artwork (the site uses optimized copies in web/public/brand and web/app)
 Images/
+staging-login.txt
+new-database-url.txt
