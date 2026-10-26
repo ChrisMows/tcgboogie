@@ -305,7 +305,6 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .cmp-inner { padding: 22px 24px 24px; }
 .cmp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .cmp-top h2 { margin: 0 0 4px; }
-.cmp-key { background: var(--accent-soft); color: var(--accent); padding: 0 6px; border-radius: 4px; font-weight: 700; }
 .cmp-close { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-size: 15px; cursor: pointer; }
 .cmp-close:hover { border-color: var(--accent); }
 .cmp-head, .cmp-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center; }
@@ -314,23 +313,32 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .cmp-plan.featured { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--panel)); }
 .cmp-price { font-size: 22px; font-weight: 800; }
 .cmp-price small { font-size: 13px; color: var(--muted); font-weight: 600; }
-.cmp-group h3 { margin: 18px 0 6px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-.cmp-row { padding: 9px 10px; border-radius: 8px; font-size: 14px; }
-.cmp-row + .cmp-row { border-top: 1px solid var(--border); }
-.cmp-row.diff { background: var(--accent-soft); border-top-color: transparent; }
-.cmp-row.diff .cmp-cell.premium { color: var(--accent); font-weight: 700; }
+.cmp-group h3 { margin: 18px 0 4px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+/* The Premium column is one continuous lime band; Free stays plain. */
+.cmp-row { gap: 0; font-size: 14px; border-top: 1px solid var(--border); }
+.cmp-row > span { padding: 10px 12px; align-self: stretch; display: flex; align-items: center; }
+.cmp-what { gap: 8px; flex-wrap: wrap; }
 .cmp-cell { color: var(--muted); }
-.cmp-cell.premium { color: var(--text); }
-.cmp-yes { color: var(--good); font-weight: 800; }
-.cmp-no { color: var(--muted); opacity: 0.6; }
+.cmp-cell.premium { color: var(--text); background: rgba(211, 255, 102, 0.07); border-left: 1px solid rgba(211, 255, 102, 0.35); border-right: 1px solid rgba(211, 255, 102, 0.35); }
+.cmp-row.diff .cmp-cell.premium { color: var(--accent); font-weight: 700; }
+.cmp-row.only .cmp-cell.premium { background: rgba(211, 255, 102, 0.13); }
+.cmp-yes { color: var(--good); font-weight: 800; font-size: 16px; }
+.cmp-row.diff .cmp-yes { color: var(--accent); }
+.cmp-no { color: #ff7a7a; font-weight: 700; opacity: 0.85; }
+.cmp-only { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+  padding: 2px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.cmp-up { color: var(--accent); }
+.cmp-head .cmp-plan.featured { box-shadow: 0 0 0 1px var(--accent), 0 10px 30px rgba(211, 255, 102, 0.12); }
 .cmp-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
 @media (max-width: 640px) {
   .cmp-inner { padding: 16px 14px 18px; }
   .cmp-head { grid-template-columns: 1fr 1fr; top: -16px; }
   .cmp-head > span:first-child { display: none; }
-  .cmp-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
-  .cmp-what { grid-column: 1 / -1; font-weight: 600; }
-  .cmp-cell::before { content: attr(data-plan) ": "; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .cmp-row { grid-template-columns: 1fr 1fr; }
+  .cmp-what { grid-column: 1 / -1; font-weight: 600; padding-bottom: 2px !important; }
+  .cmp-row > .cmp-cell { padding-top: 6px; }
+  .cmp-row > .cmp-cell { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; }
+  .cmp-cell::before { content: attr(data-plan); color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 }
 
 /* ---------- filter page (TCGplayer-style) ---------- */

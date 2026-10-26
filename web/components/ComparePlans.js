@@ -6,7 +6,7 @@ import Link from "next/link";
 // "Compare plans": Free and Premium side by side in a pop-up, grouped by area, with what Premium adds highlighted.
 // The rows come from lib/plan-copy.js planGroups (the plans as Admin → Plans left them), passed in by the page.
 // A native <dialog>: Esc closes it, focus stays inside, and a click on the dimmed backdrop closes it too.
-const mark = (v) => (v === "✓" ? <span className="cmp-yes" aria-label="Included">✓</span> : v === "—" ? <span className="cmp-no" aria-label="Not included">—</span> : v);
+const mark = (v) => (v === "✓" ? <span className="cmp-yes" aria-label="Included">✓</span> : v === "—" ? <span className="cmp-no" aria-label="Not included">✕</span> : v);
 
 export default function ComparePlans({ groups, free, premium, trial = 0, signedIn = false, label = "Compare plans", className = "btn" }) {
   const ref = useRef(null);
@@ -30,7 +30,9 @@ export default function ComparePlans({ groups, free, premium, trial = 0, signedI
           <div className="cmp-top">
             <div>
               <h2 id={titleId}>Compare plans</h2>
-              <p className="muted" style={{ margin: 0 }}>Everything in Free is in Premium too. <span className="cmp-key">Highlighted</span> rows are what Premium adds.</p>
+              <p className="muted" style={{ margin: 0 }}>
+                Everything in Free is in Premium too. <span className="cmp-only">Premium only</span> features aren&apos;t in Free at all, and <b className="cmp-up">lime</b> is where Premium gives you more.
+              </p>
             </div>
             <button type="button" className="cmp-close" onClick={close} aria-label="Close">✕</button>
           </div>
@@ -39,8 +41,8 @@ export default function ComparePlans({ groups, free, premium, trial = 0, signedI
             <section key={g.group} className="cmp-group">
               <h3>{g.group}</h3>
               {g.rows.map(([what, a, b]) => (
-                <div key={what} className={`cmp-row${a !== b ? " diff" : ""}`}>
-                  <span className="cmp-what">{what}</span>
+                <div key={what} className={`cmp-row${a !== b ? " diff" : ""}${a === "—" ? " only" : ""}`}>
+                  <span className="cmp-what">{what}{a === "—" && b !== "—" && <span className="cmp-only">Premium only</span>}</span>
                   <span className="cmp-cell" data-plan={free.label}>{mark(a)}</span>
                   <span className="cmp-cell premium" data-plan={premium.label}>{mark(b)}</span>
                 </div>
