@@ -79,6 +79,10 @@ footer .brand { font-size: 21px; }
 footer p { max-width: 440px; font-size: 10px; color: #758396; line-height: 1.8; margin: 10px 0 0; }
 footer nav { display: flex; gap: 30px; flex-wrap: wrap; }
 footer nav a { color: #a1a8b3; }
+.x-follow { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.x-follow:hover { color: var(--accent); }
+footer nav a.footer-x { color: #a1a8b3; }
+.follow-line { margin-top: 8px !important; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .demo-bar { background: var(--accent-soft); border-bottom: 1px solid rgba(211, 255, 102, 0.3); font-size: 13px; }
 .demo-bar .wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
 

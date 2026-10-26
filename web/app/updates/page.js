@@ -1,4 +1,5 @@
 import Link from "next/link";
+import XFollow from "@/components/XFollow";
 import { RELEASES } from "@/lib/release-notes";
 
 // What's new: release notes by version, newest first (lib/release-notes.js). Each release is a row that opens to its
@@ -19,6 +20,7 @@ export default function Updates() {
     <div className="wrap doc updates">
       <h1>What&apos;s new</h1>
       <p className="muted">Release notes for every version of TCG Boogie, newest first. Open a release to see what changed. Have an idea? Use Suggest an idea in the menu.</p>
+      <p className="follow-line">Hear about new features as they ship: <XFollow /></p>
       <div className="releases">
         {RELEASES.map((r, i) => (
           <details key={r.version} className="release" id={releaseAnchor(r)} open={i === 0}>

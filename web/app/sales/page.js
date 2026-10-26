@@ -1,4 +1,6 @@
 import Link from "next/link";
+import XFollow from "@/components/XFollow";
+import { X_HANDLE } from "@/lib/social";
 import CardThumb from "@/components/CardThumb";
 import { money } from "@/lib/collection";
 import { dealSoldSearch } from "@/lib/ebay-link";
@@ -18,7 +20,7 @@ export async function generateMetadata() {
   return {
     title: TITLE, description: DESCRIPTION, alternates: { canonical: "/sales" },
     openGraph: { title: TITLE, description: DESCRIPTION, url: `${SITE}/sales`, ...(image ? { images: [{ url: image, width: 1080, height: 1080 }] } : {}) },
-    twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, ...(image ? { images: [image] } : {}) },
+    twitter: { card: "summary_large_image", site: X_HANDLE, creator: X_HANDLE, title: TITLE, description: DESCRIPTION, ...(image ? { images: [image] } : {}) },
   };
 }
 
@@ -66,6 +68,7 @@ export default async function Sales() {
           <div className="eyebrow">POKÉMON CARD MARKET</div>
           <h1>Market Movers</h1>
           <p>Deals our members caught under market, new record highs and the week&apos;s biggest eBay sales. Updated all day from sales our deal bot watches end.</p>
+          <p className="follow-line">We post the best of these on X as they happen. <XFollow /></p>
         </div>
       </div>
       <Section id="deals" title="⚡ Deals our members caught" intro="Auctions we alerted members to that really sold well under market value, by their final price." list={f.deals}

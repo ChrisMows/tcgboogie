@@ -7,6 +7,8 @@ import IdeaBox, { SuggestIdea } from "@/components/IdeaBox";
 import TourRunner from "@/components/TourRunner";
 import PageViews from "@/components/PageViews";
 import Link from "next/link";
+import XFollow from "@/components/XFollow";
+import { X_HANDLE } from "@/lib/social";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { demoMode, getCurrentUser } from "@/lib/session";
@@ -33,6 +35,7 @@ export const metadata = {
     siteName: "TCG Boogie",
     type: "website",
   },
+  twitter: { card: "summary_large_image", site: X_HANDLE, creator: X_HANDLE },
 };
 
 function Brand() {
@@ -145,6 +148,7 @@ export default async function RootLayout({ children }) {
               <Link href="/privacy">Privacy</Link>
               <Link href="/terms">Terms</Link>
               <SuggestIdea source="footer" label="Suggest an idea" className="link-btn footer-idea" />
+              <XFollow className="footer-x"><span>{X_HANDLE}</span></XFollow>
             </nav>
           </div>
         </footer>

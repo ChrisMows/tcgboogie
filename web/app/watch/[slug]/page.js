@@ -1,3 +1,4 @@
+import { X_HANDLE } from "@/lib/social";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }) {
       images: [{ url: image, width: v.width, height: v.height }],
       videos: [{ url: video, secureUrl: video, type: "video/mp4", width: v.width, height: v.height }],
     },
-    twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: [image] },
+    twitter: { card: "summary_large_image", site: X_HANDLE, creator: X_HANDLE, title: TITLE, description: DESCRIPTION, images: [image] },
   };
 }
 

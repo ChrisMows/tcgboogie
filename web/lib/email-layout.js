@@ -1,6 +1,7 @@
 // The look every TCG Boogie email shares (sign-in links in lib/mail.js, alerts and recaps in lib/notify.js): the logo,
 // a dark card in the site's colors, a lime button and a footer. Email apps ignore most CSS, so it's tables and inline
-// styles, system fonts, and a PNG logo (Outlook can't show WebP). No imports: scripts can render it to preview.
+// styles, system fonts, and a PNG logo (Outlook can't show WebP).
+import { X_HANDLE, X_URL } from "@/lib/social";
 
 export const BRAND = { bg: "#0b0e12", card: "#151a22", line: "#262d38", text: "#f4f5ef", body: "#c9d1dd", muted: "#8f9aa9", accent: "#d3ff66", ink: "#15200c" };
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -80,6 +81,7 @@ export function emailLayout({ site = "https://tcgboogie.com", preheader = "", he
       ${notes.map((n) => `<p style="margin:0 0 10px">${n}</p>`).join("")}
       <p style="margin:0 0 6px"><b style="color:${BRAND.body}">TCG Boogie</b> · Pokémon card deals, prices and collection tracking</p>
       <p style="margin:0">${link("", "tcgboogie.com")} &nbsp;·&nbsp; ${link("/faq", "Help")} &nbsp;·&nbsp; ${link("/privacy", "Privacy")} &nbsp;·&nbsp; <a href="mailto:support@tcgboogie.com" style="color:${BRAND.muted};text-decoration:underline">support@tcgboogie.com</a></p>
+      <p style="margin:8px 0 0"><a href="${X_URL}" style="color:${BRAND.text};text-decoration:none;font-weight:700">Follow ${X_HANDLE} on X</a></p>
     </td></tr>
   </table>
 </td></tr></table>
