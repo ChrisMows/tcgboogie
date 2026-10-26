@@ -14,6 +14,7 @@ import { sendEmail } from "@/lib/notify";
 import { sendTestAlert } from "@/lib/price-alerts";
 import { sendRecapPreview } from "@/lib/recap";
 import { releaseByVersion, sendRelease, sendReleaseTest } from "@/lib/release-email";
+import { setPictureFromRequest } from "@/lib/card-images";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { marketItem } from "@/lib/market";
@@ -195,6 +196,16 @@ export async function testRecap() {
   let r;
   try { r = await sendRecapPreview(admin); } catch (e) { r = `fail:${String(e.message).slice(0, 200)}`; }
   redirect(`/app/admin?recap=${encodeURIComponent(r)}`);
+}
+
+/** Admin -> Requests -> Pictures: use a picture link for a card that had none (shown everywhere). */
+export async function setRequestPicture(id, formData) {
+  const admin = await requireAdmin();
+  const err = await setPictureFromRequest(admin, id, formData.get("image"));
+  if (err) redirect(`/app/admin?tab=requests&kind=picture&err=${encodeURIComponent(err)}`);
+  await logAdminAction(admin, "set_card_picture", { request: Number(id) });
+  revalidatePath("/app", "layout");
+  redirect("/app/admin?tab=requests&kind=picture&ok=picture");
 }
 
 /** Admin -> Release emails: a [Test] copy of a release email to the signed-in admin. */

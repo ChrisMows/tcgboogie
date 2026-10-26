@@ -44,7 +44,8 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
 /app/collection/grading — Worth Grading?: which raw cards would profit from grading.
 /app/collection/trade — Trade Analyzer: price both sides of a trade and get a fairness grade out of 10.
 /app/cards/<id> — a card's page (open any card): prices, graded sales, Add to collection, a price alert, Sell on eBay
-  for a copy you own, and "✎ Price wrong?" to report an eBay sale we're missing.
+  for a copy you own, "✎ Price wrong?" to report an eBay sale we're missing, and "📷 Missing picture?" when the card
+  shows an empty slab (we find the picture or a person adds it).
 /app/deals — Deals. Tabs: My filters, History.
   - My filters: "+ New filter" adds one (✎ renames it). Open a filter: a row of buttons sets it up, grouped as
     What (Product type: slabs, raw cards, sealed · Card type · Set · Cards), Grade & condition (Grading Company ·

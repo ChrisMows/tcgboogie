@@ -1,6 +1,7 @@
 import RecentSales from "@/components/RecentSales";
 import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
+import MissingPicture from "@/components/MissingPicture";
 import { setLabel } from "@/lib/sets";
 import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
@@ -184,12 +185,15 @@ export default async function CardPage({ params, searchParams }) {
                   <Source name="ebay" className="src-sm" /> Sell on eBay
                 </Link>
               )}
-              {!isSealed && (
-                <span className="price-wrong">
-                  <a href="#report-sale" className="btn price-wrong-btn">✎ Price wrong?</a>
-                  <span className="price-wrong-tip">Seen it sell for more or less? Show us the sale and we&apos;ll update the value.</span>
-                </span>
-              )}
+              <div className="card-report-row">
+                {!isSealed && (
+                  <span className="price-wrong">
+                    <a href="#report-sale" className="btn price-wrong-btn">✎ Price wrong?</a>
+                    <span className="price-wrong-tip">Seen it sell for more or less? Show us the sale and we&apos;ll update the value.</span>
+                  </span>
+                )}
+                <MissingPicture productId={p.id} language={p.language || language} />
+              </div>
             </div>
           </div>
           <div className="muted">

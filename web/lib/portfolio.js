@@ -1,4 +1,5 @@
 import "server-only";
+import { loadPictures, pictureFor } from "@/lib/card-images";
 import { getProduct, prefetchProducts } from "@/lib/catalog";
 import { change, marketValue, summarize } from "@/lib/collection";
 import * as store from "@/lib/store";
@@ -37,6 +38,7 @@ export async function loadCollection(user) {
   const [items, binders, prefs] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.getCollectionPrefs(user.id)]);
   const products = await loadProducts(items.map((it) => it.productId));
   const now = Date.now();
+  await loadPictures();
   const enriched = [];
   const fresh = []; // values to save, in one database write
   for (const it of items) {
@@ -50,7 +52,8 @@ export async function loadCollection(user) {
     }
     enriched.push({
       ...it,
-      image: it.image || p?.image || null,
+      // A picture saved because TCGplayer has none comes first: the copy's own saved link is TCGplayer's missing one.
+      image: pictureFor(it.productId) || it.image || p?.image || null,
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
       change7: it.kind === "graded" ? null : change(p, 7),
       createdAt: String(it.createdAt),

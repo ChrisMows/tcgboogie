@@ -1,4 +1,5 @@
 import "server-only";
+import { withPicture } from "@/lib/card-images";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
@@ -351,6 +352,11 @@ function fromSealed(s) {
  * TCGplayer number gets the service's prices by itself once the service adds it.
  */
 export async function getProduct(id, opts = {}) {
+  const p = await findProduct(id, opts);
+  return p ? withPicture(p) : p; // a picture saved for a card TCGplayer has none for (lib/card-images.js)
+}
+
+async function findProduct(id, opts) {
   if (isToppsId(id)) return toppsCard(id);
   if (isMemberId(id)) {
     const m = await getMemberCard(id);

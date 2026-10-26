@@ -1072,6 +1072,12 @@ details.era > .set-grid { margin-bottom: 14px; }
 .price-wrong-btn { border-color: var(--accent); color: var(--accent); }
 .price-wrong-btn:hover { background: var(--accent-soft); }
 .price-wrong-tip { font-size: 11.5px; line-height: 1.35; color: var(--muted); text-align: right; }
+.card-report-row { display: flex; flex-direction: column; gap: 10px; }
+.card-report-row .price-wrong { max-width: 230px; }
+@media (min-width: 1280px) { .card-report-row { flex-direction: row; } .card-report-row .price-wrong { width: 160px; } }
+.picture-result { color: var(--text); }
+.picture-result.fixed { color: var(--good); }
+.picture-result.error { color: var(--warn); }
 .report-sale-open { margin-top: 12px; border-color: var(--accent); color: var(--accent); }
 .report-sale-open:hover { background: var(--accent-soft); }
 #report-sale { scroll-margin-top: 90px; }
@@ -1120,6 +1126,8 @@ details.era > .set-grid { margin-bottom: 14px; }
   .price-wrong { flex: 1 1 100%; flex-direction: row; align-items: center; gap: 10px; }
   .price-wrong-btn { flex: none; }
   .price-wrong-tip { flex: 1; text-align: left; }
+  .card-report-row { flex: 1 1 100%; }
+  .card-report-row .price-wrong { max-width: none; width: auto; }
 }
 /* Phones: a smaller, centered card picture so the name, price and buttons show on the first screen */
 .card-hero-art .thumb { min-width: 0 !important; }

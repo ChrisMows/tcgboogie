@@ -393,6 +393,17 @@ export const cardRequests = pgTable("card_request", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("card_request_status_idx").on(t.status, t.createdAt)]);
 
+// A card's picture when TCGplayer has none (lib/card-images.js): found on TCGdex after a member reports it missing, or
+// set by an admin (Admin -> Requests). Shown for that card everywhere, for every member.
+export const cardImages = pgTable("card_image", {
+  productId: text("product_id").primaryKey(),
+  image: text("image").notNull(),
+  source: text("source").notNull(), // tcgdex / admin
+  note: text("note"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 // Search words that should find a product the price service's search misses (learned from approved requests).
 export const searchAliases = pgTable("search_alias", {
   id: serial("id").primaryKey(),

@@ -6,7 +6,7 @@ import AdminFeatures from "@/components/AdminFeatures";
 import AdminLimits from "@/components/AdminLimits";
 import { currentFeatures, currentLimits } from "@/lib/features";
 import { listRequests, pendingCount } from "@/lib/card-requests";
-import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, postSale, removeMemberCard, setIdeas, skipSale } from "./actions";
+import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, postSale, removeMemberCard, setIdeas, setRequestPicture, skipSale } from "./actions";
 import { desc } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { marketFeed, releasePosts } from "@/lib/market";
@@ -302,9 +302,9 @@ async function Members({ q, userId, done }) {
   );
 }
 
-const REQUEST_KINDS = [["all", "All"], ["card", "Cards"], ["sealed", "Sealed"], ["import", "Import files"], ["games", "Games"]];
+const REQUEST_KINDS = [["all", "All"], ["card", "Cards"], ["sealed", "Sealed"], ["picture", "Pictures"], ["import", "Import files"], ["games", "Games"]];
 const OK_NOTES = { approved: "Approved: the card is searchable by the member's words now.", removed: "Removed: the card no longer shows in search or opens.",
-  done: "Marked as reviewed.", declined: "Declined." };
+  done: "Marked as reviewed.", declined: "Declined.", picture: "Picture added: the card shows it everywhere now." };
 
 async function Requests({ ok, err, show, kind: rawKind }) {
   const kind = REQUEST_KINDS.some(([k]) => k === rawKind) ? rawKind : "all";
@@ -336,7 +336,9 @@ async function Requests({ ok, err, show, kind: rawKind }) {
       ) : (
       <>
       <p className="small muted" style={{ marginTop: 0 }}>
-        {kind === "import"
+        {kind === "picture"
+          ? "Cards a member reported with no picture that we couldn't find on TCGdex automatically (you also get a Discord DM). Paste a link to a picture of the card (an eBay listing photo works: right-click it and copy the image address) and it shows for that card everywhere."
+          : kind === "import"
           ? "Collection files whose column names we didn't recognise (we only keep the column names and file name). We guess the columns and members can correct them, so these show which apps' exports to add by name."
           : <>Members ask for cards and sealed products they couldn&apos;t find, and most are added automatically: ones our price service has are linked, and
             ones it doesn&apos;t have (often Korean or Chinese) are added without prices from the TCGplayer page or the linked page. Waiting here are
@@ -346,7 +348,7 @@ async function Requests({ ok, err, show, kind: rawKind }) {
       {rows.length === 0 ? <div className="panel muted">{status === "all" ? "No requests yet." : "Nothing waiting. 🎉"}</div> : rows.map((r) => (
         <div key={r.id} className="panel req-row">
           <div className="req-main">
-            <b>{r.kind === "import" ? r.query : `“${r.query}”`}</b> {r.kind !== "card" && <span className="badge">{r.kind === "import" ? "Import file" : "Sealed"}</span>}{" "}
+            <b>{r.kind === "import" ? r.query : `“${r.query}”`}</b> {r.kind !== "card" && <span className="badge">{r.kind === "import" ? "Import file" : r.kind === "picture" ? "Missing picture" : "Sealed"}</span>}{" "}
             <span className={`badge ${r.status === "added" || r.status === "done" ? "good" : r.status === "declined" ? "" : "warn"}`}>{r.status}</span>
             <div className="small muted">{r.email || "member"} · {ago(r.createdAt)}{r.reason ? ` · ${r.reason}` : ""}</div>
             {r.kind === "import" ? <span className="small muted">File: {r.link}</span>
@@ -363,7 +365,25 @@ async function Requests({ ok, err, show, kind: rawKind }) {
           {r.status === "pending" && r.kind === "import" && (
             <div className="req-actions"><form action={doneCardRequest.bind(null, r.id)}><button className="btn sm">Mark reviewed</button></form></div>
           )}
-          {r.status === "pending" && r.kind !== "import" && (
+          {r.status === "pending" && r.kind === "picture" && (
+            <div className="req-actions">
+              {r.card?.suggestion && (
+                <form action={setRequestPicture.bind(null, r.id)} className="req-read">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.card.suggestion} alt="" width={60} height={84} style={{ borderRadius: 4, flex: "none" }} />
+                  <span className="small">The regular version from TCGdex (same art, different pattern).</span>
+                  <input type="hidden" name="image" value={r.card.suggestion} />
+                  <button className="btn sm" style={{ flex: "none" }}>Use it anyway</button>
+                </form>
+              )}
+              <form action={setRequestPicture.bind(null, r.id)} className="row" style={{ gap: 6 }}>
+                <input name="image" type="url" placeholder="Picture link (https://…)" required />
+                <button className="btn sm primary" style={{ flex: "none" }}>Use this picture</button>
+              </form>
+              <form action={declineCardRequest.bind(null, r.id)}><button className="btn sm ghost">Decline</button></form>
+            </div>
+          )}
+          {r.status === "pending" && r.kind !== "import" && r.kind !== "picture" && (
             <div className="req-actions">
               {r.card?.name && (
                 <form action={approveReadCard.bind(null, r.id)} className="req-read">
