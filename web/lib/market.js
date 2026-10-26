@@ -57,21 +57,27 @@ function captionFor(x) {
   return `${line}\n\n${hashtags(x.name, x.grader, x.grade)}\n${SITE}/sales`;
 }
 
-// Cards looked up live per feed rebuild when no copy was ever saved (each costs price-service credits).
+// Cards looked up live per feed rebuild when no copy was ever saved (each costs price-service credits). One that
+// still isn't found isn't tried again for a day.
 const LIVE_LOOKUPS = 12;
+const notFound = globalThis.__tcgMarketMissing ?? (globalThis.__tcgMarketMissing = new Map());
 
 /**
  * Each card's name, set, number and picture for the feed. A saved copy of any age will do (prices age, names and
  * pictures don't); a card nobody ever looked up is looked up live, a few per rebuild, biggest sales first.
  */
 async function products(ids) {
-  const sold = await prefetchProducts(ids).catch(() => null);
+  const sold = await prefetchProducts(ids, { light: true }).catch(() => null);
   const out = {};
   let live = 0;
   for (const id of [...new Set(ids)]) {
     try {
       let p = await getProduct(id, { cachedOnly: true, anyAge: true, sales: sold || undefined });
-      if (!p && live < LIVE_LOOKUPS) { live++; p = await getProduct(id); }
+      if (!p && live < LIVE_LOOKUPS && !(Date.now() - (notFound.get(id) || 0) < DAY)) {
+        live++;
+        p = await getProduct(id);
+        if (!p) notFound.set(id, Date.now());
+      }
       if (p) out[id] = slim(p);
     } catch { /* price service down: the tile shows the eBay title until the next rebuild */ }
   }

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
@@ -366,8 +366,14 @@ export async function getProduct(id, opts = {}) {
  * Many products' cached prices and our graded sales in two database reads, instead of two or more reads per product
  * one after another (a 50-card collection was 100+ trips to the database). Fills the memory cache that getProduct
  * reads; returns the graded sales to pass to getProduct as { sales }.
+ *
+ * light (the sales feed, with getProduct's anyAge): each card is read once per server, without its price history
+ * (most of a card's ~85 KB), and kept as an old copy so pages that need fresh prices still read the full one.
+ * Re-reading full cards every 15 minutes used the database's whole monthly network allowance.
  */
-export async function prefetchProducts(ids) {
+const LIGHT_DATA = sql`case when jsonb_typeof(${schema.catalogCache.data}->'data') = 'array'
+  then ${schema.catalogCache.data} #- '{data,0,priceHistory}' else ${schema.catalogCache.data} #- '{data,priceHistory}' end`;
+export async function prefetchProducts(ids, { light = false } = {}) {
   const unique = [...new Set(ids.map(String))].filter((id) => !isMemberId(id) && !isToppsId(id));
   if (!db || !unique.length) return null;
   const now = Date.now();
@@ -375,18 +381,22 @@ export async function prefetchProducts(ids) {
     pptKey(`/cards/${encodeURIComponent(id)}`, PRICE_PARAMS),
     pptKey("/sealed-products", { tcgPlayerId: id, limit: "1" }),
     pptKey(`/cards/${encodeURIComponent(id)}`, { ...PRICE_PARAMS, language: "japanese" }),
-  ]).filter((k) => { const h = mem.get(k); return !h || now - h.at >= PRICE_TTL; }) : [];
+  ]).filter((k) => { const h = mem.get(k); return light ? !h : !h || now - h.at >= PRICE_TTL; }) : [];
   const sales = new Map();
   try {
     const [rows, sold] = await Promise.all([
-      keys.length ? db.select().from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys)) : [],
+      !keys.length ? []
+        : light ? db.select({ key: schema.catalogCache.key, fetchedAt: schema.catalogCache.fetchedAt, data: LIGHT_DATA, light: sql`true` })
+          .from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys))
+          : db.select().from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys)),
       db.select().from(schema.sales).where(and(inArray(schema.sales.productId, [...new Set(ids.map(String))]), eq(schema.sales.kind, "graded"),
         gte(schema.sales.soldAt, new Date(now - 90 * DAY_MS)))),
     ]);
     const found = new Map(rows.map((r) => [r.key, r]));
     for (const k of keys) {
       const r = found.get(k);
-      mem.set(k, r ? { at: r.fetchedAt.getTime(), data: r.data, checked: now } : { at: 0, data: undefined, checked: now });
+      mem.set(k, r?.light ? { at: 0, data: r.data } // "old": anyAge uses it, everything else reads the full copy
+        : r ? { at: r.fetchedAt.getTime(), data: r.data, checked: now } : { at: 0, data: undefined, checked: now });
     }
     for (const s of sold) (sales.get(s.productId) || sales.set(s.productId, []).get(s.productId)).push(s);
   } catch { return null; } // fall back to one product at a time
