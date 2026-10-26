@@ -724,8 +724,11 @@ td.num { text-align: right; font-weight: 600; }
 }
 
 /* ---------- responsive ---------- */
-@media (max-width: 860px) {
+/* The header's seven links don't fit beside the logo and buttons below ~1,100px: they move behind the ☰ menu. */
+@media (max-width: 1120px) {
   nav.main { display: none; }
+}
+@media (max-width: 860px) {
   .app-shell { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .editor-top select { min-width: 0; width: 100%; }
   .demo-bar .wrap { gap: 8px; }
@@ -1544,8 +1547,10 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .mobile-menu-list > a:hover, .mobile-menu-idea:hover { background: var(--panel-2); text-decoration: none; }
 .mobile-menu-auth { display: flex; flex-direction: column; gap: 8px; padding: 10px 4px 4px; margin-top: 6px; border-top: 1px solid var(--border); }
 .mobile-menu-auth .btn { justify-content: center; }
-@media (max-width: 860px) {
+@media (max-width: 1120px) {
   .mobile-menu { display: block; }
+}
+@media (max-width: 860px) {
   .header-actions .login-link { display: none; }
 }
 
@@ -1562,6 +1567,37 @@ details.bill-cancel summary { cursor: pointer; color: var(--muted); font-size: 1
 .stat-row .stat b { font-size: 24px; }
 .traffic-bar { display: block; height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
 .traffic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+
+/* Admin -> Usage (components/UsageCharts.js): today's use against each daily limit, and 60 days of bars */
+.usage-summary { margin-bottom: 6px; }
+.usage-summary.ok b { color: var(--good); }
+.usage-summary.near { border-color: var(--warn); background: var(--warn-soft); }
+.usage-group { margin: 22px 0 10px; font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.usage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.usage-card { display: flex; flex-direction: column; gap: 8px; margin: 0; min-width: 0; }
+.usage-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.usage-pill { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.usage-pill.ok { color: var(--good); background: var(--good-soft); }
+.usage-pill.near { color: var(--warn); background: var(--warn-soft); }
+.usage-pill.over { color: var(--bad); background: var(--bad-soft); }
+.usage-now { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; }
+.usage-big { font-size: 26px; font-weight: 700; }
+.usage-meter { height: 6px; border-radius: 999px; background: var(--panel-3); overflow: hidden; }
+.usage-meter span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.usage-meter span.near { background: var(--warn); }
+.usage-meter span.over { background: var(--bad); }
+.usage-chart-wrap { position: relative; }
+.usage-chart { width: 100%; height: 110px; display: block; }
+.usage-cap-label { position: absolute; right: 0; font-size: 11px; color: var(--muted); background: var(--panel); padding: 0 4px; pointer-events: none; }
+.usage-days { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.usage-bar { fill: var(--accent); opacity: 0.85; }
+.usage-bar.near { fill: var(--warn); opacity: 1; }
+.usage-bar.over { fill: var(--bad); opacity: 1; }
+.usage-hit { fill: transparent; }
+.usage-hit:hover { fill: var(--panel-3); }
+.usage-axis { stroke: var(--border-strong); stroke-width: 1; }
+.usage-cap { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.usage-empty { margin: 6px 0; padding: 22px 12px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); }
 
 /* Site helper (components/HelperChat.js) */
 .helper-fab { position: fixed; right: 18px; bottom: 18px; z-index: 80; display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px 10px 10px;

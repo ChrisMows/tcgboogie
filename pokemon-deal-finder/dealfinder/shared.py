@@ -281,3 +281,29 @@ def save_topps_price(product_id, r):
                 "coalesce(t.history, '[]'::jsonb) || excluded.history) WITH ORDINALITY AS h(x, n) ORDER BY n DESC LIMIT 26) last), "
                 "checked_at = now()",
                 (product_id, r["price"], r["low"], r["high"], r["listings"], r["image"], point))
+
+
+# ----- Admin -> Usage (web/lib/usage.js): one row per UTC day and metric -----
+def _today():
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def usage_set(metric, value, cap=None):
+    """Today's reading of a gauge (credits used, disk...). Keeps the day's highest, so the page shows the peak."""
+    _run("INSERT INTO usage_daily (day, metric, value, cap, updated_at) VALUES (%s, %s, %s, %s, now()) "
+         "ON CONFLICT (day, metric) DO UPDATE SET value = GREATEST(usage_daily.value, excluded.value), "
+         "cap = COALESCE(excluded.cap, usage_daily.cap), updated_at = now()",
+         (_today(), metric, float(value), None if cap is None else float(cap)))
+
+
+def usage_add(metric, n=1):
+    """Add n to today's count of something (e.g. Claude requests)."""
+    if n and n > 0:
+        _run("INSERT INTO usage_daily (day, metric, value, updated_at) VALUES (%s, %s, %s, now()) "
+             "ON CONFLICT (day, metric) DO UPDATE SET value = usage_daily.value + excluded.value, updated_at = now()",
+             (_today(), metric, float(n)))
+
+
+def database_size_mb():
+    row = _run("SELECT pg_database_size(current_database())", fetch=True)
+    return row[0] / 1048576 if row and row is not True else None

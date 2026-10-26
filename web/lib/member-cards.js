@@ -9,6 +9,7 @@ import { db, schema } from "@/lib/db";
 import { appToken } from "@/lib/ebay-sell";
 import { POKEMON_NAMES } from "@/lib/pokemon-names";
 import { itemIdFromLink } from "@/lib/report-sale";
+import { noteClaude } from "@/lib/usage";
 
 // Cards (and sealed products) our price service doesn't carry, added automatically from "Request a card" links (see lib/card-requests.js).
 // This is how the catalog grows one requested card at a time: Korean, Chinese and other cards the service has no
@@ -272,6 +273,7 @@ Page description: ${page.description}
 Page text (start): ${page.text}`,
     }],
   });
+  noteClaude(response); // Admin -> Usage
   if (response.stop_reason === "refusal") return null;
   try { return JSON.parse(response.content.find((b) => b.type === "text")?.text || ""); } catch { return null; }
 }

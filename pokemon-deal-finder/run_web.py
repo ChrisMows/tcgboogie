@@ -20,6 +20,7 @@ from dealfinder.health import SiteHealth
 from dealfinder.sales import SaleTracker
 from dealfinder.sealed import SealedScanner
 from dealfinder.topps import ToppsPricer
+from dealfinder.usage import UsageRecorder
 from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
 
@@ -89,6 +90,7 @@ def main():
     from dealfinder import vision
     log.info("Photo check: %s", f"on ({link.photos.model})" if vision.enabled() else "off (add ANTHROPIC_API_KEY to .env to turn it on)")
     log.info("Deal finder (website mode) started. Ctrl+C to stop.")
+    usage = UsageRecorder(finder.cfg, finder.conn, finder.ppt)
     per_check = None  # average eBay calls per check, to spread the daily budget evenly
     while True:
         started = time.time()
@@ -111,6 +113,8 @@ def main():
             site.tick()
         except Exception:  # noqa: BLE001 - watching the site must never stop the deal finder
             log.exception("Website health check crashed")
+        usage.cfg, usage.ppt = finder.cfg, finder.ppt
+        usage.tick()  # Admin -> Usage: eBay calls, price credits, server disk and memory (every 5 minutes)
         used = db.api_calls_today(finder.conn) - before
         if used > 0:
             per_check = used if per_check is None else per_check * 0.8 + used * 0.2

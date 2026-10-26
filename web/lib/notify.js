@@ -50,6 +50,8 @@ async function countEmail() {
           then jsonb_build_object('day', ${day}::text, 'n', coalesce((${schema.appSettings.value}->>'n')::int, 0) + 1)
           else jsonb_build_object('day', ${day}::text, 'n', 1) end`,
         updatedAt: new Date() } });
+    const { bumpUsage } = await import("@/lib/usage");
+    bumpUsage("emails"); // Admin -> Usage: the same count, kept per day
   } catch { /* counting must never stop an email */ }
 }
 

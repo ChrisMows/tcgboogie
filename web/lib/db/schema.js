@@ -441,6 +441,17 @@ export const gameInterest = pgTable("game_interest", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("game_interest_unique").on(t.userId, t.game)]);
 
+// Daily use of everything with a limit (Admin → Usage): one row per UTC day and metric, e.g. ("2026-10-26",
+// "ebay_calls") = 3,912 with cap 5,000. Counters are added to as things happen (emails, Claude requests); gauges
+// (credits used, disk) are set by the bot every few minutes and keep the day's highest value. See lib/usage.js.
+export const usageDaily = pgTable("usage_daily", {
+  day: text("day").notNull(), // YYYY-MM-DD (UTC: the price service and eBay reset at midnight UTC)
+  metric: text("metric").notNull(),
+  value: doublePrecision("value").notNull().default(0),
+  cap: doublePrecision("cap"), // the day's limit, when the source knows it
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.day, t.metric] })]);
+
 // Our own visit counts (Admin → Traffic): one row per day, kind and key, e.g. ("2026-10-24", "view", "/faq") = 31.
 // Only totals: nothing here identifies a visitor (lib/traffic.js).
 export const siteTraffic = pgTable("site_traffic", {

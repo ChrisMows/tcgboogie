@@ -11,6 +11,7 @@ import { log } from "@/lib/log";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
+import { noteClaude } from "@/lib/usage";
 
 // Products matched during this import, so the import step doesn't look them up (and spend credits) again.
 const matched = globalThis.__tcgImportMatched ?? (globalThis.__tcgImportMatched = new Map());
@@ -73,6 +74,7 @@ A column with both a name and a number like "Charizard #4" counts as the name. A
 
 ${rows.map((r, i) => `Row ${i + 1}: ${JSON.stringify(r)}`).join("\n")}` }],
       });
+      noteClaude(response); // Admin -> Usage
       guess = JSON.parse(response.content.find((b) => b.type === "text")?.text || "null");
     } catch (e) {
       await log("website", "warn", `Import column guess failed: ${e.message}`, null, user.id);

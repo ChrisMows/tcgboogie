@@ -7,6 +7,7 @@ import { currentFaq } from "@/lib/faq";
 import { log } from "@/lib/log";
 import { effectivePlans, planRows } from "@/lib/plan-copy";
 import { TOURS } from "@/lib/tours";
+import { noteClaude } from "@/lib/usage";
 
 // Boogie Bot, the site helper (the "Ask" chat in the corner, components/HelperChat.js): answers questions about how
 // TCG Boogie works and where things are, from the FAQ, the plan table and the page map below, and offers a "Show me
@@ -158,6 +159,7 @@ export async function askHelper({ messages, user, page }) {
       ],
       messages: turns,
     });
+    noteClaude(response); // Admin -> Usage
     if (response.stop_reason === "refusal") {
       ok = false;
       answer = "Sorry, I can't help with that one. For anything about TCG Boogie, ask away, or email support@tcgboogie.com.";

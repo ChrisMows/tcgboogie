@@ -5,6 +5,7 @@ import { discordAdmins } from "@/lib/admin-alerts";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
+import { noteClaude } from "@/lib/usage";
 
 // "Suggest an idea": what members (and visitors) wanted to do but couldn't. They come from the menu and footer, and
 // from the dead ends where people get stuck: a search that finds nothing, a filter that's missing, Boogie Bot not
@@ -111,6 +112,7 @@ export async function groupIdeas() {
     },
     messages: [{ role: "user", content: `These are feature ideas and "I couldn't do this" notes from users of TCG Boogie, a Pokémon card deal-alert and collection site. Group the ones that ask for the same thing. Give each group a short theme (under 8 words, e.g. "Yu-Gi-Oh! support" or "Sort collection by set"). Every id goes in exactly one group; an idea unlike the others is a group of one. Order groups from most ideas to fewest.\n\n${rows.map((i) => `#${i.id}: ${i.text.slice(0, 300)}`).join("\n")}` }],
   });
+  noteClaude(response); // Admin -> Usage
   if (response.stop_reason === "refusal") throw new Error("Claude declined to group these.");
   const parsed = JSON.parse(response.content.find((b) => b.type === "text")?.text || "{}");
   const known = new Set(rows.map((i) => i.id));

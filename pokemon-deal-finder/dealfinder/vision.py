@@ -118,6 +118,14 @@ class PhotoChecker:
         except (anthropic.RateLimitError, anthropic.APIConnectionError, anthropic.APIStatusError) as e:
             log.warning("Photo check unavailable right now (%s); sending the deal with a note", type(e).__name__)
             return None
+        try:  # Admin -> Usage: requests and tokens (what the bill is based on)
+            from dealfinder import shared
+            u = r.usage
+            shared.usage_add("claude_requests", 1)
+            shared.usage_add("claude_tokens", sum(getattr(u, k, 0) or 0 for k in
+                                                  ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens")))
+        except Exception:  # noqa: BLE001 - counting must never stop a photo check
+            pass
         if r.stop_reason == "refusal":
             result = None
         else:

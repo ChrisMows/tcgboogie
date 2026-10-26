@@ -13,6 +13,8 @@ import { gameTotals } from "@/lib/game-interest";
 import { helperReport } from "@/lib/helper";
 import { SOURCES, STATUSES, groupIdeas, ideaCounts, listIdeas } from "@/lib/ideas";
 import { trafficReport } from "@/lib/traffic";
+import { usageReport } from "@/lib/usage";
+import UsageCharts from "@/components/UsageCharts";
 import { FEATURES, LIMITS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
@@ -44,7 +46,7 @@ function PlanBadge({ m, compact }) {
 export default async function Admin({ searchParams }) {
   const admin = await requireAdmin();
   const sp = await searchParams;
-  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales"].includes(sp?.tab) ? sp.tab : "status";
+  const tab = sp?.user ? "members" : ["members", "log", "features", "requests", "ideas", "traffic", "helper", "sales", "usage"].includes(sp?.tab) ? sp.tab : "status";
 
   return (
     <>
@@ -63,6 +65,7 @@ export default async function Admin({ searchParams }) {
         <Link href="/app/admin?tab=ideas" className={tab === "ideas" ? "on" : ""} role="tab" aria-selected={tab === "ideas"}>Ideas{(await ideaCounts()).new ? <span>{(await ideaCounts()).new}</span> : null}</Link>
         <Link href="/app/admin?tab=sales" className={tab === "sales" ? "on" : ""} role="tab" aria-selected={tab === "sales"}>Social media</Link>
         <Link href="/app/admin?tab=traffic" className={tab === "traffic" ? "on" : ""} role="tab" aria-selected={tab === "traffic"}>Traffic</Link>
+        <Link href="/app/admin?tab=usage" className={tab === "usage" ? "on" : ""} role="tab" aria-selected={tab === "usage"}>Usage</Link>
         <Link href="/app/admin?tab=helper" className={tab === "helper" ? "on" : ""} role="tab" aria-selected={tab === "helper"}>Boogie Bot</Link>
         <Link href="/app/admin?tab=log" className={tab === "log" ? "on" : ""} role="tab" aria-selected={tab === "log"}>Admin log</Link>
       </div>
@@ -71,6 +74,7 @@ export default async function Admin({ searchParams }) {
       {tab === "log" && <Log />}
       {tab === "ideas" && <Ideas show={sp?.show} group={sp?.group === "1"} ok={sp?.ok} emailed={sp?.emailed} err={sp?.err} />}
       {tab === "traffic" && <Traffic />}
+      {tab === "usage" && <Usage />}
       {tab === "sales" && <Sales ok={sp?.ok} err={sp?.err} />}
       {tab === "helper" && <Helper />}
       {tab === "requests" && <Requests ok={sp?.ok} err={sp?.err} show={sp?.show} kind={sp?.kind} />}
@@ -563,6 +567,13 @@ async function Helper() {
 }
 
 // Traffic: our own cookie-free visit counts (lib/traffic.js), the last 30 days.
+async function Usage() {
+  let metrics = null;
+  try { metrics = await usageReport(); } catch { metrics = null; }
+  if (!metrics) return <div className="panel"><p className="muted" style={{ margin: 0 }}>Usage isn&apos;t available yet (the usage_daily table needs <code>npm run db:push</code>).</p></div>;
+  return <UsageCharts metrics={metrics} />;
+}
+
 async function Traffic() {
   let r = null;
   try { r = await trafficReport(30); } catch { r = null; }

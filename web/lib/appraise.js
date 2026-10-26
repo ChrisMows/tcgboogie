@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { findCardOptions } from "@/lib/catalog";
 import { GRADERS, gradeKey, nmPrice } from "@/lib/collection";
 import { log } from "@/lib/log";
+import { noteClaude } from "@/lib/usage";
 
 // Photo appraiser: a photo of cards (a binder page, a spread, a few slabs) -> which cards they are and what they're
 // worth. Claude Haiku 5.5 reads what's printed on each card; the price service finds the matching product.
@@ -58,6 +59,7 @@ async function readPhoto(image) {
       ],
     }],
   });
+  noteClaude(response); // Admin -> Usage
   if (response.stop_reason === "refusal") throw new Error("The photo couldn't be read.");
   const text = response.content.find((b) => b.type === "text")?.text || "";
   const parsed = JSON.parse(text);
