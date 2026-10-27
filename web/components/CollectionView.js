@@ -118,6 +118,10 @@ export default function CollectionView({ items, binders, products, watched: watc
         <div className="search-box small">
           <span aria-hidden="true">⌕</span>
           <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder={wishlist ? "Search your wishlist" : "Search: name, set, number or rarity (SIR, RR…)"} aria-label="Search" />
+          {q && (
+            <button type="button" className="search-clear" title="Clear" aria-label="Clear search"
+              onClick={(e) => { setQ(""); e.currentTarget.parentElement.querySelector("input")?.focus(); }}>✕</button>
+          )}
         </div>
         {!wishlist && (
           <select value={binder} onChange={(e) => setBinder(e.target.value)} aria-label="Binder">

@@ -643,6 +643,8 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .coll-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
 .coll-toolbar > select { width: auto; padding: 8px 10px; font-size: 14px; }
 .coll-toolbar .search-box { flex: 1 1 220px; }
+.coll-toolbar .search-box input { flex: 1; }
+.search-box.small .search-clear { width: 24px; height: 24px; font-size: 11px; }
 .coll-toolbar .seg button { padding: 7px 12px; }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
 .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
