@@ -10,14 +10,23 @@ import {
   changeQuantity, editItem, moveToCollection, removeItem, watchProduct,
 } from "@/app/app/collection/actions";
 import { KINDS, SORTS, isOwnValue, itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { rangeLabel, useChartRange } from "@/lib/chart-range";
 import { rarityCodes } from "@/lib/rarity";
 
 const short = (name) => name.replace(/\s*\(.*\)$/, "");
 
-function Change({ v }) {
+/** A card's price change over the range picked on the value chart (lib/chart-range.js), e.g. "▲ 2.1% 7D". */
+const changeFor = (it, range) => (it.changes ? it.changes[range ?? 0] ?? null : range === 7 ? it.change7 : null);
+function Change({ it }) {
+  const range = useChartRange();
+  const v = changeFor(it, range);
   if (v === null || v === undefined) return null;
   const flat = Math.abs(v) < 0.005;
-  return <span className={`chg ${flat ? "" : v > 0 ? "up" : "down"}`}>{flat ? "•" : v > 0 ? "▲" : "▼"} {pct(v)}</span>;
+  return (
+    <span className={`chg ${flat ? "" : v > 0 ? "up" : "down"}`} title={`Price change, ${rangeLabel(range) === "All" ? "all the history we have" : `last ${rangeLabel(range)}`}`}>
+      {flat ? "•" : v > 0 ? "▲" : "▼"} {pct(Math.abs(v)).replace("+", "")} <span className="chg-range">{rangeLabel(range)}</span>
+    </span>
+  );
 }
 
 function WatchButton({ item, watched, onWatch, pending }) {
@@ -44,6 +53,7 @@ export default function CollectionView({ items, binders, products, watched: watc
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const wishlist = tab === "wishlist";
+  const range = useChartRange(); // the value chart's range: the % changes and the Change sort follow it
 
   useEffect(() => {
     try { const v = localStorage.getItem("tcg-coll-view"); if (v === "list" || v === "grid") setView(v); } catch {}
@@ -68,12 +78,12 @@ export default function CollectionView({ items, binders, products, watched: watc
     const by = {
       value: (a, b) => total(b) - total(a),
       gain: (a, b) => gain(b) - gain(a),
-      change: (a, b) => (b.change7 ?? -Infinity) - (a.change7 ?? -Infinity),
+      change: (a, b) => (changeFor(b, range) ?? -Infinity) - (changeFor(a, range) ?? -Infinity),
       name: (a, b) => a.name.localeCompare(b.name),
       added: (a, b) => String(b.createdAt).localeCompare(String(a.createdAt)),
     };
     return [...list].sort(by[sort] || by.value);
-  }, [items, products, q, binder, kind, sort]);
+  }, [items, products, q, binder, kind, sort, range]);
 
   const act = (fn, msg) => start(async () => { const r = await fn(); if (r?.ok === false && r.error) show(r.error, null, "bad"); else if (msg) show(msg); router.refresh(); });
 
@@ -152,7 +162,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className="tile-meta">{it.setName}{it.number ? ` · ${it.number.split("/")[0]}` : ""}</div>
                 <div className="tile-foot">
                   <span className="chip-mini">{itemLabel(it)}</span>
-                  <Change v={it.change7} />
+                  <Change it={it} />
                 </div>
                 <div className={`tile-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
                   {money(unitValue(it) !== null ? unitValue(it) * (wishlist ? 1 : it.quantity) : null)}
@@ -198,7 +208,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className={`item-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
                   <b>{money(v !== null ? v * (wishlist ? 1 : it.quantity) : null)}</b>
                   {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
-                  <div className="small muted">{!wishlist && it.quantity > 1 && v !== null ? `${money(v)} each · ` : ""}<Change v={it.change7} /></div>
+                  <div className="small muted">{!wishlist && it.quantity > 1 && v !== null ? `${money(v)} each · ` : ""}<Change it={it} /></div>
                 </div>
                 {!wishlist && (
                   <div className={`item-gain ${gain === null ? "muted" : gain >= 0 ? "up" : "down"}`}>

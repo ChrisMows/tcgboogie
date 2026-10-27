@@ -95,7 +95,7 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
       {open === "alerts" && <CollectionAlerts plan={plan} prefs={prefs} />}
       {open === "chart" && (
         <div className="panel coll-chart coll-pop">
-          {hasCards ? <ValueChart points={chart} historyDays={historyDays} profit={summary} changes={changes} hideable />
+          {hasCards ? <ValueChart points={chart} historyDays={historyDays} profit={summary} changes={changes} hideable shared />
             : <p className="small muted" style={{ margin: 0 }}>Add a card and your collection&apos;s value is charted day by day.</p>}
         </div>
       )}

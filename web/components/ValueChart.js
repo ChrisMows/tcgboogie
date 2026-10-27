@@ -4,6 +4,7 @@ import HideValues from "@/components/HideValues";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { money, pct } from "@/lib/collection";
+import { setChartRange, useChartRange } from "@/lib/chart-range";
 
 const RANGES = [["1D", 1], ["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["All", null]];
 
@@ -13,8 +14,12 @@ const RANGES = [["1D", 1], ["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["A
  * With `changes` ({ [days]: { change, pct } }, 0 = all time, from lib/collection.js marketChange), the change shown for
  * a range is the price movement of the cards owned then, so cards added in the range don't read as gains.
  */
-export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false, changes = null }) {
-  const [range, setRange] = useState(30);
+export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false, changes = null, shared = false }) {
+  // shared: the range is the collection's (lib/chart-range.js), so the card list's % changes follow it.
+  const [own, setOwn] = useState(30);
+  const sharedRange = useChartRange();
+  const range = shared ? sharedRange : own;
+  const setRange = shared ? setChartRange : setOwn;
   const hasCost = Boolean(profit?.cost) && points.some((p) => p.cost > 0);
   const [showCost, setShowCost] = useState(true);
   const costOn = hasCost && showCost;

@@ -288,6 +288,7 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .chip-mini { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: var(--panel-3); color: #c9d1dd; white-space: nowrap; }
 .chg { font-size: 12px; white-space: nowrap; color: var(--muted); }
+.chg-range { font-size: 0.85em; opacity: 0.65; margin-left: 2px; font-weight: 600; }
 .chg.up { color: var(--accent); }
 .chg.down { color: var(--bad); }
 

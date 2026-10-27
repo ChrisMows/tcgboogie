@@ -33,6 +33,13 @@ export async function loadProducts(ids, maxLive = MAX_LIVE_LOOKUPS) {
   return products;
 }
 
+const RANGES = [1, 7, 30, 90, 365];
+function rangeChanges(p) {
+  const n = (p?.history || []).filter((h) => Number.isFinite(h.price)).length;
+  if (n < 2) return null;
+  return Object.fromEntries([...RANGES.map((d) => [d, n > d ? change(p, d) : null]), [0, change(p, n - 1)]]);
+}
+
 /** A member's whole collection, valued, with today's snapshot recorded. */
 export async function loadCollection(user) {
   const [items, binders, prefs] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.getCollectionPrefs(user.id)]);
@@ -56,6 +63,9 @@ export async function loadCollection(user) {
       image: pictureFor(it.productId) || it.image || p?.image || null,
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
       change7: it.kind === "graded" ? null : change(p, 7),
+      // Each chart range's price change (key 0 = all the history we have), so the list follows the chart's range.
+      // Only when the card's history covers the range: no "1Y" figure from 90 days of prices. Graded copies have none.
+      changes: it.kind === "graded" ? null : rangeChanges(p),
       createdAt: String(it.createdAt),
       valueUpdatedAt: it.valueUpdatedAt ? String(it.valueUpdatedAt) : null,
     });
