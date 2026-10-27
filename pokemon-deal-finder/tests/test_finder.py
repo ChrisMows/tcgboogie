@@ -130,6 +130,15 @@ class ExclusionTests(unittest.TestCase):
                   "Lot of 5 PSA 10 Pokemon", "Custom Charizard proxy card PSA 10"]:
             self.assertTrue(title_excluded(t, CFG), t)
 
+    def test_accessories_excluded(self):
+        # Display cases, frames and stands are listed with the card's name and number: they aren't the card.
+        for t in ["Mega Sharpedo ex - 127/094 Pokemon Phantasmal Flames SIR Extended Art Case",
+                  "Charizard 4/102 Base Set Acrylic Display Case", "Umbreon VMAX 215/203 framed shadow box"]:
+            self.assertTrue(title_excluded(t, CFG, raw=True), t)
+        for t in ["Mew ex 232/091 Paldean Fates Special Illustration Rare extended art",
+                  "Charizard ex 223/197 Obsidian Flames NM in toploader and sleeve", "Delcatty 30 Edition Gold Frame Pokemon Card"]:
+            self.assertIsNone(title_excluded(t, CFG, raw=True), t)
+
     def test_clean_titles_not_excluded(self):
         for t in ["2021 Pokemon Evolving Skies Umbreon VMAX #215 PSA 10", "Charizard Base Set 4/102 PSA 8 NM-MT",
                   "Drawn by the Dragons Rayquaza PSA 10", "Pikachu Black Star Promo SWSH020 CGC 9.5", "Tag Team Pikachu & Zekrom GX TAG 10"]:

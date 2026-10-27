@@ -167,6 +167,22 @@ red_flags:
     - repack
     - bulk
     - binder
+    # Accessories sold with the card's name and number in the title (display cases, frames, stands, art): not the card.
+    - art case
+    - display case
+    - card case
+    - acrylic
+    - framed
+    - shadow box
+    - display stand
+    - card stand
+    - playmat
+    - play mat
+    - art print
+    - canvas
+    - keychain
+    - plush
+    - 3d print
   # If the DESCRIPTION contains any of these, the alert is still sent but flagged.
   flag_description_keywords:
     - pre-graded
