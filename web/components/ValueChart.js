@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { money, pct } from "@/lib/collection";
 
-const RANGES = [["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["All", null]];
+const RANGES = [["1D", 1], ["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["All", null]];
 
 /**
  * Collection value over time. `points` are { day, value, cost? }. Ranges past the plan's history are shown locked.
  * With `profit` ({ cost, gain, gainPct } from summarize()) and cost data, it also draws what you paid and your profit.
+ * With `changes` ({ [days]: { change, pct } }, 0 = all time, from lib/collection.js marketChange), the change shown for
+ * a range is the price movement of the cards owned then, so cards added in the range don't read as gains.
  */
-export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false }) {
+export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false, changes = null }) {
   const [range, setRange] = useState(30);
   const hasCost = Boolean(profit?.cost) && points.some((p) => p.cost > 0);
   const [showCost, setShowCost] = useState(true);
@@ -19,7 +21,9 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
   const shown = useMemo(() => {
     if (!range) return points;
     const cutoff = new Date(Date.now() - range * 86400000).toISOString().slice(0, 10);
-    return points.filter((p) => p.day >= cutoff);
+    // Start from the last saved day before the range, so the line covers all of it (days are saved on visits).
+    const before = points.filter((p) => p.day < cutoff).pop();
+    return [...(before ? [before] : []), ...points.filter((p) => p.day >= cutoff)];
   }, [points, range]);
   const [hover, setHover] = useState(null);
 
@@ -31,7 +35,10 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
   const line = shown.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
   const costLine = costOn ? shown.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.cost || 0).toFixed(1)}`).join(" ") : null;
   const first = shown[0]?.value, last = shown[shown.length - 1]?.value;
-  const delta = first ? (last - first) / first : null;
+  const market = changes ? changes[range ?? 0] : undefined; // price moves only (see above)
+  // With `changes`, a range without a price-only figure shows no change rather than one inflated by added cards.
+  const moved = changes ? market?.change ?? null : first ? last - first : null;
+  const delta = changes ? market?.pct ?? null : first ? (last - first) / first : null;
   const up = (delta ?? 0) >= 0;
   const at = hover !== null ? shown[hover] : null;
 
@@ -42,7 +49,10 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
           <div className="small muted">{at ? new Date(`${at.day}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : label}</div>
           <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : last)}</div>{hideable && <HideValues />}</div>
           {!at && delta !== null && shown.length > 1 && (
-            <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>{up ? "▲" : "▼"} {money(Math.abs(last - first))} ({pct(delta)}) {range ? `in ${range} days` : "all time"}</div>
+            <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>
+              {up ? "▲" : "▼"} {money(Math.abs(moved))} ({pct(delta)}) {range === 1 ? "today" : range ? `in ${range} days` : "all time"}
+              {market && <span className="muted"> from price moves</span>}
+            </div>
           )}
           {at && costOn && at.cost > 0 && <div className={`small muted ${hideable ? "sensitive" : ""}`}>Paid {money(at.cost)}</div>}
           {!at && hasCost && (

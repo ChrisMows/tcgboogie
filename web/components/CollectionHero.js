@@ -9,12 +9,17 @@ import ValueChart from "@/components/ValueChart";
 
 const money = (v, d = 2) => `$${Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
+/** "today" when compared with yesterday, otherwise "since Oct 24" (days are saved when the collection is opened). */
+const sinceLabel = (day) => {
+  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return day === y ? "today" : `since ${new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`;
+};
 
 /**
  * Collection page top: the total, front and center, then a row of round actions in alphabetical order. Top movers,
  * alerts and the value chart open in a panel right under the row (one at a time); the chart is open to start with.
  */
-export default function CollectionHero({ summary, week, adding, exportAllowed, tradeAllowed = true, movers, chart, historyDays, plan, prefs, hasCards }) {
+export default function CollectionHero({ summary, day, week, sinceVisit, changes, adding, exportAllowed, tradeAllowed = true, movers, chart, historyDays, plan, prefs, hasCards }) {
   const [open, setOpen] = useState(hasCards ? "chart" : null); // "movers" | "alerts" | "chart"; the chart starts open
   const toggle = (k) => setOpen((o) => (o === k ? null : k));
 
@@ -40,14 +45,25 @@ export default function CollectionHero({ summary, week, adding, exportAllowed, t
           <div className="coll-hero-value sensitive">{money(summary.value)}</div>
           <HideValues className="icon-only" />
         </div>
+        {/* Price moves only: cards you added don't count as gains (lib/collection.js marketChange). */}
+        <div className="coll-hero-day">
+          {day ? (
+            <span className={`sensitive ${day.change >= 0 ? "up" : "down"}`}>
+              {day.change >= 0 ? "▲" : "▼"} {money(Math.abs(day.change))} ({pct(day.pct)}) <span className="muted">{sinceLabel(day.since)}</span>
+            </span>
+          ) : <span className="muted small">Your day-to-day change shows from tomorrow.</span>}
+        </div>
+        {sinceVisit && sinceVisit.since !== day?.since && (
+          <div className="small coll-hero-visit">
+            <span className={`sensitive ${sinceVisit.change >= 0 ? "up" : "down"}`}>{sinceVisit.change >= 0 ? "▲" : "▼"} {money(Math.abs(sinceVisit.change))} ({pct(sinceVisit.pct)})</span>
+            <span className="muted"> since your last visit, {sinceLabel(sinceVisit.since).replace(/^since /, "")}</span>
+          </div>
+        )}
         <div className="small coll-hero-sub">
-          {week !== null && Math.abs(week.change) >= 0.005 && (
-            <span className={`sensitive ${week.change >= 0 ? "up" : "down"}`}>{week.change >= 0 ? "▲" : "▼"} {money(Math.abs(week.change))} ({pct(week.pct)}) this week</span>
+          {week && week.since !== day?.since && (
+            <><span className={`sensitive ${week.change >= 0 ? "up" : "down"}`}>{week.change >= 0 ? "▲" : "▼"} {money(Math.abs(week.change))} ({pct(week.pct)}) this week</span><span className="muted"> · </span></>
           )}
-          <span className="muted">{week !== null && Math.abs(week.change) >= 0.005 ? " · " : ""}{summary.copies} {summary.copies === 1 ? "card" : "cards"}</span>
-          {summary.gain !== null && summary.cost > 0 && (
-            <span className="muted"> · <span className={`sensitive ${summary.gain >= 0 ? "up" : "down"}`}>{summary.gain >= 0 ? "+" : "−"}{money(Math.abs(summary.gain), 0)}</span> on what you paid</span>
-          )}
+          <span className="muted">{summary.copies} {summary.copies === 1 ? "card" : "cards"}</span>
         </div>
         {summary.unpriced > 0 && (
           <div className="hint">{summary.unpriced} {summary.unpriced === 1 ? "copy has" : "copies have"} no market value yet and {summary.unpriced === 1 ? "isn't" : "aren't"} counted. Set your own value from Edit.</div>
@@ -79,7 +95,7 @@ export default function CollectionHero({ summary, week, adding, exportAllowed, t
       {open === "alerts" && <CollectionAlerts plan={plan} prefs={prefs} />}
       {open === "chart" && (
         <div className="panel coll-chart coll-pop">
-          {hasCards ? <ValueChart points={chart} historyDays={historyDays} profit={summary} hideable />
+          {hasCards ? <ValueChart points={chart} historyDays={historyDays} profit={summary} changes={changes} hideable />
             : <p className="small muted" style={{ margin: 0 }}>Add a card and your collection&apos;s value is charted day by day.</p>}
         </div>
       )}

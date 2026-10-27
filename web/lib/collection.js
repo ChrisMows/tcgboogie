@@ -160,6 +160,34 @@ export function validateItem(input, product) {
 }
 
 /** Fill in a daily series of collection values for the chart, limited to the member's plan. */
+/**
+ * How much the collection moved in price over the last `days` (null = since the first day we have), leaving out cards
+ * added since then: today's value of the cards already owned on that day, against that day's saved total. Days are
+ * saved when the member opens their collection, so "1 day" means since the last saved day before today. Returns
+ * { change, pct, since: "YYYY-MM-DD" } or null with no earlier day to compare with. (A card removed since then reads
+ * as a drop, and a quantity raised as a gain: we keep totals per day, not per card.)
+ */
+export function marketChange(owned, snapshots, days, now = new Date(), sinceDay = null) {
+  const today = now.toISOString().slice(0, 10);
+  // Days with a value only (a day saved before any card had a price is no base to compare with).
+  const pts = [...snapshots].filter((p) => String(p.day) < today && p.value > 0).sort((a, b) => String(a.day).localeCompare(String(b.day)));
+  if (!pts.length) return null;
+  // sinceDay ("YYYY-MM-DD", e.g. the member's last visit) instead of a number of days.
+  const cutoff = sinceDay || (days ? new Date(now - days * 86400000).toISOString().slice(0, 10) : null);
+  // The last saved day on or before the cutoff; with no history that far back, the earliest one (like the chart).
+  const then = (cutoff && [...pts].reverse().find((p) => String(p.day) <= cutoff)) || pts[0];
+  if (!then?.value || then.value <= 0) return null;
+  const dayEnd = new Date(`${String(then.day).slice(0, 10)}T23:59:59.999Z`);
+  const held = owned.reduce((t, it) => {
+    if (new Date(it.createdAt) > dayEnd) return t; // added after that day: not part of the comparison
+    const v = unitValue(it);
+    return v === null ? t : t + v * (it.quantity || 1);
+  }, 0);
+  if (held <= 0) return null;
+  const change = held - then.value;
+  return { change, pct: change / then.value, since: String(then.day).slice(0, 10) };
+}
+
 export function chartSeries(snapshots, historyDays) {
   const pts = [...snapshots].sort((a, b) => String(a.day).localeCompare(String(b.day)));
   if (!historyDays) return pts;

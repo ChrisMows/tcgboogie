@@ -411,6 +411,20 @@ export async function listSnapshots(userId) {
   return db.select().from(portfolioSnapshots).where(eq(portfolioSnapshots.userId, userId)).orderBy(asc(portfolioSnapshots.day));
 }
 
+/** The day this member last opened their collection before today ("YYYY-MM-DD" or null); records today. */
+export async function lastCollectionVisit(userId) {
+  if (isDemo(userId) || !db) return null;
+  const key = `collection_visit:${userId}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const [row] = await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, key)).limit(1);
+  const prev = row?.value?.prev && row.value.day === today ? row.value.prev : row?.value?.day && row.value.day !== today ? row.value.day : row?.value?.prev || null;
+  if (row?.value?.day !== today) {
+    const value = { day: today, prev };
+    await db.insert(schema.appSettings).values({ key, value }).onConflictDoUpdate({ target: schema.appSettings.key, set: { value, updatedAt: new Date() } });
+  }
+  return prev;
+}
+
 export async function getCollectionPrefs(userId) {
   const defaults = { setDeals: false, sellHigh: false, sellHighPct: 25 };
   if (isDemo(userId)) return { ...defaults, ...demoCollection().collectionPrefs };

@@ -1212,6 +1212,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .coll-hero-value-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .coll-hero-value { font-family: var(--font-head), var(--font-body), sans-serif; font-size: clamp(34px, 7vw, 52px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; }
 .coll-hero-sub { margin-top: 4px; }
+.coll-hero-day { font-size: 17px; font-weight: 700; margin-top: 2px; }
+.coll-hero-day .muted { font-weight: 500; font-size: 14px; }
 .coll-hero .hint { max-width: 460px; margin: 6px auto 0; }
 .hide-values-btn.icon-only { padding: 7px; border-radius: 50%; }
 .hide-values-btn.icon-only span { display: none; }

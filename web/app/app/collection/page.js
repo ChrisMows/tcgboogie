@@ -4,7 +4,7 @@ import BinderTab from "@/components/BinderTab";
 import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
 import { catalogLive } from "@/lib/catalog";
-import { chartSeries, itemLabel, ownedCounts, unitValue } from "@/lib/collection";
+import { chartSeries, itemLabel, marketChange, ownedCounts, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
@@ -31,10 +31,15 @@ export default async function CollectionPage({ searchParams }) {
   const binderParam = String(sp?.binder || "");
   const startBinder = binderParam === "none" || c.binders.some((b) => String(b.id) === binderParam) ? binderParam : "all";
 
-  // This week's change: today's total against the last snapshot from at least 7 days ago.
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const then = [...c.snapshots].filter((p) => String(p.day) <= weekAgo).pop();
-  const week = then && then.value > 0 ? { change: summary.value - then.value, pct: (summary.value - then.value) / then.value } : null;
+  // How the cards you own moved in price (cards added since don't count as gains): since the last saved day, this
+  // week, and for each chart range.
+  const day = marketChange(c.owned, c.snapshots, 1);
+  const week = marketChange(c.owned, c.snapshots, 7);
+  const changes = Object.fromEntries([1, 7, 30, 90, 365, 0].map((d) => [d, marketChange(c.owned, c.snapshots, d || null)]));
+  // Away for a while? Also how it moved since the last visit (when that was before yesterday).
+  const lastVisit = await store.lastCollectionVisit(user.id).catch(() => null);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const sinceVisit = lastVisit && lastVisit < yesterday ? marketChange(c.owned, c.snapshots, null, new Date(), lastVisit) : null;
 
   // Collection is the member area's home page, so new members' setup steps and price alerts that hit show here.
   const steps = [
@@ -47,7 +52,7 @@ export default async function CollectionPage({ searchParams }) {
   return (
     <>
       <h1 className="sr-only">Collection</h1>
-      <CollectionHero summary={summary} week={week} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer} movers={movers}
+      <CollectionHero summary={summary} day={day} week={week} sinceVisit={sinceVisit} changes={changes} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer} movers={movers}
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
 

@@ -41,6 +41,8 @@ export const RELEASES = [
         text: "On screens a little narrower than a laptop, the top menu moves behind the menu button instead of pushing your profile picture off the edge." },
       { tag: "Improved", title: "Discord alerts that reach you", href: "/app/account#alerts",
         text: "BoogieBot can only message people in the TCG Boogie Discord server, so Settings now links straight to it. If your Discord alerts can't reach you (not in the server, or DMs turned off), you'll see a note at the top of your pages and get an email saying how to fix it." },
+      { tag: "Fixed", title: "Your collection's daily change", href: "/app/collection",
+        text: "The top of your collection now leads with how much it moved today (and since your last visit, if you've been away), then this week, and the value chart has a 1D view. We now save your collection's value every day, even when you don't visit, so every chart range is right. Changes count price moves only: cards you just added no longer show up as a gain." },
       { tag: "Fixed", title: "Finding sealed products", href: "/app/collection",
         text: "Searching for sealed product works the way you type it: \"Surging Sparks ETB\", \"151 booster bundle\" or \"Charizard UPC\" now finds the right box, in any word order, with the box listed before its case." },
       { tag: "Fixed", title: "Market Movers eBay links", href: "/sales",

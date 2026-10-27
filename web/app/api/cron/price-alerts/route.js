@@ -8,6 +8,7 @@ import { runRecaps } from "@/lib/recap";
 import { runSellHigh } from "@/lib/sell-high";
 import { sendAdminAlerts } from "@/lib/admin-alerts";
 import { continueReleaseEmails } from "@/lib/release-email";
+import { recordDailySnapshots } from "@/lib/snapshots";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -43,6 +44,10 @@ async function handle(req) {
     }
     try { summary.recaps = await runRecaps(); } catch (e) {
       await log("alerts", "error", `Email recaps crashed: ${e.message}`, { stack: String(e.stack || "").slice(0, 1500) });
+    }
+    // Every member's collection value for today (once a day, late UTC), so the value chart has every day.
+    try { summary.snapshots = await recordDailySnapshots(); } catch (e) {
+      await log("website", "warn", `Daily collection values crashed: ${e.message}`);
     }
     // Release emails that stopped part-way (the day's email limit, a restart) carry on.
     try { summary.releaseEmails = await continueReleaseEmails(); } catch (e) {
