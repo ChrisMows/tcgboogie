@@ -1,3 +1,4 @@
+import DiscordReachNotice from "@/components/DiscordReachNotice";
 import PackReveal from "@/components/PackReveal";
 import SideNav from "@/components/SideNav";
 import { catalogLive } from "@/lib/catalog";
@@ -14,6 +15,7 @@ export default async function MemberLayout({ children }) {
         {!user.demo && !catalogLive() && (
           <div className="notice warn">Preview: card search, sets and prices use a small sample catalog until the price service is connected.</div>
         )}
+        <DiscordReachNotice user={user} />
         {children}
       </section>
       <PackReveal />

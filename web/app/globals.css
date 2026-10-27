@@ -293,6 +293,10 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 
 .compare-all { display: flex; justify-content: center; margin: 28px auto 0; }
 
+/* Discord alerts that can't reach the member (components/DiscordReachNotice.js) */
+.discord-reach { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; }
+.discord-reach > div:first-child { flex: 1 1 320px; }
+
 /* Compare plans pop-up (components/ComparePlans.js) */
 .btn.cmp-open { color: var(--accent); }
 .btn.cmp-open:hover { text-decoration: underline; }

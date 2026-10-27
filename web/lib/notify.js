@@ -77,13 +77,21 @@ export async function sendDiscordDM(discordUserId, { title, description, url, fi
     body: JSON.stringify(body),
     cache: "no-store",
   });
+  // A bounce is almost always the member's Discord setup (not in our server, or DMs off), not a site fault: say which
+  // (lib/discord-reach.js tells the member once) and start the message with "Discord unreachable" so the admin's
+  // error email leaves it out.
+  const bounced = async (status) => {
+    const { noteDmFailure } = await import("@/lib/discord-reach");
+    throw new Error(`Discord unreachable (${status}): the member ${await noteDmFailure(discordUserId)}; they've been told how to fix it`);
+  };
   const ch = await api("/users/@me/channels", { recipient_id: String(discordUserId) });
-  if (!ch.ok) throw new Error(`Discord couldn't open a DM (${ch.status}). The member may not share a server with BoogieBot.`);
+  if (!ch.ok) await bounced(ch.status);
   const { id } = await ch.json();
   const msg = await api(`/channels/${id}/messages`, {
     embeds: [{ title: title.slice(0, 256), description: description?.slice(0, 2000), url, color: 0xd3ff66, fields: fields.slice(0, 10), footer: { text: VERIFY } }],
   });
-  if (!msg.ok) throw new Error(`Discord DM failed (${msg.status}). The member may have DMs turned off.`);
+  if (!msg.ok) await bounced(msg.status);
+  void import("@/lib/discord-reach").then((m) => m.noteDmSuccess(discordUserId)).catch(() => {});
 }
 
 /** A text message through Twilio. to is E.164, e.g. +15551234567. */

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DISCORD_INVITE } from "@/lib/social";
 import RevealSetting from "@/components/RevealSetting";
 import { enabledProviders } from "@/auth";
 import { demoMode, requireUser } from "@/lib/session";
@@ -249,7 +250,8 @@ export default async function Account({ searchParams }) {
             <input type="checkbox" name="alertDiscord" defaultChecked={user.alertDiscord} disabled={!canDiscord} /> 💬 Discord message from BoogieBot <span className="badge good" style={{ marginLeft: 6 }}>Fastest</span>
             {!canDiscord && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
           </label>
-          {canDiscord && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts to get these.</div>}
+          {canDiscord && !user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>Connect Discord under Connected accounts, and <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer">join the TCG Boogie Discord server</a>, to get these.</div>}
+          {canDiscord && user.discordConnected && <div className="hint" style={{ marginLeft: 27 }}>BoogieBot can only message people in the TCG Boogie server: <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer">join it here</a> if you haven&apos;t.</div>}
           <label className={`check ${canSms && smsReady && user.phoneVerifiedAt ? "" : "dim"}`} style={{ marginTop: 6 }}>
             <input type="checkbox" name="alertSms" defaultChecked={Boolean(user.alertSms)} disabled={!canSms || !smsReady || !user.phoneVerifiedAt} /> 📱 Text message
             {!smsReady && !user.demo ? <span className="badge" style={{ marginLeft: 6 }}>Coming soon</span> : !canSms && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
@@ -312,7 +314,7 @@ export default async function Account({ searchParams }) {
       <div className="panel" id="connections">
         <h2>Connected accounts</h2>
         <p className="small muted" style={{ marginTop: -6 }}>Ways to sign in, Discord for alerts, and eBay for selling.</p>
-        {params?.linked && <div className="notice good">{PROVIDER_LABELS[params.linked] || "Account"} connected.{params.linked === "discord" ? " You can now sign in with Discord, and Discord alerts can reach you." : ""}</div>}
+        {params?.linked && <div className="notice good">{PROVIDER_LABELS[params.linked] || "Account"} connected.{params.linked === "discord" ? <> You can now sign in with Discord. For alerts, also <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer">join the TCG Boogie Discord server</a>: BoogieBot can only message people in it.</> : ""}</div>}
         {params?.unlinked && <div className="notice good">{PROVIDER_LABELS[params.unlinked] || "Account"} disconnected.</div>}
         {params?.link === "last" && <div className="notice warn">That&apos;s your only way to sign in, so it can&apos;t be disconnected. Connect another method first.</div>}
         {params?.link === "unavailable" && <div className="notice warn">That connection isn&apos;t available yet.</div>}
@@ -334,6 +336,7 @@ export default async function Account({ searchParams }) {
                   {PROVIDER_LABELS[p]}
                   {p === "discord" && <span className="hint" style={{ display: "block", marginTop: 2 }}>
                     {connected ? "Sign in with Discord and get alerts as Discord messages." : "Connect to sign in with Discord and get alerts as Discord messages."}
+                    {" "}Alerts need you in the <a href={DISCORD_INVITE} target="_blank" rel="noopener noreferrer">TCG Boogie Discord server</a> too.
                   </span>}
                 </span>
                 {connected ? (

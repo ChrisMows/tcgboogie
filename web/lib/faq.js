@@ -1,4 +1,5 @@
 import "server-only";
+import { DISCORD_INVITE } from "@/lib/social";
 import { billingLive } from "@/lib/billing";
 import { channels, effectivePlans, planHighlights, textSoon, trialDays } from "@/lib/plan-copy";
 
@@ -63,6 +64,8 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
         "Every price is checked daily. For eBay listings we check each card by how likely a listing at your price is: if your price is close to what the card sells for, every day; a little below, every few days; far below, about once a week. If the card's price drops toward yours, we start checking it more often by ourselves."],
       ["How do alerts reach me? Do I need Discord?",
         `No. On Free, alerts come by ${channels(free, sms)}${textSoon(free, sms)}; on Premium, by ${channels(premium, sms)}${textSoon(premium, sms)}. Switch each one on or off at the top of the Price alerts page or in Settings. You also get a ${free.emailRecap} email recap${premium.emailRecap !== free.emailRecap ? ` (${premium.emailRecap} on Premium)` : ""} that you can turn off in Settings.`],
+      ["Why aren't my Discord alerts arriving?",
+        `BoogieBot can only message people who are in the TCG Boogie Discord server (that's Discord's rule). Connect Discord in Settings → Connected accounts, then join the server: ${DISCORD_INVITE}. If you're in the server and still get nothing, open it in Discord, tap its name, then Privacy Settings, and turn on Direct Messages. If Discord alerts can't reach you, we show a note at the top of your pages and email you once.`],
       ["How do I get push notifications on my phone?",
         "Push notifications pop up on your phone or computer the moment we send an alert, even when TCG Boogie isn't open (Premium). Go to Settings → How we reach you → Push notifications and tap \"Turn on for this device\", then allow notifications. On iPhone, add TCG Boogie to your home screen first (Share → Add to Home Screen) and open it from there: Apple only allows push for apps on the home screen. Switch on each phone or computer you want alerts on, and use \"Send a test\" to check."],
       ["Do you bid or buy for me?",

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, notIlike, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { sendDiscordDM, sendEmail } from "@/lib/notify";
@@ -26,8 +26,10 @@ export async function sendAdminAlerts() {
   // First run: start from now rather than mailing the whole history.
   const since = state.checkedAt ? new Date(state.checkedAt) : new Date(now - MIN_GAP_MS);
 
+  // A member's Discord setup (not in our server, DMs off) isn't a site error: the member is told (lib/discord-reach.js).
   const errors = await db.select({ source: systemLog.source, message: systemLog.message, at: systemLog.at }).from(systemLog)
-    .where(and(eq(systemLog.level, "error"), gt(systemLog.at, since))).orderBy(desc(systemLog.at)).limit(300);
+    .where(and(eq(systemLog.level, "error"), gt(systemLog.at, since), notIlike(systemLog.message, "%Discord unreachable%"),
+      notIlike(systemLog.message, "%Discord DM failed (403)%"))).orderBy(desc(systemLog.at)).limit(300);
   const groups = new Map();
   for (const e of errors) {
     const k = `${e.source}|${e.message}`;
