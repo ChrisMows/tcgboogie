@@ -1,6 +1,6 @@
 import "server-only";
 import os from "node:os";
-import { and, count, desc, eq, gte, ilike, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { compActive, effectiveTier, signupOpen } from "@/lib/access";
 import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog";
@@ -83,10 +83,14 @@ export async function systemStatus({ pingPrices = false } = {}) {
       !v ? "Hasn't run yet: add the Hostinger cron job" : v.error ? `Last run failed ${ago(v.at)}: ${v.error}`
         : `Last run ${ago(v.at)} · ${v.checked ?? 0} alerts checked · ${v.fired ?? 0} fired${age > 6 * 3600 * 1000 ? " · overdue: is the cron job set up?" : ""}`);
     const since = new Date(Date.now() - 24 * 3600 * 1000);
-    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, n: count() }).from(alertLog).where(and(gte(alertLog.sentAt, since), ne(alertLog.kind, "release"))).groupBy(alertLog.channel, alertLog.ok);
-    const failed = sent.filter((x) => !x.ok).reduce((s, x) => s + Number(x.n), 0);
+    // A Discord DM that bounced because the member isn't in our server or has DMs off is their setup, not a fault
+    // (they're told how to fix it, lib/discord-reach.js): listed, but it doesn't turn the check amber.
+    const memberSide = sql`(${alertLog.error} ilike '%Discord unreachable%' or ${alertLog.error} ilike '%Discord DM failed (403)%' or ${alertLog.error} ilike '%couldn''t open a DM%')`;
+    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, member: sql`coalesce(${memberSide}, false)`.mapWith(Boolean), n: count() }).from(alertLog)
+      .where(and(gte(alertLog.sentAt, since), ne(alertLog.kind, "release"))).groupBy(alertLog.channel, alertLog.ok, sql`3`);
+    const failed = sent.filter((x) => !x.ok && !x.member).reduce((s, x) => s + Number(x.n), 0);
     add("Alerts", "Alerts sent (24 h)", failed ? "warn" : "ok",
-      sent.length ? sent.map((x) => `${x.channel}${x.ok ? "" : " failed"}: ${x.n}`).join(" · ") : "None in the last 24 hours");
+      sent.length ? sent.map((x) => `${x.channel}${x.ok ? "" : x.member ? " not reachable (member's Discord settings, they've been told)" : " failed"}: ${x.n}`).join(" · ") : "None in the last 24 hours");
   }
 
   if (!ready.email) add("Alerts", "Email (SMTP)", "off", "SMTP settings not added yet");
