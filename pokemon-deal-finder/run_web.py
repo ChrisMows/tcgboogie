@@ -20,6 +20,7 @@ from dealfinder.health import SiteHealth
 from dealfinder.sales import SaleTracker
 from dealfinder.sealed import SealedScanner
 from dealfinder.topps import ToppsPricer
+from dealfinder.refresh import PriceRefresher
 from dealfinder.usage import UsageRecorder
 from dealfinder.watch_ebay import EbayWatcher
 from dealfinder.web import WebLink
@@ -48,9 +49,18 @@ def main():
     finder.on_identified = tracker.remember
     site = SiteHealth(finder.cfg)
     topps = ToppsPricer(finder.cfg, finder.ebay)
+    refresher = PriceRefresher(finder.cfg, None)
 
     def check():
+        # Members' saved prices first (a few a check), so website pages never have to buy one (dealfinder/refresh.py).
+        refresher.cfg, refresher.ppt = finder.cfg, finder._ppt()
+        try:
+            stats_refreshed = refresher.run()
+        except Exception as e:  # noqa: BLE001 - refreshing must never stop the deal finder
+            log.warning("Price refresh round skipped: %s", e)
+            stats_refreshed = 0
         stats = finder.poll_once()
+        stats["prices_refreshed"] = stats_refreshed
         if stats.get("listings", 0) == 0 and not stats.get("paused"):
             stats["idle"] = True
         # Sealed products (every few checks, see config sealed.every_n_checks), before the website sends alerts.

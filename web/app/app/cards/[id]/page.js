@@ -96,6 +96,8 @@ export default async function CardPage({ params, searchParams }) {
   const user = await requireUser(back);
   let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
   let savedOnly = false; // showing the last saved prices instead of buying a fresh lookup (a limit was reached)
+  // A card page is one lookup at most (never a burst), so a stale saved price is refreshed here; members' own cards are
+  // usually fresh already (the deal bot refreshes them in the background, dealfinder/refresh.py).
   if (product === undefined) {
     if (!await allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
     // A member's daily allowance, the website's own daily budget and today's credits left, so no one (or many

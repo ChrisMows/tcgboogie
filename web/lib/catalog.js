@@ -14,7 +14,7 @@ import { FAMILIES } from "@/lib/pokemon-families";
 
 const PPT = "https://www.pokemonpricetracker.com/api/v2";
 const HOUR = 3600 * 1000;
-const PRICE_TTL = 20 * HOUR; // keep in step with price_cache_hours in the bot's config.yaml
+const PRICE_TTL = 24 * HOUR; // once a day; keep in step with price_cache_hours in the bot's config.yaml
 const img = (id) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_in_200x200.jpg`;
 const r2 = (v) => Math.round(v * 100) / 100;
 const today = new Date();
@@ -104,7 +104,11 @@ function recordStatus(r) {
   const left = r.headers.get("x-ratelimit-daily-remaining") ?? r.headers.get("x-ratelimit-total-remaining");
   Object.assign(status, { at: new Date().toISOString(), ok: r.ok || r.status === 404, code: r.status, creditsLeft: left === null ? status.creditsLeft : Number(left) });
   if (left !== null) shareCredits(Number(left));
-  if (!status.ok) void log("prices", r.status === 429 ? "warn" : "error", `Price service answered ${r.status}${r.status === 429 ? " (out of credits or rate-limited)" : ""}`, { url: String(r.url || "").replace(/\?.*$/, ""), creditsLeft: status.creditsLeft });
+  // A 429 is logged once per pause (see ppt), not once for every card a page asked for.
+  if (!status.ok && !(r.status === 429 && status.loggedPauseUntil === pause.until)) {
+    if (r.status === 429) status.loggedPauseUntil = pause.until;
+    void log("prices", r.status === 429 ? "warn" : "error", `Price service answered ${r.status}${r.status === 429 ? (status.creditsLeft > 0 ? " (too many lookups this minute; pausing a minute)" : " (out of credits for today)") : ""}`, { url: String(r.url || "").replace(/\?.*$/, ""), creditsLeft: status.creditsLeft });
+  }
   else if (status.creditsLeft !== null && status.creditsLeft !== undefined && status.creditsLeft < 500 && !status.lowWarned) {
     status.lowWarned = true;
     void log("prices", "warn", `Price service credits running low: ${status.creditsLeft} left today`);
@@ -181,10 +185,20 @@ async function cached(key, maxAgeMs, fetcher, cachedOnly = false) {
 const PRICE_PARAMS = { includeHistory: "true", includeEbay: "true", days: "90" };
 const pptKey = (path, params) => `${PPT}${path}?${new URLSearchParams(params)}`;
 
+// The plan allows about 60 lookups a minute, shared with the deal bot. After a 429 ("slow down") every lookup pauses
+// for a minute (or the Retry-After the service gives) instead of firing the rest of a page's cards into the same
+// refusal; pages use saved prices meanwhile, and the next view catches up.
+const pause = globalThis.__tcgPptPause ?? (globalThis.__tcgPptPause = { until: 0 });
+
 async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
   const url = pptKey(path, params);
   return cached(url, maxAgeMs, async () => {
+    if (Date.now() < pause.until) throw new Error("Price service busy: pausing lookups for a minute");
     const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
+    if (r.status === 429) {
+      const wait = Number(r.headers.get("retry-after"));
+      pause.until = Date.now() + (Number.isFinite(wait) && wait > 0 ? Math.min(wait, 300) : 60) * 1000;
+    }
     recordStatus(r);
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(`Price service error ${r.status}`);
@@ -439,7 +453,7 @@ async function pricedProduct(id, { cachedOnly = false, language = "english", sal
   if (card === MISS) return undefined;
   if (card?.data) return withOurSales({ ...fromCard(Array.isArray(card.data) ? card.data[0] : card.data), ...(japanese ? { language: "japanese" } : {}) }, sales);
   if (japanese) return null;
-  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, anyAge ? Infinity : 12 * HOUR, cachedOnly);
+  const sealed = await ppt("/sealed-products", { tcgPlayerId: String(id), limit: "1" }, anyAge ? Infinity : PRICE_TTL, cachedOnly);
   if (sealed === MISS) return undefined;
   const s = Array.isArray(sealed?.data) ? sealed.data[0] : sealed?.data;
   if (s) return withSealedHistory(fromSealed(s));

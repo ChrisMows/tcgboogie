@@ -70,8 +70,11 @@ export async function systemStatus({ pingPrices = false } = {}) {
     const s = priceServiceStatus();
     const ok = r ? r.ok : s.ok;
     const credits = (r?.creditsLeft ?? s.creditsLeft);
-    add("Data", "Price service (PokemonPriceTracker)", ok === false ? "down" : credits !== null && credits < 200 ? "warn" : "ok",
-      [r ? `Test: ${r.ok ? "OK" : `failed (${r.code ?? r.detail})`} in ${r.ms} ms` : s.at ? `Last call ${ago(s.at)} (${s.code})` : "Key set · no calls since the last restart (use Test to check)",
+    // A 429 with credits left is the per-minute limit (shared with the deal bot): busy for a minute, not down.
+    const busy = ok === false && (r?.code ?? s.code) === 429 && credits > 0;
+    add("Data", "Price service (PokemonPriceTracker)", busy ? "warn" : ok === false ? "down" : credits !== null && credits < 200 ? "warn" : "ok",
+      [busy ? `Busy: too many lookups in one minute (the plan allows about 60, shared with the deal bot); lookups pause a minute and pages use saved prices · last call ${ago(s.at)}`
+        : r ? `Test: ${r.ok ? "OK" : `failed (${r.code ?? r.detail})`} in ${r.ms} ms` : s.at ? `Last call ${ago(s.at)} (${s.code})` : "Key set · no calls since the last restart (use Test to check)",
         credits !== null ? `${credits.toLocaleString()} credits left today` : null].filter(Boolean).join(" · "));
   }
 

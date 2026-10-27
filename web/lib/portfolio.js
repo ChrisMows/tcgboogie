@@ -4,9 +4,9 @@ import { creditsLow, getProduct, prefetchProducts } from "@/lib/catalog";
 import { change, marketValue, summarize } from "@/lib/collection";
 import * as store from "@/lib/store";
 
-// Products looked up live (spending API credits) per page view; the rest use cached prices or the last saved value,
-// and catch up on the next views. Keeps a 2,000-card collection from burning a day's credits in one page load.
-const MAX_LIVE_LOOKUPS = 40;
+// Products looked up live (spending API credits) per page view: only cards never looked up before (saved prices of
+// any age are used as they are; the deal bot keeps them fresh). Keeps a big import from bursting the price service.
+const MAX_LIVE_LOOKUPS = 20; // with the bot's 30 a check, stays under the plan's ~60 lookups a minute
 const STALE_MS = 20 * 3600 * 1000;
 
 /** A product trimmed to what pages and client components need. */
@@ -26,7 +26,10 @@ export async function loadProducts(ids, maxLive = MAX_LIVE_LOOKUPS) {
   const sales = await prefetchProducts(ids).catch(() => null);
   for (const id of [...new Set(ids)]) {
     try {
+      // A saved price of any age (the deal bot refreshes members' cards in the background, dealfinder/refresh.py);
+      // a live lookup only for a card that's never been looked up.
       let p = await getProduct(id, { cachedOnly: true, sales });
+      if (p === undefined) p = await getProduct(id, { cachedOnly: true, anyAge: true, sales });
       if (p === undefined && live < maxLive) { live++; p = await getProduct(id); }
       if (p) products[id] = slim(p);
     } catch { /* price service unavailable: fall back to saved values */ }

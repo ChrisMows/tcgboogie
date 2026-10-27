@@ -111,7 +111,7 @@ auto:
   search_limit_wide: 8        # retry size, used only when a full first page didn't contain the card
   catalog_cache_days: 90      # how long a card-number lookup is reused (the catalog rarely changes)
   not_found_cache_days: 3     # how long "no card with that number" is reused (new sets get added)
-  price_cache_hours: 20       # how long a card's prices are reused (TCGplayer and eBay data update about daily)
+  price_cache_hours: 24       # how long a card's prices are reused: once a day (TCGplayer and eBay data update daily)
 
 red_flags:
   early_bid:                  # flag deals whose price is low only because bidding has barely started
@@ -239,6 +239,16 @@ usage:
   alerts: true
   alert_at: [75, 90]
   pace_warning: true
+
+# Members' saved prices, refreshed in the background (dealfinder/refresh.py) so website pages never have to buy a
+# fresh price while someone waits (and never burst past the price service's ~60 lookups a minute). Every card members
+# own, wishlist or watch, most valuable first, once its saved copy is older than max_age_hours. ~3 credits each, out of
+# the same paced budget as deal lookups.
+refresh:
+  enabled: true
+  per_check: 10
+  daily_lookups: 3000
+  max_age_hours: 22          # a little under the 24-hour price life, so pages never find one out of date
 
 # Topps Pokémon cards (1999-2004, not TCG cards): the typical eBay asking price of each card for the website's Topps
 # catalog, one eBay search per card every refresh_days. See dealfinder/topps.py.
