@@ -126,7 +126,7 @@ function features(free, premium, sms) {
     { area: "Running the site", name: "Premium billing", link: "/app/admin", grows: "member", vendors: ["stripe"],
       what: `Subscriptions at $${premium.price} a month${premium.trialDays ? `, ${premium.trialDays}-day free trial` : ""}.`, free: "—", premium: "✓" },
     { area: "Running the site", name: "Usage and warnings", link: "/app/admin?tab=usage", grows: "shared", vendors: ["discord", "vps"],
-      what: "Admin -> Usage, and Discord DMs at 75% and 90% of any limit.", free: "—", premium: "—" },
+      what: "Admin -> Usage, and Discord DMs to you at 75% and 90% of any limit, for each new member and for Premium trials, upgrades, cancels and ends.", free: "—", premium: "—" },
     { area: "Running the site", name: "Website and database", link: "/app/admin", grows: "shared", vendors: ["hostinger", "vps"],
       what: "tcgboogie.com on Hostinger; the database, bot and backups on the VPS.", free: "—", premium: "—" },
   ];

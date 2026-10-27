@@ -1,6 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, count, eq, inArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
@@ -336,6 +336,24 @@ async function syncSubscription(subscriptionId, userId) {
   await applySubscription(sub, userId);
 }
 
+/** A Discord DM to the admin about a Premium change worth knowing: a new trial or subscriber, a cancel, an end. */
+async function tellAdmin(u, status, cancelling, renews) {
+  const was = u.subscriptionStatus || "none";
+  const when = renews ? longDate(renews.getTime()) : null;
+  const msg = status === "trialing" && was !== "trialing" ? ["🆓 Premium trial started", `${u.email}${when ? ` · trial ends ${when}` : ""}`]
+    : status === "active" && was === "trialing" ? ["💳 Trial converted: now paying", u.email]
+      : status === "active" && !PAID.includes(was) ? ["💎 New Premium member", u.email]
+        : cancelling && !u.cancelAtPeriodEnd && PAID.includes(status) ? ["⚠️ Premium cancelling", `${u.email}${when ? ` · ends ${when}` : ""}`]
+          : !PAID.includes(status) && PAID.includes(was) ? ["👋 Premium ended", `${u.email} is back on Free`]
+            : status === "past_due" && was !== "past_due" ? ["❗ Premium payment failed", `${u.email} · Stripe will retry`] : null;
+  if (!msg) return;
+  try {
+    const [{ n }] = await db.select({ n: count() }).from(users).where(inArray(users.subscriptionStatus, PAID));
+    const { discordAdmins } = await import("@/lib/admin-alerts");
+    await discordAdmins({ title: msg[0], description: `${msg[1]}\n${n} on Premium now (paying or in trial)`, url: `${SITE}/app/admin?tab=members` });
+  } catch { /* the DM is a nice-to-have */ }
+}
+
 async function applySubscription(sub, userId) {
   let id = userId || sub.metadata?.userId;
   if (!id) {
@@ -371,6 +389,7 @@ async function applySubscription(sub, userId) {
     await log("payments", sub.status === "past_due" || sub.status === "unpaid" ? "warn" : "info",
       `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${cancelling ? " (cancels at month end)" : ""}; plan ${tier}`,
       { subscription: sub.id, renews: fields.currentPeriodEnd?.toISOString() ?? null }, id);
+    await tellAdmin(u, sub.status, cancelling, fields.currentPeriodEnd);
   } else {
     await db.update(users).set(fields).where(eq(users.id, id)); // e.g. the renewal date moved on
   }

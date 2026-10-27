@@ -29,6 +29,18 @@ if (emailConfigured()) {
     },
   });
 }
+/** A Discord DM to the admin when someone joins (Admin -> Members has the details). Never throws. */
+async function tellAdminNewMember(user, provider) {
+  try {
+    const { count } = await import("drizzle-orm");
+    const [{ n }] = await db.select({ n: count() }).from(schema.users);
+    const { discordAdmins } = await import("@/lib/admin-alerts");
+    const site = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
+    await discordAdmins({ title: "🎉 New member joined", description: `${user?.email || "Someone"} signed up with ${provider === "google" ? "Google" : provider === "discord" ? "Discord" : "an email link"}\n${n} members now`,
+      url: `${site}/app/admin?tab=members${user?.id ? `&user=${encodeURIComponent(user.id)}` : ""}` });
+  } catch { /* the DM is a nice-to-have */ }
+}
+
 /** A provider's profile picture URL from its sign-in profile, or null. */
 function providerImage(provider, profile) {
   if (!profile) return null;
@@ -69,6 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile, isNewUser }) {
       await saveProviderImage(user?.id, account?.provider, profile);
       await log("signin", "info", `${isNewUser ? "New member joined" : "Signed in"} with ${account?.provider || "email"}: ${user?.email || "?"}`, null, user?.id);
+      if (isNewUser) await tellAdminNewMember(user, account?.provider);
     },
     async linkAccount({ user, account, profile }) {
       await saveProviderImage(user?.id, account?.provider, profile);
