@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { defaultFilters } from "@/lib/filters";
 import { PLANS } from "@/lib/plans";
@@ -266,7 +266,7 @@ export async function deleteWatch(userId, id) {
 }
 
 // ---------- collection tracker ----------
-const { binders, collectionItems, portfolioSnapshots } = schema;
+const { binders, collectionItems, portfolioSnapshots, itemValueDaily } = schema;
 const DEMO_ITEMS = [
   { productId: "246723", productType: "card", name: "Umbreon VMAX (Alternate Art Secret)", setName: "Evolving Skies", number: "215/203", kind: "graded", printing: "Holofoil", grader: "PSA", grade: "10", purchasePrice: 4100, purchaseDate: "2025-11-02", binder: 1 },
   { productId: "517045", productType: "card", name: "Charizard ex", setName: "Scarlet & Violet 151", number: "199/165", kind: "raw", printing: "Holofoil", condition: "Near Mint", quantity: 2, purchasePrice: 240, purchaseDate: "2025-06-14", binder: 1 },
@@ -341,6 +341,28 @@ export async function updateItemValues(userId, values) {
   const rows = sql.join(values.map((v) => sql`(${Number(v.id)}::integer, ${Number(v.unitValue)}::double precision)`), sql`, `);
   await db.execute(sql`update ${collectionItems} set unit_value = v.val, value_updated_at = now()
     from (values ${rows}) as v(id, val) where ${collectionItems.userId} = ${userId} and ${collectionItems.id} = v.id`);
+}
+
+/** Today's value of each graded copy (its % change for any range, see itemValueDaily in lib/db/schema.js). */
+export async function recordItemValues(userId, items) {
+  if (isDemo(userId) || !db) return;
+  const day = new Date().toISOString().slice(0, 10);
+  const rows = items.filter((it) => it.kind === "graded" && it.list === "owned" && Number.isFinite(Number(it.unitValue ?? it.customValue)))
+    .map((it) => ({ itemId: Number(it.id), day, value: Number(it.unitValue ?? it.customValue) }));
+  if (!rows.length) return;
+  await db.insert(itemValueDaily).values(rows)
+    .onConflictDoUpdate({ target: [itemValueDaily.itemId, itemValueDaily.day], set: { value: sql`excluded.value` } });
+}
+
+/** Saved daily values for these items over the last ~13 months: { itemId: [{ day, value }] } oldest first. */
+export async function itemHistories(itemIds) {
+  if (!db || !itemIds.length) return {};
+  const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+  const rows = await db.select().from(itemValueDaily)
+    .where(and(inArray(itemValueDaily.itemId, itemIds.map(Number)), sql`${itemValueDaily.day} >= ${since}`)).orderBy(asc(itemValueDaily.day));
+  const out = {};
+  for (const r of rows) (out[r.itemId] ||= []).push({ day: String(r.day).slice(0, 10), value: r.value });
+  return out;
 }
 
 export async function deleteItem(userId, id) {

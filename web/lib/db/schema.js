@@ -179,6 +179,14 @@ export const portfolioSnapshots = pgTable("portfolio_snapshot", {
   cost: doublePrecision("cost").notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.day] })]);
 
+// Each graded copy's value per day (raw cards and sealed have the price service's daily history instead), so a slab's
+// % change works for any range: saved on collection visits and by the daily job (lib/snapshots.js).
+export const itemValueDaily = pgTable("item_value_daily", {
+  itemId: integer("item_id").notNull().references(() => collectionItems.id, { onDelete: "cascade" }),
+  day: date("day").notNull(),
+  value: doublePrecision("value").notNull(),
+}, (t) => [primaryKey({ columns: [t.itemId, t.day] })]);
+
 // Price-service responses shared by every member, so a card is looked up once a day no matter how many people own it.
 export const catalogCache = pgTable("catalog_cache", {
   key: text("key").primaryKey(),

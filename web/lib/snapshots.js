@@ -29,6 +29,7 @@ export async function recordDailySnapshots(now = new Date()) {
       const valued = items.map((it) => ({ ...it, unitValue: marketValue(products[it.productId], it) ?? it.unitValue }));
       const s = summarize(valued);
       await store.recordSnapshot(userId, Math.round(s.value * 100) / 100, Math.round(s.cost * 100) / 100);
+      await store.recordItemValues(userId, valued); // graded copies, for their own % changes
       saved++;
     } catch (e) {
       failed++;

@@ -294,6 +294,13 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 
 .compare-all { display: flex; justify-content: center; margin: 28px auto 0; }
 
+/* Card page price change with a range switch (components/PriceRangeChange.js) */
+.price-range { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 4px; }
+.price-range-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; overflow: visible; }
+.price-range-seg button { padding: 3px 9px; font-size: 12px; border-right: 0; border-radius: 8px; }
+.price-range-val { font-size: 14px; font-weight: 700; }
+.price-range-val .muted { font-weight: 400; font-size: 12.5px; }
+
 /* Discord alerts that can't reach the member (components/DiscordReachNotice.js) */
 .discord-reach { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; }
 .discord-reach > div:first-child { flex: 1 1 320px; }
@@ -650,6 +657,7 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .tile-meta { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 4px; }
 .tile-value { font: 600 17px var(--font-head), sans-serif; margin-top: 2px; }
+.tile-value .chg { margin-left: 6px; font: 600 11.5px var(--font-body, inherit), sans-serif; vertical-align: 2px; }
 .tile-actions { display: flex; gap: 6px; padding: 0 10px 10px; }
 .tile-actions .btn { flex: 1; padding: 6px 8px; }
 .item-list { display: grid; gap: 8px; container-type: inline-size; }

@@ -14,7 +14,8 @@ import ValueChart from "@/components/ValueChart";
 import { getProduct } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
-import { slim } from "@/lib/portfolio";
+import { rangeChanges, slim } from "@/lib/portfolio";
+import PriceRangeChange from "@/components/PriceRangeChange";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
@@ -115,7 +116,6 @@ export default async function CardPage({ params, searchParams }) {
   }));
   const watch = watches.find((w) => w.productId === p.id);
   const now = p.type === "sealed" ? p.prices?.market : nmPrice(p);
-  const c7 = change(p, 7), c30 = change(p, 30);
   const printings = p.type === "card" ? Object.entries(p.prices || {}) : [];
   // Graded: PSA, then CGC, BGS, SGC, TAG; highest grade first. Thin/stale data goes in its own, clearly marked group.
   const gradeSort = ([a], [b]) => {
@@ -220,10 +220,7 @@ export default async function CardPage({ params, searchParams }) {
           ) : <div className="hero-price">
             <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
             <b>{money(now)}</b>
-            <span className="small">
-              {c7 !== null && <span className={c7 >= 0 ? "up" : "down"}>{c7 >= 0 ? "▲" : "▼"} {pct(c7)} 7d</span>}
-              {c30 !== null && <span className={c30 >= 0 ? "up" : "down"} style={{ marginLeft: 12 }}>{c30 >= 0 ? "▲" : "▼"} {pct(c30)} 30d</span>}
-            </span>
+            <PriceRangeChange changes={rangeChanges(p)} />
           </div>}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
@@ -242,7 +239,7 @@ export default async function CardPage({ params, searchParams }) {
       <div className="card-detail-grid">
         <div className="panel" style={{ marginBottom: 0 }}>
           <ValueChart points={(p.history || []).map((h) => ({ day: h.date, value: h.price }))} historyDays={null}
-            label={isSealed ? "Market price" : "Near Mint market price"} ranges={[["7D", 7], ["30D", 30], ["90D", 90]]} height={160} />
+            label={isSealed ? "Market price" : "Near Mint market price"} height={160} shared />
         </div>
 
         <div className="panel" style={{ marginBottom: 0 }}>

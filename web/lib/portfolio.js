@@ -34,7 +34,20 @@ export async function loadProducts(ids, maxLive = MAX_LIVE_LOOKUPS) {
 }
 
 const RANGES = [1, 7, 30, 90, 365];
-function rangeChanges(p) {
+/** A graded copy's change per range from its own saved daily values (store.itemHistories); null without history. */
+function itemRangeChanges(hist, now) {
+  const today = new Date().toISOString().slice(0, 10);
+  const past = (hist || []).filter((h) => h.day < today && h.value > 0);
+  if (!past.length || !(now > 0)) return null;
+  const at = (d) => {
+    const cutoff = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+    const base = [...past].reverse().find((h) => h.day <= cutoff);
+    return base ? (now - base.value) / base.value : null;
+  };
+  return Object.fromEntries([...RANGES.map((d) => [d, d === 1 ? (now - past[past.length - 1].value) / past[past.length - 1].value : at(d)]), [0, (now - past[0].value) / past[0].value]]);
+}
+
+export function rangeChanges(p) {
   const n = (p?.history || []).filter((h) => Number.isFinite(h.price)).length;
   if (n < 2) return null;
   return Object.fromEntries([...RANGES.map((d) => [d, n > d ? change(p, d) : null]), [0, change(p, n - 1)]]);
@@ -46,6 +59,7 @@ export async function loadCollection(user) {
   const products = await loadProducts(items.map((it) => it.productId));
   const now = Date.now();
   await loadPictures();
+  const hist = await store.itemHistories(items.filter((it) => it.kind === "graded" && it.list === "owned").map((it) => it.id)).catch(() => ({}));
   const enriched = [];
   const fresh = []; // values to save, in one database write
   for (const it of items) {
@@ -64,8 +78,9 @@ export async function loadCollection(user) {
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
       change7: it.kind === "graded" ? null : change(p, 7),
       // Each chart range's price change (key 0 = all the history we have), so the list follows the chart's range.
-      // Only when the card's history covers the range: no "1Y" figure from 90 days of prices. Graded copies have none.
-      changes: it.kind === "graded" ? null : rangeChanges(p),
+      // Only when the history covers the range: no "1Y" figure from 90 days of prices. Graded copies use their own
+      // saved daily values (they have no price-service history).
+      changes: it.kind === "graded" ? itemRangeChanges(hist[it.id], it.unitValue ?? it.customValue) : rangeChanges(p),
       createdAt: String(it.createdAt),
       valueUpdatedAt: it.valueUpdatedAt ? String(it.valueUpdatedAt) : null,
     });
@@ -74,6 +89,7 @@ export async function loadCollection(user) {
   const summary = summarize(owned);
   await Promise.all([
     store.updateItemValues(user.id, fresh),
+    store.recordItemValues(user.id, items).catch(() => {}), // graded copies' values for today (their % changes)
     store.recordSnapshot(user.id, Math.round(summary.value * 100) / 100, Math.round(summary.cost * 100) / 100),
   ]);
   const snapshots = (await store.listSnapshots(user.id)).map((s) => ({ day: String(s.day).slice(0, 10), value: s.value, cost: s.cost }));

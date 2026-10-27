@@ -162,10 +162,10 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className="tile-meta">{it.setName}{it.number ? ` · ${it.number.split("/")[0]}` : ""}</div>
                 <div className="tile-foot">
                   <span className="chip-mini">{itemLabel(it)}</span>
-                  <Change it={it} />
                 </div>
                 <div className={`tile-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
                   {money(unitValue(it) !== null ? unitValue(it) * (wishlist ? 1 : it.quantity) : null)}
+                  <Change it={it} />
                   {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
                 </div>
               </Link>
