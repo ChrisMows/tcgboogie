@@ -106,7 +106,7 @@ function features(free, premium, sms) {
       what: "Download the collection as a CSV.", free: yes(free.collectionExport), premium: yes(premium.collectionExport) },
 
     { area: "Cards", name: "Card pages", link: "/app/collection", grows: "card", vendors: ["ppt", "ebay", "epn"],
-      what: "Prices by condition, graded sales and value history for any card.", free: "✓", premium: "✓" },
+      what: "Prices by condition, graded sales and value history for any card. New lookups: 400 a day per member, 2,000 a day site-wide, saved prices when under 1,000 credits are left.", free: "✓", premium: "✓" },
     { area: "Cards", name: "Report a sale", link: "/app/collection", grows: "use", vendors: ["ebay"],
       what: "A member pastes an eBay sale we're missing; we verify it with eBay.", free: yes(free.reportSales, "15 a day"), premium: yes(premium.reportSales, "15 a day") },
     { area: "Cards", name: "Request a card", link: "/app/collection", grows: "use", vendors: ["ppt"],
@@ -115,13 +115,13 @@ function features(free, premium, sms) {
       what: "Finds a picture on TCGdex, or DMs you to add one.", free: "30 a day", premium: "30 a day" },
 
     { area: "Email and help", name: "Sign-in links", link: "/login", grows: "member", vendors: ["resend"],
-      what: "Passwordless email sign-in. 10% of the daily email limit is always kept for these.", free: "✓", premium: "✓" },
+      what: "Passwordless email sign-in. 10% of the daily email limit is always kept for these; 4 links an hour per address, 20 a day per IP.", free: "✓", premium: "✓" },
     { area: "Email and help", name: "Email recap", link: "/app/account#alerts", grows: "member", vendors: ["resend", "ppt"],
       what: "Collection value, biggest movers, deals and alerts.", free: cap1(free.emailRecap || "monthly"), premium: cap1(premium.emailRecap || "monthly") },
     { area: "Email and help", name: "Release emails", link: "/app/admin?tab=releases", grows: "member", vendors: ["resend"],
       what: "What's new, sent from Admin -> Release emails to members with product updates on.", free: "✓", premium: "✓" },
     { area: "Email and help", name: "Boogie Bot", link: "/app/admin?tab=helper", grows: "use", vendors: ["claude"],
-      what: "The site helper that answers members' questions.", free: "✓", premium: "✓" },
+      what: "The site helper that answers members' questions (visitors 8 a day per IP; 2,000 a day site-wide).", free: "25 a day", premium: "80 a day" },
 
     { area: "Running the site", name: "Premium billing", link: "/app/admin", grows: "member", vendors: ["stripe"],
       what: `Subscriptions at $${premium.price} a month${premium.trialDays ? `, ${premium.trialDays}-day free trial` : ""}.`, free: "—", premium: "✓" },

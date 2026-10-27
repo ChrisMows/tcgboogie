@@ -123,6 +123,26 @@ function shareCredits(remaining) {
     .onConflictDoUpdate({ target: schema.appSettings.key, set: { value, updatedAt: new Date() } }).catch(() => {});
 }
 
+/**
+ * Are today's price credits nearly gone (under `floor` left, by the website's last lookup or the bot's shared
+ * count)? Then card pages and collections use saved prices instead of buying new ones, and the last credits go to
+ * price alerts. Read at most once a minute.
+ */
+const low = globalThis.__tcgCreditsLow ?? (globalThis.__tcgCreditsLow = { at: 0, left: null });
+export async function creditsLow(floor = 1000) {
+  if (!catalogLive()) return false;
+  if (db && Date.now() - low.at > 60000) {
+    low.at = Date.now();
+    try {
+      const [row] = await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, "ppt_credits")).limit(1);
+      const v = row?.value;
+      if (v && Number.isFinite(Number(v.remaining)) && Date.now() - new Date(v.at).getTime() < 3 * 3600000) low.left = Number(v.remaining);
+    } catch { /* keep the last reading */ }
+  }
+  const lefts = [status.creditsLeft, low.left].filter((x) => Number.isFinite(x));
+  return lefts.length > 0 && Math.min(...lefts) < floor;
+}
+
 /** Admin status check: one tiny live request (1 credit). */
 export async function pingPriceService() {
   if (!catalogLive()) return { ok: false, detail: "No PPT_API_KEY set" };

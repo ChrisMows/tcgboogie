@@ -25,6 +25,15 @@ if (emailConfigured()) {
     maxAge: 24 * 60 * 60,
     options: {},
     async sendVerificationRequest({ identifier, url }) {
+      // A few links per address an hour and per IP a day, so nobody can flood inboxes (or burn our email quota and
+      // sending reputation) by asking for links over and over. Over the limit, the login page asks them to wait.
+      const { allow } = await import("@/lib/rate-limit");
+      let ip = "unknown";
+      try { const h = await (await import("next/headers")).headers(); ip = (h.get("x-forwarded-for") || "").split(",")[0].trim() || h.get("x-real-ip") || "unknown"; } catch { /* no request */ }
+      if (!await allow("signinEmail", String(identifier).toLowerCase()) || !await allow("signinIp", ip)) {
+        await log("signin", "warn", `Sign-in link refused (too many requests): ${identifier}`, { ip });
+        throw new Error("Too many sign-in links requested");
+      }
       await sendLoginEmail(identifier, url);
     },
   });

@@ -25,6 +25,10 @@ export async function POST(req) {
       : "You've asked a lot of questions today, so the helper is taking a break until tomorrow. The [FAQ](/faq) covers most things, or email support@tcgboogie.com.";
     return NextResponse.json({ answer, limited: true });
   }
+  // Everyone together: a cap on the day's questions, so many accounts or IP addresses can't run up the bill.
+  if (!await allow("helperSite", "site")) {
+    return NextResponse.json({ answer: "Boogie Bot has answered a lot of questions today and is resting until tomorrow. The [FAQ](/faq) covers most things, or email support@tcgboogie.com.", limited: true });
+  }
   const page = String(body.page || "/").split(/[?#]/)[0].slice(0, 120);
   return NextResponse.json(await askHelper({ messages, user, page }));
 }

@@ -30,6 +30,13 @@ export const LIMITS = {
   helperFree: { max: 25, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Free members
   helperPremium: { max: 80, windowMs: 24 * 60 * 60 * 1000, persist: true }, // site helper questions, Premium members
   appraise: { max: 40, windowMs: 24 * 60 * 60 * 1000, persist: true }, // photo appraiser photos (about a cent each, plus price lookups)
+  // Abuse limits: sign-in emails (each one spends email quota and sending reputation), card pages that buy a price
+  // lookup, and site-wide caps so many accounts or IP addresses together can't run up the bill (key "site").
+  signinEmail: { max: 4, windowMs: 60 * 60 * 1000, persist: true }, // sign-in links per email address
+  signinIp: { max: 20, windowMs: 24 * 60 * 60 * 1000, persist: true }, // sign-in links per IP address
+  cardPageDay: { max: 400, windowMs: 24 * 60 * 60 * 1000, persist: true }, // card pages that need a price lookup, per member
+  siteLookups: { max: 2000, windowMs: 24 * 60 * 60 * 1000, persist: true }, // the website's own new card lookups (~3 credits each)
+  helperSite: { max: 2000, windowMs: 24 * 60 * 60 * 1000, persist: true }, // Boogie Bot questions, everyone together (~$0.002 each)
 };
 
 /** In memory: a sliding window per bucket and member. */

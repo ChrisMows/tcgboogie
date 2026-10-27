@@ -1,6 +1,6 @@
 import "server-only";
 import { loadPictures, pictureFor } from "@/lib/card-images";
-import { getProduct, prefetchProducts } from "@/lib/catalog";
+import { creditsLow, getProduct, prefetchProducts } from "@/lib/catalog";
 import { change, marketValue, summarize } from "@/lib/collection";
 import * as store from "@/lib/store";
 
@@ -20,6 +20,7 @@ export const slim = (p) => p && {
 
 /** Fetch products for a list of IDs, at most `maxLive` of them from the API; the rest only if already cached. */
 export async function loadProducts(ids, maxLive = MAX_LIVE_LOOKUPS) {
+  if (maxLive && await creditsLow()) maxLive = 0; // today's credits nearly gone: saved prices (lib/catalog.js)
   const products = {};
   let live = 0;
   const sales = await prefetchProducts(ids).catch(() => null);

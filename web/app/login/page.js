@@ -9,6 +9,7 @@ export async function generateMetadata({ searchParams }) {
 }
 
 const ERRORS = {
+  EmailSignin: "We couldn't send a sign-in link just now. Try again in a few minutes (if you've asked for several, wait an hour), or sign in with Google or Discord.",
   email: "Enter a valid email address.",
   unavailable: "That sign-in option isn't available yet.",
   OAuthAccountNotLinked: "That email is already used with a different sign-in method. Sign in with that one first, then connect this one from your account page.",

@@ -11,7 +11,7 @@ import Source from "@/components/Source";
 import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
-import { getProduct } from "@/lib/catalog";
+import { creditsLow, getProduct } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
 import { rangeChanges, slim } from "@/lib/portfolio";
@@ -95,9 +95,18 @@ export default async function CardPage({ params, searchParams }) {
   const back = `/app/cards/${encodeURIComponent(id)}${sp?.deal ? `?deal=${encodeURIComponent(sp.deal)}${language === "japanese" ? "&lang=japanese" : ""}${sp?.from === "alert" ? "&from=alert" : ""}` : ""}`;
   const user = await requireUser(back);
   let product = await getProduct(id, { cachedOnly: true, language }).catch(() => null);
+  let savedOnly = false; // showing the last saved prices instead of buying a fresh lookup (a limit was reached)
   if (product === undefined) {
     if (!await allow("cardPage", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
-    try { product = await getProduct(id, { language }); } catch { product = null; }
+    // A member's daily allowance, the website's own daily budget and today's credits left, so no one (or many
+    // accounts together) can spend the price credits deal-finding needs.
+    if (await allow("cardPageDay", user.id) && await allow("siteLookups", "site") && !await creditsLow()) {
+      try { product = await getProduct(id, { language }); } catch { product = null; }
+    } else {
+      savedOnly = true;
+      product = await getProduct(id, { cachedOnly: true, anyAge: true, language }).catch(() => null);
+      if (product === undefined) return <div className="notice warn">We can&apos;t look up new card prices right now. Please try this card again tomorrow.</div>;
+    }
   }
   if (product === null) notFound();
   const p = slim(product);
@@ -173,6 +182,7 @@ export default async function CardPage({ params, searchParams }) {
         {p.name.replace(/\s*\(.*\)$/, "")}
       </div>
 
+      {savedOnly && <div className="notice">Showing the last prices we saved for this card. Fresh prices will be back shortly.</div>}
       <div className="card-hero">
         <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
         <div className="card-hero-info">
