@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { XCheckout } from "@/components/XEvents";
 import { DISCORD_INVITE } from "@/lib/social";
 import RevealSetting from "@/components/RevealSetting";
 import { enabledProviders } from "@/auth";
@@ -93,6 +94,7 @@ export default async function Account({ searchParams }) {
 
   return (
     <>
+      {params?.billing === "welcome" && <XCheckout trial={trialing} subscriptionId={user.stripeSubscriptionId} price={user.plan.price ?? PLANS.premium.price} />}
       <div className="page-head">
         <div>
           <h1>Settings</h1>

@@ -7,6 +7,8 @@ import { useEffect } from "react";
 // Event IDs come from X's Events Manager for pixel ri3dv.
 export const X_EVENTS = {
   signup: "tw-ri3dv-ri4cm", // Sign up: a new account
+  purchase: "tw-ri3dv-ri4co", // Purchase: Premium paid straight away (no trial), with its price
+  trial: null, // Start trial: the 7-day Premium trial (add its event ID from X's Events Manager)
 };
 
 /** Fire an X event once per key (remembered on this device), when X's pixel has loaded. */
@@ -29,5 +31,18 @@ export default function XEvents({ userId, newMember }) {
   useEffect(() => {
     if (userId && newMember) fireOnce("signup", userId);
   }, [userId, newMember]);
+  return null;
+}
+
+/**
+ * Back from Stripe checkout (Settings, "Welcome to Premium"): Purchase with the price, or Start trial, once per
+ * subscription. The first charge after a trial happens later on Stripe's side, where no browser can report it.
+ */
+export function XCheckout({ trial, subscriptionId, price }) {
+  useEffect(() => {
+    if (!subscriptionId) return;
+    if (trial) fireOnce("trial", subscriptionId);
+    else fireOnce("purchase", subscriptionId, { value: Number(price), currency: "USD" });
+  }, [trial, subscriptionId, price]);
   return null;
 }
