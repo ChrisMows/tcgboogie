@@ -6,7 +6,7 @@ export default function Privacy() {
   return (
     <div className="wrap doc">
       <h1>Privacy</h1>
-      <p className="updated">Last updated October 26, 2026</p>
+      <p className="updated">Last updated October 28, 2026</p>
       <p>
         This page explains what TCG Boogie collects, why, who it&apos;s shared with, and how to remove it. We keep it to the
         minimum needed to run the service.
@@ -38,17 +38,23 @@ export default function Privacy() {
         <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
         <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; works out the columns of an import file we don&apos;t recognise, from its first few rows; answers the questions you ask Boogie Bot, our site helper; and, when an admin asks, sorts the ideas you send us into themes. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
         <li><b>PokemonPriceTracker</b>, our price service: the card searches and card lookups that show prices. It doesn&apos;t get your account details.</li>
+        <li><b>X (Twitter)</b>, for our ads on X: its advertising pixel tells X which pages were visited from our ads, so we can see which ads work and show ads to people who visited. It doesn&apos;t get your name, email or collection.</li>
       </ul>
-      <p>We don&apos;t sell your data or share it with advertisers.</p>
+      <p>We don&apos;t sell your data. Apart from X&apos;s pixel above, we don&apos;t share anything with advertisers.</p>
 
       <h2>Cookies and browser storage</h2>
       <p>
         We use essential cookies only: one to keep you signed in, and short-lived ones for security while you connect an
         account. Your browser also remembers a few display choices on your device (such as hiding your collection value or
-        grid vs list view); those never leave your device. No advertising or tracking cookies.
+        grid vs list view); those never leave your device.
       </p>
       <p>
-        We count visits ourselves, without cookies or outside analytics: each page view adds one to a daily total, and
+        One exception: the X (Twitter) advertising pixel sets its own cookies to measure our ads on X and to show our ads
+        to people who visited. You can turn this off by blocking third-party cookies in your browser, with a tracker
+        blocker, or in X&apos;s own settings under Privacy and safety → Ads preferences.
+      </p>
+      <p>
+        Apart from that pixel, we count visits ourselves, without cookies or outside analytics: each page view adds one to a daily total, and
         to count visitors we use a code made from your IP address and browser that changes every day and is never stored
         with anything that identifies you. Your browser also remembers which site or campaign link first brought you
         here; when you create an account we record that source once, as a total, so we know which posts work.

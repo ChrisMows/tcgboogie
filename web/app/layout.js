@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Script from "next/script";
 import MobileMenu from "@/components/MobileMenu";
 import NavProgress from "@/components/NavProgress";
 import HelperChat from "@/components/HelperChat";
@@ -67,6 +68,11 @@ export default async function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('tcgb-hide-values')==='1')document.documentElement.classList.add('hide-values')}catch(e){}" }} />
       </head>
       <body>
+        {/* X conversion tracking base code (pixel ri3dv): page views for X ads. Allowed in next.config.mjs's CSP. */}
+        <Script id="x-pixel" strategy="afterInteractive">{`!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
+},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
+a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
+twq('config','ri3dv');`}</Script>
         <Suspense fallback={null}><NavProgress /></Suspense>
         <Suspense fallback={null}><PageViews signedIn={Boolean(user)} /></Suspense>
         <HelperChat signedIn={Boolean(user)} />

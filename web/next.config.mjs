@@ -1,12 +1,13 @@
-// Content-Security-Policy: only run code from this site, only load images from the services we use, never be framed.
+// Content-Security-Policy: only run code from this site (and X's ad pixel, app/layout.js), load images over https, never be framed.
 // (Next.js needs inline scripts for its page data; the dev server also needs eval, so the policy is production-only.)
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://static.ads-twitter.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tcgplayer-cdn.tcgplayer.com https://*.tcgplayer.com https://i.ebayimg.com https://cdn.pokemonpricetracker.com https://cdn.discordapp.com https://*.googleusercontent.com",
+  // Any https image: card pictures come from TCGplayer, eBay, TCGdex, Discord, Google and links admins paste in.
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://static.ads-twitter.com https://analytics.twitter.com https://*.twitter.com https://*.x.com https://t.co",
   "frame-ancestors 'none'",
   "form-action 'self' https://accounts.google.com https://discord.com https://checkout.stripe.com https://billing.stripe.com",
   "base-uri 'self'",
