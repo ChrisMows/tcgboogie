@@ -1,4 +1,5 @@
 import DiscordReachNotice from "@/components/DiscordReachNotice";
+import XEvents from "@/components/XEvents";
 import PackReveal from "@/components/PackReveal";
 import SideNav from "@/components/SideNav";
 import { catalogLive } from "@/lib/catalog";
@@ -16,6 +17,8 @@ export default async function MemberLayout({ children }) {
           <div className="notice warn">Preview: card search, sets and prices use a small sample catalog until the price service is connected.</div>
         )}
         <DiscordReachNotice user={user} />
+        {/* X ads: Sign up, once, on a new member's first pages (components/XEvents.js). */}
+        <XEvents userId={user.demo ? null : user.id} newMember={Boolean(user.createdAt) && Date.now() - new Date(user.createdAt).getTime() < 30 * 60000} />
         {children}
       </section>
       <PackReveal />

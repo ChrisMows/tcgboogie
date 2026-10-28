@@ -42,7 +42,7 @@ function vendors(on) {
     { key: "push", name: "Web push", what: "Phone and computer notifications", price: "Free", limit: "—", status: "live" },
     { key: "twilio", name: "Twilio", what: "Text message alerts", price: "Per text", limit: "Per member daily cap (SMS_DEALS_PER_DAY)", status: on.sms ? "live" : "off" },
     { key: "stripe", name: "Stripe", what: "Premium subscriptions and the free trial", price: "Stripe's fee per payment", limit: "—", status: on.stripe ? "live" : "off" },
-    { key: "x", name: "X (Twitter) API", what: "Posting Market Movers and release notes", price: "Per post", limit: "—", status: on.x ? "live" : "off" },
+    { key: "x", name: "X (Twitter) API", what: "Posting Market Movers and release notes; the X ad pixel (ri3dv) and its Sign up / Start trial / Purchase events", price: "Per post (pixel free)", limit: "—", status: on.x ? "live" : "off" },
     { key: "tcgdex", name: "TCGdex", what: "Pictures for cards TCGplayer has none for", price: "Free", limit: "—", status: "live" },
     { key: "epn", name: "eBay Partner Network", what: "Commission on eBay links (earns money)", price: "Pays you", limit: "—", status: "live" },
   ];
