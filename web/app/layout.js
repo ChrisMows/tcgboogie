@@ -127,7 +127,7 @@ twq('config','ri3dv');`}</Script>
               ) : (
                 <>
                   <Link href="/login" className="login-link">Log in</Link>
-                  <Link href="/login?mode=signup" className="btn primary">Get started free ↗</Link>
+                  <Link href="/login?mode=signup" className="btn primary header-cta"><span className="cta-long">Get started free ↗</span><span className="cta-short">Start free</span></Link>
                 </>
               )}
             </div>

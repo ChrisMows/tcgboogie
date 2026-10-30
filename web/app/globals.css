@@ -1990,3 +1990,10 @@ body:has(.install-hint) .helper-fab { display: none; }
 /* Card page chart: the price change sits to the right of the price, not under it */
 .hero-chart .chart-head > div:first-child { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
 .hero-chart .chart-head > div:first-child > :first-child { grid-column: 1 / -1; }
+/* Signed-out header on phones: a shorter "Start free" button so the header fits (it was pushing the page wider than the screen) */
+.header-cta .cta-short { display: none; }
+@media (max-width: 420px) {
+  .header-cta .cta-long { display: none; }
+  .header-cta .cta-short { display: inline; }
+  .header-actions .header-cta { padding: 11px 14px; }
+}
