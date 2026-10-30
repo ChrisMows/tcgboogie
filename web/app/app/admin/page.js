@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ebaySearch } from "@/lib/ebay-link";
 import { connectStripe, grantComp, moveSubscribers, removeMemberPhone, renameMember, revokeComp, sendReleaseEmail, setPlan, testAlert, testRecap, testReleaseEmail } from "./actions";
 import { RELEASES } from "@/lib/release-notes";
 import { releaseEmailStatus } from "@/lib/release-email";
@@ -563,7 +564,9 @@ async function Sales({ ok, err }) {
                       <label className="post-check-row">
                         <span>Previous high</span>
                         <span className="post-check-money">$<input name="prevHigh" type="number" step="0.01" min="0.01" defaultValue={x.prevHigh} /></span>
-                        <span className="small">from {x.sales} earlier sales{x.productId ? <> · <a href={`/app/cards/${x.productId}`} target="_blank" rel="noopener noreferrer">card page ↗</a></> : null}</span>
+                        <span className="small">from {x.sales} earlier sales{x.productId ? <> · <a href={`/app/cards/${x.productId}`} target="_blank" rel="noopener noreferrer">card page ↗</a></> : null}
+                          {" · "}<a href={ebaySearch(`${x.name} ${x.number || ""} ${x.grader || ""} ${x.grade || ""}`.replace(/\s+/g, " ").trim(), { sold: true, highest: true, source: "admin-check" }).href}
+                            target="_blank" rel="noopener noreferrer"><b>eBay sold, highest first ↗</b></a></span>
                       </label>
                     )}
                     <label className="check post-check-ok">

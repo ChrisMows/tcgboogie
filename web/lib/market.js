@@ -21,6 +21,9 @@ const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, ""
 const HIGH_MIN = 200; // a "new high" worth posting
 const BIG_MIN = 1000; // a "big sale" worth posting
 const HIGH_MAX = 1.5; // a record beats the old high by at most this much; more usually means a different version sold
+// The price service gives one average per day. On a day with several sales the best one was higher than the average,
+// by how much we can't tell: such a day counts as up to this much above its average when deciding a new high.
+const BUSY_DAY = 1.25;
 // Special versions the bot can mistake for the regular card (a stamped Gengar sold as "Gengar"): their sales aren't
 // records or big sales of the card we'd name. A word that's part of the product's own name or set doesn't count.
 const VARIANT_WORDS = ["stamped", "stamp", "error", "misprint", "miscut", "mis cut", "test print", "prerelease", "pre release", "staff",
@@ -51,7 +54,7 @@ function item(kind, p, fields) {
 
 export function captionFor(x) {
   const what = `${x.grade ? `${gradeText(x.grader, x.grade)} ` : ""}${x.name}${x.set ? ` from ${x.set}` : ""}`;
-  const line = x.kind === "high" ? `📈 New high: a ${what} just sold on eBay for ${money(x.price, 0)}, beating the last high of ${money(x.prevHigh, 0)}.`
+  const line = x.kind === "high" ? `📈 New high: a ${what} just sold on eBay for ${money(x.price, 0)}, the most we've seen one sell for (previous best ${money(x.prevHigh, 0)}).`
     : x.kind === "deal" ? `⚡ Caught it: a ${what} sold on eBay for ${money(x.price, 0)}, ${x.off}% under its ${money(x.market, 0)} market value. Our members got the alert before it ended.`
       : `💰 A ${what} just sold on eBay for ${money(x.price, 0)}.`;
   return `${line}\n\n${hashtags(x.name, x.grader, x.grade)}\n${SITE}/sales`;
@@ -111,14 +114,17 @@ async function build() {
   for (const r of rows) {
     const p = byId[r.productId];
     const key = gradeKey(r.grader, r.grade);
+    const day = r.soldAt.toISOString().slice(0, 10);
     const before = [
-      ...ours.filter((o) => o.productId === r.productId && o.grader === r.grader && o.grade === r.grade && o.soldAt < r.soldAt).map((o) => o.price),
-      ...(p?.recentSales || []).filter((s) => s.grade === key && s.date < r.soldAt.toISOString().slice(0, 10)).map((s) => s.price),
-    ].filter((v) => Number.isFinite(v) && v > 0);
-    const prev = before.length ? Math.max(...before) : 0;
-    // A real record: enough history, beats it, isn't a special version, and isn't so far above the old high that a
-    // different version probably sold.
-    if (before.length >= 3 && r.price > prev && r.price <= prev * HIGH_MAX && !specialVersion(r.title, p)) {
+      ...ours.filter((o) => o.productId === r.productId && o.grader === r.grader && o.grade === r.grade && o.soldAt < r.soldAt)
+        .map((o) => ({ price: o.price, count: 1 })),
+      ...(p?.recentSales || []).filter((s) => s.grade === key && s.date < day && s.source !== "ebay").map((s) => ({ price: s.price, count: s.count || 1 })),
+    ].filter((s) => Number.isFinite(s.price) && s.price > 0);
+    const prev = before.length ? Math.max(...before.map((s) => s.price)) : 0; // the best figure we know
+    const bar = before.length ? Math.max(...before.map((s) => (s.count > 1 ? s.price * BUSY_DAY : s.price))) : 0; // what a record must beat
+    // A real record: enough history, beats every earlier sale (busy days included), isn't a special version, and isn't
+    // so far above the old high that a different version probably sold.
+    if (before.length >= 3 && r.price > bar && r.price <= prev * HIGH_MAX && !specialVersion(r.title, p)) {
       highs.push(item("high", p, { id: `high-${r.itemId}`, itemId: r.itemId, title: r.title, grader: r.grader, grade: r.grade, price: r.price, prevHigh: prev, sales: before.length, soldAt: r.soldAt, url: r.url }));
     }
   }

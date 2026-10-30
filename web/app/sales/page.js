@@ -39,7 +39,7 @@ function Tile({ x }) {
       <b className="sale-price">{money(x.price, 0)}</b>
       <span className="sale-name">{[x.grader ? `${x.grader} ${x.grade}` : x.condition, x.name].filter(Boolean).join(" · ")}</span>
       <span className="small muted">
-        {[x.set, x.kind === "high" ? `last high ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `market ${money(x.market, 0)}` : null, x.soldAt ? day(x.soldAt) : null].filter(Boolean).join(" · ")}
+        {[x.set, x.kind === "high" ? `previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `market ${money(x.market, 0)}` : null, x.soldAt ? day(x.soldAt) : null].filter(Boolean).join(" · ")}
       </span>
       <span className="sale-links">
         {link && <a href={link.href} target="_blank" rel={`noopener noreferrer${link.affiliate ? " sponsored" : ""}`}>eBay ↗</a>}
@@ -73,7 +73,7 @@ export default async function Sales() {
       </div>
       <Section id="deals" title="⚡ Deals our members caught" intro="Auctions we alerted members to that really sold well under market value, by their final price." list={f.deals}
         empty="No caught deals in the last two weeks yet." />
-      <Section id="highs" title="📈 New highs" intro="Graded cards that just sold for more than any sale of that card and grade we know of." list={f.highs}
+      <Section id="highs" title="📈 New highs" intro="Graded cards that just sold for more than any sale of that card and grade we've seen: the sales we track ourselves and the last 90 days of eBay sales." list={f.highs}
         empty="No new highs in the last two weeks. They show up here the moment one sells." />
       <Section id="big" title="💰 Biggest sales this week" intro="The priciest graded Pokémon cards that sold on eBay in the last 7 days." list={f.big}
         empty="No big sales recorded this week yet." />

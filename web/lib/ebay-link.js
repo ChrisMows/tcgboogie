@@ -25,9 +25,9 @@ export function ebayLink(url, source = "site") {
  * An eBay search, tracked. Cards search the Pokémon singles category; sealed products search all of eBay.
  * sold: Sold + Completed listings only, most recently ended first.
  */
-export function ebaySearch(query, { sold = false, sealed = false, source = "search" } = {}) {
+export function ebaySearch(query, { sold = false, sealed = false, source = "search", highest = false } = {}) {
   const q = new URLSearchParams({ _nkw: query, ...(sealed ? {} : { _sacat: "183454" }) });
-  if (sold) { q.set("LH_Sold", "1"); q.set("LH_Complete", "1"); q.set("_sop", "13"); }
+  if (sold) { q.set("LH_Sold", "1"); q.set("LH_Complete", "1"); q.set("_sop", highest ? "16" : "13"); } // 16: highest price first
   return ebayLink(`https://www.ebay.com/sch/i.html?${q}`, source);
 }
 

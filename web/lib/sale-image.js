@@ -112,7 +112,7 @@ export async function saleImage(x) {
   if (x.kind === "release") return releaseImage(x, await load());
   const [{ bg, bold, medium }, img] = await Promise.all([load(), picture(x.image)]);
   const kicker = x.kind === "high" ? "NEW HIGH" : x.kind === "deal" ? `SOLD ${x.off}% UNDER MARKET` : "BIG SALE";
-  const sub = x.kind === "high" ? `Last high ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `Market ${money(x.market, 0)}` : "Sold on eBay";
+  const sub = x.kind === "high" ? `Previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `Market ${money(x.market, 0)}` : "Sold on eBay";
   const label = [x.grader ? `${x.grader} ${x.grade}` : x.condition, x.name].filter(Boolean).join(" · ");
   return new ImageResponse(
     (

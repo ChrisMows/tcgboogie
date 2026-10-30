@@ -339,7 +339,12 @@ function weightedMedian(points) {
  * service's own figure (and its reliability rule).
  */
 async function withOurSales(p, prefetched) {
-  const trim = (x) => ({ ...x, recentSales: (x.recentSales || []).slice(0, 40) }); // the card page filters these by grade
+  // Up to 40 per grade (newest first): the card page filters these by grade, and the market feed's "new high" needs
+  // every grade's history (40 across all grades dropped a popular card's older, higher PSA 10 sales).
+  const trim = (x) => {
+    const n = {};
+    return { ...x, recentSales: (x.recentSales || []).filter((s) => (n[s.grade] = (n[s.grade] || 0) + 1) <= 40) };
+  };
   if (p.type !== "card") return trim(p);
   let rows = [];
   if (prefetched) rows = prefetched.get(p.id) || [];
