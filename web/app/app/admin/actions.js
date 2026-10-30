@@ -17,7 +17,7 @@ import { releaseByVersion, sendRelease, sendReleaseTest } from "@/lib/release-em
 import { setPictureFromRequest } from "@/lib/card-images";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { marketItem } from "@/lib/market";
+import { captionFor, marketItem, withConfirmed } from "@/lib/market";
 import { saleImage } from "@/lib/sale-image";
 import { postToX } from "@/lib/x";
 
@@ -278,11 +278,21 @@ export async function setIdeas(formData) {
 // ----- Admin → Sales: post a sale's share image to X, or skip it (lib/market.js, lib/x.js) -----
 export async function postSale(id, formData) {
   const admin = await requireAdmin();
-  const x = await marketItem(id);
-  if (!x) redirect("/app/admin?tab=sales&err=gone");
+  const found = await marketItem(id);
+  if (!found) redirect("/app/admin?tab=sales&err=gone");
   const [done] = await db.select().from(schema.socialPosts).where(eq(schema.socialPosts.key, id)).limit(1);
   if (done) redirect("/app/admin?tab=sales&err=already");
-  const caption = String(formData.get("caption") || x.caption).trim().slice(0, 280);
+  // Sales are posted only after the admin confirms the numbers (and may correct them): see "Check before posting".
+  let x = found;
+  if (found.kind !== "release") {
+    if (formData.get("verified") !== "on") redirect("/app/admin?tab=sales&err=unchecked");
+    const r = withConfirmed(found, { price: formData.get("price"), market: formData.get("market"), prevHigh: formData.get("prevHigh") });
+    if (r.error) redirect(`/app/admin?tab=sales&err=${encodeURIComponent(r.error)}`);
+    x = { ...r.x, caption: captionFor(r.x) };
+  }
+  // An untouched caption follows the confirmed numbers; one the admin edited is posted as written.
+  const typed = String(formData.get("caption") || "").trim();
+  const caption = (typed && typed !== String(formData.get("auto") || "").trim() ? typed : x.caption).slice(0, 280);
   let posted;
   try {
     const png = Buffer.from(await (await saleImage(x)).arrayBuffer());
@@ -292,7 +302,8 @@ export async function postSale(id, formData) {
     redirect(`/app/admin?tab=sales&err=${encodeURIComponent(String(e.message).slice(0, 180))}`);
   }
   await db.insert(schema.socialPosts).values({ key: id, status: "posted", caption, postId: posted.id, postUrl: posted.url, by: admin.email }).onConflictDoNothing();
-  await logAdminAction(admin, "x_post", { id, url: posted.url });
+  await logAdminAction(admin, "x_post", { id, url: posted.url, ...(x.price !== found.price || x.market !== found.market || x.prevHigh !== found.prevHigh
+    ? { corrected: { price: [found.price, x.price], market: [found.market, x.market], prevHigh: [found.prevHigh, x.prevHigh] } } : {}) });
   redirect("/app/admin?tab=sales&ok=posted");
 }
 

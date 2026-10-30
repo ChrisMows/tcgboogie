@@ -49,7 +49,7 @@ function item(kind, p, fields) {
   };
 }
 
-function captionFor(x) {
+export function captionFor(x) {
   const what = `${x.grade ? `${gradeText(x.grader, x.grade)} ` : ""}${x.name}${x.set ? ` from ${x.set}` : ""}`;
   const line = x.kind === "high" ? `📈 New high: a ${what} just sold on eBay for ${money(x.price, 0)}, beating the last high of ${money(x.prevHigh, 0)}.`
     : x.kind === "deal" ? `⚡ Caught it: a ${what} sold on eBay for ${money(x.price, 0)}, ${x.off}% under its ${money(x.market, 0)} market value. Our members got the alert before it ended.`
@@ -165,6 +165,26 @@ export function releasePosts() {
       ...(rest ? [`• Plus ${rest} ${rest === 1 ? "improvement" : "improvements and fixes"}`] : []), "", `All the details: ${SITE}/updates`, "#pokemon #pokemontcg #tcgboogie"].join("\n");
     return { kind: "release", id: `release-${r.date}`, date: r.date, title: r.title, items: r.items.map(({ tag, title }) => ({ tag, title })), caption };
   });
+}
+
+/**
+ * A sale post with the numbers the admin confirmed (Admin -> Social media "Check before posting"): the sale price and,
+ * for a caught deal, the market value (the % under is worked out again), or for a new high, the previous high.
+ * Returns { x, error }: an error when the corrected numbers no longer make it a deal or a record.
+ */
+export function withConfirmed(x, { price, market, prevHigh }) {
+  const n = (v) => { const f = Number(String(v ?? "").replace(/[$,\s]/g, "")); return Number.isFinite(f) && f > 0 ? Math.round(f * 100) / 100 : null; };
+  const out = { ...x, price: n(price) ?? x.price };
+  if (x.kind === "deal") {
+    out.market = n(market) ?? x.market;
+    out.off = Math.round((1 - out.price / out.market) * 100);
+    if (out.off < 5) return { x: out, error: `At ${money(out.price, 0)} against a ${money(out.market, 0)} market value it isn't a deal (${out.off}% under).` };
+  }
+  if (x.kind === "high") {
+    out.prevHigh = n(prevHigh) ?? x.prevHigh;
+    if (out.price <= out.prevHigh) return { x: out, error: `${money(out.price, 0)} doesn't beat the previous high of ${money(out.prevHigh, 0)}.` };
+  }
+  return { x: out, error: null };
 }
 
 /** One post by its id ("high-123", "big-123", "deal-123", "release-2026-10-25"), for its share image and X post. */

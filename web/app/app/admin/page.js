@@ -521,7 +521,8 @@ async function Sales({ ok, err }) {
   const queue = [...releasePosts(), ...feed.deals.slice(0, 8), ...feed.highs, ...feed.big.slice(0, 8)].filter((x) => !handled.has(x.id));
   const posted = done.filter((d) => d.status === "posted").slice(0, 20);
   const ready = xReady();
-  const ERR = { gone: "That sale isn't in the feed anymore.", already: "That one was already posted or skipped." };
+  const ERR = { gone: "That sale isn't in the feed anymore.", already: "That one was already posted or skipped.", unchecked: "Tick \"I checked these numbers\" before posting." };
+  const day = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
   return (
     <>
       {ok === "posted" && <div className="notice good">Posted to X.</div>}
@@ -542,11 +543,42 @@ async function Sales({ ok, err }) {
               <a href={`/sales/image/${x.id}.png`} target="_blank" rel="noopener noreferrer"><img src={`/sales/image/${x.id}.png`} alt="" width={260} height={260} loading="lazy" /></a>
               <div className="post-body">
                 <span className="badge accent">{x.kind === "release" ? "Release notes" : x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
+                {x.kind !== "release" && (
+                  <fieldset className="post-check">
+                    <legend>Check before posting</legend>
+                    {x.title && <div className="small muted post-check-title">eBay title: “{x.title}”</div>}
+                    <label className="post-check-row">
+                      <span>Sold for</span>
+                      <span className="post-check-money">$<input name="price" type="number" step="0.01" min="0.01" defaultValue={x.price} /></span>
+                      <span className="small">{day(x.soldAt)}{x.url ? <> · <a href={x.url} target="_blank" rel="noopener noreferrer">eBay listing ↗</a></> : null}</span>
+                    </label>
+                    {x.kind === "deal" && (
+                      <label className="post-check-row">
+                        <span>Market value</span>
+                        <span className="post-check-money">$<input name="market" type="number" step="0.01" min="0.01" defaultValue={x.market} /></span>
+                        <span className="small">{x.off}% under{x.productId ? <> · <a href={`/app/cards/${x.productId}`} target="_blank" rel="noopener noreferrer">card page ↗</a></> : null}</span>
+                      </label>
+                    )}
+                    {x.kind === "high" && (
+                      <label className="post-check-row">
+                        <span>Previous high</span>
+                        <span className="post-check-money">$<input name="prevHigh" type="number" step="0.01" min="0.01" defaultValue={x.prevHigh} /></span>
+                        <span className="small">from {x.sales} earlier sales{x.productId ? <> · <a href={`/app/cards/${x.productId}`} target="_blank" rel="noopener noreferrer">card page ↗</a></> : null}</span>
+                      </label>
+                    )}
+                    <label className="check post-check-ok">
+                      <input type="checkbox" name="verified" required />
+                      I checked these numbers{x.kind === "deal" ? " (the sale price and market value)" : x.kind === "high" ? " (the sale price and previous high)" : ""}
+                    </label>
+                    <div className="hint">Change a number and the image and caption use yours when you post. A caption you edited is posted as written.</div>
+                  </fieldset>
+                )}
+                <input type="hidden" name="auto" value={x.caption} />
                 <textarea name="caption" defaultValue={x.caption} rows={6} maxLength={280} aria-label="Caption" />
                 <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                   <button className="btn primary" style={{ flex: "none" }} disabled={!ready}>Post to X</button>
                   <a className="btn" style={{ flex: "none" }} href={`/sales/image/${x.id}.png`} download={`tcgboogie-${x.id}.png`}>Download image</a>
-                  <button className="btn ghost" style={{ flex: "none" }} formAction={skipSale.bind(null, x.id)}>Skip</button>
+                  <button className="btn ghost" style={{ flex: "none" }} formAction={skipSale.bind(null, x.id)} formNoValidate>Skip</button>
                 </div>
               </div>
             </form>

@@ -2055,3 +2055,12 @@ body:has(.install-hint) .helper-fab { display: none; }
 .ip-chips i { flex: 1; font-style: normal; text-align: center; font-size: 10.5px; padding: 5px 0; color: var(--muted); border-right: 1px solid var(--border); }
 .ip-chips i:last-child { border-right: 0; }
 .ip-chips i.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+/* Admin -> Social media: confirm a sale's numbers before it's posted */
+.post-check { width: 100%; border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px 12px; margin: 0; display: grid; gap: 8px; }
+.post-check legend { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); padding: 0 6px; }
+.post-check-title { overflow-wrap: anywhere; }
+.post-check-row { display: grid; grid-template-columns: 96px 130px 1fr; gap: 10px; align-items: center; font-size: 14px; }
+.post-check-money { display: flex; align-items: center; gap: 4px; font-weight: 700; color: var(--muted); }
+.post-check-money input { width: 100%; padding: 6px 8px; font-weight: 700; }
+.post-check-ok { font-weight: 600; }
+@media (max-width: 600px) { .post-check-row { grid-template-columns: 1fr 1fr; } .post-check-row > .small { grid-column: 1 / -1; } }
