@@ -245,6 +245,15 @@ function fromCard(c) {
     prices[main] = { ...(prices[main] || {}), "Near Mint": { market: c.prices.market, low: c.prices.low ?? c.variants?.[main]?.lowPrice ?? null } };
   }
   for (const k of Object.keys(prices)) if (!Object.keys(prices[k]).length) delete prices[k];
+  // The main printing goes first: everything that defaults to "the first printing" (the card's headline Near Mint
+  // price, price alerts, quick adds) means it. If it has no Near Mint price, the first printing that does goes first,
+  // so a card whose service lists "Normal" (played copies only) before "Holofoil" doesn't show no price.
+  const lead = [main, ...Object.keys(prices)].find((k) => prices[k]?.["Near Mint"]?.market != null);
+  if (lead && Object.keys(prices)[0] !== lead) {
+    const { [lead]: first, ...rest } = prices;
+    for (const k of Object.keys(prices)) delete prices[k];
+    Object.assign(prices, { [lead]: first }, rest);
+  }
   const graded = {};
   // Graded sales by day (last 90 days): { psa10: { "2026-08-31": { average, count } } }. salesByGrade.count is all-time,
   // so the recent count (what the 90-day price is based on) comes from here.
