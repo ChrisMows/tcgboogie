@@ -1952,7 +1952,11 @@ body:has(.install-hint) .helper-fab { display: none; }
 .hero-chart { margin: 14px 0 6px; }
 .hero-chart .chart-value { font: 600 34px var(--font-head), sans-serif; letter-spacing: -0.02em; }
 .hero-chart .chart-empty { height: 80px; }
-.you-own-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.you-own-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 13px; }
+.copy-what { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.copy-qty { font-weight: 700; color: var(--muted); }
+.copy-value { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.you-own-total { padding-top: 8px; margin-top: 8px; border-top: 1px solid rgba(211, 255, 102, 0.18); }
 .you-own-worth { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 .copy-row { display: grid; gap: 4px; }
 .copy-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
@@ -1967,4 +1971,9 @@ body:has(.install-hint) .helper-fab { display: none; }
 .card-prices .recent-sales { margin-top: 0; padding-top: 0; border-top: 0; }
 .price-foot { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; }
 .price-foot .hint { margin: 0; }
-@media (min-width: 861px) { .card-prices { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; } }
+@media (min-width: 861px) { .card-prices { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; } }
+.card-prices h3.price-sub { margin-top: 20px; }
+.card-prices .price-col + .price-col { border-left: 1px solid var(--border); padding-left: 32px; }
+@media (max-width: 860px) { .card-prices .price-col + .price-col { border-left: 0; padding-left: 0; } }
+.card-prices .ebay-links .btn { padding: 9px 12px; }
+.card-prices .report-sale-open { margin-top: 10px; }

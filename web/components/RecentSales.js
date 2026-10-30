@@ -9,7 +9,7 @@ const SHOW = 8;
  * The card page's latest graded sales, with chips to show just one grade.
  * sales: [{ key, date, grade (label), price, count, href }], newest first.
  */
-export default function RecentSales({ sales, soldHref, soldAffiliate }) {
+export default function RecentSales({ sales, soldHref, soldAffiliate, label = "Latest graded sales (eBay and Fanatics Collect)" }) {
   const [grade, setGrade] = useState("all");
   const [more, setMore] = useState(false);
   const grades = useMemo(() => {
@@ -22,7 +22,7 @@ export default function RecentSales({ sales, soldHref, soldAffiliate }) {
 
   return (
     <div className="recent-sales">
-      <div className="small muted">Latest graded sales (eBay and Fanatics Collect)</div>
+      {label && <div className="small muted">{label}</div>}
       {grades.length > 1 && (
         <div className="sale-chips" role="group" aria-label="Show sales for one grade">
           <button type="button" className={grade === "all" ? "on" : ""} onClick={() => { setGrade("all"); setMore(false); }}>All</button>

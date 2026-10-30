@@ -265,7 +265,7 @@ export default async function CardPage({ params, searchParams }) {
           </div>
         ) : (
           <>
-            <div className="price-col">
+            <div className="price-col price-main">
               <h3>Raw</h3>
               {printings.length === 0 && <p className="small muted" style={{ margin: 0 }}>No pricing data available for this card.</p>}
               {printings.map(([printing, byCond]) => (
@@ -281,9 +281,7 @@ export default async function CardPage({ params, searchParams }) {
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="price-col">
-              <h3>Graded</h3>
+              <h3 className="price-sub">Graded</h3>
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="cond-grid">
                   {graded.slice(0, 12).map(([key, g]) => (
@@ -310,9 +308,9 @@ export default async function CardPage({ params, searchParams }) {
               )}
             </div>
             <div className="price-col">
-              <h3>Recent sales</h3>
+              <h3>Recent graded sales</h3>
               {(p.recentSales || []).length > 0 ? (
-                <RecentSales
+                <RecentSales label={null}
                   sales={p.recentSales.map((s) => ({
                     key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
                     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,

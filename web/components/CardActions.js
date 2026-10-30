@@ -77,22 +77,23 @@ export default function CardActions({ product, mine, binders, watch, plan, canSe
     <div className="card-actions">
       {copies > 0 ? (
         <div className="you-own">
-          <div className="you-own-head">
-            <b>✓ You own {copies}</b>
-            <span className="you-own-worth">
-              <b>{money(worth)}</b>
-              {gain !== null && <span className={`small ${gain >= 0 ? "up" : "down"}`}>{gain >= 0 ? "+" : ""}{money(gain)} ({cost ? pct(gain / cost) : "—"})</span>}
-            </span>
-          </div>
-          {owned.map((it) => (
+          <div className="you-own-head"><b>✓ In your collection</b></div>
+          {owned.map((it) => {
+            const each = unitValue(it);
+            const lineGain = it.purchasePrice != null && each != null ? (each - it.purchasePrice) * it.quantity : null;
+            return (
             <div key={it.id} className="copy-row">
               <div className="copy-line">
-                <span className="copy-label">{itemLabel(it)}</span>
-                <b>{money(unitValue(it))}{it.quantity > 1 ? <span className="small muted"> each</span> : null}</b>
+                <span className="copy-what"><span className="copy-qty">{it.quantity}×</span><span className="copy-label">{itemLabel(it)}</span></span>
+                <span className="copy-value">
+                  <b>{money(each != null ? each * it.quantity : null)}</b>
+                  {it.quantity > 1 && <span className="small muted">{money(each)} each</span>}
+                </span>
               </div>
               <div className="copy-line">
                 <span className="small muted copy-meta">
-                  {[it.purchasePrice ? `Paid ${money(it.purchasePrice)}` : null, binders.find((b) => b.id === it.binderId)?.name].filter(Boolean).join(" · ")}
+                  {it.purchasePrice ? <>Paid {money(it.purchasePrice)}{lineGain !== null && <> · <span className={lineGain >= 0 ? "up" : "down"}>{lineGain >= 0 ? "+" : "−"}{money(Math.abs(lineGain))}</span></>}</> : null}
+                  {it.purchasePrice && binders.find((b) => b.id === it.binderId) ? " · " : ""}{binders.find((b) => b.id === it.binderId)?.name}
                 </span>
                 <span className="copy-tools">
                   <span className="stepper xs">
@@ -116,7 +117,14 @@ export default function CardActions({ product, mine, binders, watch, plan, canSe
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
+          {owned.length > 1 && (
+            <div className="copy-line you-own-total">
+              <span className="small muted">Total{gain !== null ? <> · <span className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))} ({cost ? pct(gain / cost) : "—"})</span></> : null}</span>
+              <b>{money(worth)}</b>
+            </div>
+          )}
         </div>
       ) : wish ? (
         <div className="you-own wish"><b>♥ On your wishlist</b> <span className="small muted">Got it? Move it to your collection in one tap.</span></div>
