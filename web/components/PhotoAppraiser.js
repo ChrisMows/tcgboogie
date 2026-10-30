@@ -81,6 +81,12 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
   const unsure = result ? result.cards.filter((c, i) => chooser(c) && version[i] == null).length : 0; // not yet chosen by the member
   return (
     <>
+      {!result && !preview && (
+        // How it works, until a photo is picked: snap your cards, see their value, build your collection.
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img className="photo-steps" src="/assets/photo-appraiser-steps.webp" width={1200} height={480}
+          alt="How it works: snap your cards, see their value, build your collection" />
+      )}
       <div className="panel photo-drop">
         <label className="btn primary" style={{ cursor: "pointer" }}>
           📷 {result || preview ? "Try another photo" : "Take or choose a photo"}

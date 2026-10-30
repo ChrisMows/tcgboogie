@@ -2064,3 +2064,5 @@ body:has(.install-hint) .helper-fab { display: none; }
 .post-check-money input { width: 100%; padding: 6px 8px; font-weight: 700; }
 .post-check-ok { font-weight: 600; }
 @media (max-width: 600px) { .post-check-row { grid-template-columns: 1fr 1fr; } .post-check-row > .small { grid-column: 1 / -1; } }
+/* Photo appraiser: the "snap, see their value, build your collection" picture above the photo button */
+.photo-steps { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto 8px; }
