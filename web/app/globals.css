@@ -756,6 +756,8 @@ a.deal-tile:hover { text-decoration: none; transform: translateY(-3px); border-c
 .copy-meta { flex: 1; min-width: 120px; }
 .copy-edit { flex-basis: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 6px; }
 .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Desktop: tighter buttons so price alert, deal alerts and both eBay links fit on one row. */
+@media (min-width: 900px) { .action-row .btn { padding: 11px 11px; gap: 7px; } .action-row .ebay-btn { gap: 6px; } }
 .action-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 14px; }
 .card-detail-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .cond-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }

@@ -120,7 +120,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         ) : (
           <button type="button" className="btn" onClick={openAlert}>🔔 Price alert</button>
         )}
-        {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
+        {product.type === "card" && <Link href={filterHref} className="btn">⚡ Deal alerts</Link>}
         {ebayLive && (
           <a href={ebayLive.href} target="_blank" rel={`noopener noreferrer${ebayLive.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live"
             title="Live eBay listings and auctions for this card">
@@ -130,7 +130,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         {ebaySold && (
           <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold"
             title="eBay sold and completed listings for this card, most recent first">
-            <Source name="ebay" className="src-sm" /> <span aria-hidden="true">🧾</span>Recent sales ↗
+            <Source name="ebay" className="src-sm" /> Recent sales ↗
           </a>
         )}
       </div>
