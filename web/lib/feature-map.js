@@ -66,7 +66,7 @@ function features(free, premium, sms) {
       free: `After the auction ends · ${free.minDiscountFloor}%+ off · $${free.minValueFloor}+ cards`,
       premium: `Live, while you can bid · ${premium.minDiscountFloor}%+ off · $${premium.minValueFloor}+ cards` },
     { area: "Deals", name: "Deal filters", link: "/app/deals", grows: "shared", vendors: [],
-      what: "Which deals reach a member: cards, grades, discount, value.",
+      what: "Which deals reach a member: cards, grades, discount, value. The lightning on a card page makes one for that card from 3 quick choices (raw/graded, how far under market, minutes left).",
       free: `${free.maxProfiles} filter, ${per(free.maxCardsPerFilter, "cards")}`, premium: `${premium.maxProfiles} filters, ${per(premium.maxCardsPerFilter, "cards")}` },
     { area: "Deals", name: "Deal alerts", link: "/app/account#alerts", grows: "member", vendors: ["resend", "discord", "push", "twilio", "epn"],
       what: "Each matching deal sent to the member (bundled in email, capped per day).", free: ch(free), premium: ch(premium) },

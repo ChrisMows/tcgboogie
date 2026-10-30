@@ -119,7 +119,9 @@ export default async function CardPage({ params, searchParams }) {
   const dealId = (await searchParams)?.deal;
   const found = dealId ? await getDeal(dealId).catch(() => null) : null;
   const deal = found && String(found.productId) === String(p.id) ? found : null;
-  const [items, binders, watches] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id)]);
+  const [items, binders, watches, profiles] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id), store.listProfiles(user.id)]);
+  // A deal filter that already picks this card: the lightning then links to it instead of opening the quick setup.
+  const dealFilter = profiles.some((pr) => (pr.filters?.cards || []).some((c) => String(c.productId) === String(p.id)));
   // Value your copies from today's prices (the saved value can lag behind).
   const mine = items.filter((it) => it.productId === p.id).map((it) => ({
     ...it, unitValue: marketValue(p, it) ?? it.unitValue, createdAt: String(it.createdAt), valueUpdatedAt: null,
@@ -210,7 +212,7 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-info">
           <div className="card-name-row">
             <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
-            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} filterHref={p.type === "card" ? filterHref : null} />
+            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} />
           </div>
           <div className="muted">
             {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}
@@ -259,7 +261,7 @@ export default async function CardPage({ params, searchParams }) {
             <MissingPicture productId={p.id} language={p.language || language} />
           </div>
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} />
+            plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
         </aside>
       </div>
 

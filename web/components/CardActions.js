@@ -6,9 +6,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
-import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
+import { addItem, changeQuantity, dealAlertForCard, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
 import { itemLabel, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
+import DealSheet from "@/components/DealSheet";
 
 /** The "add a copy" button next to the card title: opens the add panel below. */
 export function AddCardButton({ label }) {
@@ -21,32 +22,40 @@ export function AddCardButton({ label }) {
 export const alertLabel = (watch) => (watch.mode === "high" ? "Alert on new highs" : watch.mode === "low" ? "Alert on new lows"
   : watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`);
 
-/** The bell and lightning icons beside a card's name: the price alert pop-up (or, with an alert set, the alert) and
- * deal alerts for this card. */
-export function CardAlertIcons({ watch, filterHref }) {
+/** The bell and lightning icons beside a card's name: the price alert and deal alert pop-ups (or, once set, a link to
+ * the alert / the deal filter). */
+export function CardAlertIcons({ watch, deals = false, dealFilter = false }) {
   return (
     <span className="card-icons">
       {watch ? <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>
         : <button type="button" className="alert-bell" title="Price alert" aria-label="Set a price alert"
           onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}>🔔</button>}
-      {filterHref && <Link href={filterHref} className="alert-bell" title="Deal alerts for this card" aria-label="Get deal alerts for this card">⚡</Link>}
+      {deals && (dealFilter ? <Link href="/app/deals" className="alert-bell set" title="You get deal alerts on this card" aria-label="Deal alerts: on for this card">⚡</Link>
+        : <button type="button" className="alert-bell" title="Deal alerts" aria-label="Get deal alerts for this card"
+          onClick={() => window.dispatchEvent(new Event("tcgb:deal-alert"))}>⚡</button>)}
     </span>
   );
 }
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
-export default function CardActions({ product, mine, binders, watch, plan }) {
+export default function CardActions({ product, mine, binders, watch, plan, price = null, dealFilter = false, filterHref = "/app/deals" }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | null
   const panelRef = useRef(null);
   const alertRef = useRef(null); // the price alert pop-up (a native <dialog>)
   const [alertError, setAlertError] = useState(null);
   const openAlert = () => { setAlertError(null); alertRef.current?.showModal(); };
+  const dealRef = useRef(null); // the deal alert pop-up
+  const [dealError, setDealError] = useState(null);
+  const openDeal = () => { setDealError(null); dealRef.current?.showModal(); };
   useEffect(() => {
     const open = () => { setPanel("add"); setTimeout(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
     window.addEventListener("tcgb:add-card", open);
     window.addEventListener("tcgb:price-alert", openAlert);
-    return () => { window.removeEventListener("tcgb:add-card", open); window.removeEventListener("tcgb:price-alert", openAlert); };
+    window.addEventListener("tcgb:deal-alert", openDeal);
+    return () => {
+      window.removeEventListener("tcgb:add-card", open); window.removeEventListener("tcgb:price-alert", openAlert); window.removeEventListener("tcgb:deal-alert", openDeal);
+    };
   }, []);
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
@@ -171,6 +180,32 @@ export default function CardActions({ product, mine, binders, watch, plan }) {
                 show(input.mode === "high" ? "Alert set. We'll tell you each time it hits a new high."
                   : input.mode === "low" ? "Alert set. We'll tell you each time it hits a new low."
                     : `Alert set. We'll tell you at ${money(r.target)} or ${input.mode === "above" ? "more" : "less"}.`, { href: "/app/watches", label: "Price alerts" });
+                router.refresh();
+              })} />
+          </div>
+        </dialog>
+      )}
+      {!dealFilter && product.type === "card" && (
+        <dialog ref={dealRef} className="cmp-dialog alert-dialog" aria-labelledby="deal-title"
+          onClick={(e) => { if (e.target === dealRef.current) dealRef.current.close(); }}>
+          <div className="cmp-inner">
+            <div className="cmp-top">
+              <div className="alert-head">
+                {product.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={product.image} alt="" width={48} height={48} />}
+                <div>
+                  <h2 id="deal-title">Deal alert</h2>
+                  <div className="small muted">{product.name}{product.setName ? ` · ${product.setName}` : ""}</div>
+                </div>
+              </div>
+              <button type="button" className="cmp-close" onClick={() => dealRef.current?.close()} aria-label="Close">✕</button>
+            </div>
+            <DealSheet product={product} plan={plan} price={price} moreHref={filterHref} pending={pending} error={dealError}
+              onCreate={(input) => start(async () => {
+                const r = await dealAlertForCard(product.id, input);
+                if (r?.ok === false) return setDealError(r.error || "Something went wrong.");
+                dealRef.current?.close();
+                show(r.already ? "You already get deal alerts on this card." : `Deal alert set. We'll tell you when an auction for this card ends ${input.pct}% or more under market.`,
+                  { href: "/app/deals", label: "Deal filters" });
                 router.refresh();
               })} />
           </div>

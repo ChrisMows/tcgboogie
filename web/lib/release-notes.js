@@ -9,8 +9,10 @@ export const RELEASES = [
     items: [
       { tag: "New", title: "One-tap price alerts", href: "/app/watches",
         text: "Tap the bell next to a card's name and choose: tell me when it reaches a price I pick, hits a new high, or hits a new low. Type a price below today's and we watch for a drop, above it and we watch for a climb. New high and new low alerts tell you every time the price sets a new record. Want a specific condition, the lowest listing or a percent? Tap More options." },
+      { tag: "New", title: "One-tap deal alerts", href: "/app/deals",
+        text: "Tap the lightning next to a card's name, pick raw or graded copies, how far under market and how close to the end, and we'll tell you when an eBay auction for that card is ending at that price. Want grades, sellers or more cards in the same alert? Tap More options. A short demo of the bell and the lightning shows on your collection once; tap Don't show again to hide it for good." },
       { tag: "Improved", title: "A cleaner card page", href: "/app/collection",
-        text: "Card pages are easier to read. The price, its change and the price chart sit together beside the card. The bell (price alert) and lightning (deal alerts) icons sit next to the card's name. \"In your collection\" lists each version you own, like 1× PSA 10, with its value. Raw prices, graded prices and recent sales share one panel, with Live listings, Recent sales and Sell on eBay at its top." },
+        text: "Card pages are easier to read. The price, its change and the price chart sit together beside the card. The bell (price alert) and lightning (deal alert) icons sit next to the card's name. \"In your collection\" lists each version you own, like 1× PSA 10, with its value. Raw prices, graded prices and recent sales share one panel, with Live listings, Recent sales and Sell on eBay at its top." },
       { tag: "Fixed", title: "Missing prices on some cards", href: "/app/collection",
         text: "Some cards, like Venusaur ex from EX FireRed & LeafGreen, showed a dash instead of their price at the top of the card page. They now show their Near Mint market price, and price alerts start from it too." },
       { tag: "New", title: "What's new, by email", href: "/app/account#alerts",

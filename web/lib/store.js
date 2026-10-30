@@ -471,6 +471,15 @@ export async function hideSetupSteps(userId) {
   await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || '{"hideSetup": true}'::jsonb` }).where(eq(users.id, userId));
 }
 
+/** The member chose "Don't show again" on a "what's new" pop-up (components/FeatureIntro.js): kept on their account,
+ * so it stays hidden on every device. */
+export const INTROS = ["introAlerts1"];
+export async function hideIntro(userId, id) {
+  if (!INTROS.includes(id)) return;
+  if (isDemo(userId)) return void (demoCollection().collectionPrefs[id] = true);
+  await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || ${JSON.stringify({ [id]: true })}::jsonb` }).where(eq(users.id, userId));
+}
+
 /** New members start with one profile. */
 export async function ensureStarterProfile(user) {
   const existing = await listProfiles(user.id);

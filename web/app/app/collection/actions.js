@@ -13,6 +13,7 @@ import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { alertsWord, atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
+import { defaultFilters, validateFilters } from "@/lib/filters";
 
 function refresh(productId) {
   revalidatePath("/app/collection", "layout");
@@ -281,6 +282,47 @@ export async function hideSetup() {
   const user = await requireUser();
   await store.hideSetupSteps(user.id);
   revalidatePath("/app/collection");
+}
+
+/**
+ * The lightning on a card page: a deal filter for just this card, from three quick choices (raw / graded / both, how
+ * far under market, how long before the auction ends). A new filter, or, when the plan's only filter is the untouched
+ * starter one, that one turned into this card's. The full filter page has everything else.
+ */
+export async function dealAlertForCard(productId, input = {}) {
+  const user = await requireUser();
+  const product = await getProduct(productId);
+  if (!product || product.type !== "card") return { ok: false, error: "Deal alerts cover single cards." };
+  const profiles = await store.listProfiles(user.id);
+  const mine = profiles.find((p) => (p.filters?.cards || []).some((c) => String(c.productId) === String(product.id)));
+  if (mine) return { ok: true, already: true, id: mine.id };
+  const japanese = product.language === "japanese";
+  if (japanese && !user.plan.japanese) return { ok: false, premium: true, error: "Deal alerts on Japanese cards are part of Premium." };
+  const starter = profiles.length === 1 && profiles[0].updatedAt?.getTime?.() === profiles[0].createdAt?.getTime?.() ? profiles[0] : null;
+  if (!starter && profiles.length >= user.plan.maxProfiles) {
+    return { ok: false, limit: true, error: `You're using your ${user.plan.maxProfiles} deal filter${user.plan.maxProfiles === 1 ? "" : "s"} on ${user.plan.label}. Add this card to one on the Deals page, or get more with Premium.` };
+  }
+  const types = { raw: ["raw"], graded: ["graded"], both: ["raw", "graded"] }[input.types] || ["raw", "graded"];
+  const { filters, errors } = validateFilters({
+    ...defaultFilters(user.plan),
+    cardTypes: types,
+    minDiscountPct: input.pct,
+    maxMinutesLeft: input.minutes,
+    languages: [japanese ? "japanese" : "english"],
+    cards: [{ name: product.name, setName: product.setName, number: product.number, productId: product.id, image: product.image }],
+  }, user.plan);
+  if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0] };
+  const name = product.name.replace(/\s*\(.*\)$/, "").slice(0, 40);
+  const row = starter ? await store.updateProfile(user.id, starter.id, { name, filters, active: true }) : await store.createProfile(user.id, name, filters);
+  revalidatePath("/app", "layout");
+  return { ok: true, id: row?.id };
+}
+
+/** "Don't show again" on a what's-new pop-up (components/FeatureIntro.js). */
+export async function hideIntroAction(id) {
+  const user = await requireUser();
+  await store.hideIntro(user.id, String(id));
+  return { ok: true };
 }
 
 /** Premium collection alerts. */

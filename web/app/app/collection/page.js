@@ -3,6 +3,7 @@ import AddCards from "@/components/AddCards";
 import BinderTab from "@/components/BinderTab";
 import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
+import FeatureIntro from "@/components/FeatureIntro";
 import { catalogLive } from "@/lib/catalog";
 import { chartSeries, itemLabel, marketChange, ownedCounts, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
@@ -48,10 +49,18 @@ export default async function CollectionPage({ searchParams }) {
     ["Set a price alert", watches.length > 0, "/app/watches"],
   ];
   const hit = watches.filter((w) => w.status === "triggered").length;
+  // What's new (bell and lightning on card pages): for members with cards, until they choose "Don't show again".
+  // The demo uses their most valuable card that has a picture.
+  const top = c.owned.filter((it) => it.image && it.productType === "card" && unitValue(it)).sort((a, b) => unitValue(b) - unitValue(a))[0];
+  const intro = !c.prefs?.introAlerts1 && c.owned.length > 0
+    ? top ? { id: top.productId, name: top.name.replace(/\s*\(.*\)$/, ""), short: top.name.replace(/\s*\(.*\)$/, "").split(" ")[0], set: top.setName || "", image: top.image, price: unitValue(top) }
+      : { id: null, name: "Charizard ex", short: "a card", set: "Scarlet & Violet 151", image: null, price: 325 }
+    : null;
 
   return (
     <>
       <h1 className="sr-only">Collection</h1>
+      {intro && <FeatureIntro card={intro} />}
       <CollectionHero summary={summary} day={day} week={week} sinceVisit={sinceVisit} changes={changes} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer} movers={movers}
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
