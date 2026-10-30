@@ -172,11 +172,17 @@ export default async function CardPage({ params, searchParams }) {
       .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
     return options[0] || null;
   })();
-  const canSell = Boolean(user.plan.sellOnEbay && p.type === "card" && language !== "japanese"); // Sell on eBay, per copy in "You own"
+  // Sell on eBay (Premium, English cards you own): with the other eBay buttons on the prices panel, for your first copy.
+  const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
   // Live listings and sold listings on eBay, under the sales.
   const ebayLinks = (
     <div className="ebay-links">
+      {sellItem && (
+        <Link href={`/app/collection/sell/${sellItem.id}`} className="btn ebay-btn sell" data-tour="sell-open" title="List your copy on eBay with the details filled in">
+          <Source name="ebay" className="src-sm" /> Sell on eBay
+        </Link>
+      )}
       {ebay && <a href={ebay.href} target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live"
         title="Live eBay listings and auctions for this card">
         <Source name="ebay" className="src-sm" /> <span className="live-dot" aria-hidden="true" />Live listings ↗
@@ -253,7 +259,7 @@ export default async function CardPage({ params, searchParams }) {
             <MissingPicture productId={p.id} language={p.language || language} />
           </div>
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} canSell={canSell} />
+            plan={user.plan} />
         </aside>
       </div>
 

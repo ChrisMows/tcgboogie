@@ -9,7 +9,6 @@ import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
 import { itemLabel, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
-import Source from "@/components/Source";
 
 /** The "add a copy" button next to the card title: opens the add panel below. */
 export function AddCardButton({ label }) {
@@ -36,7 +35,7 @@ export function CardAlertIcons({ watch, filterHref }) {
 }
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
-export default function CardActions({ product, mine, binders, watch, plan, canSell = false }) {
+export default function CardActions({ product, mine, binders, watch, plan }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | null
   const panelRef = useRef(null);
@@ -104,11 +103,6 @@ export default function CardActions({ product, mine, binders, watch, plan, canSe
                   <button type="button" className="link-btn small" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
                 </span>
               </div>
-              {canSell && it.kind !== "sealed" && (
-                <Link href={`/app/collection/sell/${it.id}`} className="btn sm copy-sell" data-tour="sell-open" title="List this copy on eBay with the details filled in">
-                  <Source name="ebay" className="src-sm" /> Sell on eBay
-                </Link>
-              )}
               {editing === it.id && (
                 <div className="copy-edit">
                   <ItemForm product={product} initial={it} binders={binders} allowList={false} submitLabel="Save changes" pending={pending} errors={errors}
