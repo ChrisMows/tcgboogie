@@ -113,6 +113,38 @@ export async function premiumPrice() {
 }
 
 /**
+ * After a price change (lib/plans.js): move every current Premium subscription onto today's price, from its next bill.
+ * No proration: nobody is charged or refunded now; the next invoice is simply at the new price. Members on a trial
+ * pay the new price when it ends. Safe to run again (subscriptions already on the price are skipped).
+ * Returns { moved, already, failed }.
+ */
+export async function moveSubscribersToCurrentPrice() {
+  const price = await premiumPrice();
+  const out = { moved: 0, already: 0, failed: 0 };
+  let after;
+  for (let page = 0; page < 50; page++) {
+    const list = await stripe("GET", "subscriptions", { status: "all", limit: 100, ...(after ? { starting_after: after } : {}) });
+    for (const sub of list.data || []) {
+      if (!PAID.includes(sub.status)) continue;
+      const item = sub.items?.data?.[0];
+      if (!item) continue;
+      if (item.price?.id === price) { out.already++; continue; }
+      try {
+        await stripe("POST", `subscriptions/${sub.id}`, { items: [{ id: item.id, price }], proration_behavior: "none" });
+        out.moved++;
+      } catch (e) {
+        out.failed++;
+        await log("payments", "error", `Couldn't move subscription ${sub.id} to the new price: ${e.message}`);
+      }
+    }
+    if (!list.has_more || !list.data?.length) break;
+    after = list.data[list.data.length - 1].id;
+  }
+  await log("payments", "info", `Moved ${out.moved} subscriptions to $${PLANS.premium.price}/month (${out.already} already on it, ${out.failed} failed)`);
+  return out;
+}
+
+/**
  * Is Stripe Tax switched on in the dashboard (for this mode)? Checkout adds sales tax only then, so checkout keeps
  * working before it's set up. Checked at most every 10 minutes.
  */

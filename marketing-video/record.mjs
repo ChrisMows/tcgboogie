@@ -291,7 +291,7 @@ await record(page, "08-pricing", async () => {
   await page.locator("#pricing").evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 10));
   await sleep(600);
 }, async () => {
-  await caption(page, "Free forever.", "Premium is $9.99/mo with 7 days free", { top: !V });
+  await caption(page, "Free forever.", "Premium is $4.99/mo with 7 days free", { top: !V });
   await sleep(1300);
   if (V) await page.locator(".plan.featured").evaluate((el, v) => {
     const r = el.getBoundingClientRect();

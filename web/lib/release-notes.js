@@ -7,6 +7,8 @@ export const RELEASES = [
     date: "2026-10-26",
     title: "Faster deals, better emails and clearer plans",
     items: [
+      { tag: "Improved", title: "Premium is now $4.99 a month", href: "/app/premium",
+        text: "Premium dropped from $9.99 to $4.99 a month (plus sales tax), still with 7 days free for new members. Everything it includes stays the same." },
       { tag: "New", title: "One-tap price alerts", href: "/app/watches",
         text: "Tap the bell next to a card's name and choose: tell me when it reaches a price I pick, hits a new high, or hits a new low. Type a price below today's and we watch for a drop, above it and we watch for a climb. New high and new low alerts tell you every time the price sets a new record. Want a specific condition, the lowest listing or a percent? Tap More options." },
       { tag: "New", title: "One-tap deal alerts", href: "/app/deals",

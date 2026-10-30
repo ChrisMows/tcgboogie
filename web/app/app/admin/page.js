@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { connectStripe, grantComp, removeMemberPhone, renameMember, revokeComp, sendReleaseEmail, setPlan, testAlert, testRecap, testReleaseEmail } from "./actions";
+import { connectStripe, grantComp, moveSubscribers, removeMemberPhone, renameMember, revokeComp, sendReleaseEmail, setPlan, testAlert, testRecap, testReleaseEmail } from "./actions";
 import { RELEASES } from "@/lib/release-notes";
 import { releaseEmailStatus } from "@/lib/release-email";
 import AdminFeatures from "@/components/AdminFeatures";
@@ -19,7 +19,7 @@ import { usageReport } from "@/lib/usage";
 import UsageCharts from "@/components/UsageCharts";
 import FeatureMap from "@/components/FeatureMap";
 import { featureMap } from "@/lib/feature-map";
-import { FEATURES, LIMITS } from "@/lib/plans";
+import { FEATURES, LIMITS, PLANS } from "@/lib/plans";
 import { settingsSummary } from "@/lib/settings-backup";
 import { ago, memberCounts, memberDetail, recentAdminLog, requireAdmin, searchMembers, systemStatus } from "@/lib/admin";
 
@@ -129,9 +129,11 @@ async function Status({ ping, test, why, stripe, recap, backup }) {
       )}
       {stripe && (
         <div className={`notice ${stripe.startsWith("ok") ? "good" : "bad"}`}>
-          {stripe.startsWith("ok")
+          {stripe.startsWith("moved")
+            ? <><b>Subscribers moved to ${PLANS.premium.price}/month</b> from their next bill: {stripe.split(":")[1]} moved, {stripe.split(":")[2]} already on it{Number(stripe.split(":")[3]) ? <>, <b>{stripe.split(":")[3]} failed</b> (see Logs)</> : null}.</>
+            : stripe.startsWith("ok")
             ? <><b>Stripe connected</b> ({stripe.split(":")[1]} mode). Premium price and payment webhook are {stripe.split(":")[2] === "created" ? "set up" : "up to date"}.</>
-            : <><b>Stripe setup failed:</b> {stripe.slice(5)}</>}
+            : <><b>Stripe failed:</b> {stripe.slice(5)}</>}
         </div>
       )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
@@ -140,6 +142,7 @@ async function Status({ ping, test, why, stripe, recap, backup }) {
         <form action={testRecap} style={{ flex: "none" }}><button className="btn sm" title="Emails you a preview of your recap">Email me a recap preview</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
         {process.env.STRIPE_SECRET_KEY ? <form action={connectStripe} style={{ flex: "none" }}><button className="btn sm" title="Creates the Premium price and the payment webhook in Stripe. Safe to press again.">Set up Stripe</button></form> : null}
+        {process.env.STRIPE_SECRET_KEY ? <form action={moveSubscribers} style={{ flex: "none" }}><button className="btn sm" title={`Moves every current subscriber to $${PLANS.premium.price}/month from their next bill. Nobody is charged or refunded now. Safe to press again.`}>Move subscribers to ${PLANS.premium.price}</button></form> : null}
       </div>
       <div className={`panel settings-backup ${settings.missingEssential.length ? "warn" : ""}`}>
         <h2>Settings backup</h2>

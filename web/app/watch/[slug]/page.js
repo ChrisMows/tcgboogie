@@ -1,4 +1,5 @@
 import { X_HANDLE } from "@/lib/social";
+import { PLANS } from "@/lib/plans";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 
@@ -53,7 +54,7 @@ export default async function Watch({ params }) {
           <Link href="/login?mode=signup" className="btn primary lg">Start free ↗</Link>
           <Link href="/" className="btn lg">See the site</Link>
         </div>
-        <p className="hint">Free forever, no card needed. Premium is $9.99/month with 7 days free.</p>
+        <p className="hint">Free forever, no card needed. Premium is ${PLANS.premium.price}/month with 7 days free.</p>
       </div>
     </div>
   );

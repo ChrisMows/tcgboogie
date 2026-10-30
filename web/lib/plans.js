@@ -42,7 +42,7 @@ export const PLANS = {
   premium: {
     key: "premium",
     label: "Premium",
-    price: 9.99,
+    price: 4.99,
     tagline: "Every deal, while there's still time.",
     maxProfiles: 15,
     maxCardsPerFilter: null, // unlimited (the filter itself stops at 100)

@@ -8,7 +8,7 @@ import { hideMemberCard } from "@/lib/member-cards";
 import { setIdeaStatus } from "@/lib/ideas";
 import { currentFeatures, currentLimits, saveFeatures, saveLimits } from "@/lib/features";
 import { FEATURES, LIMITS } from "@/lib/plans";
-import { setupStripe } from "@/lib/billing";
+import { moveSubscribersToCurrentPrice, setupStripe } from "@/lib/billing";
 import { log, logError } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
 import { sendTestAlert } from "@/lib/price-alerts";
@@ -237,6 +237,21 @@ export async function connectStripe() {
     msg = `ok:${r.mode}:${r.webhook}`;
   } catch (e) {
     await logError("payments", "Stripe setup failed", e);
+    msg = `fail:${String(e.message).slice(0, 200)}`;
+  }
+  redirect(`/app/admin?stripe=${encodeURIComponent(msg)}`);
+}
+
+/** Move current subscribers onto today's Premium price from their next bill (after a price change). */
+export async function moveSubscribers() {
+  const admin = await requireAdmin();
+  let msg;
+  try {
+    const r = await moveSubscribersToCurrentPrice();
+    await logAdminAction(admin, "moveSubscribers", r);
+    msg = `moved:${r.moved}:${r.already}:${r.failed}`;
+  } catch (e) {
+    await logError("payments", "Moving subscribers failed", e);
     msg = `fail:${String(e.message).slice(0, 200)}`;
   }
   redirect(`/app/admin?stripe=${encodeURIComponent(msg)}`);
