@@ -14,7 +14,8 @@ const RANGES = [["1D", 1], ["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["A
  * With `changes` ({ [days]: { change, pct } }, 0 = all time, from lib/collection.js marketChange), the change shown for
  * a range is the price movement of the cards owned then, so cards added in the range don't read as gains.
  */
-export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false, changes = null, shared = false }) {
+export default function ValueChart({ points, historyDays, height = 180, label = "Collection value", ranges = RANGES, profit = null, hideable = false, changes = null, shared = false, current = null }) {
+  // current: the value to show when not hovering (a card page's price today, which can be newer than its history)
   // shared: the range is the collection's (lib/chart-range.js), so the card list's % changes follow it.
   const [own, setOwn] = useState(30);
   const sharedRange = useChartRange();
@@ -52,7 +53,7 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
       <div className="chart-head">
         <div>
           <div className="small muted">{at ? new Date(`${at.day}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : label}</div>
-          <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : last)}</div>{hideable && <HideValues />}</div>
+          <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : current ?? last)}</div>{hideable && <HideValues />}</div>
           {!at && delta !== null && shown.length > 1 && (
             <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>
               {up ? "▲" : "▼"} {money(Math.abs(moved))} ({pct(delta)}) {range === 1 ? "today" : range ? `in ${range} days` : "all time"}

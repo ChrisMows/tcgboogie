@@ -9,6 +9,7 @@ import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
 import { itemLabel, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
+import Source from "@/components/Source";
 
 /** The "add a copy" button next to the card title: opens the add panel below. */
 export function AddCardButton({ label }) {
@@ -35,7 +36,7 @@ export function CardAlertIcons({ watch, filterHref }) {
 }
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
-export default function CardActions({ product, mine, binders, watch, plan }) {
+export default function CardActions({ product, mine, binders, watch, plan, canSell = false }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | null
   const panelRef = useRef(null);
@@ -76,26 +77,37 @@ export default function CardActions({ product, mine, binders, watch, plan }) {
     <div className="card-actions">
       {copies > 0 ? (
         <div className="you-own">
-          <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
-            <b style={{ flex: "none" }}>✓ You own {copies}</b>
-            <span className="small muted" style={{ flex: "none" }}>
-              Worth {money(worth)}{gain !== null ? <> · <span className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : ""}{money(gain)} ({cost ? pct(gain / cost) : "—"})</span></> : null}
+          <div className="you-own-head">
+            <b>✓ You own {copies}</b>
+            <span className="you-own-worth">
+              <b>{money(worth)}</b>
+              {gain !== null && <span className={`small ${gain >= 0 ? "up" : "down"}`}>{gain >= 0 ? "+" : ""}{money(gain)} ({cost ? pct(gain / cost) : "—"})</span>}
             </span>
           </div>
           {owned.map((it) => (
             <div key={it.id} className="copy-row">
-              <span className="chip-mini">{itemLabel(it)}</span>
-              <span className="small muted copy-meta">
-                {money(unitValue(it))} each{it.purchasePrice ? ` · paid ${money(it.purchasePrice)}` : ""}
-                {it.binderId && binders.find((b) => b.id === it.binderId) ? ` · ${binders.find((b) => b.id === it.binderId).name}` : ""}
-              </span>
-              <span className="stepper xs">
-                <button type="button" disabled={pending} onClick={() => (it.quantity > 1 || window.confirm("Remove this copy from your collection?")) && run(() => changeQuantity(it.id, -1))} aria-label="One fewer">−</button>
-                <span>{it.quantity}</span>
-                <button type="button" disabled={pending} onClick={() => run(() => changeQuantity(it.id, 1))} aria-label="One more">+</button>
-              </span>
-              <button type="button" className="link-btn small" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
-              {plan?.sellOnEbay && product.type === "card" && owned.length > 1 && <Link href={`/app/collection/sell/${it.id}`} className="link-btn small sell-link">Sell this copy</Link>}
+              <div className="copy-line">
+                <span className="copy-label">{itemLabel(it)}</span>
+                <b>{money(unitValue(it))}{it.quantity > 1 ? <span className="small muted"> each</span> : null}</b>
+              </div>
+              <div className="copy-line">
+                <span className="small muted copy-meta">
+                  {[it.purchasePrice ? `Paid ${money(it.purchasePrice)}` : null, binders.find((b) => b.id === it.binderId)?.name].filter(Boolean).join(" · ")}
+                </span>
+                <span className="copy-tools">
+                  <span className="stepper xs">
+                    <button type="button" disabled={pending} onClick={() => (it.quantity > 1 || window.confirm("Remove this copy from your collection?")) && run(() => changeQuantity(it.id, -1))} aria-label="One fewer">−</button>
+                    <span>{it.quantity}</span>
+                    <button type="button" disabled={pending} onClick={() => run(() => changeQuantity(it.id, 1))} aria-label="One more">+</button>
+                  </span>
+                  <button type="button" className="link-btn small" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
+                </span>
+              </div>
+              {canSell && it.kind !== "sealed" && (
+                <Link href={`/app/collection/sell/${it.id}`} className="btn sm copy-sell" data-tour="sell-open" title="List this copy on eBay with the details filled in">
+                  <Source name="ebay" className="src-sm" /> Sell on eBay
+                </Link>
+              )}
               {editing === it.id && (
                 <div className="copy-edit">
                   <ItemForm product={product} initial={it} binders={binders} allowList={false} submitLabel="Save changes" pending={pending} errors={errors}

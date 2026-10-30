@@ -14,8 +14,7 @@ import ValueChart from "@/components/ValueChart";
 import { creditsLow, getProduct } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
-import { rangeChanges, slim } from "@/lib/portfolio";
-import PriceRangeChange from "@/components/PriceRangeChange";
+import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
@@ -165,7 +164,6 @@ export default async function CardPage({ params, searchParams }) {
   };
   const owned = mine.filter((it) => it.list === "owned").reduce((n, it) => n + it.quantity, 0);
   const wished = mine.some((it) => it.list === "wishlist");
-  // Sell on eBay: the copy you own (the first one if you have several; each copy also has its own link below).
   const gradeIdea = (() => {
     // The grader that pays best at its cheapest tier.
     const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
@@ -174,7 +172,7 @@ export default async function CardPage({ params, searchParams }) {
       .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
     return options[0] || null;
   })();
-  const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
+  const canSell = Boolean(user.plan.sellOnEbay && p.type === "card" && language !== "japanese"); // Sell on eBay, per copy in "You own"
 
   // Live listings and sold listings on eBay, under the sales.
   const ebayLinks = (
@@ -203,27 +201,9 @@ export default async function CardPage({ params, searchParams }) {
       <div className="card-hero">
         <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
         <div className="card-hero-info">
-          <div className="card-title-row">
-            <div className="card-name-row">
-              <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
-              <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} filterHref={p.type === "card" ? filterHref : null} />
-            </div>
-            <div className="card-title-actions">
-              {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
-              {sellItem && (
-                <Link href={`/app/collection/sell/${sellItem.id}`} className="btn card-sell-btn" data-tour="sell-open" title="List this card on eBay with the details filled in">
-                  <Source name="ebay" className="src-sm" /> Sell on eBay
-                </Link>
-              )}
-              <div className="card-report-row">
-                {!isSealed && (
-                  <span className="price-wrong">
-                    <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">✎ Price wrong?</a>
-                  </span>
-                )}
-                <MissingPicture productId={p.id} language={p.language || language} />
-              </div>
-            </div>
+          <div className="card-name-row">
+            <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
+            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} filterHref={p.type === "card" ? filterHref : null} />
           </div>
           <div className="muted">
             {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}
@@ -246,11 +226,12 @@ export default async function CardPage({ params, searchParams }) {
               <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
               so you can still add it to your collection with your own value, set price alerts and report sales you see.
             </div>
-          ) : <div className="hero-price">
-            <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
-            <b>{money(now)}</b>
-            <PriceRangeChange changes={rangeChanges(p)} />
-          </div>}
+          ) : (
+            <div className="hero-chart">
+              <ValueChart points={(p.history || []).map((h) => ({ day: h.date, value: h.price }))} historyDays={null} current={now}
+                label={isSealed ? "Market price" : "Raw Near Mint market price"} height={150} shared />
+            </div>
+          )}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
           {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
           {gradeIdea && gradeIdea.verdict !== "skip" && (
@@ -259,85 +240,101 @@ export default async function CardPage({ params, searchParams }) {
               {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
             </Link>
           )}
-          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} />
         </div>
+        <aside className="card-hero-side">
+          {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
+          <div className="card-report-row">
+            {!isSealed && (
+              <span className="price-wrong">
+                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">✎ Price wrong?</a>
+              </span>
+            )}
+            <MissingPicture productId={p.id} language={p.language || language} />
+          </div>
+          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
+            plan={user.plan} canSell={canSell} />
+        </aside>
       </div>
 
-      <div className="card-detail-grid">
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <ValueChart points={(p.history || []).map((h) => ({ day: h.date, value: h.price }))} historyDays={null}
-            label={isSealed ? "Market price" : "Near Mint market price"} height={160} shared />
-        </div>
-
-        <div className="panel" style={{ marginBottom: 0 }}>
-          {isSealed ? <><p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p>{ebayLinks}</> : (
-            <>
-              <h2>By condition</h2>
+      <div className="panel card-prices">
+        {isSealed ? (
+          <div className="price-col">
+            <h3>Prices</h3>
+            <p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p>
+            {ebayLinks}
+          </div>
+        ) : (
+          <>
+            <div className="price-col">
+              <h3>Raw</h3>
               {printings.length === 0 && <p className="small muted" style={{ margin: 0 }}>No pricing data available for this card.</p>}
               {printings.map(([printing, byCond]) => (
-                <div key={printing} style={{ marginBottom: 12 }}>
-                  {printings.length > 1 && <div className="small muted" style={{ marginBottom: 4 }}>{printing}</div>}
+                <div key={printing} className="price-group">
+                  {printings.length > 1 && <div className="small muted">{printing}</div>}
                   <div className="cond-grid">
                     {Object.entries(byCond).sort(([a], [b]) => condRank(a) - condRank(b)).map(([cond, v]) => (
                       <a key={cond} className="cond-cell cond-link" href={tcgListings(printing, cond)} target="_blank" rel="noopener noreferrer"
                         title={`See ${cond} listings on ${p.topps ? "eBay" : "TCGplayer"}`}>
                         <span className="small muted">{COND_SHORT[cond] || cond}</span><b>{money(v.market)}</b>
-                        <span className="grade-sales">{p.topps ? "eBay" : "TCGplayer"} ↗</span>
                       </a>
                     ))}
                   </div>
                 </div>
               ))}
-              <h2 style={{ marginTop: 18 }}>Graded</h2>
+            </div>
+            <div className="price-col">
+              <h3>Graded</h3>
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="cond-grid">
                   {graded.slice(0, 12).map(([key, g]) => (
                     <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
-                      rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`See ${GRADE_LABEL(key)} sold listings on eBay`}>
+                      rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}>
                       <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-                      {g.few && <span className="few-tag" title="Based on only one or two recent sales: a rough guide">Few sales</span>}
-                      <span className="grade-sales">{saleNote(g)} ↗</span>
+                      <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
                     </a>
                   ))}
                 </div>
               )}
               {thinGraded.length > 0 && (
                 <details className="thin-grades">
-                  <summary>No sales in the last 90 days: {thinGraded.map(([k]) => GRADE_LABEL(k)).join(", ")}</summary>
-                  <p className="small muted" style={{ margin: "6px 0 8px" }}>These grades haven&apos;t sold recently, so their old figures are shown for reference only and aren&apos;t used for your collection value.</p>
+                  <summary>No recent sales: {thinGraded.map(([k]) => GRADE_LABEL(k)).join(", ")}</summary>
+                  <p className="small muted" style={{ margin: "6px 0 8px" }}>These grades haven&apos;t sold in 90 days, so their old figures are shown for reference only and aren&apos;t used for your collection value.</p>
                   <div className="cond-grid">
                     {thinGraded.map(([key, g]) => (
-                      <div key={key} className="cond-cell thin">
+                      <div key={key} className="cond-cell thin" title={saleNote(g)}>
                         <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-                        <span className="grade-sales">{saleNote(g)}</span>
                       </div>
                     ))}
                   </div>
                 </details>
               )}
-              {(p.recentSales || []).length > 0 && (
+            </div>
+            <div className="price-col">
+              <h3>Recent sales</h3>
+              {(p.recentSales || []).length > 0 ? (
                 <RecentSales
                   sales={p.recentSales.map((s) => ({
                     key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
                     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
                   }))} />
-              )}
+              ) : <p className="small muted" style={{ margin: 0 }}>No individual sales to list yet.</p>}
               {ebayLinks}
               {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
-            </>
-          )}
+            </div>
+          </>
+        )}
+        <div className="price-foot">
           {p.topps ? (
-            <p className="hint" style={{ marginBottom: 0 }}>
+            <p className="hint">
               A Topps Pokémon card ({p.topps.year}), not a Pokémon TCG card. Its value is the typical asking price of current eBay Buy It Now
               listings for a raw copy{p.topps.checkedAt ? `, checked ${new Date(p.topps.checkedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}.
               Asking prices, not sold prices: check sold listings before you buy or sell. Graded copies keep the value you enter.
             </p>
           ) : p.memberAdded ? (
-            <p className="hint" style={{ marginBottom: 0 }}>
+            <p className="hint">
               Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.
             </p>
-          ) : <p className="hint" style={{ marginBottom: 0 }}>
+          ) : <p className="hint">
             Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>
           </p>}

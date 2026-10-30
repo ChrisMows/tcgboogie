@@ -798,6 +798,7 @@ td.num { text-align: right; font-weight: 600; }
   .coll-overview, .card-detail-grid { grid-template-columns: minmax(0, 1fr); }
   .card-hero { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .card-hero-art { max-width: 220px; }
+  .card-hero-side { grid-column: auto !important; }
 }
 @media (max-width: 600px) {
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -927,7 +928,7 @@ a.cond-link:hover { border-color: var(--accent); }
 .card-title-row h1 { flex: 1 1 auto; min-width: 0; }
 /* The card's name with its bell (price alert) and lightning (deal alerts) icons at the right, like a store's star */
 .card-name-row { display: flex; align-items: flex-start; gap: 12px; min-width: 0; align-self: stretch; }
-.card-name-row h1 { margin-bottom: 0; }
+.card-name-row h1 { margin-bottom: 0; flex: 1 1 auto; min-width: 0; }
 .card-icons { display: flex; gap: 8px; flex: none; margin-top: 4px; }
 .card-icons .alert-bell { width: 38px; height: 38px; font-size: 17px; }
 .card-add-btn { flex: none; margin-top: 4px; }
@@ -1178,16 +1179,6 @@ details.era > .set-grid { margin-bottom: 14px; }
 .cond-cell.few { border-style: dashed; }
 .few-tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--warn, #e3b341); }
 @media (max-width: 700px) { .price-wrong { align-items: flex-start; max-width: none; } .price-wrong-tip { text-align: left; } }
-/* Card page header: the button column sits beside the title, set line and price (instead of pushing them down) */
-@media (min-width: 601px) {
-  .card-hero-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 18px; align-content: start; }
-  .card-hero-info > * { grid-column: 1 / -1; }
-  .card-hero-info > .card-title-row { display: contents; }
-  .card-hero-info > .card-title-row > .card-name-row { grid-column: 1; grid-row: 1; }
-  .card-hero-info > .card-title-row > .card-title-actions { grid-column: 2; grid-row: 1 / span 3; }
-  .card-hero-info > .muted { grid-column: 1; grid-row: 2; }
-  .card-hero-info > .hero-price { grid-column: 1; grid-row: 3; }
-}
 .price-wrong { align-items: stretch; }
 .price-wrong-btn { justify-content: center; text-align: center; }
 
@@ -1941,3 +1932,39 @@ body:has(.install-hint) .helper-fab { display: none; }
   .release-counts { order: 3; width: 100%; justify-content: flex-start; padding-left: 64px; }
   .release-body { padding: 2px 14px 14px; }
 }
+
+/* Card page: art | name, price and chart | add, report and "You own" (3 columns on wide screens; the side column
+   drops under the chart on medium screens and everything stacks on phones). Prices and sales span the full width. */
+@media (min-width: 861px) {
+  .card-hero { grid-template-columns: 240px minmax(0, 1fr); }
+  .card-hero-side { grid-column: 2; }
+}
+@media (min-width: 1180px) {
+  .card-hero { grid-template-columns: 240px minmax(0, 1fr) 300px; gap: 28px; }
+  .card-hero-side { grid-column: 3; }
+}
+.card-hero-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-hero-side .card-add-btn { margin-top: 0; width: 100%; }
+.card-hero-side .card-report-row { flex-direction: row; gap: 8px; }
+.card-hero-side .card-report-row .price-wrong { flex: 1 1 0; width: auto; max-width: none; }
+.card-hero-side .price-wrong-btn { padding: 10px 8px; width: 100%; }
+.card-hero-side .card-actions .you-own { margin: 4px 0 0; }
+.hero-chart { margin: 14px 0 6px; }
+.hero-chart .chart-value { font: 600 34px var(--font-head), sans-serif; letter-spacing: -0.02em; }
+.hero-chart .chart-empty { height: 80px; }
+.you-own-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.you-own-worth { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.copy-row { display: grid; gap: 4px; }
+.copy-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
+.copy-label { font-weight: 700; font-size: 13px; padding: 2px 9px; border-radius: 6px; background: var(--panel-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.copy-tools { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.copy-sell { justify-self: start; margin-top: 4px; gap: 7px; }
+.card-prices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.card-prices h3 { margin: 0 0 10px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.price-group + .price-group { margin-top: 10px; }
+.price-group > .small { margin-bottom: 4px; }
+.card-prices .cond-cell { gap: 1px; }
+.card-prices .recent-sales { margin-top: 0; padding-top: 0; border-top: 0; }
+.price-foot { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; }
+.price-foot .hint { margin: 0; }
+@media (min-width: 861px) { .card-prices { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; } }
