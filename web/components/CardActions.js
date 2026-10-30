@@ -3,7 +3,6 @@
 import { revealCard } from "@/lib/reveal";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import Source from "@/components/Source";
 import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
@@ -22,17 +21,21 @@ export function AddCardButton({ label }) {
 export const alertLabel = (watch) => (watch.mode === "high" ? "Alert on new highs" : watch.mode === "low" ? "Alert on new lows"
   : watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`);
 
-/** The bell next to a card's price: opens the price alert pop-up (or, with an alert already set, goes to it). */
-export function PriceAlertBell({ watch }) {
-  if (watch) return <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>;
+/** The bell and lightning icons beside a card's name: the price alert pop-up (or, with an alert set, the alert) and
+ * deal alerts for this card. */
+export function CardAlertIcons({ watch, filterHref }) {
   return (
-    <button type="button" className="alert-bell" title="Set a price alert" aria-label="Set a price alert"
-      onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}>🔔</button>
+    <span className="card-icons">
+      {watch ? <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>
+        : <button type="button" className="alert-bell" title="Price alert" aria-label="Set a price alert"
+          onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}>🔔</button>}
+      {filterHref && <Link href={filterHref} className="alert-bell" title="Deal alerts for this card" aria-label="Get deal alerts for this card">⚡</Link>}
+    </span>
   );
 }
 
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
-export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebayLive, ebaySold }) {
+export default function CardActions({ product, mine, binders, watch, plan }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | null
   const panelRef = useRef(null);
@@ -107,7 +110,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         <div className="you-own wish"><b>♥ On your wishlist</b> <span className="small muted">Got it? Move it to your collection in one tap.</span></div>
       ) : null}
 
-      <div className="action-row">
+      {(wish || copies === 0) && <div className="action-row">
         {wish && (
           <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
         )}
@@ -115,26 +118,7 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
           wish ? <button type="button" className="btn" disabled={pending} onClick={() => run(() => removeFromWishlist(product.id), "Removed from your wishlist.")}>♥ Wishlisted</button>
             : <button type="button" className="btn" disabled={pending} onClick={() => run(() => quickAdd(product.id, "wishlist"), "Added to your wishlist.", { href: "/app/collection?tab=wishlist", label: "Wishlist" })}>♡ Wishlist</button>
         )}
-        {watch ? (
-          <Link href="/app/watches" className="btn">🔔 {alertLabel(watch)}</Link>
-        ) : (
-          <button type="button" className="btn" onClick={openAlert}>🔔 Price alert</button>
-        )}
-        {product.type === "card" && <Link href={filterHref} className="btn">⚡ Deal alerts</Link>}
-        {ebayLive && (
-          <a href={ebayLive.href} target="_blank" rel={`noopener noreferrer${ebayLive.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live"
-            title="Live eBay listings and auctions for this card">
-            <Source name="ebay" className="src-sm" /> <span className="live-dot" aria-hidden="true" />Live listings ↗
-          </a>
-        )}
-        {ebaySold && (
-          <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold"
-            title="eBay sold and completed listings for this card, most recent first">
-            <Source name="ebay" className="src-sm" /> Recent sales ↗
-          </a>
-        )}
-      </div>
-      {(ebayLive?.affiliate || ebaySold?.affiliate) && <p className="hint ebay-note">eBay links may earn us a commission.</p>}
+      </div>}
 
       {panel === "add" && !wish && (
         <div className="action-panel" ref={panelRef}>

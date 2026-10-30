@@ -925,6 +925,11 @@ a.cond-link:hover { border-color: var(--accent); }
 /* Card page header and eBay buttons */
 .card-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .card-title-row h1 { flex: 1 1 auto; min-width: 0; }
+/* The card's name with its bell (price alert) and lightning (deal alerts) icons at the right, like a store's star */
+.card-name-row { display: flex; align-items: flex-start; gap: 12px; min-width: 0; align-self: stretch; }
+.card-name-row h1 { margin-bottom: 0; }
+.card-icons { display: flex; gap: 8px; flex: none; margin-top: 4px; }
+.card-icons .alert-bell { width: 38px; height: 38px; font-size: 17px; }
 .card-add-btn { flex: none; margin-top: 4px; }
 .ebay-btn { display: inline-flex; align-items: center; gap: 8px; }
 .src.src-sm { min-width: 0; padding: 2px 6px; font-size: 13px; border-radius: 5px; }
@@ -934,6 +939,9 @@ a.cond-link:hover { border-color: var(--accent); }
 @keyframes live-pulse { 50% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 .ebay-note { margin: 6px 0 0; font-size: 11px; }
+.ebay-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.ebay-links .ebay-note { flex: 1 1 100%; margin-top: 0; }
+@media (max-width: 600px) { .ebay-links .btn { flex: 1 1 0; padding: 10px 8px; gap: 6px; font-size: 12.5px; } }
 @media (max-width: 600px) { .card-title-row { flex-direction: column; gap: 8px; } }
 
 /* ⓘ info tips */
@@ -1175,7 +1183,7 @@ details.era > .set-grid { margin-bottom: 14px; }
   .card-hero-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 18px; align-content: start; }
   .card-hero-info > * { grid-column: 1 / -1; }
   .card-hero-info > .card-title-row { display: contents; }
-  .card-hero-info > .card-title-row > h1 { grid-column: 1; grid-row: 1; }
+  .card-hero-info > .card-title-row > .card-name-row { grid-column: 1; grid-row: 1; }
   .card-hero-info > .card-title-row > .card-title-actions { grid-column: 2; grid-row: 1 / span 3; }
   .card-hero-info > .muted { grid-column: 1; grid-row: 2; }
   .card-hero-info > .hero-price { grid-column: 1; grid-row: 3; }
@@ -1212,8 +1220,9 @@ details.era > .set-grid { margin-bottom: 14px; }
   .price-wrong { flex: 1 1 100%; flex-direction: row; align-items: center; gap: 10px; }
   .price-wrong-btn { flex: none; }
   .price-wrong-tip { flex: 1; text-align: left; }
-  .card-report-row { flex: 1 1 100%; }
-  .card-report-row .price-wrong { max-width: none; width: auto; }
+  .card-report-row { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; }
+  .card-report-row .price-wrong { max-width: none; width: auto; flex: 1 1 0; }
+  .card-report-row .price-wrong-tip { flex: 1 1 100%; }
 }
 /* Phones: a smaller, centered card picture so the name, price and buttons show on the first screen */
 .card-hero-art .thumb { min-width: 0 !important; }

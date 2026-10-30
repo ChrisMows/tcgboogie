@@ -16,12 +16,10 @@ export default function MissingPicture({ productId, language }) {
   });
   return (
     <span className="price-wrong">
-      <button type="button" className="btn price-wrong-btn" onClick={click} disabled={pending || (result && result.status !== "error")}>
+      <button type="button" className="btn price-wrong-btn" title="Blank picture? We'll find it, or ask a person to add it." onClick={click} disabled={pending || (result && result.status !== "error")}>
         {pending ? "Looking for it…" : result?.status === "fixed" ? "✓ Picture added" : "📷 Missing picture?"}
       </button>
-      <span className={`price-wrong-tip${result ? ` picture-result ${result.status}` : ""}`} role="status">
-        {result ? result.message : "Blank picture? We'll find it, or ask a person to add it."}
-      </span>
+      {result && <span className={`price-wrong-tip picture-result ${result.status}`} role="status">{result.message}</span>}
     </span>
   );
 }

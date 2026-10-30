@@ -44,7 +44,7 @@ export default function RecentSales({ sales, soldHref, soldAffiliate }) {
         </div>
       ))}
       {shown.length > SHOW && !more && <button type="button" className="link-btn small" onClick={() => setMore(true)}>Show all {shown.length}</button>}
-      <a href={soldHref} target="_blank" rel={`noopener noreferrer${soldAffiliate ? " sponsored" : ""}`} className="small">All sold listings on eBay ↗</a>
+      {soldHref && <a href={soldHref} target="_blank" rel={`noopener noreferrer${soldAffiliate ? " sponsored" : ""}`} className="small">All sold listings on eBay ↗</a>}
     </div>
   );
 }

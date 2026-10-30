@@ -6,7 +6,7 @@ import { setLabel } from "@/lib/sets";
 import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import CardActions, { AddCardButton, PriceAlertBell } from "@/components/CardActions";
+import CardActions, { AddCardButton, CardAlertIcons } from "@/components/CardActions";
 import Source from "@/components/Source";
 import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
@@ -176,6 +176,21 @@ export default async function CardPage({ params, searchParams }) {
   })();
   const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
+  // Live listings and sold listings on eBay, under the sales.
+  const ebayLinks = (
+    <div className="ebay-links">
+      {ebay && <a href={ebay.href} target="_blank" rel={`noopener noreferrer${ebay.affiliate ? " sponsored" : ""}`} className="btn ebay-btn live"
+        title="Live eBay listings and auctions for this card">
+        <Source name="ebay" className="src-sm" /> <span className="live-dot" aria-hidden="true" />Live listings ↗
+      </a>}
+      {ebaySold && <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold"
+        title="eBay sold and completed listings for this card, most recent first">
+        <Source name="ebay" className="src-sm" /> Recent sales ↗
+      </a>}
+      {(ebay?.affiliate || ebaySold?.affiliate) && <p className="hint ebay-note">eBay links may earn us a commission.</p>}
+    </div>
+  );
+
   return (
     <>
       <div className="crumbs">
@@ -189,7 +204,10 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
         <div className="card-hero-info">
           <div className="card-title-row">
-            <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
+            <div className="card-name-row">
+              <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
+              <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} filterHref={p.type === "card" ? filterHref : null} />
+            </div>
             <div className="card-title-actions">
               {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
               {sellItem && (
@@ -200,8 +218,7 @@ export default async function CardPage({ params, searchParams }) {
               <div className="card-report-row">
                 {!isSealed && (
                   <span className="price-wrong">
-                    <a href="#report-sale" className="btn price-wrong-btn">✎ Price wrong?</a>
-                    <span className="price-wrong-tip">Seen it sell for more or less? Show us the sale and we&apos;ll update the value.</span>
+                    <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">✎ Price wrong?</a>
                   </span>
                 )}
                 <MissingPicture productId={p.id} language={p.language || language} />
@@ -231,7 +248,7 @@ export default async function CardPage({ params, searchParams }) {
             </div>
           ) : <div className="hero-price">
             <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
-            <span className="hero-price-row"><b>{money(now)}</b>{now ? <PriceAlertBell watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} /> : null}</span>
+            <b>{money(now)}</b>
             <PriceRangeChange changes={rangeChanges(p)} />
           </div>}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
@@ -243,8 +260,7 @@ export default async function CardPage({ params, searchParams }) {
             </Link>
           )}
           <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} filterHref={filterHref}
-            ebayLive={ebay} ebaySold={ebaySold} />
+            plan={user.plan} />
         </div>
       </div>
 
@@ -255,7 +271,7 @@ export default async function CardPage({ params, searchParams }) {
         </div>
 
         <div className="panel" style={{ marginBottom: 0 }}>
-          {isSealed ? <p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p> : (
+          {isSealed ? <><p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p>{ebayLinks}</> : (
             <>
               <h2>By condition</h2>
               {printings.length === 0 && <p className="small muted" style={{ margin: 0 }}>No pricing data available for this card.</p>}
@@ -301,12 +317,13 @@ export default async function CardPage({ params, searchParams }) {
                 </details>
               )}
               {(p.recentSales || []).length > 0 && (
-                <RecentSales soldHref={ebaySold.href} soldAffiliate={ebaySold.affiliate}
+                <RecentSales
                   sales={p.recentSales.map((s) => ({
                     key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
                     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
                   }))} />
               )}
+              {ebayLinks}
               {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
             </>
           )}
