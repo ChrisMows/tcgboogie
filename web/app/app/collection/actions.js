@@ -232,9 +232,10 @@ export async function watchProduct(productId, input = {}) {
   const product = await getProduct(productId);
   if (!product) return { ok: false, error: "That product is no longer available." };
   const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
+  const record = input.mode === "high" || input.mode === "low";
   const selling = input.mode === "above" || input.mode === "rise";
-  const target = input.targetPrice ?? (now ? Math.round(now * (selling ? 1.15 : 0.85) * 100) / 100 : null);
-  if (!target) return { ok: false, error: "There's no current price for this product yet, so set a target on the Price alerts page." };
+  const target = record ? null : input.targetPrice ?? (now ? Math.round(now * (selling ? 1.15 : 0.85) * 100) / 100 : null);
+  if (!target && !record) return { ok: false, error: "There's no current price for this product yet, so set a target on the Price alerts page." };
   const { watch, errors } = validateWatch({ priceType: "market", mode: "below", condition: "Near Mint", targetPrice: target, alsoEbay: product.type === "card" && product.language !== "japanese", ...input }, product);
   if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0] };
   const price = currentPrice(product, watch);
@@ -244,7 +245,7 @@ export async function watchProduct(productId, input = {}) {
   });
   revalidatePath("/app/watches");
   refresh(product.id);
-  return { ok: true, target: watch.targetPrice };
+  return { ok: true, target: watch.targetPrice, record: watch.basePrice };
 }
 
 // ---------- binders ----------

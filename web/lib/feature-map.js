@@ -74,7 +74,7 @@ function features(free, premium, sms) {
       what: "Public page of caught deals, new highs and big sales; ready-made X posts.", free: "✓ (public)", premium: "✓" },
 
     { area: "Price alerts", name: "Price alerts", link: "/app/watches", grows: "card", vendors: ["ppt", "resend", "discord", "push", "twilio"],
-      what: "A member's buy or sell price on a card, checked daily against the market.",
+      what: "A member's target price on a card, or a new high / new low (each time it beats the record we've seen), checked daily against the market. Set from the bell on a card page in one tap.",
       free: per(free.maxPriceWatches, "alert"), premium: per(premium.maxPriceWatches, "alerts") },
     { area: "Price alerts", name: "eBay listing alerts", link: "/app/watches", grows: "card", vendors: ["ebay"],
       what: "Also searches eBay Buy It Now for the card: daily when the target is close to market, every 3 days, or weekly for long shots.",

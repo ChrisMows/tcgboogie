@@ -29,19 +29,36 @@ export function currentPrice(product, watch) {
 
 // Alert modes. Buying: "below" (at or below a price) / "drop" (falls by a percent).
 // Selling: "above" (at or above a price) / "rise" (climbs by a percent). dropPct holds the percent for both.
-export const MODES = ["below", "drop", "above", "rise"];
-export const isRising = (watch) => watch.mode === "above" || watch.mode === "rise";
+// Records: "high" / "low" alert each time the price beats the highest / lowest we've recorded (kept in basePrice,
+// which moves to the new record after every alert, so they never need re-arming).
+export const MODES = ["below", "drop", "above", "rise", "high", "low"];
+export const isRising = (watch) => watch.mode === "above" || watch.mode === "rise" || watch.mode === "high";
+export const isRecord = (watch) => watch.mode === "high" || watch.mode === "low";
+const RECORD_STEP = 0.01; // a new record must beat the old one by 1%, so a price wobbling at its high isn't an alert a day
 
-/** The price at which a watch fires. */
+/** The price at which a watch fires (for a record alert: the record to beat). */
 export function targetPrice(watch) {
   if (watch.mode === "drop") return Math.round(watch.basePrice * (1 - watch.dropPct / 100) * 100) / 100;
   if (watch.mode === "rise") return Math.round(watch.basePrice * (1 + watch.dropPct / 100) * 100) / 100;
+  if (isRecord(watch)) return watch.basePrice;
   return watch.targetPrice;
 }
 
 export function isTriggered(watch, price) {
   if (price === null || price === undefined) return false;
+  if (watch.mode === "high") return Boolean(watch.basePrice) && price >= watch.basePrice * (1 + RECORD_STEP);
+  if (watch.mode === "low") return Boolean(watch.basePrice) && price <= watch.basePrice * (1 - RECORD_STEP);
   return isRising(watch) ? price >= targetPrice(watch) : price <= targetPrice(watch);
+}
+
+/** The record a new "high" / "low" alert starts from: today's price and, when the card's 90-day history is for this
+ * same price (market, Near Mint, main printing), the highest / lowest in it. */
+export function startingRecord(product, w, now) {
+  if (!now) return null;
+  const sameSeries = w.priceType === "market"
+    && (product.type === "sealed" || (w.condition === "Near Mint" && w.printing === Object.keys(product.prices || {})[0]));
+  const past = sameSeries ? (product.history || []).map((h) => Number(h.price)).filter((v) => v > 0) : [];
+  return w.mode === "high" ? Math.max(now, ...past) : Math.min(now, ...past);
 }
 
 /** Validate a new or edited watch for a product. Returns { watch, errors }. */
@@ -65,10 +82,13 @@ export function validateWatch(input, product) {
   } else {
     w.alsoEbay = false; // eBay matching covers single cards for now
   }
-  if (isRising(w)) w.alsoEbay = false; // eBay listing alerts are for buying (listed at or under your price)
+  if (isRising(w) || isRecord(w)) w.alsoEbay = false; // eBay listing alerts are for buying (listed at or under your price)
   const base = currentPrice(product, w);
   w.basePrice = base;
-  if (w.mode === "below" || w.mode === "above") {
+  if (isRecord(w)) {
+    w.basePrice = startingRecord(product, w, base);
+    if (!w.basePrice) errors._ = "There's no current price for this yet, so a new high or low can't be measured. Use a target price instead.";
+  } else if (w.mode === "below" || w.mode === "above") {
     const t = Number(String(input.targetPrice ?? "").replace(/[$,\s]/g, ""));
     if (!Number.isFinite(t) || t <= 0 || t > 1_000_000) errors.targetPrice = "Enter a target price in dollars.";
     else w.targetPrice = Math.round(t * 100) / 100;

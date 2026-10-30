@@ -7,6 +7,8 @@ export const RELEASES = [
     date: "2026-10-26",
     title: "Faster deals, better emails and clearer plans",
     items: [
+      { tag: "New", title: "One-tap price alerts", href: "/app/watches",
+        text: "Tap the bell next to a card's price and choose: tell me when it reaches a price I pick, hits a new high, or hits a new low. Type a price below today's and we watch for a drop, above it and we watch for a climb. New high and new low alerts tell you every time the price sets a new record. Want a specific condition, the lowest listing or a percent? Tap More options." },
       { tag: "New", title: "What's new, by email", href: "/app/account#alerts",
         text: "When we release new features and fixes, we'll send you a short email with what's new. Prefer not to get them? Turn off Product updates in Settings, or use the unsubscribe link at the bottom." },
       { tag: "New", title: "Compare plans", href: "/",

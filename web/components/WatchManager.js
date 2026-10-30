@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sparkline from "@/components/Sparkline";
 import { addWatch, editWatch, findProducts, rearmWatch, removeWatch } from "@/app/app/watches/actions";
-import { PRICE_TYPES, currentPrice, isRising, targetPrice, trackingLabel } from "@/lib/watches";
+import AlertSheet from "@/components/AlertSheet";
+import { PRICE_TYPES, currentPrice, isRecord, isRising, targetPrice, trackingLabel } from "@/lib/watches";
 
 const money = (v) => (v === null || v === undefined ? "—" : `$${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
@@ -126,12 +127,13 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
   );
 }
 
-export default function WatchManager({ watches, products, plan, isDemo, owned = {}, listings = {}, side = null }) {
+export default function WatchManager({ watches, products, plan, isDemo, owned = {}, listings = {}, side = null, pick = null }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null);
   const [findError, setFindError] = useState(null);
-  const [picked, setPicked] = useState(null);
+  const [picked, setPicked] = useState(pick);
+  const [advanced, setAdvanced] = useState(Boolean(pick)); // the full form (printing, condition, percent...) instead of the 3 choices
   const [errors, setErrors] = useState({});
   const [editing, setEditing] = useState(null);
   const [message, setMessage] = useState(null);
@@ -157,8 +159,9 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
       const res = await addWatch(picked.id, input);
       if (!res.ok) return setErrors(res.errors || {});
       setErrors({});
-      setMessage({ kind: "good", text: res.alreadyBelow ? "Alert added. The price is already past your target today, so you'll hear from us on the next check." : "Alert added. We'll tell you when the price reaches your target." });
-      setPicked(null); setResults(null); setQuery("");
+      setMessage({ kind: "good", text: input.mode === "high" || input.mode === "low" ? `Alert added. We'll tell you each time it hits a new ${input.mode}.`
+        : res.alreadyBelow ? "Alert added. The price is already past your target today, so you'll hear from us on the next check." : "Alert added. We'll tell you when the price reaches your target." });
+      setPicked(null); setResults(null); setQuery(""); setAdvanced(false);
       router.refresh();
     });
   }
@@ -227,7 +230,15 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     <Sparkline points={picked.history} width={180} />
                     <button type="button" className="btn ghost sm" onClick={() => setPicked(null)}>Change</button>
                   </div>
-                  <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} listingAlerts={plan.ebayListingAlerts !== false} />
+                  {advanced ? (
+                    <>
+                      <WatchForm key={picked.id} product={picked} onSubmit={create} submitLabel="Add alert" pending={pending} errors={errors} listingAlerts={plan.ebayListingAlerts !== false} />
+                      <button type="button" className="link-btn small" style={{ marginTop: 10 }} onClick={() => setAdvanced(false)}>Fewer options</button>
+                    </>
+                  ) : (
+                    <AlertSheet key={picked.id} product={picked} plan={plan} owned={Boolean(owned[picked.id])} pending={pending}
+                      error={errors._ || errors.targetPrice || errors.printing || null} onCreate={create} onMore={() => setAdvanced(true)} />
+                  )}
                 </div>
               )}
             </>
@@ -240,14 +251,15 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         Your price alerts {limit !== null && <span className="small muted" style={{ fontWeight: 400 }}>· {watches.length} of {limit} used</span>}
       </h2>
       {watches.length === 0 ? (
-        <div className="panel muted">No alerts yet. Find a card above, then choose buying or selling.</div>
+        <div className="panel muted">No alerts yet. Find a card above, then pick a price or a new high or low.</div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {watches.map((w) => {
             const product = products[w.productId] || { type: w.productType, prices: {}, history: [] };
             const fires = targetPrice(w);
             const up = isRising(w);
-            const gap = w.lastPrice && fires ? (up ? fires - w.lastPrice : w.lastPrice - fires) / w.lastPrice : null;
+            const record = isRecord(w);
+            const gap = !record && w.lastPrice && fires ? (up ? fires - w.lastPrice : w.lastPrice - fires) / w.lastPrice : null;
             return (
               <div className="panel" key={w.id} style={{ marginBottom: 0 }}>
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -256,7 +268,7 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                       <Link href={`/app/cards/${w.productId}`} style={{ flex: "none", color: "var(--text)", fontWeight: 700 }}>{w.name}</Link>
                       {owned[w.productId] ? <Link href={`/app/cards/${w.productId}`} className="badge accent" style={{ flex: "none" }}>You own {owned[w.productId]}</Link> : null}
-                      <span className="badge" style={{ flex: "none" }}>{up ? "📈 Selling" : "📉 Buying"}</span>
+                      <span className="badge" style={{ flex: "none" }}>{record ? (up ? "🚀 New highs" : "📉 New lows") : up ? "📈 Selling" : "📉 Buying"}</span>
                       {w.status === "triggered"
                         ? <span className="badge good" style={{ flex: "none" }}>{up ? "Hit your sell price" : "Hit your buy price"}</span>
                         : <span className="badge" style={{ flex: "none" }}>Watching</span>}
@@ -265,7 +277,8 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                     </div>
                     <div className="small muted">{w.setName}{w.number ? ` · ${w.number}` : ""} · {trackingLabel({ type: w.productType }, w)}</div>
                     <div style={{ marginTop: 6 }}>
-                      Now <b>{money(w.lastPrice)}</b> · target <b>{money(fires)}</b>
+                      Now <b>{money(w.lastPrice)}</b> · {record ? <>{up ? "highest" : "lowest"} recorded <b>{money(fires)}</b></> : <>target <b>{money(fires)}</b></>}
+                      {record && w.triggeredAt ? <span className="small muted"> · last new {up ? "high" : "low"} {new Date(w.triggeredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span> : null}
                       {w.mode === "drop" || w.mode === "rise" ? <span className="small muted"> ({w.dropPct}% {up ? "above" : "below"} {money(w.basePrice)})</span> : null}
                       {gap !== null && gap > 0 && <span className="small muted"> · {Math.round(gap * 100)}% to go</span>}
                     </div>
@@ -285,9 +298,11 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
                 )}
                 <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                   <a className="btn sm" href={w.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">TCGplayer</a>
-                  <button type="button" className="btn sm" onClick={() => { setErrors({}); setEditing(editing === w.id ? null : w.id); }}>
-                    {editing === w.id ? "Close" : "Edit"}
-                  </button>
+                  {!record && (
+                    <button type="button" className="btn sm" onClick={() => { setErrors({}); setEditing(editing === w.id ? null : w.id); }}>
+                      {editing === w.id ? "Close" : "Edit"}
+                    </button>
+                  )}
                   {w.status === "triggered" && (
                     <button type="button" className="btn sm" disabled={pending} onClick={() => act(rearmWatch, w.id, "Alert re-armed.")}>Re-arm</button>
                   )}
@@ -307,8 +322,8 @@ export default function WatchManager({ watches, products, plan, isDemo, owned = 
         </div>
       )}
       <p className="hint" style={{ marginTop: 16 }}>
-        TCGplayer prices update about once a day. Each alert fires once, then stays quiet until the price moves back
-        past your target (or you re-arm it).
+        TCGplayer prices update about once a day. A target price alert fires once, then stays quiet until the price moves
+        back past your target (or you re-arm it). New high and new low alerts tell you each time the price sets a new record.
       </p>
     </>
   );

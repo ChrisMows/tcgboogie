@@ -314,6 +314,31 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .cmp-dialog[open] { animation: cmp-in 0.18s ease-out; }
 @keyframes cmp-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .cmp-dialog[open] { animation: none; } }
+
+/* Price alerts: the bell by a card's price and the 3-choice alert sheet (components/AlertSheet.js) */
+.hero-price-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.alert-bell { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: var(--panel-2); font-size: 18px; line-height: 1; cursor: pointer; text-decoration: none; filter: grayscale(1); transition: border-color 0.2s, filter 0.2s; }
+.alert-bell:hover, .alert-bell.set { border-color: var(--accent); filter: none; text-decoration: none; }
+.alert-bell.set { background: var(--accent-soft); }
+.alert-dialog { width: min(480px, calc(100vw - 24px)); }
+.alert-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.alert-head img { border-radius: 8px; object-fit: contain; background: #fff1; flex: none; }
+.alert-head h2 { margin: 0 0 2px; }
+.alert-now b { font-size: 18px; }
+.alert-opts { display: grid; gap: 8px; }
+.alert-opt { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer; transition: border-color 0.15s; }
+.alert-opt:hover { border-color: var(--border-strong); }
+.alert-opt.on { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--panel)); }
+.alert-opt input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.alert-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.alert-opt-icon { font-size: 20px; line-height: 1.2; flex: none; }
+.alert-opt-text { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.alert-price { display: grid; gap: 6px; margin-top: 6px; }
+.alert-target { display: flex; align-items: center; gap: 6px; max-width: 200px; }
+.alert-dollar { font-weight: 700; color: var(--muted); }
+.alert-target input { font-size: 18px; font-weight: 700; }
+.alert-foot { display: flex; gap: 16px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
 .cmp-inner { padding: 22px 24px 24px; }
 .cmp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .cmp-top h2 { margin: 0 0 4px; }

@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
-import { itemLabel, money, nmPrice, pct, unitValue } from "@/lib/collection";
+import { itemLabel, money, pct, unitValue } from "@/lib/collection";
+import AlertSheet from "@/components/AlertSheet";
 
 /** The "add a copy" button next to the card title: opens the add panel below. */
 export function AddCardButton({ label }) {
@@ -17,23 +18,35 @@ export function AddCardButton({ label }) {
   );
 }
 
+/** What a member's price alert on this card says, on its button: "Alert at $40", "Alert on new highs"... */
+export const alertLabel = (watch) => (watch.mode === "high" ? "Alert on new highs" : watch.mode === "low" ? "Alert on new lows"
+  : watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`);
+
+/** The bell next to a card's price: opens the price alert pop-up (or, with an alert already set, goes to it). */
+export function PriceAlertBell({ watch }) {
+  if (watch) return <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>;
+  return (
+    <button type="button" className="alert-bell" title="Set a price alert" aria-label="Set a price alert"
+      onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}>🔔</button>
+  );
+}
+
 /** Everything you can do with one card, on its page: own it, want it, watch its price, get deals on it, check eBay. */
 export default function CardActions({ product, mine, binders, watch, plan, filterHref, ebayLive, ebaySold }) {
   const router = useRouter();
-  const [panel, setPanel] = useState(null); // "add" | "watch" | null
+  const [panel, setPanel] = useState(null); // "add" | null
   const panelRef = useRef(null);
+  const alertRef = useRef(null); // the price alert pop-up (a native <dialog>)
+  const [alertError, setAlertError] = useState(null);
+  const openAlert = () => { setAlertError(null); alertRef.current?.showModal(); };
   useEffect(() => {
     const open = () => { setPanel("add"); setTimeout(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
     window.addEventListener("tcgb:add-card", open);
-    return () => window.removeEventListener("tcgb:add-card", open);
+    window.addEventListener("tcgb:price-alert", openAlert);
+    return () => { window.removeEventListener("tcgb:add-card", open); window.removeEventListener("tcgb:price-alert", openAlert); };
   }, []);
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
-  const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
-  const suggest = (up) => (now ? (Math.round(now * (up ? 1.15 : 0.85) * 100) / 100).toFixed(2) : "");
-  const [selling, setSelling] = useState(mine.some((it) => it.list === "owned")); // own it? you're probably selling
-  const [target, setTarget] = useState(suggest(mine.some((it) => it.list === "owned")));
-  const pickSide = (up) => { setSelling(up); setTarget(suggest(up)); };
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const owned = mine.filter((it) => it.list === "owned");
@@ -103,9 +116,9 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
             : <button type="button" className="btn" disabled={pending} onClick={() => run(() => quickAdd(product.id, "wishlist"), "Added to your wishlist.", { href: "/app/collection?tab=wishlist", label: "Wishlist" })}>♡ Wishlist</button>
         )}
         {watch ? (
-          <Link href="/app/watches" className="btn">🔔 {watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`}</Link>
+          <Link href="/app/watches" className="btn">🔔 {alertLabel(watch)}</Link>
         ) : (
-          <button type="button" className="btn" onClick={() => setPanel(panel === "watch" ? null : "watch")}>🔔 Price alert</button>
+          <button type="button" className="btn" onClick={openAlert}>🔔 Price alert</button>
         )}
         {product.type === "card" && <Link href={filterHref} className="btn">⚡ Get deal alerts</Link>}
         {ebayLive && (
@@ -137,29 +150,33 @@ export default function CardActions({ product, mine, binders, watch, plan, filte
         </div>
       )}
 
-      {panel === "watch" && !watch && (
-        <form className="action-panel" onSubmit={(e) => {
-          e.preventDefault();
-          run(() => watchProduct(product.id, { targetPrice: target, mode: selling ? "above" : "below" }),
-            (r) => `Alert set. We'll tell you at ${money(r.target)} or ${selling ? "more" : "less"}.`, { href: "/app/watches", label: "Price alerts" });
-          setPanel(null);
-        }}>
-          <div className="seg" role="group" aria-label="Buying or selling" style={{ marginBottom: 12 }}>
-            <button type="button" className={!selling ? "on" : ""} onClick={() => pickSide(false)}>📉 Buying</button>
-            <button type="button" className={selling ? "on" : ""} onClick={() => pickSide(true)}>📈 Selling</button>
+      {!watch && (
+        <dialog ref={alertRef} className="cmp-dialog alert-dialog" aria-labelledby="alert-title"
+          onClick={(e) => { if (e.target === alertRef.current) alertRef.current.close(); }}>
+          <div className="cmp-inner">
+            <div className="cmp-top">
+              <div className="alert-head">
+                {product.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={product.image} alt="" width={48} height={48} />}
+                <div>
+                  <h2 id="alert-title">Price alert</h2>
+                  <div className="small muted">{product.name}{product.setName ? ` · ${product.setName}` : ""}</div>
+                </div>
+              </div>
+              <button type="button" className="cmp-close" onClick={() => alertRef.current?.close()} aria-label="Close">✕</button>
+            </div>
+            <AlertSheet product={product} plan={plan} owned={copies > 0} printing={owned.find((it) => it.printing)?.printing}
+              pending={pending} error={alertError} onMore={() => router.push(`/app/watches?add=${product.id}`)}
+              onCreate={(input) => start(async () => {
+                const r = await watchProduct(product.id, input);
+                if (r?.ok === false) return setAlertError(r.error || "Something went wrong.");
+                alertRef.current?.close();
+                show(input.mode === "high" ? "Alert set. We'll tell you each time it hits a new high."
+                  : input.mode === "low" ? "Alert set. We'll tell you each time it hits a new low."
+                    : `Alert set. We'll tell you at ${money(r.target)} or ${input.mode === "above" ? "more" : "less"}.`, { href: "/app/watches", label: "Price alerts" });
+                router.refresh();
+              })} />
           </div>
-          <b>Alert me when {product.type === "card" ? "the Near Mint price" : "the price"} {selling ? "climbs to" : "drops to"}</b>
-          <div className="row" style={{ marginTop: 10, maxWidth: 360 }}>
-            <input type="number" min="0.01" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Target price" />
-            <button className="btn primary" style={{ flex: "none" }} disabled={pending || !Number(target)}>Set alert</button>
-          </div>
-          <div className="hint">
-            Now {money(now)}{Number(target) && now ? ` · ${Math.round(Math.abs(Number(target) / now - 1) * 100)}% ${Number(target) >= now ? "above" : "below"} today` : ""}.
-            {product.type === "card" && !selling ? " We'll also watch eBay for listings at or under your price." : ""}
-            {plan.maxPriceWatches !== null ? ` ${plan.label} includes ${plan.maxPriceWatches} price alert${plan.maxPriceWatches === 1 ? "" : "s"}.` : ""}
-            {" "}More options on <Link href="/app/watches">Price alerts</Link>.
-          </div>
-        </form>
+        </dialog>
       )}
       {toast}
     </div>

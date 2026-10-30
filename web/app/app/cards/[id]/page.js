@@ -6,7 +6,7 @@ import { setLabel } from "@/lib/sets";
 import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import CardActions, { AddCardButton } from "@/components/CardActions";
+import CardActions, { AddCardButton, PriceAlertBell } from "@/components/CardActions";
 import Source from "@/components/Source";
 import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
@@ -231,7 +231,7 @@ export default async function CardPage({ params, searchParams }) {
             </div>
           ) : <div className="hero-price">
             <span className="small muted">{isSealed ? "Market price" : "Raw Near Mint market price"}</span>
-            <b>{money(now)}</b>
+            <span className="hero-price-row"><b>{money(now)}</b>{now ? <PriceAlertBell watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} /> : null}</span>
             <PriceRangeChange changes={rangeChanges(p)} />
           </div>}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
@@ -242,7 +242,7 @@ export default async function CardPage({ params, searchParams }) {
               {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
             </Link>
           )}
-          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, target: targetPrice(watch), status: watch.status } : null}
+          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
             plan={user.plan} filterHref={filterHref}
             ebayLive={ebay} ebaySold={ebaySold} />
         </div>

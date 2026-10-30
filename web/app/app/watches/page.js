@@ -27,13 +27,20 @@ export default async function WatchesPage({ searchParams }) {
   }));
 
   const listings = user.demo ? {} : await listingsByWatch(user.id);
+  // "More options" from a card's price alert pop-up: open the full form with that card picked.
+  const addId = String((await searchParams)?.add || "").replace(/\D/g, "").slice(0, 12);
+  let pick = null;
+  if (addId && tab === "alerts") {
+    const p = await getProduct(addId).catch(() => null);
+    if (p) pick = { id: p.id, type: p.type, prices: p.prices, history: p.history, name: p.name, setName: p.setName, number: p.number, image: p.image, tcgplayerUrl: p.tcgplayerUrl, language: p.language || "english" };
+  }
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Price alerts</h1>
-          <p>Buying or selling? Pick a card and your price. We&apos;ll tell you when it gets there.</p>
+          <p>Pick a card, then a price or a new high or low. We&apos;ll tell you when it gets there.</p>
         </div>
       </div>
       <div className="tabs-row" role="tablist">
@@ -57,6 +64,7 @@ export default async function WatchesPage({ searchParams }) {
             isDemo={user.demo}
             owned={ownedCounts(await store.listItems(user.id))}
             listings={listings}
+            pick={pick}
           />
         </>
       )}

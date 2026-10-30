@@ -128,7 +128,7 @@ async function buildRecap(user, days, allDeals, now) {
 
   // Price alerts that hit.
   const hits = await db.select({ title: alertLog.title }).from(alertLog).where(and(eq(alertLog.userId, user.id), gt(alertLog.sentAt, since),
-    eq(alertLog.ok, true), inArray(alertLog.kind, ["price_buy", "price_sell", "ebay_listing", "sell_high"])));
+    eq(alertLog.ok, true), inArray(alertLog.kind, ["price_buy", "price_sell", "price_high", "price_low", "ebay_listing", "sell_high"])));
   const titles = [...new Set(hits.map((h) => h.title.replace(/^\S+\s/, "")))];
   if (titles.length) lines.push(`Alerts ${period}: ${titles.slice(0, 3).join("; ")}${titles.length > 3 ? `, and ${titles.length - 3} more` : ""}.`);
 

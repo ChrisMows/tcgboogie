@@ -8,7 +8,7 @@ import { channelsReady, sendDiscordDM, sendEmail, sendSms } from "@/lib/notify";
 import { sendPush } from "@/lib/push";
 import { log } from "@/lib/log";
 import { planFor } from "@/lib/plans";
-import { currentPrice, isRising, isTriggered, targetPrice } from "@/lib/watches";
+import { currentPrice, isRecord, isRising, isTriggered, targetPrice } from "@/lib/watches";
 
 const { priceWatches, users, accounts, alertLog } = schema;
 const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
@@ -54,7 +54,16 @@ export async function runPriceAlerts() {
       continue;
     }
     const hit = isTriggered(w, price);
-    if (hit && w.status !== "triggered") {
+    if (hit && isRecord(w)) {
+      // A new high / low: alert, and today's price becomes the record to beat next (no re-arming needed).
+      await db.update(priceWatches).set({ lastPrice: price, lastCheckedAt: now, basePrice: price, triggeredAt: now, status: "watching" }).where(eq(priceWatches.id, w.id));
+      out.fired++;
+      const user = people[w.userId];
+      if (user) {
+        const r = await notify(user, discordIds[w.userId], w, price, ready);
+        out.sent += r.sent; out.failed += r.failed;
+      }
+    } else if (hit && w.status !== "triggered") {
       await db.update(priceWatches).set({ lastPrice: price, lastCheckedAt: now, status: "triggered", triggeredAt: now }).where(eq(priceWatches.id, w.id));
       out.fired++;
       const user = people[w.userId];
@@ -81,21 +90,26 @@ async function notify(user, discordId, w, price, ready) {
   const target = targetPrice(w);
   const name = short(w.name);
   const what = w.productType === "card" ? `${w.condition || "Near Mint"}${w.printing ? `, ${w.printing}` : ""}` : "Sealed";
-  const title = selling ? `📈 ${name} climbed to ${money(price)}` : `🔔 ${name} dropped to ${money(price)}`;
-  const line = selling ? `Your sell price was ${money(target)}. It's at ${money(price)} now.` : `Your buy price was ${money(target)}. It's at ${money(price)} now.`;
+  const record = isRecord(w) ? (w.mode === "high" ? "high" : "low") : null;
+  const title = record ? `${record === "high" ? "🚀" : "📉"} ${name} hit a new ${record}: ${money(price)}`
+    : selling ? `📈 ${name} climbed to ${money(price)}` : `🔔 ${name} dropped to ${money(price)}`;
+  const line = record ? `The ${record}est price we'd recorded was ${money(target)}. It's at ${money(price)} now.`
+    : selling ? `Your sell price was ${money(target)}. It's at ${money(price)} now.` : `Your buy price was ${money(target)}. It's at ${money(price)} now.`;
+  const kind = record ? `price_${record}` : selling ? "price_sell" : "price_buy";
   const cardUrl = `${SITE}/app/cards/${w.productId}`;
-  const quiet = "You'll hear about this card again only after its price moves back past your target.";
+  const quiet = record ? `We'll tell you again each time it sets a new ${record}.`
+    : "You'll hear about this card again only after its price moves back past your target.";
   const results = { sent: 0, failed: 0 };
 
   const attempt = async (channel, fn) => {
     try {
       await fn();
       results.sent++;
-      await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind: selling ? "price_sell" : "price_buy", channel, title, price, target, ok: true });
+      await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind, channel, title, price, target, ok: true });
       await log("alerts", "info", `Sent by ${channel}: ${title}`, { watch: w.id, price, target }, user.id);
     } catch (e) {
       results.failed++;
-      await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind: selling ? "price_sell" : "price_buy", channel, title, price, target, ok: false, error: String(e.message).slice(0, 300) });
+      await db.insert(alertLog).values({ userId: user.id, watchId: w.id, kind, channel, title, price, target, ok: false, error: String(e.message).slice(0, 300) });
       await log("alerts", "error", `Couldn't send by ${channel}: ${e.message}`, { watch: w.id, title }, user.id);
     }
   };
@@ -105,7 +119,7 @@ async function notify(user, discordId, w, price, ready) {
       subject: title,
       heading: title,
       items: [{ title: name, sub: [w.setName, w.number ? `#${w.number}` : "", what, `TCGplayer ${w.priceType === "low" ? "lowest listing" : "market price"}`].filter(Boolean).join(" · "),
-        image: w.image || undefined, value: money(price), tone: selling ? "up" : "good", note: `your ${selling ? "sell" : "buy"} price ${money(target)}`, url: cardUrl }],
+        image: w.image || undefined, value: money(price), tone: selling ? "up" : "good", note: record ? `previous ${record} ${money(target)}` : `your ${selling ? "sell" : "buy"} price ${money(target)}`, url: cardUrl }],
       more: [line],
       button: { label: "Open the card", url: cardUrl },
       footer: `${quiet} Manage alerts: ${SITE}/app/watches`,

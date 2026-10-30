@@ -247,7 +247,7 @@ export const alertLog = pgTable("alert_log", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   watchId: integer("watch_id").references(() => priceWatches.id, { onDelete: "set null" }),
-  kind: text("kind").notNull(), // price_buy / price_sell
+  kind: text("kind").notNull(), // price_buy / price_sell / price_high / price_low / ebay_listing / sell_high
   channel: text("channel").notNull(), // email / discord
   title: text("title").notNull(),
   price: doublePrecision("price"),
