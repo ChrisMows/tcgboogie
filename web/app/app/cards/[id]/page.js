@@ -185,9 +185,10 @@ export default async function CardPage({ params, searchParams }) {
         title="eBay sold and completed listings for this card, most recent first">
         <Source name="ebay" className="src-sm" /> Recent sales ↗
       </a>}
-      {(ebay?.affiliate || ebaySold?.affiliate) && <p className="hint ebay-note">eBay links may earn us a commission.</p>}
     </div>
   );
+
+  const commission = ebay?.affiliate || ebaySold?.affiliate ? " eBay links may earn us a commission." : "";
 
   return (
     <>
@@ -257,11 +258,13 @@ export default async function CardPage({ params, searchParams }) {
       </div>
 
       <div className="panel card-prices">
+        <div className="prices-head">
+          <h2>Prices and sales</h2>
+          {ebayLinks}
+        </div>
         {isSealed ? (
           <div className="price-col">
-            <h3>Prices</h3>
             <p className="muted" style={{ margin: 0 }}>Sealed product. Prices from TCGplayer, updated daily.</p>
-            {ebayLinks}
           </div>
         ) : (
           <>
@@ -316,7 +319,6 @@ export default async function CardPage({ params, searchParams }) {
                     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
                   }))} />
               ) : <p className="small muted" style={{ margin: 0 }}>No individual sales to list yet.</p>}
-              {ebayLinks}
               {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
             </div>
           </>
@@ -326,15 +328,15 @@ export default async function CardPage({ params, searchParams }) {
             <p className="hint">
               A Topps Pokémon card ({p.topps.year}), not a Pokémon TCG card. Its value is the typical asking price of current eBay Buy It Now
               listings for a raw copy{p.topps.checkedAt ? `, checked ${new Date(p.topps.checkedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}.
-              Asking prices, not sold prices: check sold listings before you buy or sell. Graded copies keep the value you enter.
+              Asking prices, not sold prices: check sold listings before you buy or sell. Graded copies keep the value you enter.{commission}
             </p>
           ) : p.memberAdded ? (
             <p className="hint">
-              Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.
+              Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.{commission}
             </p>
           ) : <p className="hint">
             Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more.{" "}
-            <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>
+            <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
           </p>}
         </div>
       </div>

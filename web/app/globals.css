@@ -1975,5 +1975,12 @@ body:has(.install-hint) .helper-fab { display: none; }
 .card-prices h3.price-sub { margin-top: 20px; }
 .card-prices .price-col + .price-col { border-left: 1px solid var(--border); padding-left: 32px; }
 @media (max-width: 860px) { .card-prices .price-col + .price-col { border-left: 0; padding-left: 0; } }
-.card-prices .ebay-links .btn { padding: 9px 12px; }
+.prices-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 14px; margin-bottom: -6px; border-bottom: 1px solid var(--border); }
+.prices-head h2 { margin: 0; font-size: 17px; }
+.prices-head .ebay-links { margin-top: 0; flex-wrap: nowrap; }
+.card-prices .ebay-links .btn { padding: 8px 12px; font-size: 12.5px; }
+.card-prices .recent-sale { grid-template-columns: 64px 1fr auto 70px; }
+.card-prices .recent-sale > b { text-align: right; }
+@media (max-width: 600px) { .prices-head .ebay-links { flex: 1 1 100%; } }
 .card-prices .report-sale-open { margin-top: 10px; }
