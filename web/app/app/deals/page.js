@@ -6,6 +6,7 @@ import { withLinks } from "@/lib/deal-links";
 import { dealsFor, sentDeals } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
 import { filterCardInfo } from "@/lib/filter-cards";
+import { listSubscriptions } from "@/lib/push";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 
@@ -43,10 +44,11 @@ async function Filters({ user, sp }) {
   const profiles = await store.ensureStarterProfile(user);
   const clean = (v) => String(v || "").trim().slice(0, 60) || null;
   const prefill = sp?.pokemon || sp?.set ? { pokemon: clean(sp.pokemon), set: clean(sp.set) } : null;
-  const [sets, found, cardInfo] = await Promise.all([
+  const [sets, found, cardInfo, pushDevices] = await Promise.all([
     listSets().catch(() => []).then((all) => all.map((s) => ({ name: s.name, releaseDate: s.releaseDate || null }))),
     dealsFor(user),
     filterCardInfo(profiles.map((p) => p.filters)).catch(() => ({})),
+    listSubscriptions(user.id).catch(() => []),
   ]);
   return (
     <FilterStudio
@@ -58,6 +60,7 @@ async function Filters({ user, sp }) {
       allSets={sets}
       cardInfo={cardInfo}
       ready={{
+        push: Boolean(user.alertWebPush && pushDevices.length),
         email: Boolean(user.email) && user.alertEmail !== false,
         discord: Boolean(user.discordConnected && user.alertDiscord),
         sms: Boolean(user.phoneVerifiedAt && user.alertSms),

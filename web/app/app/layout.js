@@ -1,6 +1,7 @@
 import DiscordReachNotice from "@/components/DiscordReachNotice";
 import XEvents from "@/components/XEvents";
 import PackReveal from "@/components/PackReveal";
+import PushPrompt from "@/components/PushPrompt";
 import SideNav from "@/components/SideNav";
 import { catalogLive } from "@/lib/catalog";
 import { requireUser } from "@/lib/session";
@@ -22,6 +23,7 @@ export default async function MemberLayout({ children }) {
         {children}
       </section>
       <PackReveal />
+      <PushPrompt canPush={!user.demo && user.plan.watchAlertChannels.includes("push")} />
     </div>
   );
 }

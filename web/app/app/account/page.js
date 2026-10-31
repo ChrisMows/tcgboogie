@@ -245,6 +245,7 @@ export default async function Account({ searchParams }) {
         <div className="panel" id="alerts">
           <h2>How we reach you</h2>
           <p className="small muted" style={{ marginTop: -6 }}>Deal alerts, price alerts and collection alerts come to every channel you turn on here.</p>
+          <div id="push" style={{ marginBottom: 6 }}><PushSetup canPush={canPush} devices={pushDevices} alertOn={Boolean(user.alertWebPush)} /></div>
           <label className="check">
             <input type="checkbox" name="alertEmail" defaultChecked={user.alertEmail !== false} /> ✉️ Email <span className="muted">· {user.email}</span>
           </label>
@@ -260,7 +261,6 @@ export default async function Account({ searchParams }) {
             {canSms && user.phoneVerifiedAt && <span className="muted"> · {user.phone}</span>}
           </label>
           {canSms && (smsReady || user.demo) && !user.phoneVerifiedAt && <div className="hint" style={{ marginLeft: 27 }}>Add your number just below to get texts.</div>}
-          <div id="push" style={{ marginTop: 10 }}><PushSetup canPush={canPush} devices={pushDevices} /></div>
           <div style={{ maxWidth: 320, marginTop: 16 }}>
             <label className="field" htmlFor="emailRecap">Email recap</label>
             <select id="emailRecap" name="emailRecap" defaultValue={user.emailRecap === "off" ? "off" : "on"} aria-describedby="recap-hint">

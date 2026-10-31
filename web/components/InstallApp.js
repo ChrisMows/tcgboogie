@@ -29,8 +29,8 @@ export function useInstall() {
   return mode;
 }
 
-/** Start the install: the browser's prompt on Android, or the iPhone steps. */
-export async function install() {
+/** Start the install: the browser's prompt on Android, or the iPhone steps (forPush: say push gets switched on after). */
+export async function install({ forPush = false } = {}) {
   if (deferred) {
     deferred.prompt();
     await deferred.userChoice.catch(() => null);
@@ -38,7 +38,7 @@ export async function install() {
     window.dispatchEvent(new Event("tcgb-installable"));
     return;
   }
-  window.dispatchEvent(new Event("tcgb-install-ios"));
+  window.dispatchEvent(new CustomEvent("tcgb-install-ios", { detail: { forPush } }));
 }
 
 /** A menu button: "📲 Add to home screen", only on devices that can. */
@@ -60,7 +60,7 @@ export default function InstallApp({ signedIn }) {
   const [hint, setHint] = useState(false);
 
   useEffect(() => {
-    const show = () => setSteps(true);
+    const show = (e) => setSteps(e.detail?.forPush ? "push" : true);
     window.addEventListener("tcgb-install-ios", show);
     return () => window.removeEventListener("tcgb-install-ios", show);
   }, []);
@@ -92,11 +92,13 @@ export default function InstallApp({ signedIn }) {
           <div className="panel install-steps" role="dialog" aria-label="Add to Home Screen" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/icon-192.png" alt="" width={64} height={64} />
-            <h2>Add TCG Boogie to your home screen</h2>
+            <h2>{steps === "push" ? "Push alerts need TCG Boogie on your home screen" : "Add TCG Boogie to your home screen"}</h2>
+            {steps === "push" && <p className="small muted" style={{ marginTop: -4 }}>On iPhone, Apple only lets apps on the home screen send notifications. Here&apos;s how:</p>}
             <ol>
               <li>Tap the <b>Share</b> button <span className="install-share" aria-hidden="true">⬆︎</span> at the bottom of Safari (top right on iPad).</li>
               <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
               <li>Tap <b>Add</b>. TCG Boogie opens full-screen from your home screen, like an app.</li>
+              {steps === "push" && <li>Open TCG Boogie from your home screen and tap <b>Turn on push</b> when we ask.</li>}
             </ol>
             <p className="small muted">In Chrome on iPhone, the Share button is at the right of the address bar; the rest is the same.</p>
             <button type="button" className="btn primary" onClick={() => setSteps(false)}>Got it</button>

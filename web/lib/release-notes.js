@@ -9,6 +9,8 @@ export const RELEASES = [
     items: [
       { tag: "Improved", title: "Premium is now $4.99 a month", href: "/app/premium",
         text: "Premium dropped from $9.99 to $4.99 a month (plus sales tax), still with 7 days free for new members. Everything it includes stays the same." },
+      { tag: "Improved", title: "Push alerts in one tap", href: "/app/account#alerts",
+        text: "Push notifications are now the first choice everywhere you pick how alerts reach you: Settings, Alerts go to on the price alerts page, and each deal filter. Switch Push on and your browser asks right there, with no trip to Settings. On iPhone, we show you how to add TCG Boogie to your home screen first (Apple needs that for notifications), then ask once when you open it from there. Premium." },
       { tag: "New", title: "One-tap price alerts", href: "/app/watches",
         text: "Tap the bell next to a card's name and choose: tell me when it reaches a price I pick, hits a new high, or hits a new low. Type a price below today's and we watch for a drop, above it and we watch for a climb. New high and new low alerts tell you every time the price sets a new record. Want a specific condition, the lowest listing or a percent? Tap More options." },
       { tag: "New", title: "One-tap deal alerts", href: "/app/deals",

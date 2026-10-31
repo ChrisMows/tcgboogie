@@ -39,7 +39,7 @@ function vendors(on) {
     { key: "vps", name: "Bot server (VPS)", what: "The deal bot, the database and nightly backups",
       price: "Your VPS plan", limit: "47 GB disk, 3.8 GB memory", metric: "vps_disk_gb", cap: 47.3, unit: "GB", status: "live" },
     { key: "discord", name: "Discord (BoogieBot)", what: "Deal and price alerts by DM (members must join the TCG Boogie server), your admin warnings", price: "Free", limit: "Discord's sending rate", status: on.discord ? "live" : "off" },
-    { key: "push", name: "Web push", what: "Phone and computer notifications", price: "Free", limit: "—", status: "live" },
+    { key: "push", name: "Web push", what: "Phone and computer notifications (first choice in every alert-channel picker; iPhone needs the home-screen app, which asks once)", price: "Free", limit: "—", status: "live" },
     { key: "twilio", name: "Twilio", what: "Text message alerts", price: "Per text", limit: "Per member daily cap (SMS_DEALS_PER_DAY)", status: on.sms ? "live" : "off" },
     { key: "stripe", name: "Stripe", what: "Premium subscriptions and the free trial", price: "Stripe's fee per payment", limit: "—", status: on.stripe ? "live" : "off" },
     { key: "x", name: "X (Twitter) API", what: "Posting Market Movers and release notes; the X ad pixel (ri3dv) and its Sign up / Start trial / Purchase events", price: "Per post (pixel free)", limit: "—", status: on.x ? "live" : "off" },

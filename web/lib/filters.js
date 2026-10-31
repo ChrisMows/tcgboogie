@@ -13,7 +13,7 @@ export const RAW_CONDITION_LABELS = {
 };
 export const GRADE_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 8.5, 9, 9.5, 10];
 // How a filter's deal alerts reach you (each also has to be switched on in Settings -> Where alerts go).
-export const ALERT_CHANNELS = ["email", "push", "discord", "sms"];
+export const ALERT_CHANNELS = ["push", "email", "discord", "sms"]; // push first: the instant one
 export const ALERT_CHANNEL_LABELS = { email: "Email", push: "Push", discord: "Discord", sms: "Text" };
 
 export function defaultFilters(plan) {

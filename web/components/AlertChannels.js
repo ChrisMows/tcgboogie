@@ -4,21 +4,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toggleAlertChannel } from "@/app/app/actions";
+import { enablePush } from "@/lib/push-client";
 
-/** "Alerts go to": Email, Push, Discord and Text as on/off switches, or a link to set one up (or unlock it). */
+/**
+ * "Alerts go to": Push, Email, Discord and Text as on/off switches, or a link to set one up (or unlock it). Push with
+ * no device yet switches this device on right here (the browser asks; on iPhone, the home-screen steps first).
+ */
 export default function AlertChannels({ user, smsReady = true }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const can = (c) => user.plan.watchAlertChannels.includes(c); // Admin → Features decides which plan gets each
   const [on, setOn] = useState({ email: user.alertEmail !== false, push: Boolean(user.alertWebPush), discord: Boolean(user.alertDiscord), sms: Boolean(user.alertSms) });
 
+  const [pushNote, setPushNote] = useState(null);
   const channels = [
-    { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
     {
       key: "push", icon: "📲", label: "Push",
-      ...(!can("push") ? { state: "locked" } : !user.pushDevices ? { state: "todo", action: "Turn on push for this device", href: "/app/account#push" }
+      ...(!can("push") ? { state: "locked" } : !user.pushDevices ? { state: "enable" }
         : { state: "ready", note: `${user.pushDevices} ${user.pushDevices === 1 ? "device" : "devices"}` }),
     },
+    { key: "email", icon: "✉️", label: "Email", state: "ready", note: user.email },
     {
       key: "discord", icon: "💬", label: "Discord",
       ...(!can("discord") ? { state: "locked" } : !user.discordConnected ? { state: "todo", action: "Connect Discord", href: "/app/account#connections" }
@@ -31,6 +36,16 @@ export default function AlertChannels({ user, smsReady = true }) {
     },
   ];
   const any = channels.some((c) => c.state === "ready" && on[c.key]);
+
+  // Push with no device yet: switch this one on (savePush turns push alerts on for the account too).
+  function enable() {
+    setPushNote(null);
+    start(async () => {
+      const res = await enablePush();
+      if (res.ok) { setOn((o) => ({ ...o, push: true })); router.refresh(); }
+      else if (res.error) setPushNote(res.error);
+    });
+  }
 
   function flip(key) {
     const next = !on[key];
@@ -59,6 +74,14 @@ export default function AlertChannels({ user, smsReady = true }) {
               </button>
             );
           }
+          if (c.state === "enable") {
+            return (
+              <button key={c.key} type="button" role="switch" aria-checked={false} className="ac-option" disabled={pending} onClick={enable}
+                title="Off: tap to get push alerts on this device">
+                {inner}<span className="ac-switch" aria-hidden="true"><i /></span>
+              </button>
+            );
+          }
           if (c.state === "soon") {
             return (
               <span key={c.key} className="ac-option soon" title={`${c.label} alerts are coming soon`}>
@@ -74,6 +97,7 @@ export default function AlertChannels({ user, smsReady = true }) {
           );
         })}
       </div>
+      {pushNote && <div className="ac-warn">{pushNote}</div>}
       {!any && <div className="ac-warn">Nothing is switched on, so you won&apos;t hear about these alerts.</div>}
     </section>
   );

@@ -7,6 +7,7 @@ import CardThumb from "@/components/CardThumb";
 import { DealGrid } from "@/components/DealTile";
 import { cardOptions, createProfile, deleteProfile, saveProfile, setProfileActive } from "@/app/app/actions";
 import { SuggestIdea } from "@/components/IdeaBox";
+import { enablePush } from "@/lib/push-client";
 import { FACET_GROUPS, FACETS, activeFacets, hasCards } from "@/lib/facets";
 import { GRADE_STEPS, GRADERS, RAW_CONDITION_LABELS, RAW_CONDITIONS, clampToPlan, defaultFilters, matches, ALERT_CHANNELS, ALERT_CHANNEL_LABELS } from "@/lib/filters";
 
@@ -15,6 +16,27 @@ const Lock = ({ children }) => <div className="locked-note">🔒 {children} <Lin
 const short = (n) => String(n || "").replace(/\s*\(.*\)$/, "");
 const cardNo = (n) => String(n || "").split("/")[0].replace(/^0+(?=\d)/, "");
 const sameCard = (a, b) => a.name === b.name && (a.number || "") === (b.number || "") && (a.setName || "") === (b.setName || "");
+
+// Push not on for any device yet: switch this one on from the filter (the browser asks; iPhone: home-screen steps).
+function PushTurnOn() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState(null);
+  const go = (e) => {
+    e.preventDefault();
+    setError(null);
+    start(async () => {
+      const res = await enablePush();
+      if (res.ok) router.refresh();
+      else if (res.error) setError(res.error);
+    });
+  };
+  return (
+    <span className="small muted"> · <button type="button" className="link-btn small" onClick={go} disabled={pending}>{pending ? "Turning on..." : "Turn on for this device"}</button>
+      {error && <span className="bad"> {error}</span>}
+    </span>
+  );
+}
 
 function Check({ checked, onChange, disabled, children }) {
   return (
@@ -247,11 +269,12 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
         {ALERT_CHANNELS.map((c) => (
           <Check key={c} checked={(f.channels || ALERT_CHANNELS).includes(c)} onChange={() => toggle("channels", c)}>
             {ALERT_CHANNEL_LABELS[c]}
-            {ready && !ready[c] && <span className="small muted"> · not set up yet (<a href="/app/account#alerts">Settings</a>)</span>}
+            {ready && !ready[c] && (c === "push" && plan.watchAlertChannels?.includes("push") ? <PushTurnOn />
+              : <span className="small muted"> · not set up yet (<a href="/app/account#alerts">Settings</a>)</span>)}
           </Check>
         ))}
         <Err msg={errors.channels} />
-        <div className="hint">How this filter&apos;s live deal alerts reach you. Pick one, two or all three.</div>
+        <div className="hint">How this filter&apos;s live deal alerts reach you. Push is instant on your phone; pick as many as you like.</div>
         {!premium && <Lock>Live deal alerts come with Premium. On Free, deals show on this page after they end.</Lock>}
       </>);
     case "seller":

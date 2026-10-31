@@ -3,32 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { pushKey, removePush, savePush, testPush } from "@/app/app/actions";
-import { InstallButton } from "@/components/InstallApp";
+import { removePush, testPush, toggleAlertChannel } from "@/app/app/actions";
+import { currentSubscription, enablePush, needsInstall, pushSupported } from "@/lib/push-client";
 
-// Push alerts on this phone or computer (lib/push.js sends them, public/sw.js shows them). The browser asks the
-// member's permission, so each device is switched on here with a tap. On iPhone, push works only once TCG Boogie is
-// on the home screen and opened from there (Apple's rule), so the button there is "Add to home screen" first.
+// Push alerts on this phone or computer (lib/push.js sends them, public/sw.js shows them), as the first switch in
+// Settings → How we reach you. Ticking it asks the browser's permission right there; on an iPhone in Safari it shows
+// the home-screen steps first (lib/push-client.js). Unticking switches this device off.
 
-const supported = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-const isIOS = () => typeof navigator !== "undefined"
-  && (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-const standalone = () => typeof window !== "undefined"
-  && (window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
-
-function keyBytes(base64) {
-  const pad = "=".repeat((4 - (base64.length % 4)) % 4);
-  const raw = atob((base64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
-
-async function currentSubscription() {
-  const reg = await navigator.serviceWorker.getRegistration("/");
-  return reg ? reg.pushManager.getSubscription() : null;
-}
-
-/** devices: [{ endpoint, device }] this member already switched on. */
-export default function PushSetup({ canPush, devices = [] }) {
+/** devices: [{ endpoint, device }] this member already switched on. alertOn: push alerts switched on for the account. */
+export default function PushSetup({ canPush, devices = [], alertOn = true }) {
   const router = useRouter();
   const [state, setState] = useState("checking"); // checking / unsupported / ios-install / blocked / off / on
   const [endpoint, setEndpoint] = useState(null);
@@ -37,7 +20,7 @@ export default function PushSetup({ canPush, devices = [] }) {
 
   useEffect(() => {
     (async () => {
-      if (!supported()) return setState(isIOS() && !standalone() ? "ios-install" : "unsupported");
+      if (!pushSupported()) return setState(needsInstall() ? "ios-install" : "unsupported");
       if (Notification.permission === "denied") return setState("blocked");
       const sub = await currentSubscription().catch(() => null);
       const mine = sub && devices.some((d) => d.endpoint === sub.endpoint);
@@ -48,23 +31,22 @@ export default function PushSetup({ canPush, devices = [] }) {
 
   const turnOn = () => start(async () => {
     setNote(null);
-    try {
-      const key = await pushKey();
-      if (!key) return setNote({ bad: true, text: "Push alerts work on the live site, not in this preview." });
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") return setState(permission === "denied" ? "blocked" : "off");
-      const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
-      const res = await savePush(sub.toJSON(), navigator.userAgent);
-      if (!res.ok) return setNote({ bad: true, text: res.error });
-      setEndpoint(sub.endpoint);
-      setState("on");
-      setNote({ text: "Push alerts are on for this device. Send a test to see one." });
-      router.refresh();
-    } catch {
-      setNote({ bad: true, text: "This browser wouldn't switch push on. Please try again, or try another browser." });
+    // This device is already set up but push was switched off (Alerts go to): just switch it back on.
+    if (state === "on" && !alertOn) {
+      await toggleAlertChannel("push", true);
+      setNote({ text: "Push alerts are back on." });
+      return router.refresh();
     }
+    const res = await enablePush();
+    if (!res.ok) {
+      if (res.state) setState(res.state);
+      if (res.error) setNote({ bad: true, text: res.error });
+      return;
+    }
+    setEndpoint(res.endpoint);
+    setState("on");
+    setNote({ text: "Push alerts are on for this device. Send a test to see one." });
+    router.refresh();
   });
 
   const turnOff = () => start(async () => {
@@ -82,30 +64,26 @@ export default function PushSetup({ canPush, devices = [] }) {
     setNote(res.ok ? { text: `Sent to ${res.devices} ${res.devices === 1 ? "device" : "devices"}. It should pop up in a few seconds.` } : { bad: true, text: res.error });
   });
 
+  const checked = state === "on" && alertOn;
   const others = devices.filter((d) => d.endpoint !== endpoint);
+  const usable = canPush && state !== "checking" && state !== "unsupported";
   return (
     <div className="push-setup">
-      <div className="push-row">
-        <span>📲 <b>Push notifications</b> <span className="badge good" style={{ marginLeft: 6 }}>Instant</span>{!canPush && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}</span>
-        {!canPush ? (
-          <Link href="/app/premium?from=push" className="btn sm">Unlock with Premium</Link>
-        ) : state === "on" ? (
-          <span className="row" style={{ gap: 6, flex: "none" }}>
-            <button type="button" className="btn sm" onClick={test} disabled={pending}>Send a test</button>
-            <button type="button" className="btn sm ghost" onClick={turnOff} disabled={pending}>Turn off here</button>
-          </span>
-        ) : state === "off" ? (
-          <button type="button" className="btn sm primary" onClick={turnOn} disabled={pending}>Turn on for this device</button>
-        ) : state === "ios-install" ? (
-          <InstallButton className="btn sm primary" />
-        ) : null}
-      </div>
+      <label className={`check ${usable ? "" : "dim"}`}>
+        <input type="checkbox" checked={checked} disabled={!usable || pending}
+          onChange={(e) => (e.target.checked ? turnOn() : turnOff())} />
+        {" "}📲 Push notifications on this device <span className="badge good" style={{ marginLeft: 6 }}>Instant</span>
+        {!canPush && <span className="badge" style={{ marginLeft: 6 }}>Premium</span>}
+        {checked && <button type="button" className="link-btn small" style={{ marginLeft: 8 }} onClick={(e) => { e.preventDefault(); test(); }} disabled={pending}>Send a test</button>}
+      </label>
       <div className="hint" style={{ marginLeft: 27 }}>
-        {state === "on" ? "On for this device. Deal and price alerts pop up here the moment they're sent."
-          : state === "blocked" ? "Notifications are blocked for TCG Boogie in this browser. Allow them in the browser's site settings, then come back here."
-          : state === "ios-install" ? "On iPhone, add TCG Boogie to your home screen and open it from there, then turn push on in Settings."
-          : state === "unsupported" ? "This browser can't show push notifications. Try Chrome, Edge, Firefox or Safari, or add TCG Boogie to your home screen."
-          : canPush ? "Alerts pop up on this phone or computer, even when TCG Boogie isn't open. Switch on each device you want them on." : "Instant alerts on your phone, even when TCG Boogie isn't open."}
+        {!canPush ? <>Instant alerts on your phone, even when TCG Boogie isn&apos;t open. <Link href="/app/premium?from=push">Unlock with Premium</Link></>
+          : checked ? "Deal and price alerts pop up here the moment they're sent."
+          : state === "on" ? "This device is set up, but push alerts are switched off. Tick the box to switch them back on."
+          : state === "blocked" ? "Notifications are blocked for TCG Boogie in this browser. Allow them in the browser's site settings, then tick the box."
+          : state === "ios-install" ? "On iPhone, tick the box and we'll show you how to add TCG Boogie to your home screen (Apple needs that for notifications)."
+          : state === "unsupported" ? "This browser can't show push notifications. Try Chrome, Edge, Firefox or Safari."
+          : "Alerts pop up on this phone or computer, even when TCG Boogie isn't open. Tick it on each device you want them on."}
         {others.length > 0 && ` Also on: ${others.map((d) => d.device || "another device").join(", ")}.`}
       </div>
       {note && <div className={`small ${note.bad ? "bad" : "good"}`} style={{ marginLeft: 27, marginTop: 4 }}>{note.text}</div>}
