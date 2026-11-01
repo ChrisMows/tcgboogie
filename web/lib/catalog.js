@@ -534,7 +534,9 @@ const SEALED_ABBR = [[/\bpc\s*etb\b/gi, "pokemon center elite trainer box"], [/\
 const SEALED_TYPES = ["elite trainer box", "booster box", "booster bundle", "booster pack", "sleeved booster", "ultra premium collection",
   "super premium collection", "premium collection", "collection box", "build & battle", "blister", "tin", "bundle", "booster display", "case"];
 const typeSpellings = (t) => (/ultra premium|super premium/.test(t) ? [t, t.replace(/(ultra|super) premium/, "$1-premium")] : [t]);
-export const expandSealed = (s) => SEALED_ABBR.reduce((t, [re, to]) => t.replace(re, to), String(s || ""));
+// "Ascended Heroes pack" means its booster pack, but "3 pack blister" and "sleeved booster pack" stay as typed.
+const packToBooster = (s) => (/\bblister/i.test(s) ? s : s.replace(/(?<!\b(?:booster|\d+)\s*)\bpack(s?)\b/gi, "booster pack$1"));
+export const expandSealed = (s) => packToBooster(SEALED_ABBR.reduce((t, [re, to]) => t.replace(re, to), String(s || "")));
 const typeRe = (t) => new RegExp(`\\b${t}s?\\b`, "i");
 const sealedTypeIn = (s) => SEALED_TYPES.find((t) => typeRe(t).test(s)) || null;
 
