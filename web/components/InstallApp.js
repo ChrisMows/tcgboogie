@@ -80,9 +80,17 @@ export default function InstallApp({ signedIn }) {
     const START = ["/", "/app", "/app/collection"];
     const onStart = () => START.includes(window.location.pathname) && !window.location.search;
     const nav = performance.getEntriesByType?.("navigation")?.[0];
-    const fresh = (!nav || nav.type === "navigate") && !document.referrer && window.history.length <= 1;
+    let fromSite = false;
+    try { fromSite = Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin; } catch { /* no referrer */ }
+    const fresh = nav?.type !== "reload" && nav?.type !== "back_forward" && !fromSite;
     // Phones only (the app, or an iPhone home-screen icon opening in Safari): a desktop tab typed to /app/collection stays.
-    if (fresh && onStart() && (standalone() || isIOS())) return void window.location.replace("/app/home");
+    const phone = standalone() || isIOS();
+    if (phone && onStart()) {
+      // What the phone reported, for Admin → Logs while we make sure this works on iPhones (app/api/pv logs admins only).
+      const launch = { path: window.location.pathname, nav: nav?.type || null, referrer: document.referrer ? "set" : "", history: window.history.length, standalone: standalone(), moved: fresh };
+      try { navigator.sendBeacon?.("/api/pv", new Blob([JSON.stringify({ path: window.location.pathname, launch })], { type: "application/json" })); } catch { /* fine */ }
+    }
+    if (fresh && onStart() && phone) return void window.location.replace("/app/home");
     if (!standalone()) return;
     let hiddenAt = 0;
     const onVis = () => {

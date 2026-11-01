@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { allow } from "@/lib/rate-limit";
+import { log } from "@/lib/log";
 import { getCurrentUser } from "@/lib/session";
 import { bump, creditSignup, firstVisitToday } from "@/lib/traffic";
 
@@ -29,6 +30,12 @@ export async function POST(req) {
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
     if (!await allow("pageView", ip)) return done;
     const body = await req.json().catch(() => ({}));
+    // components/InstallApp.js: how an admin's phone opened on Collection (start-on-Home check), for Admin → Logs.
+    if (body.launch) {
+      const user = await getCurrentUser().catch(() => null);
+      if (user?.isAdmin && !user.demo) await log("website", "info", "Phone opened on Collection (start-on-Home check)", { ...body.launch, ua: ua.slice(0, 160) }, user.id);
+      return done;
+    }
     const path = pageKey(body.path);
     if (SKIP.test(path)) return done;
 
