@@ -78,17 +78,23 @@ export default function InstallApp({ signedIn }) {
   useEffect(() => {
     if (!signedIn) return;
     const START = ["/", "/app", "/app/collection"];
-    const onStart = () => START.includes(window.location.pathname) && !window.location.search;
+    // Any address on these pages: the icon may have been saved with extras, like /app/collection?tab=wishlist.
+    const onStart = () => START.includes(window.location.pathname.replace(/\/+$/, "") || "/");
     const nav = performance.getEntriesByType?.("navigation")?.[0];
     let fromSite = false;
     try { fromSite = Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin; } catch { /* no referrer */ }
     const fresh = nav?.type !== "reload" && nav?.type !== "back_forward" && !fromSite;
     // Phones only (the app, or an iPhone home-screen icon opening in Safari): a desktop tab typed to /app/collection stays.
     const phone = standalone() || isIOS();
-    if (phone && onStart()) {
+    if (phone && (onStart() || standalone())) {
       // What the phone reported, for Admin → Logs while we make sure this works on iPhones (app/api/pv).
-      const launch = { path: window.location.pathname, nav: nav?.type || null, referrer: document.referrer ? "set" : "", history: window.history.length, standalone: standalone(), moved: fresh };
-      try { navigator.sendBeacon?.("/api/pv", new Blob([JSON.stringify({ path: window.location.pathname, launch })], { type: "application/json" })); } catch { /* fine */ }
+      const launch = { path: window.location.pathname + window.location.search, start: onStart(), nav: nav?.type || null, referrer: document.referrer ? "set" : "", history: window.history.length, standalone: standalone(), moved: fresh && onStart() };
+      const body = JSON.stringify({ path: window.location.pathname, launch });
+      try {
+        if (!navigator.sendBeacon?.("/api/pv", new Blob([body], { type: "application/json" }))) {
+          fetch("/api/pv", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
+        }
+      } catch { /* fine */ }
     }
     if (fresh && onStart() && phone) return void window.location.replace("/app/home");
     if (!standalone()) return;

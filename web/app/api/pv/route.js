@@ -34,7 +34,7 @@ export async function POST(req) {
     // Any signed-in member, while we make sure this works on iPhones; it only happens when a phone opens on Collection.
     if (body.launch) {
       const user = await getCurrentUser().catch(() => null);
-      if (user && !user.demo) await log("website", "info", "Phone opened on Collection (start-on-Home check)", { ...body.launch, ua: ua.slice(0, 160) }, user.id);
+      if (user && !user.demo) await log("website", "info", `Phone app opened on ${String(body.launch.path || "").slice(0, 80)} (start-on-Home check)`, { ...body.launch, ua: ua.slice(0, 160) }, user.id);
       return done;
     }
     const path = pageKey(body.path);
