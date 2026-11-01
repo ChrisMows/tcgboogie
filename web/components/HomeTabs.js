@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 // right on a phone does too). The collection value sits above Overview; Performance's chart shows it there. Performance
 // is Premium: for Free members it slides in blurred, with an invitation to Premium in front of it. The view is kept in
 // the address (?view=performance).
-// premium: the Premium tab (what Premium adds, and a button to join), for members not on Premium; null hides it.
+// premium: the Premium tab (what Premium adds; a button to join for members not on it); null hides it.
 export default function HomeTabs({ initial = "overview", locked, header, overview, performance, premium = null }) {
   const tabs = ["overview", "performance", ...(premium ? ["premium"] : [])];
   const [tab, setTab] = useState(initial);

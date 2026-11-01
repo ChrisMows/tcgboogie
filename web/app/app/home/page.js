@@ -35,7 +35,7 @@ export default async function HomePage({ searchParams }) {
   const user = await requireUser("/app/home");
   const onPremium = user.tier === "premium";
   const asked = (await searchParams)?.view;
-  const view = asked === "performance" || (asked === "premium" && !onPremium) ? asked : "overview";
+  const view = asked === "performance" || asked === "premium" ? asked : "overview";
   const premium = Boolean(user.plan.liveFeed);
   const [c, watches, profiles, found, feed, pushDevices, lastVisit, plans] = await Promise.all([
     loadCollection(user),
@@ -45,7 +45,7 @@ export default async function HomePage({ searchParams }) {
     marketFeed().catch(() => ({ highs: [], big: [], deals: [] })),
     user.demo ? [] : listSubscriptions(user.id).catch(() => []),
     store.lastVisit(user.id, "home").catch(() => null),
-    onPremium ? null : effectivePlans(),
+    effectivePlans(),
   ]);
 
   // Collection value: today's change, since the last visit (when that was before yesterday), and the last 30 days.
@@ -234,7 +234,7 @@ export default async function HomePage({ searchParams }) {
           </>
         )}
         performance={<Performance c={c} hasCards={hasCards} historyDays={user.plan.collectionPerformance ? null : user.plan.collectionHistoryDays} />}
-        premium={onPremium ? null : <PremiumTab plans={plans} trial={trialDaysFor(user)} missed={premium ? 0 : mine.length} watches={watches.length} />}
+        premium={<PremiumTab plans={plans} onPremium={onPremium} trial={trialDaysFor(user)} missed={premium ? 0 : mine.length} watches={watches.length} />}
       />
     </>
   );
@@ -370,9 +370,10 @@ function Performance({ c, hasCards, historyDays }) {
   );
 }
 
-// The Premium tab (members not on Premium): what changes when they join, from the plans as Admin → Features left them
-// (lib/plan-copy.js), with their own numbers where we have them, and a button to the Premium page to join.
-function PremiumTab({ plans, trial, missed, watches }) {
+// The Premium tab: what changes with Premium, from the plans as Admin → Features left them (lib/plan-copy.js). Not on
+// Premium: their own numbers where we have them and a button to the Premium page to join. On Premium: what they have,
+// and a link to billing.
+function PremiumTab({ plans, onPremium, trial, missed, watches }) {
   const price = PLANS.premium.price;
   const rows = planGroups(plans).flatMap((g) => g.rows.filter(([, free, prem]) => free !== prem).map((r) => [g.group, ...r]));
   const join = (
@@ -380,6 +381,19 @@ function PremiumTab({ plans, trial, missed, watches }) {
       {trial > 0 ? `Start your ${trial}-day free trial` : `Join Premium · $${price}/month`}
     </Link>
   );
+  if (onPremium) {
+    return (
+      <>
+        <div className="panel home-premium-hero">
+          <div className="eyebrow-sm">TCG BOOGIE PREMIUM</div>
+          <h2>You&apos;re on Premium 🎉</h2>
+          <p className="muted">Every deal reaches you live, while you can still bid. Here&apos;s everything your plan adds over Free.</p>
+          <Link href="/app/account#billing" className="btn">Billing</Link>
+        </div>
+        <PlanRows rows={rows} />
+      </>
+    );
+  }
   const yours = [
     missed > 0 && `Your deal filters caught ${missed} ${missed === 1 ? "deal" : "deals"} this week. You saw ${missed === 1 ? "it" : "them"} after the auction ended; on Premium they reach you live, while you can still bid.`,
     plans.free.maxPriceWatches !== null && watches >= plans.free.maxPriceWatches && `You're using ${watches} of ${plans.free.maxPriceWatches} price ${plans.free.maxPriceWatches === 1 ? "alert" : "alerts"}. Premium has room for ${plans.premium.maxPriceWatches === null ? "as many as you like" : plans.premium.maxPriceWatches}.`,
@@ -405,24 +419,30 @@ function PremiumTab({ plans, trial, missed, watches }) {
         </section>
       )}
 
-      <section className="home-section">
-        <div className="home-head"><h2>What changes with Premium</h2></div>
-        <div className="panel home-compare">
-          <div className="home-compare-row head"><span /><span className="small muted">Free</span><span className="small home-premium-word">Premium</span></div>
-          {rows.map(([group, what, free, prem]) => (
-            <div key={`${group}-${what}`} className="home-compare-row">
-              <span className="small">{what}</span>
-              <span className="small muted">{free}</span>
-              <b className="small">{prem}</b>
-            </div>
-          ))}
-        </div>
-      </section>
+      <PlanRows rows={rows} />
 
       <div className="home-premium-foot">
         {join}
         <span className="small muted">Your collection and settings stay the same whichever plan you&apos;re on.</span>
       </div>
     </>
+  );
+}
+
+function PlanRows({ rows }) {
+  return (
+    <section className="home-section">
+      <div className="home-head"><h2>What changes with Premium</h2></div>
+      <div className="panel home-compare">
+        <div className="home-compare-row head"><span /><span className="small muted">Free</span><span className="small home-premium-word">Premium</span></div>
+        {rows.map(([group, what, free, prem]) => (
+          <div key={`${group}-${what}`} className="home-compare-row">
+            <span className="small">{what}</span>
+            <span className="small muted">{free}</span>
+            <b className="small">{prem}</b>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
