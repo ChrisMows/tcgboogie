@@ -7,18 +7,20 @@ import { useRef, useState } from "react";
 // right on a phone does too). The collection value sits above Overview; Performance's chart shows it there. Performance
 // is Premium: for Free members it slides in blurred, with an invitation to Premium in front of it. The view is kept in
 // the address (?view=performance).
-export default function HomeTabs({ initial = "overview", locked, header, overview, performance }) {
+// premium: the Premium tab (what Premium adds, and a button to join), for members not on Premium; null hides it.
+export default function HomeTabs({ initial = "overview", locked, header, overview, performance, premium = null }) {
+  const tabs = ["overview", "performance", ...(premium ? ["premium"] : [])];
   const [tab, setTab] = useState(initial);
   const [dir, setDir] = useState(0);
   const touch = useRef(null);
 
   const go = (next) => {
     if (next === tab) return;
-    setDir(next === "performance" ? 1 : -1);
+    setDir(tabs.indexOf(next) > tabs.indexOf(tab) ? 1 : -1);
     setTab(next);
     try {
       const u = new URL(window.location.href);
-      if (next === "performance") u.searchParams.set("view", "performance"); else u.searchParams.delete("view");
+      if (next === "overview") u.searchParams.delete("view"); else u.searchParams.set("view", next);
       window.history.replaceState(window.history.state, "", u);
     } catch { /* fine */ }
   };
@@ -30,7 +32,8 @@ export default function HomeTabs({ initial = "overview", locked, header, overvie
     if (!touch.current) return;
     const dx = e.changedTouches[0].clientX - touch.current.x, dy = e.changedTouches[0].clientY - touch.current.y;
     touch.current = null;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) go(dx < 0 ? "performance" : "overview");
+    const next = tabs[tabs.indexOf(tab) + (dx < 0 ? 1 : -1)];
+    if (next && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) go(next);
   };
 
   return (
@@ -40,11 +43,14 @@ export default function HomeTabs({ initial = "overview", locked, header, overvie
         <button type="button" role="tab" aria-selected={tab === "performance"} className={tab === "performance" ? "on" : ""} onClick={() => go("performance")}>
           Performance{locked && <span className="home-pro">PREMIUM</span>}
         </button>
+        {premium && (
+          <button type="button" role="tab" aria-selected={tab === "premium"} className={`home-tab-premium ${tab === "premium" ? "on" : ""}`} onClick={() => go("premium")}>Premium</button>
+        )}
       </div>
-      {/* Performance opens on its own chart, which shows the value; locked, the value stays above the blurred view. */}
-      {(tab === "overview" || locked) && header}
+      {/* Overview only: Performance opens on its own chart, which shows the value (locked, the value stays above the blurred view). */}
+      {(tab === "overview" || (tab === "performance" && locked)) && header}
       <div key={tab} className="home-pane" data-dir={dir} role="tabpanel" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {tab === "overview" ? overview : locked ? (
+        {tab === "overview" ? overview : tab === "premium" ? premium : locked ? (
           <div className="home-locked">
             <div className="home-locked-view" aria-hidden="true" inert>{performance}</div>
             <div className="panel home-upsell" role="dialog" aria-label="Performance is part of Premium">

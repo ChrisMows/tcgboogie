@@ -7,10 +7,13 @@ import HomeTabs from "@/components/HomeTabs";
 import Sparkline from "@/components/Sparkline";
 import ValueChart from "@/components/ValueChart";
 import { chartSeries, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
+import { trialDaysFor } from "@/lib/billing";
 import { withLinks } from "@/lib/deal-links";
 import { dealsFor } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
 import { marketFeed } from "@/lib/market";
+import { effectivePlans, planGroups } from "@/lib/plan-copy";
+import { PLANS } from "@/lib/plans";
 import { loadCollection } from "@/lib/portfolio";
 import { listSubscriptions } from "@/lib/push";
 import { RELEASES } from "@/lib/release-notes";
@@ -23,15 +26,18 @@ export const metadata = { title: "Home" };
 // filters caught, price alerts that hit, their cards that moved, the market), with a way into each part of the app.
 // It reads the same saved prices as the Collection page plus the 15-minute market cache: no extra price service or eBay
 // calls, since it's opened all day.
-const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
+// Tiny moves keep two decimals, so -$2 on $9,000 reads -0.02%, not -0.0%.
+const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(v !== 0 && Math.abs(v) < 0.001 ? 2 : 1)}%`;
 const shortDay = (day) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const cleanName = (s) => String(s || "").replace(/\s*\(.*\)$/, "");
 
 export default async function HomePage({ searchParams }) {
   const user = await requireUser("/app/home");
-  const view = (await searchParams)?.view === "performance" ? "performance" : "overview";
+  const onPremium = user.tier === "premium";
+  const asked = (await searchParams)?.view;
+  const view = asked === "performance" || (asked === "premium" && !onPremium) ? asked : "overview";
   const premium = Boolean(user.plan.liveFeed);
-  const [c, watches, profiles, found, feed, pushDevices, lastVisit] = await Promise.all([
+  const [c, watches, profiles, found, feed, pushDevices, lastVisit, plans] = await Promise.all([
     loadCollection(user),
     store.listWatches(user.id),
     store.listProfiles(user.id),
@@ -39,6 +45,7 @@ export default async function HomePage({ searchParams }) {
     marketFeed().catch(() => ({ highs: [], big: [], deals: [] })),
     user.demo ? [] : listSubscriptions(user.id).catch(() => []),
     store.lastVisit(user.id, "home").catch(() => null),
+    onPremium ? null : effectivePlans(),
   ]);
 
   // Collection value: today's change, since the last visit (when that was before yesterday), and the last 30 days.
@@ -227,6 +234,7 @@ export default async function HomePage({ searchParams }) {
           </>
         )}
         performance={<Performance c={c} hasCards={hasCards} historyDays={user.plan.collectionPerformance ? null : user.plan.collectionHistoryDays} />}
+        premium={onPremium ? null : <PremiumTab plans={plans} trial={trialDaysFor(user)} missed={premium ? 0 : mine.length} watches={watches.length} />}
       />
     </>
   );
@@ -266,6 +274,13 @@ function Performance({ c, hasCards, historyDays }) {
     .map(([k, label]) => ({ k, label, value: priced.filter((it) => it.kind === k).reduce((t, it) => t + held(it), 0) })).filter((x) => x.value > 0);
   const { summary } = c;
   const signed = (v) => `${v >= 0 ? "+" : "−"}${money(Math.abs(v))}`;
+  const costed = c.owned.filter((it) => it.purchasePrice !== null && it.purchasePrice !== undefined).length;
+  const allSince = changes[0]?.since || null;
+  // A range shows when the history reaches back that far (and isn't the same day as All time); All time always shows.
+  const first = c.snapshots.filter((p) => p.value > 0).map((p) => p.day).sort()[0];
+  const reaches = (d) => first && first <= new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+  const ranges = RANGE_ROWS.map(([d, label]) => ({ d, label, ch: changes[d] }))
+    .filter((r) => r.ch && (r.d === 0 || (reaches(r.d) && r.ch.since !== allSince)));
 
   return (
     <>
@@ -273,37 +288,40 @@ function Performance({ c, hasCards, historyDays }) {
         <ValueChart points={chartSeries(c.snapshots, historyDays)} historyDays={historyDays} profit={summary} changes={changes} hideable shared />
       </div>
 
+      {/* Returns: one strip, a cell per range the history covers. */}
       <section className="home-section">
         <div className="home-head"><h2>Returns</h2></div>
-        <div className="home-returns">
-          {RANGE_ROWS.map(([d, label]) => {
-            const ch = changes[d];
-            return (
-              <div key={d} className="panel">
-                <span className="small muted">{label}</span>
-                {ch ? (
-                  <>
-                    <b className={`sensitive ${ch.change >= 0 ? "up" : "down"}`}>{signed(ch.change)}</b>
-                    <span className={`small ${ch.change >= 0 ? "up" : "down"}`}>{pct(ch.pct)}</span>
-                  </>
-                ) : <span className="small muted">Not enough history yet</span>}
-              </div>
-            );
-          })}
+        <div className="panel home-ranges">
+          {ranges.map(({ d, label, ch }) => (
+            <div key={d}>
+              <span className="small muted">{label}</span>
+              <b className={`sensitive ${ch.change >= 0 ? "up" : "down"}`}>{signed(ch.change)}</b>
+              <span className={`small ${ch.change >= 0 ? "up" : "down"}`}>{pct(ch.pct)}</span>
+            </div>
+          ))}
         </div>
-        <p className="hint">Price moves only: cards you added during a range don&apos;t count as gains.</p>
+        <p className="hint">Price moves only: cards you added during a range don&apos;t count as gains.{allSince ? ` All time is since ${shortDay(allSince)}.` : ""}</p>
       </section>
 
+      {/* Profit: the number, then what they paid against what those cards are worth now, as two bars. */}
       <section className="home-section">
         <div className="home-head"><h2>Profit on what you paid</h2></div>
         {summary.cost > 0 ? (
-          <div className="home-returns three">
-            <div className="panel"><span className="small muted">You paid</span><b className="sensitive">{money(summary.cost)}</b></div>
-            <div className="panel"><span className="small muted">Those cards now</span><b className="sensitive">{money(summary.cost + summary.gain)}</b></div>
-            <div className="panel"><span className="small muted">Profit</span>
-              <b className={`sensitive ${summary.gain >= 0 ? "up" : "down"}`}>{signed(summary.gain)}</b>
-              <span className={`small ${summary.gain >= 0 ? "up" : "down"}`}>{pct(summary.gainPct)}</span>
+          <div className="panel home-profit">
+            <div className="home-profit-head">
+              <b className={`home-profit-num sensitive ${summary.gain >= 0 ? "up" : "down"}`}>{signed(summary.gain)}</b>
+              <span className={`small ${summary.gain >= 0 ? "up" : "down"}`}>{pct(summary.gainPct)} on what you paid</span>
             </div>
+            <div className="home-bars">
+              {[["You paid", summary.cost, "paid"], ["Worth now", summary.cost + summary.gain, summary.gain >= 0 ? "up" : "down"]].map(([label, v, cls]) => (
+                <div key={label} className="home-bar-row">
+                  <span className="small muted">{label}</span>
+                  <span className="home-bar"><i className={cls} style={{ width: `${Math.max(2, (v / Math.max(summary.cost, summary.cost + summary.gain)) * 100)}%` }} /></span>
+                  <b className="small sensitive">{money(v)}</b>
+                </div>
+              ))}
+            </div>
+            <p className="hint" style={{ margin: 0 }}>From the {costed} of your {c.owned.length} cards with a price paid. Add the rest from Edit in your collection.</p>
           </div>
         ) : <div className="panel small muted">Add what you paid for your cards (Edit on any card in your collection) and we work out your profit, card by card.</div>}
         {(best.length > 0 || worst.length > 0) && (
@@ -348,6 +366,63 @@ function Performance({ c, hasCards, historyDays }) {
           </div>
         </section>
       )}
+    </>
+  );
+}
+
+// The Premium tab (members not on Premium): what changes when they join, from the plans as Admin → Features left them
+// (lib/plan-copy.js), with their own numbers where we have them, and a button to the Premium page to join.
+function PremiumTab({ plans, trial, missed, watches }) {
+  const price = PLANS.premium.price;
+  const rows = planGroups(plans).flatMap((g) => g.rows.filter(([, free, prem]) => free !== prem).map((r) => [g.group, ...r]));
+  const join = (
+    <Link href="/app/premium?from=home#enroll" className="btn primary home-join">
+      {trial > 0 ? `Start your ${trial}-day free trial` : `Join Premium · $${price}/month`}
+    </Link>
+  );
+  const yours = [
+    missed > 0 && `Your deal filters caught ${missed} ${missed === 1 ? "deal" : "deals"} this week. You saw ${missed === 1 ? "it" : "them"} after the auction ended; on Premium they reach you live, while you can still bid.`,
+    plans.free.maxPriceWatches !== null && watches >= plans.free.maxPriceWatches && `You're using ${watches} of ${plans.free.maxPriceWatches} price ${plans.free.maxPriceWatches === 1 ? "alert" : "alerts"}. Premium has room for ${plans.premium.maxPriceWatches === null ? "as many as you like" : plans.premium.maxPriceWatches}.`,
+  ].filter(Boolean);
+
+  return (
+    <>
+      <div className="panel home-premium-hero">
+        <div className="eyebrow-sm">TCG BOOGIE PREMIUM</div>
+        <h2>Get every deal while you can still bid</h2>
+        <p className="muted">Live deal alerts the moment an underpriced auction is found, instant push alerts, your collection&apos;s full performance, and more of everything.</p>
+        <div className="home-premium-price"><b>${price}</b><span className="muted">/month plus tax · cancel anytime</span></div>
+        {join}
+        {trial > 0 && <p className="hint" style={{ margin: "8px 0 0" }}>$0 today. We email you 3 days before your first charge.</p>}
+      </div>
+
+      {yours.length > 0 && (
+        <section className="home-section">
+          <div className="home-head"><h2>What you&apos;re missing</h2></div>
+          <div className="panel home-list">
+            {yours.map((t) => <p key={t} className="home-yours">{t}</p>)}
+          </div>
+        </section>
+      )}
+
+      <section className="home-section">
+        <div className="home-head"><h2>What changes with Premium</h2></div>
+        <div className="panel home-compare">
+          <div className="home-compare-row head"><span /><span className="small muted">Free</span><span className="small home-premium-word">Premium</span></div>
+          {rows.map(([group, what, free, prem]) => (
+            <div key={`${group}-${what}`} className="home-compare-row">
+              <span className="small">{what}</span>
+              <span className="small muted">{free}</span>
+              <b className="small">{prem}</b>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="home-premium-foot">
+        {join}
+        <span className="small muted">Your collection and settings stay the same whichever plan you&apos;re on.</span>
+      </div>
     </>
   );
 }

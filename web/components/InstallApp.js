@@ -49,6 +49,7 @@ export function InstallButton({ className = "", onDone }) {
 }
 
 const DISMISS = "tcgb-install-hint";
+const LAUNCHED = "tcgb-launched"; // this app launch already started (sessionStorage lasts one launch)
 
 /**
  * Mounted once in the root layout: the iPhone steps when asked for, and a one-time hint for members on a phone
@@ -70,6 +71,17 @@ export default function InstallApp({ signedIn }) {
     try { seen = Boolean(localStorage.getItem(DISMISS)); } catch { /* storage blocked: show it */ }
     if (!seen) { const t = setTimeout(() => setHint(true), 4000); return () => clearTimeout(t); }
   }, [signedIn, mode]);
+
+  // Opening the home-screen app starts on Home. iPhones can keep the address the app was added from (often the
+  // collection) instead of the start address, so the first page of each launch on Collection or the homepage moves on.
+  useEffect(() => {
+    if (!signedIn || !standalone()) return;
+    try {
+      if (sessionStorage.getItem(LAUNCHED)) return;
+      sessionStorage.setItem(LAUNCHED, "1");
+    } catch { return; }
+    if (["/", "/app", "/app/collection"].includes(window.location.pathname) && !window.location.search) window.location.replace("/app/home");
+  }, [signedIn]);
 
   const dismiss = () => { setHint(false); try { localStorage.setItem(DISMISS, "1"); } catch { /* fine */ } };
 
