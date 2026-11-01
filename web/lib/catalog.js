@@ -570,7 +570,9 @@ export async function searchProducts(q) {
   const raw = String(q || "").trim().slice(0, 80);
   const wantsJapanese = /\b(japanese|japan|jp|jpn)\b/i.test(raw);
   const wantsEnglish = /\b(english|eng)\b/i.test(raw);
-  const term = expandSealed(spellVariants(raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " "))).replace(/\s+/g, " ").trim();
+  // "ascended heroes pac": still typing "pack", so search for the packs already.
+  const typed = spellVariants(raw.replace(/\b(japanese|japan|jp|jpn|english|eng)\b/gi, " ")).replace(/\s+/g, " ").trim().replace(/(\S\s+)pac$/i, "$1pack");
+  const term = expandSealed(typed).replace(/\s+/g, " ").trim();
   if (term.length < 2) return [];
   // Named a sealed product type ("surging sparks etb", "151 booster box"): sealed only, and a number like 151 is part
   // of the name, not a card number.
@@ -599,6 +601,19 @@ export async function searchProducts(q) {
     if (en) lookups.push(cards(name, 8));
     if (jp) lookups.push(cards(name, 8, "japanese"));
     if (en && !number) lookups.push(ppt("/sealed-products", { search: name, limit: "5" }, week).then((j) => (j?.data || []).map(fromSealed)).catch(() => []));
+  }
+  // The last word may still be half typed ("ascended heroes boo"), and the service only finds whole words. Search
+  // without it too and keep what has a word starting with it. While it's being typed, that search stays the same, so
+  // it comes from the cache after the first letter.
+  const words = name.split(" ");
+  const part = words.length > 1 && !number ? words[words.length - 1].toLowerCase() : "";
+  if (part.length >= 2 && en) {
+    const before = words.slice(0, -1).join(" ");
+    const starts = (p) => nameWords(p.name).some((w) => w.startsWith(part));
+    lookups.push(Promise.all([
+      cards(before, 8),
+      ppt("/sealed-products", { search: before, limit: "20" }, week).then((j) => (j?.data || []).map(fromSealed)).catch(() => []),
+    ]).then((r) => r.flat().filter(starts)));
   }
   if (complete && name.length >= 2) {
     if (en) lookups.push(cards(`${name} ${number}`, 8));
