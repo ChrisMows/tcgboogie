@@ -5,7 +5,7 @@ import HideValues from "@/components/HideValues";
 import HomePromo from "@/components/HomePromo";
 import HomeTabs from "@/components/HomeTabs";
 import Sparkline from "@/components/Sparkline";
-import ValueChart from "@/components/ValueChart";
+import PerformanceChart from "@/components/PerformanceChart";
 import { chartSeries, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
 import { trialDaysFor } from "@/lib/billing";
 import { withLinks } from "@/lib/deal-links";
@@ -284,9 +284,7 @@ function Performance({ c, hasCards, historyDays }) {
 
   return (
     <>
-      <div className="panel coll-chart">
-        <ValueChart points={chartSeries(c.snapshots, historyDays)} historyDays={historyDays} profit={summary} changes={changes} hideable shared />
-      </div>
+      <PerformanceChart points={chartSeries(c.snapshots, historyDays)} summary={summary} changes={changes} historyDays={historyDays} />
 
       {/* Returns: one strip, a cell per range the history covers. */}
       <section className="home-section">

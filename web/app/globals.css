@@ -2159,8 +2159,58 @@ body:has(.install-hint) .helper-fab { display: none; }
 .home-compare-row:last-child { border-bottom: 0; }
 .home-compare-row.head { padding-bottom: 4px; font-weight: 700; }
 .home-premium-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 22px 0 6px; text-align: center; }
+/* Home → Performance: Collection performance (components/PerformanceChart.js) */
+.perf { padding: 22px 22px 16px; }
+.perf .perf-title { margin: 0; font-size: 24px; font-weight: 600; }
+.perf-sub { margin: 2px 0 16px; }
+.perf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.perf-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 0 22px; border-left: 1px solid var(--border); min-width: 0; }
+.perf-stats > div:first-child { padding-left: 0; border-left: 0; }
+.perf-stats b { font: 700 34px/1.15 var(--font-head), sans-serif; letter-spacing: -0.02em; white-space: nowrap; }
+.perf-none { margin-top: 6px; }
+.perf-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 12px; }
+.perf-bar h3 { margin: 0; font-size: 18px; font-weight: 600; }
+.perf-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.perf-switch { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; cursor: pointer; padding-right: 16px; border-right: 1px solid var(--border); }
+.perf-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.perf-switch > span { width: 36px; height: 20px; border-radius: 999px; background: var(--panel-3); border: 1px solid var(--border-strong); position: relative; transition: background 0.2s; }
+.perf-switch > span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform 0.2s, background 0.2s; }
+.perf-switch input:checked + span { background: var(--accent-soft); border-color: rgba(211, 255, 102, 0.5); }
+.perf-switch input:checked + span::after { transform: translateX(16px); background: var(--accent); }
+.perf-switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.perf-ranges { display: flex; border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+.perf-ranges button, .perf-ranges a { background: none; border: 1px solid transparent; color: var(--muted); font: 600 13px var(--font-body), sans-serif; padding: 5px 11px; border-radius: 7px; cursor: pointer; }
+.perf-ranges button:hover { color: var(--text); }
+.perf-ranges button.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.perf-ranges a.locked { color: var(--faint); }
+.perf-plot { position: relative; height: 240px; }
+.perf-area { position: absolute; left: 0; right: 70px; top: 8px; bottom: 30px; cursor: crosshair; }
+.perf-area .chart-svg { width: 100%; height: 100%; }
+.perf-dot { position: absolute; right: -5px; width: 10px; height: 10px; border-radius: 50%; transform: translateY(-50%); box-shadow: 0 0 0 3px rgba(11, 14, 18, 0.9); pointer-events: none; }
+.perf-y { position: absolute; right: 0; width: 64px; top: 8px; bottom: 30px; }
+.perf-y span { position: absolute; left: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.perf-y .perf-badge { left: 4px; padding: 2px 6px; border-radius: 5px; background: var(--accent); color: var(--accent-ink); font-weight: 700; z-index: 1; }
+.perf-y .perf-badge.down { background: var(--bad); color: #fff; }
+.perf-x { position: absolute; left: 0; right: 70px; bottom: 0; height: 22px; border-top: 1px solid var(--border-strong); }
+.perf-x span { position: absolute; top: 6px; transform: translateX(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.perf-x span:first-child { transform: none; }
+.perf-x span:last-child { transform: translateX(-100%); }
+.perf-tip { position: absolute; transform: translate(-50%, calc(-100% - 12px)); background: var(--panel-3); border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 5px 9px; display: flex; flex-direction: column; align-items: center; pointer-events: none; white-space: nowrap; z-index: 2; }
 @media (max-width: 760px) {
   .home-deals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .perf { padding: 16px 14px 12px; }
+  .perf-stats { grid-template-columns: 1fr 1fr; row-gap: 14px; }
+  .perf-stats > div { padding: 0 12px; }
+  .perf-stats > div:first-child { grid-column: 1 / -1; padding: 0; }
+  .perf-stats > div:nth-child(2) { border-left: 0; padding-left: 0; }
+  .perf-stats b { font-size: 26px; }
+  .perf-tools { width: 100%; justify-content: space-between; }
+  .perf-switch { border-right: 0; padding-right: 0; }
+  .perf-ranges button, .perf-ranges a { padding: 5px 8px; font-size: 12px; }
+  .perf-plot { height: 210px; }
+  .perf-area, .perf-x { right: 58px; }
+  .perf-y { width: 56px; }
   .home-ranges { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
   .home-ranges > div { padding: 10px 12px; }
   .home-ranges b { font-size: 15px; }
