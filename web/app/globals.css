@@ -2099,7 +2099,7 @@ body:has(.install-hint) .helper-fab { display: none; }
 .home-market a:hover { text-decoration: none; border-color: var(--border-strong); }
 .home-market .card-thumb, .home-market a > :first-child { align-self: center; }
 .home-market-name { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.home-new { display: block; margin: 26px 0 8px; color: var(--muted); }
+.home-new { display: block; margin: 0 0 8px; color: var(--muted); }
 .home-new:hover { color: var(--text); text-decoration: none; }
 .home-tabs { display: flex; gap: 24px; margin: 0 0 14px; border-bottom: 1px solid var(--border); }
 .home-tabs button { background: none; border: 0; padding: 4px 0 10px; margin-bottom: -1px; border-bottom: 3px solid transparent; cursor: pointer;

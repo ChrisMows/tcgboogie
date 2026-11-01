@@ -227,9 +227,12 @@ export default async function HomePage({ searchParams }) {
             )}
 
             {latest && (
-              <Link href="/updates" className="home-new small">
-                <span className="badge accent">New</span> v{latest.version}: {latest.title} →
-              </Link>
+              <section className="home-section">
+                <div className="home-head"><h2>✨ What&apos;s new</h2><Link href="/updates">All updates</Link></div>
+                <Link href="/updates" className="home-new small">
+                  <span className="badge accent">New</span> v{latest.version}: {latest.title} →
+                </Link>
+              </section>
             )}
           </>
         )}
