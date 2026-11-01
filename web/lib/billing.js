@@ -345,6 +345,9 @@ export async function billingDetails(user) {
       })),
     };
   } catch (e) {
+    // 404: a customer from before payments went live (test mode), so there's no live billing to show. Checkout makes
+    // them a live customer if they subscribe (customerFor), so it's not a problem worth a warning.
+    if (e.status === 404) return null;
     await log("payments", "warn", `Billing details couldn't load: ${e.message}`, {}, user.id);
     return null;
   }
