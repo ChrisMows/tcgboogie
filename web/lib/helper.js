@@ -21,8 +21,13 @@ const MAX_TURNS = 8; // earlier messages in the chat the helper sees
 
 // Where everything is. Keep this in step with the site when pages or buttons move.
 const PAGE_MAP = `
-Header (every page): Collection, Deals, Price alerts, Photo appraiser, Pricing, FAQ. On phones these are in the ☰ menu. Signed-in members
-have a round profile picture at the top right with Collection, Settings, Plan & billing and Sign out.
+Header (every page): Collection, Deals, Price alerts, Card scanner, Pricing, FAQ. On phones these are in the ☰ menu. Signed-in members
+have a round profile picture at the top right with Home, Collection, Settings, Plan & billing and Sign out. In the member area, phones
+have a tab bar at the bottom: Home, Collection, Scan (card scanner), Deals, Alerts.
+
+/app/home — Home, where members land: collection value with a 30-day line, quick buttons (Add cards, Scan cards, Price alert,
+Deal filter), price alerts that hit, deals their filters caught, their cards that moved most this week, and Market today
+(caught deals, new highs, big eBay sales).
 
 /app/collection — My collection. Tabs: Collection, ♡ Wishlist, ▤ Binders.
   - At the top: the collection value, then a row of round buttons: Add cards, Alerts, Chart (value over time), Export
@@ -38,7 +43,7 @@ have a round profile picture at the top right with Collection, Settings, Plan & 
     added) and grid or list view. List view has + / − quantity and Edit on each card; opening a card also has Edit.
   - Binders tab: make binders and sort cards into them.
 /app/collection/sets — every set; open one and tap the cards you own.
-/app/collection/photo — Photo appraiser (in the menu, and "Photo of many cards" under Add cards): photograph a binder page or
+/app/collection/photo — Card scanner (Scan on the phone tab bar, in the menu, and "Photo of many cards" under Add cards): photograph a binder page or
   spread, every card is found and valued, then it asks whether to add them all (or pick which) and opens the collection.
 /app/collection/import — import a CSV from TCGplayer, Collectr, PriceCharting, any app or a spreadsheet.
 /app/collection/grading — Worth Grading?: which raw cards would profit from grading.

@@ -69,7 +69,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
   if (left === 0 && !result) {
     return (
       <div className="panel">
-        <p style={{ marginTop: 0 }}>You&apos;ve used all {quota.limit} photo appraiser photos for this month. They reset on the 1st.</p>
+        <p style={{ marginTop: 0 }}>You&apos;ve used all {quota.limit} card scanner photos for this month. They reset on the 1st.</p>
         {quota.canUpgrade && <Link href="/app/premium?from=photo" className="btn primary">More with Premium</Link>}
       </div>
     );

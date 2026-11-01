@@ -56,7 +56,7 @@ export default async function RootLayout({ children }) {
     { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
     { href: user ? "/app/deals" : "/#deals", label: "Deals" },
     { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
-    { href: user ? "/app/collection/photo" : "/login?next=%2Fapp%2Fcollection%2Fphoto", label: "Photo appraiser" },
+    { href: user ? "/app/collection/photo" : "/login?next=%2Fapp%2Fcollection%2Fphoto", label: "Card scanner" },
     { href: "/sales", label: "Market Movers" },
     { href: "/#pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },

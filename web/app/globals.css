@@ -2066,3 +2066,49 @@ body:has(.install-hint) .helper-fab { display: none; }
 @media (max-width: 600px) { .post-check-row { grid-template-columns: 1fr 1fr; } .post-check-row > .small { grid-column: 1 / -1; } }
 /* Photo appraiser: the "snap, see their value, build your collection" picture above the photo button */
 .photo-steps { display: block; width: 100%; max-width: 900px; height: auto; margin: 0 auto 8px; }
+
+/* ---------- member Home (app/app/home) ---------- */
+.home-value { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: inherit; }
+.home-value:hover { text-decoration: none; border-color: var(--border-strong); }
+.home-value.empty { flex-wrap: wrap; }
+.home-value-row { display: flex; align-items: center; gap: 8px; }
+.home-value-num { font: 600 34px/1.15 var(--font-head), sans-serif; letter-spacing: -0.02em; }
+.home-spark { flex: 0 1 150px; min-width: 0; }
+.home-spark svg { display: block; width: 100%; height: auto; }
+.home-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.home-actions a { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--panel); color: var(--text); font-size: 13px; text-align: center; }
+.home-actions a:hover { text-decoration: none; border-color: var(--accent); }
+.home-actions a span { font-size: 20px; line-height: 1; }
+.home-promo { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; border-color: rgba(211, 255, 102, 0.35); }
+.home-promo-icon { font-size: 26px; flex: none; }
+.home-promo-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.home-section { margin: 26px 0 0; }
+.home-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.home-head h2 { font-size: 20px; margin: 0; }
+.home-head a { font-size: 14px; white-space: nowrap; }
+.home-sub { margin: -2px 0 10px; }
+.home-list { padding: 8px 16px; margin-bottom: 0; }
+.home-list > .small.muted { padding-top: 6px; }
+.home-deals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.home-movers { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.home-move { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.home-market { list-style: none; margin: 0; padding: 0 0 6px; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.home-market li { flex: none; width: 140px; scroll-snap-align: start; }
+.home-market a { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: var(--text); }
+.home-market a:hover { text-decoration: none; border-color: var(--border-strong); }
+.home-market .card-thumb, .home-market a > :first-child { align-self: center; }
+.home-market-name { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.home-new { display: block; margin: 26px 0 8px; color: var(--muted); }
+.home-new:hover { color: var(--text); text-decoration: none; }
+@media (max-width: 760px) {
+  .home-deals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .home-deals > :nth-child(3) { display: none; }
+  .home-promo { flex-wrap: wrap; }
+  .home-promo-text { flex-basis: calc(100% - 90px); }
+  .home-promo .install-x { order: 1; }
+  .home-promo > .btn { order: 2; margin-left: 38px; }
+  .home-value-num { font-size: 28px; }
+  .home-actions { gap: 8px; }
+  .home-actions a { padding: 10px 4px; font-size: 12px; }
+}

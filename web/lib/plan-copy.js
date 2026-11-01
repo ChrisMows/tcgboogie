@@ -61,7 +61,7 @@ export function planGroups({ free, premium, sms }) {
     ]],
     ["Photo tools", [
       ["Search by picture (camera or upload)", (p) => (p.photoSearch && p.photoSearchTotal != null ? `${p.photoSearchTotal} photos to try it` : allowance(p.photoSearch, p.photoSearchPerMonth))],
-      ["Photo appraiser: a binder page, every card found", (p) => allowance(p.photoAppraiser, p.appraisePerMonth)],
+      ["Card scanner: a binder page, every card found", (p) => allowance(p.photoAppraiser, p.appraisePerMonth)],
     ]],
     ["Emails", [
       ["Email recap", (p) => (p.emailRecap === "daily" ? "Daily" : p.emailRecap === "weekly" ? "Weekly" : "Monthly")],
@@ -88,7 +88,7 @@ function lines(p, sms) {
     ["photoSearch", p.photoSearch && p.photoSearchPerMonth !== 0 && p.photoSearchTotal !== 0,
       p.photoSearchTotal != null ? `Search by picture (${p.photoSearchTotal} photos to try it)`
         : p.photoSearchPerMonth == null ? "Unlimited search by picture" : `Search by picture (${p.photoSearchPerMonth} photos a month)`],
-    ["appraiser", p.photoAppraiser && p.appraisePerMonth !== 0, p.appraisePerMonth == null ? "Photo appraiser" : `Photo appraiser (${p.appraisePerMonth} photos a month)`],
+    ["appraiser", p.photoAppraiser && p.appraisePerMonth !== 0, p.appraisePerMonth == null ? "Card scanner" : `Card scanner (${p.appraisePerMonth} photos a month)`],
     ["grading", true, p.gradingCheck ? "Every Worth Grading? pick" : "Worth Grading? top 3 picks"],
     ["history", true, p.collectionHistoryDays === null ? "Full collection history" : `${p.collectionHistoryDays}-day collection history`],
     ["export", p.collectionExport, "CSV export"],

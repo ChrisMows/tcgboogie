@@ -13,7 +13,7 @@ const TYPES = ["image/jpeg", "image/png", "image/webp"];
 /** Read a photo of cards and price what's in it. */
 export async function appraise(formData) {
   const user = await requireUser();
-  if (!user.plan.photoAppraiser) return { ok: false, error: "The photo appraiser is part of Premium." };
+  if (!user.plan.photoAppraiser) return { ok: false, error: "The card scanner is part of Premium." };
   if (!appraiserReady()) return { ok: false, error: "The photo appraiser isn't switched on yet." };
   if (!await allow("appraise", user.id)) return { ok: false, error: SLOW_DOWN };
   const file = formData.get("photo");

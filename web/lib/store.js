@@ -434,9 +434,12 @@ export async function listSnapshots(userId) {
 }
 
 /** The day this member last opened their collection before today ("YYYY-MM-DD" or null); records today. */
-export async function lastCollectionVisit(userId) {
+export const lastCollectionVisit = (userId) => lastVisit(userId, "collection");
+
+/** The day this member last opened a page ("collection", "home") before today ("YYYY-MM-DD" or null); records today. */
+export async function lastVisit(userId, page) {
   if (isDemo(userId) || !db) return null;
-  const key = `collection_visit:${userId}`;
+  const key = `${page}_visit:${userId}`;
   const today = new Date().toISOString().slice(0, 10);
   const [row] = await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, key)).limit(1);
   const prev = row?.value?.prev && row.value.day === today ? row.value.prev : row?.value?.day && row.value.day !== today ? row.value.day : row?.value?.prev || null;

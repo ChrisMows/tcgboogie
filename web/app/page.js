@@ -31,7 +31,7 @@ const TOOLS = [
   { icon: "🔔", title: "Price alerts", body: "Pick a card and a price. We tell you when it drops or climbs.",
     tag: (f) => (f.maxPriceWatches === null ? null : "More on Premium") },
   { icon: "▦", title: "Collection tracker", body: "What every card is worth, updated daily. Import from any app." },
-  { icon: "🖼", title: "Photo appraiser", body: "Snap a binder page. We find each card and its value.",
+  { icon: "🖼", title: "Card scanner", body: "Snap a binder page. We find each card and its value.",
     tag: (f) => (!f.photoAppraiser || f.appraisePerMonth === 0 ? "Premium" : f.appraisePerMonth === null ? null : "More on Premium") },
   { icon: "⇄", title: "Trade Analyzer", body: "Both sides priced, and the trade graded out of 10 for fairness.",
     tag: (f) => (f.tradeAnalyzer ? null : "Premium") },
@@ -95,10 +95,10 @@ export default async function Home({ searchParams }) {
   const sp = await searchParams;
   const deleted = sp?.deleted;
   // Signed-in members who open tcgboogie.com from outside the site (the home-screen app, a bookmark, a typed address,
-  // a link in an email) go straight to their collection. From inside the site (the logo, Pricing, the menus) they get
+  // a link in an email) go straight to their Home. From inside the site (the logo, Pricing, the menus) they get
   // the homepage, at a clean tcgboogie.com/: the browser says which with Sec-Fetch-Site. Older links carry ?home=1.
   const fromSite = (await headers()).get("sec-fetch-site") === "same-origin";
-  if (user && !fromSite && sp?.home !== "1" && !deleted) redirect("/app/collection");
+  if (user && !fromSite && sp?.home !== "1" && !deleted) redirect("/app/home");
   const voted = GAMES[sp?.voted] ? sp.voted : null;
   const [mine, caught, plans] = await Promise.all([user ? myGames(user.id) : [], homeShowcase(), effectivePlans()]);
   const free = plans.free;

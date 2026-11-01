@@ -21,7 +21,7 @@ export default function manifest() {
     ],
     shortcuts: [
       { name: "Deals", url: "/app/deals", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Photo appraiser", url: "/app/collection/photo", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Card scanner", url: "/app/collection/photo", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Price alerts", url: "/app/watches", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
