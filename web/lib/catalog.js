@@ -6,6 +6,7 @@ import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
 import { isToppsId, toppsCard } from "@/lib/topps";
 import { FAMILIES } from "@/lib/pokemon-families";
+import { nameWords, setsInSearch, wordMatches, withWords } from "@/lib/search-words";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -491,24 +492,6 @@ export function splitQuery(term) {
 
 const numBare = (s) => String(s || "").toUpperCase().replace(/\s|\(.*\)/g, "").replace(/^0+(?=\w)/, "");
 const numHead = (s) => numBare(s).split("/")[0].replace(/^0+(?=\w)/, "");
-const NAME_SKIP = new Set(["ex", "gx", "v", "the", "of"]);
-const nameWords = (s) => String(s || "").toLowerCase().replace(/\(.*?\)|\s-\s.*$/g, " ").split(/[^a-z0-9']+/).filter((w) => w.length > 1 && !NAME_SKIP.has(w));
-
-/** Edit distance between two short words (for typos like "nagandel" -> "naganadel"). */
-function editDistance(a, b) {
-  if (Math.abs(a.length - b.length) > 2) return 9;
-  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    const cur = [i];
-    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    prev = cur;
-  }
-  return prev[b.length];
-}
-/** A typed word matches a name word: the same, the start of it (still typing), or a small typo in a longer word. */
-const wordMatches = (typed, word) => typed === word || word.startsWith(typed)
-  || (typed.length >= 5 && editDistance(typed, word) <= (typed.length >= 8 ? 2 : 1));
-
 // Each Pokémon -> the rest of its evolution family ("buneary" -> ["lopunny"]).
 const RELATIVES = new Map();
 for (const f of FAMILIES) {
@@ -602,18 +585,19 @@ export async function searchProducts(q) {
     if (jp) lookups.push(cards(name, 8, "japanese"));
     if (en && !number) lookups.push(ppt("/sealed-products", { search: name, limit: "5" }, week).then((j) => (j?.data || []).map(fromSealed)).catch(() => []));
   }
-  // The last word may still be half typed ("ascended heroes boo"), and the service only finds whole words. Search
-  // without it too and keep what has a word starting with it. While it's being typed, that search stays the same, so
-  // it comes from the cache after the first letter.
-  const words = name.split(" ");
-  const part = words.length > 1 && !number ? words[words.length - 1].toLowerCase() : "";
-  if (part.length >= 2 && en) {
-    const before = words.slice(0, -1).join(" ");
-    const starts = (p) => nameWords(p.name).some((w) => w.startsWith(part));
-    lookups.push(Promise.all([
-      cards(before, 8),
-      ppt("/sealed-products", { search: before, limit: "20" }, week).then((j) => (j?.data || []).map(fromSealed)).catch(() => []),
-    ]).then((r) => r.flat().filter(starts)));
+  // Sealed products: the service only finds the exact words in the exact order ("ascended heroes pa" and "heroes
+  // ascended" find nothing), while card search copes with both. So when the search names a set, its sealed products
+  // are filtered by the other words here; and the words before a half-typed last one are searched on their own (that
+  // search stays the same while the word is typed, so it comes from the cache).
+  if (en && !number && name.length >= 2) {
+    lookups.push(sealedFromSets(name));
+    const words = name.split(" ");
+    const part = words.length > 1 ? words[words.length - 1].toLowerCase() : "";
+    if (part.length >= 2) {
+      const before = words.slice(0, -1).join(" ");
+      lookups.push(ppt("/sealed-products", { search: before, limit: "20" }, week).then((j) => (j?.data || []).map(fromSealed))
+        .then((list) => withWords(list, [part])).catch(() => []));
+    }
   }
   if (complete && name.length >= 2) {
     if (en) lookups.push(cards(`${name} ${number}`, 8));
@@ -661,13 +645,27 @@ export async function searchProducts(q) {
   }).sort((x, y) => y.s - x.s || x.at - y.at || x.jp - y.jp).map((x) => x.p).slice(0, 24);
 }
 
+/**
+ * Sealed products of the sets a search names ("heroes ascended booster pa"), in any word order, with the rest of the
+ * words in the product's name. Just a set's name: its six priciest products. The set's list is cached and shared.
+ */
+async function sealedFromSets(term) {
+  const hits = setsInSearch(term, await listSets().catch(() => []));
+  const lists = await Promise.all(hits.map(async ({ set, rest }) => {
+    const all = await getSetSealed(set.name).catch(() => []);
+    // Just the set's name: its priciest products, cases and displays (several boxes) last.
+    return rest.length ? withWords(all, rest) : [...all].sort((x, y) => /\b(case|display)\b/i.test(x.name) - /\b(case|display)\b/i.test(y.name)).slice(0, 6);
+  }));
+  return lists.flat();
+}
+
 /** Sealed products for a search that names a product type: the whole search, plus the type alone filtered by the rest. */
 async function searchSealed(term, type) {
   const week = 7 * 24 * HOUR;
   const sealed = (search, limit) => ppt("/sealed-products", { search: search.slice(0, 80), limit: String(limit) }, week)
     .then((j) => (j?.data || []).map(fromSealed)).catch(() => []);
   const rest = nameWords(term.replace(typeRe(type), " "));
-  const lookups = [sealed(term, 10)];
+  const lookups = [sealed(term, 10), sealedFromSets(term)];
   if (rest.length) for (const t of typeSpellings(type)) lookups.push(sealed(t, 50));
   const seen = new Set();
   const found = (await Promise.all(lookups)).flat().filter((p) => (seen.has(p.id) ? false : seen.add(p.id)));
