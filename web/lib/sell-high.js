@@ -91,27 +91,27 @@ async function alertMember(user, discordId, risers, pct, ready) {
       await log("alerts", "error", `Sell-high alert by ${channel} failed: ${e.message}`, null, user.id);
     }
   };
-  const footer = `TCGplayer market prices (raw Near Mint for cards). You picked ${pct}% in Collection alerts; each card is alerted at most once a week. ${SITE}/app/collection`;
+  const footer = `TCGplayer market prices (raw Near Mint for cards). You picked ${pct}% in Collection alerts; each card is alerted at most once a week. ${SITE}/app/collection?from=sell-high`;
 
   if (ready.email && user.email && user.alertEmail !== false && allowed.includes("email")) {
     await attempt("email", () => sendEmail(user.email, risers.length === 1
       ? { subject: title, heading: title, items: [rowOf(top)], more: ["It could be a good time to sell."], button: { label: "Open the card", url: cardUrl(top.p) }, footer }
-      : { subject: title, heading: title, items: risers.map(rowOf), button: { label: "Open your collection", url: `${SITE}/app/collection` }, footer }, { userId: user.id, kind: "alerts" }));
+      : { subject: title, heading: title, items: risers.map(rowOf), button: { label: "Open your collection", url: `${SITE}/app/collection?from=sell-high` }, footer }, { userId: user.id, kind: "alerts" }));
   }
   if (ready.push && user.alertWebPush && allowed.includes("push")) {
     await attempt("push", () => sendPush(user.id, {
       title, body: risers.length === 1 ? `${lineOf(top)}. It could be a good time to sell.` : risers.slice(0, 3).map(lineOf).join(" · "),
-      url: risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection`, tag: "sell-high",
+      url: risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection?from=sell-high`, tag: "sell-high",
     }));
   }
   if (ready.discord && discordId && user.alertDiscord && allowed.includes("discord")) {
     await attempt("discord", () => sendDiscordDM(discordId, {
-      title, url: risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection`,
+      title, url: risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection?from=sell-high`,
       description: risers.slice(0, 10).map((x) => `• [${lineOf(x)}](${cardUrl(x.p)})`).join("\n"),
     }));
   }
   if (ready.sms && user.phone && user.phoneVerifiedAt && user.alertSms && allowed.includes("sms")) {
-    await attempt("sms", () => sendSms(user.phone, `TCG Boogie: ${title.replace(/^\S+\s/, "")}. ${risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection`}  Reply STOP to opt out.`));
+    await attempt("sms", () => sendSms(user.phone, `TCG Boogie: ${title.replace(/^\S+\s/, "")}. ${risers.length === 1 ? cardUrl(top.p) : `${SITE}/app/collection?from=sell-high`}  Reply STOP to opt out.`));
   }
   return res;
 }

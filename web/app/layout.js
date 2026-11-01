@@ -39,8 +39,6 @@ export const metadata = {
   twitter: { card: "summary_large_image", site: X_HANDLE, creator: X_HANDLE },
 };
 
-const START_ON_HOME = "try{var p=location.pathname;if(p.length>1&&p.slice(-1)==='/')p=p.slice(0,-1);var s=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true,i=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),e=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0],n=e&&e.type,r=document.referrer,f=n!=='reload'&&n!=='back_forward'&&(!r||new URL(r).origin!==location.origin);if(f&&s&&p==='/app/home')localStorage.removeItem('tcgb-app-old');if(f&&(s||i)&&(p==='/app/collection'||p==='/app')){if(s)localStorage.setItem('tcgb-app-old','1');document.documentElement.style.visibility='hidden';location.replace('/app/home')}}catch(x){}";
-
 // Signed-in members: the logo opens their Home. Visitors: the homepage.
 function Brand({ signedIn }) {
   return (
@@ -70,11 +68,6 @@ export default async function RootLayout({ children }) {
       <head>
         {/* Before the page draws: keep collection values hidden if the member chose that (no flash of the total). */}
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('tcgb-hide-values')==='1')document.documentElement.classList.add('hide-values')}catch(e){}" }} />
-        {/* Signed in, before the page draws: an iPhone opened fresh on Collection (a home-screen icon saved there, as
-            app or in Safari; not a reload, back/forward or a link inside the site) goes straight on to Home, unseen.
-            The home-screen app notes it has the old address, so Home offers the one-time re-add (components/HomePromo.js);
-            a fresh open straight on Home clears that. */}
-        {user && <script dangerouslySetInnerHTML={{ __html: START_ON_HOME }} />}
       </head>
       <body>
         {/* X conversion tracking base code (pixel ri3dv): page views for X ads. Allowed in next.config.mjs's CSP. */}

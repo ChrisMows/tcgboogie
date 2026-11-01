@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { install as startInstall, showUpdateSteps, useInstall } from "@/components/InstallApp";
-import { enablePush, needsInstall, pushSupported, standalone } from "@/lib/push-client";
+import { install as startInstall, useInstall } from "@/components/InstallApp";
+import { enablePush, needsInstall, pushSupported } from "@/lib/push-client";
 
-// Home: the one thing this member most needs next, in order: update a home-screen app that still opens on Collection
-// (app/layout.js notes it), turn on push alerts (Premium), add TCG Boogie to the home screen (phones), go Premium. ✕ hides that card on this device and the next one in line shows.
+// Home: the one thing this member most needs next, in order: turn on push alerts (Premium), add TCG Boogie to the
+// home screen (phones), go Premium. ✕ hides that card on this device and the next one in line shows.
 const KEY = (kind) => `tcgb-home-promo-${kind}`;
 const hidden = (kind) => { try { return Boolean(localStorage.getItem(KEY(kind))); } catch { return false; } };
 
@@ -20,9 +20,7 @@ export default function HomePromo({ canPush, pushOn, premium }) {
 
   useEffect(() => {
     const pushable = canPush && !pushOn && (pushSupported() ? Notification.permission !== "denied" : needsInstall());
-    let old = false;
-    try { old = standalone() && Boolean(localStorage.getItem("tcgb-app-old")); } catch { /* storage blocked */ }
-    const order = [old && "update", pushable && "push", install && window.innerWidth <= 860 && "install", !premium && "premium"].filter(Boolean);
+    const order = [pushable && "push", install && window.innerWidth <= 860 && "install", !premium && "premium"].filter(Boolean);
     setKind(order.find((k) => !hidden(k)) || null);
   }, [canPush, pushOn, premium, install]);
 
@@ -38,8 +36,6 @@ export default function HomePromo({ canPush, pushOn, premium }) {
 
   if (!kind) return null;
   const card = {
-    update: { icon: "🔄", title: "Update your TCG Boogie app", text: "Your home-screen icon still opens on Collection. Re-add it once and it opens straight to Home.",
-      action: <button type="button" className="btn sm primary" onClick={showUpdateSteps}>Show me how</button> },
     push: { icon: "📲", title: "Get deals the second they're found", text: "Push alerts pop up on your phone, even when TCG Boogie is closed.",
       action: <button type="button" className="btn sm primary" onClick={turnOnPush} disabled={pending}>{pending ? "Turning on..." : "Turn on push"}</button> },
     install: { icon: "🏠", title: "Put TCG Boogie on your home screen", text: "It opens full-screen like an app, one tap away.",

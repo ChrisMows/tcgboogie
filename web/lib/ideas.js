@@ -79,7 +79,7 @@ export async function setIdeaStatus(ids, status, note = "") {
           ...(clean(note, 500) ? [clean(note, 500)] : []),
           "Thanks for helping us make TCG Boogie better. Keep the ideas coming: Suggest an idea is in the menu.",
         ],
-        button: { label: "Take a look", url: `${SITE}${idea.page && idea.page.startsWith("/") ? idea.page : "/app/collection"}` },
+        button: { label: "Take a look", url: `${SITE}${idea.page && idea.page.startsWith("/") ? idea.page : "/app/collection?from=idea"}` },
         footer: "You're getting this because you suggested this idea on TCG Boogie.",
       });
       await db.update(ideas).set({ notifiedAt: new Date() }).where(eq(ideas.id, idea.id));
