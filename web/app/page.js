@@ -95,7 +95,7 @@ export default async function Home({ searchParams }) {
   const sp = await searchParams;
   const deleted = sp?.deleted;
   // Signed-in members who open tcgboogie.com from outside the site (the home-screen app, a bookmark, a typed address,
-  // a link in an email) go straight to their Home. From inside the site (the logo, Pricing, the menus) they get
+  // a link in an email) go straight to their Home. From inside the site (Pricing, the menus, the footer) they get
   // the homepage, at a clean tcgboogie.com/: the browser says which with Sec-Fetch-Site. Older links carry ?home=1.
   const fromSite = (await headers()).get("sec-fetch-site") === "same-origin";
   if (user && !fromSite && sp?.home !== "1" && !deleted) redirect("/app/home");

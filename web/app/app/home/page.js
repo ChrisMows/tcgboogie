@@ -3,8 +3,10 @@ import CardThumb from "@/components/CardThumb";
 import DealTile from "@/components/DealTile";
 import HideValues from "@/components/HideValues";
 import HomePromo from "@/components/HomePromo";
+import HomeTabs from "@/components/HomeTabs";
 import Sparkline from "@/components/Sparkline";
-import { itemLabel, marketChange, money, unitValue } from "@/lib/collection";
+import ValueChart from "@/components/ValueChart";
+import { chartSeries, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
 import { withLinks } from "@/lib/deal-links";
 import { dealsFor } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
@@ -25,8 +27,9 @@ const pct = (v) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
 const shortDay = (day) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const cleanName = (s) => String(s || "").replace(/\s*\(.*\)$/, "");
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }) {
   const user = await requireUser("/app/home");
+  const view = (await searchParams)?.view === "performance" ? "performance" : "overview";
   const premium = Boolean(user.plan.liveFeed);
   const [c, watches, profiles, found, feed, pushDevices, lastVisit] = await Promise.all([
     loadCollection(user),
@@ -55,15 +58,19 @@ export default async function HomePage() {
   const hits = watches.filter((w) => w.status === "triggered")
     .sort((a, b) => new Date(b.triggeredAt || 0) - new Date(a.triggeredAt || 0));
 
-  // The cards they own that moved most this week, by dollars: risers and fallers.
+  // The cards they own that moved most this week, by dollars (all their copies of it): risers and fallers.
+  // change7 is against the price 7 days ago, so the dollar move is today's price less that one.
   const moving = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
-    .map((it) => ({ it, dollars: it.change7 * unitValue(it) * (it.quantity || 1) }));
-  const risers = moving.filter((m) => m.dollars > 0).sort((a, b) => b.dollars - a.dollars).slice(0, 3).map((m) => m.it);
-  const fallers = moving.filter((m) => m.dollars < 0).sort((a, b) => a.dollars - b.dollars).slice(0, 3).map((m) => m.it);
+    .map((it) => ({ ...it, dollars: (unitValue(it) - unitValue(it) / (1 + it.change7)) * (it.quantity || 1) }));
+  const risers = moving.filter((m) => m.dollars > 0).sort((a, b) => b.dollars - a.dollars).slice(0, 3);
+  const fallers = moving.filter((m) => m.dollars < 0).sort((a, b) => a.dollars - b.dollars).slice(0, 3);
 
-  // Market: caught deals, new highs and big sales, mixed so each kind shows.
+  // Market: caught deals, new highs and big sales, newest first in each (the feed itself is sorted by size, so its top
+  // items stay the same for days), mixed so each kind shows.
+  const newest = (list) => [...list].sort((a, b) => String(b.soldAt || "").localeCompare(String(a.soldAt || "")));
+  const lists = [newest(feed.deals), newest(feed.highs), newest(feed.big)];
   const market = [];
-  for (let i = 0; market.length < 9 && i < 9; i++) for (const list of [feed.deals, feed.highs, feed.big]) if (list[i] && market.length < 9) market.push(list[i]);
+  for (let i = 0; market.length < 9 && i < 9; i++) for (const list of lists) if (list[i] && market.length < 9) market.push(list[i]);
 
   const latest = RELEASES[0];
   const hasCards = c.owned.length > 0;
@@ -73,141 +80,273 @@ export default async function HomePage() {
     <>
       <h1 className="sr-only">Home</h1>
 
-      {/* Collection value, with a 30-day line. Tapping it opens the collection. */}
-      {hasCards ? (
-        <Link href="/app/collection" className="panel home-value">
-          <div>
-            <div className="small muted">Collection value</div>
-            <div className="home-value-row">
-              <b className="home-value-num sensitive">{money(c.summary.value)}</b>
-              <HideValues className="icon-only" />
-            </div>
-            {day ? (
-              <div className={`small sensitive ${day.change >= 0 ? "up" : "down"}`}>
-                {day.change >= 0 ? "▲" : "▼"} {money(Math.abs(day.change))} ({pct(day.pct)}) <span className="muted">today</span>
-              </div>
-            ) : <div className="small muted">Your day-to-day change shows from tomorrow.</div>}
-            {sinceVisit && sinceVisit.since !== day?.since && (
-              <div className={`small sensitive ${sinceVisit.change >= 0 ? "up" : "down"}`}>
-                {sinceVisit.change >= 0 ? "▲" : "▼"} {money(Math.abs(sinceVisit.change))} ({pct(sinceVisit.pct)}) <span className="muted">since your last visit</span>
+      <HomeTabs
+        initial={view}
+        locked={!user.plan.collectionPerformance}
+        header={(
+          <>
+            {/* Collection value, with a 30-day line. Tapping it opens the collection. */}
+            {hasCards ? (
+              <Link href="/app/collection" className="panel home-value">
+                <div>
+                  <div className="small muted">Collection value</div>
+                  <div className="home-value-row">
+                    <b className="home-value-num sensitive">{money(c.summary.value)}</b>
+                    <HideValues className="icon-only" />
+                  </div>
+                  {day ? (
+                    <div className={`small sensitive ${day.change >= 0 ? "up" : "down"}`}>
+                      {day.change >= 0 ? "▲" : "▼"} {money(Math.abs(day.change))} ({pct(day.pct)}) <span className="muted">today</span>
+                    </div>
+                  ) : <div className="small muted">Your day-to-day change shows from tomorrow.</div>}
+                  {sinceVisit && sinceVisit.since !== day?.since && (
+                    <div className={`small sensitive ${sinceVisit.change >= 0 ? "up" : "down"}`}>
+                      {sinceVisit.change >= 0 ? "▲" : "▼"} {money(Math.abs(sinceVisit.change))} ({pct(sinceVisit.pct)}) <span className="muted">since your last visit</span>
+                    </div>
+                  )}
+                </div>
+                <div className="home-spark sensitive"><Sparkline points={spark} width={150} height={52} /></div>
+              </Link>
+            ) : (
+              <div className="panel home-value empty">
+                <div>
+                  <b>Start your collection</b>
+                  <p className="small muted" style={{ margin: "4px 0 0" }}>Add the cards you own and see what they&apos;re worth, updated every day.</p>
+                </div>
+                <Link href="/app/collection?add=1" className="btn primary">Add cards</Link>
               </div>
             )}
-          </div>
-          <div className="home-spark sensitive"><Sparkline points={spark} width={150} height={52} /></div>
-        </Link>
-      ) : (
-        <div className="panel home-value empty">
-          <div>
-            <b>Start your collection</b>
-            <p className="small muted" style={{ margin: "4px 0 0" }}>Add the cards you own and see what they&apos;re worth, updated every day.</p>
-          </div>
-          <Link href="/app/collection?add=1" className="btn primary">Add cards</Link>
-        </div>
-      )}
+          </>
+        )}
+        overview={(
+          <>
+            <nav className="home-actions" aria-label="Quick actions">
+              <Link href="/app/collection?add=1"><span aria-hidden="true">＋</span>Add cards</Link>
+              <Link href="/app/collection/photo"><span aria-hidden="true">📷</span>Scan cards</Link>
+              <Link href="/app/watches"><span aria-hidden="true">🔔</span>Price alert</Link>
+              <Link href="/app/deals"><span aria-hidden="true">⚡</span>Deal filter</Link>
+            </nav>
 
-      <nav className="home-actions" aria-label="Quick actions">
-        <Link href="/app/collection?add=1"><span aria-hidden="true">＋</span>Add cards</Link>
-        <Link href="/app/collection/photo"><span aria-hidden="true">📷</span>Scan cards</Link>
-        <Link href="/app/watches"><span aria-hidden="true">🔔</span>Price alert</Link>
-        <Link href="/app/deals"><span aria-hidden="true">⚡</span>Deal filter</Link>
-      </nav>
+            <HomePromo
+              canPush={!user.demo && user.plan.watchAlertChannels.includes("push")}
+              pushOn={Boolean(user.alertWebPush && pushDevices.length)}
+              premium={user.tier === "premium"}
+            />
 
-      <HomePromo
-        canPush={!user.demo && user.plan.watchAlertChannels.includes("push")}
-        pushOn={Boolean(user.alertWebPush && pushDevices.length)}
-        premium={user.tier === "premium"}
-      />
+            {/* Price alerts that hit. */}
+            {hits.length > 0 && (
+              <section className="home-section">
+                <div className="home-head"><h2>🔔 Price alerts that hit</h2><Link href="/app/watches">See all</Link></div>
+                <div className="panel home-list">
+                  {hits.slice(0, 3).map((w) => (
+                    <Link key={w.id} href={`/app/cards/${w.productId}`} className="mini-row">
+                      <CardThumb item={{ image: w.image, name: w.name, number: w.number, productType: w.productType }} width={34} />
+                      <span className="mini-text"><b>{cleanName(w.name)}</b><span className="small muted">{w.setName || ""}</span></span>
+                      <span className="small">{w.lastPrice ? money(w.lastPrice) : ""}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
 
-      {/* Price alerts that hit. */}
-      {hits.length > 0 && (
-        <section className="home-section">
-          <div className="home-head"><h2>🔔 Price alerts that hit</h2><Link href="/app/watches">See all</Link></div>
-          <div className="panel home-list">
-            {hits.slice(0, 3).map((w) => (
-              <Link key={w.id} href={`/app/cards/${w.productId}`} className="mini-row">
-                <CardThumb item={{ image: w.image, name: w.name, number: w.number, productType: w.productType }} width={34} />
-                <span className="mini-text"><b>{cleanName(w.name)}</b><span className="small muted">{w.setName || ""}</span></span>
-                <span className="small">{w.lastPrice ? money(w.lastPrice) : ""}</span>
+            {/* Deals their filters caught. */}
+            <section className="home-section">
+              <div className="home-head">
+                <h2>⚡ {premium && live.length ? "Live deals for you" : "Deals your filters caught"}</h2>
+                <Link href={premium ? "/app/deals" : "/app/deals?tab=history"}>See all</Link>
+              </div>
+              {!found.sample && (
+                <p className="small muted home-sub">
+                  {newDeals > 0 ? `${newDeals} new ${since}.` : running.length ? `Nothing new ${since}.` : "Turn on a deal filter and we'll catch underpriced eBay auctions for you."}
+                  {!premium && newDeals > 0 ? " On Premium you get them live, while you can still bid." : ""}
+                </p>
+              )}
+              {shownDeals.length ? (
+                <div className="home-deals">
+                  {withLinks(shownDeals, "home").map((d) => <DealTile key={d.id} deal={d} mode={premium ? "live" : "missed"} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} sample={found.sample} />)}
+                </div>
+              ) : (
+                <div className="panel empty-state small">
+                  {running.length ? "No deals matched your filters this week. Try widening one." : <Link href="/app/deals">Set up a deal filter →</Link>}
+                </div>
+              )}
+              {!premium && <Link href="/app/premium?from=home" className="btn sm primary" style={{ marginTop: 10 }}>Get deals live with Premium</Link>}
+            </section>
+
+            {/* Their cards that moved most this week. */}
+            {(risers.length > 0 || fallers.length > 0) && (
+              <section className="home-section">
+                <div className="home-head"><h2>📈 Your movers this week</h2><Link href="/app/collection">Collection</Link></div>
+                <div className="home-movers">
+                  {[["Up", risers], ["Down", fallers]].filter(([, list]) => list.length).map(([label, list]) => (
+                    <div key={label} className="panel home-list">
+                      <div className="small muted">{label}</div>
+                      {list.map((it) => (
+                        <Link key={it.id} href={`/app/cards/${it.productId}`} className="mini-row">
+                          <CardThumb item={it} width={34} />
+                          <span className="mini-text"><b>{cleanName(it.name)}</b><span className="small muted">{it.quantity > 1 ? `${it.quantity}× · ` : ""}{itemLabel(it)}</span></span>
+                          <span className="home-move">
+                            <b className="small sensitive">{money(unitValue(it) * (it.quantity || 1))}</b>
+                            <span className={`small sensitive ${it.dollars >= 0 ? "up" : "down"}`}>{it.dollars >= 0 ? "▲" : "▼"} {money(Math.abs(it.dollars))} ({pct(it.change7)})</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* The market: what sold on eBay, from the sales the deal bot watched end (lib/market.js). */}
+            {market.length > 0 && (
+              <section className="home-section">
+                <div className="home-head"><h2>💰 Market today</h2><Link href="/sales">Market Movers</Link></div>
+                <ul className="home-market">
+                  {market.map((x) => {
+                    const thumb = x.grader ? { kind: "graded", grader: x.grader, grade: x.grade, image: x.image, name: x.name, number: x.number } : { image: x.image, name: x.name, number: x.number };
+                    return (
+                      <li key={x.id}>
+                        <Link href={x.productId ? `/app/cards/${x.productId}` : `/sales#${x.kind === "deal" ? "deals" : x.kind === "high" ? "highs" : "big"}`}>
+                          <CardThumb item={thumb} width={96} />
+                          <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under` : "💰 Big sale"}</span>
+                          <b>{money(x.price, 0)}</b>
+                          <span className="small home-market-name">{[x.grader ? `${x.grader} ${x.grade}` : null, x.name].filter(Boolean).join(" · ")}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
+            {latest && (
+              <Link href="/updates" className="home-new small">
+                <span className="badge accent">New</span> v{latest.version}: {latest.title} →
               </Link>
-            ))}
-          </div>
-        </section>
-      )}
+            )}
+          </>
+        )}
+        performance={<Performance c={c} hasCards={hasCards} historyDays={user.plan.collectionPerformance ? null : user.plan.collectionHistoryDays} />}
+      />
+    </>
+  );
+}
 
-      {/* Deals their filters caught. */}
+// Performance (Premium; Free members see it blurred behind an invitation, components/HomeTabs.js): the all-time value
+// chart with what they paid, returns for each range, profit on what they paid, best and worst cards since they bought
+// them, the most valuable cards and how the value splits between raw, graded and sealed.
+const RANGE_ROWS = [[1, "1 day"], [7, "7 days"], [30, "30 days"], [90, "90 days"], [365, "1 year"], [0, "All time"]];
+const held = (it) => unitValue(it) * (it.quantity || 1);
+
+function Row({ it, children }) {
+  return (
+    <Link href={`/app/cards/${it.productId}`} className="mini-row">
+      <CardThumb item={it} width={34} />
+      <span className="mini-text"><b>{cleanName(it.name)}</b><span className="small muted">{it.quantity > 1 ? `${it.quantity}× · ` : ""}{itemLabel(it)}</span></span>
+      <span className="home-move">{children}</span>
+    </Link>
+  );
+}
+
+function Performance({ c, hasCards, historyDays }) {
+  if (!hasCards) {
+    return <div className="panel empty-state">Add cards and we chart how your collection performs: its value over time, profit on what you paid, and your best and worst cards.</div>;
+  }
+  const changes = Object.fromEntries(RANGE_ROWS.map(([d]) => [d, marketChange(c.owned, c.snapshots, d || null)]));
+  const priced = c.owned.filter((it) => unitValue(it) !== null);
+  const bought = priced.filter((it) => it.purchasePrice > 0).map((it) => {
+    const gain = (unitValue(it) - it.purchasePrice) * (it.quantity || 1);
+    return { ...it, gain, gainPct: gain / (it.purchasePrice * (it.quantity || 1)) };
+  });
+  const best = bought.filter((b) => b.gain > 0).sort((a, b) => b.gain - a.gain).slice(0, 3);
+  const worst = bought.filter((b) => b.gain < 0).sort((a, b) => a.gain - b.gain).slice(0, 3);
+  const top = [...priced].sort((a, b) => held(b) - held(a)).slice(0, 5);
+  const total = priced.reduce((t, it) => t + held(it), 0) || 1;
+  const kinds = [["raw", "Raw cards"], ["graded", "Graded"], ["sealed", "Sealed"]]
+    .map(([k, label]) => ({ k, label, value: priced.filter((it) => it.kind === k).reduce((t, it) => t + held(it), 0) })).filter((x) => x.value > 0);
+  const { summary } = c;
+  const signed = (v) => `${v >= 0 ? "+" : "−"}${money(Math.abs(v))}`;
+
+  return (
+    <>
+      <div className="panel coll-chart">
+        <ValueChart points={chartSeries(c.snapshots, historyDays)} historyDays={historyDays} profit={summary} changes={changes} hideable shared />
+      </div>
+
       <section className="home-section">
-        <div className="home-head">
-          <h2>⚡ {premium && live.length ? "Live deals for you" : "Deals your filters caught"}</h2>
-          <Link href={premium ? "/app/deals" : "/app/deals?tab=history"}>See all</Link>
+        <div className="home-head"><h2>Returns</h2></div>
+        <div className="home-returns">
+          {RANGE_ROWS.map(([d, label]) => {
+            const ch = changes[d];
+            return (
+              <div key={d} className="panel">
+                <span className="small muted">{label}</span>
+                {ch ? (
+                  <>
+                    <b className={`sensitive ${ch.change >= 0 ? "up" : "down"}`}>{signed(ch.change)}</b>
+                    <span className={`small ${ch.change >= 0 ? "up" : "down"}`}>{pct(ch.pct)}</span>
+                  </>
+                ) : <span className="small muted">Not enough history yet</span>}
+              </div>
+            );
+          })}
         </div>
-        {!found.sample && (
-          <p className="small muted home-sub">
-            {newDeals > 0 ? `${newDeals} new ${since}.` : running.length ? `Nothing new ${since}.` : "Turn on a deal filter and we'll catch underpriced eBay auctions for you."}
-            {!premium && newDeals > 0 ? " On Premium you get them live, while you can still bid." : ""}
-          </p>
-        )}
-        {shownDeals.length ? (
-          <div className="home-deals">
-            {withLinks(shownDeals, "home").map((d) => <DealTile key={d.id} deal={d} mode={premium ? "live" : "missed"} href={d.href} affiliate={d.affiliate} cardHref={d.cardHref} sample={found.sample} />)}
-          </div>
-        ) : (
-          <div className="panel empty-state small">
-            {running.length ? "No deals matched your filters this week. Try widening one." : <Link href="/app/deals">Set up a deal filter →</Link>}
-          </div>
-        )}
-        {!premium && <Link href="/app/premium?from=home" className="btn sm primary" style={{ marginTop: 10 }}>Get deals live with Premium</Link>}
+        <p className="hint">Price moves only: cards you added during a range don&apos;t count as gains.</p>
       </section>
 
-      {/* Their cards that moved most this week. */}
-      {(risers.length > 0 || fallers.length > 0) && (
-        <section className="home-section">
-          <div className="home-head"><h2>📈 Your movers this week</h2><Link href="/app/collection">Collection</Link></div>
-          <div className="home-movers">
-            {[["Up", risers], ["Down", fallers]].filter(([, list]) => list.length).map(([label, list]) => (
+      <section className="home-section">
+        <div className="home-head"><h2>Profit on what you paid</h2></div>
+        {summary.cost > 0 ? (
+          <div className="home-returns three">
+            <div className="panel"><span className="small muted">You paid</span><b className="sensitive">{money(summary.cost)}</b></div>
+            <div className="panel"><span className="small muted">Those cards now</span><b className="sensitive">{money(summary.cost + summary.gain)}</b></div>
+            <div className="panel"><span className="small muted">Profit</span>
+              <b className={`sensitive ${summary.gain >= 0 ? "up" : "down"}`}>{signed(summary.gain)}</b>
+              <span className={`small ${summary.gain >= 0 ? "up" : "down"}`}>{pct(summary.gainPct)}</span>
+            </div>
+          </div>
+        ) : <div className="panel small muted">Add what you paid for your cards (Edit on any card in your collection) and we work out your profit, card by card.</div>}
+        {(best.length > 0 || worst.length > 0) && (
+          <div className="home-movers" style={{ marginTop: 14 }}>
+            {[["Best since you bought", best], ["Worst since you bought", worst]].filter(([, list]) => list.length).map(([label, list]) => (
               <div key={label} className="panel home-list">
                 <div className="small muted">{label}</div>
                 {list.map((it) => (
-                  <Link key={it.id} href={`/app/cards/${it.productId}`} className="mini-row">
-                    <CardThumb item={it} width={34} />
-                    <span className="mini-text"><b>{cleanName(it.name)}</b><span className="small muted">{itemLabel(it)}</span></span>
-                    <span className="home-move">
-                      <b className="small sensitive">{money(unitValue(it))}</b>
-                      <span className={`small ${it.change7 >= 0 ? "up" : "down"}`}>{it.change7 >= 0 ? "▲" : "▼"} {pct(it.change7)}</span>
-                    </span>
-                  </Link>
+                  <Row key={it.id} it={it}>
+                    <b className="small sensitive">{money(held(it))}</b>
+                    <span className={`small sensitive ${it.gain >= 0 ? "up" : "down"}`}>{signed(it.gain)} ({pct(it.gainPct)})</span>
+                  </Row>
                 ))}
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
-      {/* The market: what sold on eBay, from the sales the deal bot watched end (lib/market.js). */}
-      {market.length > 0 && (
+      <section className="home-section">
+        <div className="home-head"><h2>Most valuable</h2><Link href="/app/collection">View all</Link></div>
+        <div className="panel home-list">
+          {top.map((it) => (
+            <Row key={it.id} it={it}>
+              <b className="small sensitive">{money(held(it))}</b>
+              {it.change7 !== null && <span className={`small ${it.change7 >= 0 ? "up" : "down"}`}>{pct(it.change7)} this week</span>}
+            </Row>
+          ))}
+        </div>
+      </section>
+
+      {kinds.length > 1 && (
         <section className="home-section">
-          <div className="home-head"><h2>💰 Market today</h2><Link href="/sales">Market Movers</Link></div>
-          <ul className="home-market">
-            {market.map((x) => {
-              const thumb = x.grader ? { kind: "graded", grader: x.grader, grade: x.grade, image: x.image, name: x.name, number: x.number } : { image: x.image, name: x.name, number: x.number };
-              return (
-                <li key={x.id}>
-                  <Link href={x.productId ? `/app/cards/${x.productId}` : `/sales#${x.kind === "deal" ? "deals" : x.kind === "high" ? "highs" : "big"}`}>
-                    <CardThumb item={thumb} width={96} />
-                    <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under` : "💰 Big sale"}</span>
-                    <b>{money(x.price, 0)}</b>
-                    <span className="small home-market-name">{[x.grader ? `${x.grader} ${x.grade}` : null, x.name].filter(Boolean).join(" · ")}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="home-head"><h2>What it&apos;s made of</h2></div>
+          <div className="panel">
+            <div className="home-split" aria-hidden="true">{kinds.map((x) => <span key={x.k} className={x.k} style={{ width: `${(x.value / total) * 100}%` }} />)}</div>
+            <div className="home-split-key">
+              {kinds.map((x) => (
+                <span key={x.k} className="small"><i className={x.k} /> {x.label} <b className="sensitive">{money(x.value)}</b> <span className="muted">{Math.round((x.value / total) * 100)}%</span></span>
+              ))}
+            </div>
+          </div>
         </section>
-      )}
-
-      {latest && (
-        <Link href="/updates" className="home-new small">
-          <span className="badge accent">New</span> v{latest.version}: {latest.title} →
-        </Link>
       )}
     </>
   );

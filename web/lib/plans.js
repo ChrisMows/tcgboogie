@@ -20,6 +20,7 @@ export const PLANS = {
     watchAlertChannels: ["email"],
     // Collection tracker: the core is free for everyone.
     collectionHistoryDays: 30, // how far back the value chart goes
+    collectionPerformance: false, // Home → Performance: returns, profit on what you paid, best and worst buys
     collectionExport: false,
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
@@ -58,6 +59,7 @@ export const PLANS = {
     maxPriceWatches: 25, // each card is a daily price check (~3 credits, shared) plus eBay watching: Admin → Plans
     watchAlertChannels: ["email", "push", "discord", "sms"],
     collectionHistoryDays: null, // all time
+    collectionPerformance: true,
     collectionExport: true,
     collectionAlerts: true,
     gradingCheck: true,
@@ -141,7 +143,9 @@ export const FEATURES = [
   { key: "csvImport", group: "Collection", label: "Import a CSV from another app", get: (p) => p.collectionImport, set: (p, on) => ({ collectionImport: on }) },
   { key: "gradingCheck", group: "Collection", label: "Full Worth Grading? list", help: "Without it, members see the top 3 cards.",
     get: (p) => p.gradingCheck, set: (p, on) => ({ gradingCheck: on }) },
-  { key: "photoAppraiser", group: "Collection", label: "Photo appraiser", get: (p) => p.photoAppraiser, set: (p, on) => ({ photoAppraiser: on }) },
+  { key: "performance", group: "Collection", label: "Collection performance (Home → Performance)", help: "Returns, profit on what members paid, best and worst buys. Without it, the tab shows an invitation to Premium.",
+    get: (p) => p.collectionPerformance, set: (p, on) => ({ collectionPerformance: on }) },
+  { key: "photoAppraiser", group: "Collection", label: "Card scanner", get: (p) => p.photoAppraiser, set: (p, on) => ({ photoAppraiser: on }) },
   { key: "photoSearch", group: "Collection", label: "Search by picture", help: "Camera or photo upload in the Add cards search: we read the card and find it.",
     get: (p) => p.photoSearch, set: (p, on) => ({ photoSearch: on }) },
   { key: "tradeAnalyzer", group: "Collection", label: "Trade analyzer", get: (p) => p.tradeAnalyzer, set: (p, on) => ({ tradeAnalyzer: on }) },

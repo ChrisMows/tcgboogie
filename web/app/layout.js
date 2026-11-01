@@ -39,9 +39,10 @@ export const metadata = {
   twitter: { card: "summary_large_image", site: X_HANDLE, creator: X_HANDLE },
 };
 
-function Brand() {
+// Signed-in members: the logo opens their Home. Visitors: the homepage.
+function Brand({ signedIn }) {
   return (
-    <Link href="/" className="brand" aria-label="TCG Boogie home">
+    <Link href={signedIn ? "/app/home" : "/"} className="brand" aria-label="TCG Boogie home">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="brand-card" src="/brand/card.webp" alt="" width={144} height={160} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -53,6 +54,7 @@ function Brand() {
 export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
   const navLinks = [
+    ...(user ? [{ href: "/app/home", label: "Home" }] : []),
     { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
     { href: user ? "/app/deals" : "/#deals", label: "Deals" },
     { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
@@ -109,9 +111,9 @@ twq('config','ri3dv');`}</Script>
         )}
         <header className="top">
           <div className="wrap">
-            <Brand />
+            <Brand signedIn={Boolean(user)} />
             <nav className="main" aria-label="Main">
-              {/* Five links. Signed-out visitors: Collection and Price alerts go to sign in, then straight to that page;
+              {/* Signed-in members get Home first. Signed-out visitors: Collection and Price alerts go to sign in, then straight to that page;
                   Deals shows the deals we've caught on the homepage. How it works is in the footer. */}
               {navLinks.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
             </nav>
@@ -137,7 +139,7 @@ twq('config','ri3dv');`}</Script>
         <footer>
           <div className="wrap">
             <div>
-              <Brand />
+              <Brand signedIn={Boolean(user)} />
               <p>
                 © {new Date().getFullYear()} TCG Boogie. Not affiliated with eBay, TCGplayer, Nintendo, The Pokémon
                 Company, or any game publisher. Prices, values and deals are automated estimates and can be wrong.
