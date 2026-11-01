@@ -49,7 +49,6 @@ export function InstallButton({ className = "", onDone }) {
 }
 
 const DISMISS = "tcgb-install-hint";
-const LAUNCHED = "tcgb-launched"; // this app launch already started (sessionStorage lasts one launch)
 
 /**
  * Mounted once in the root layout: the iPhone steps when asked for, and a one-time hint for members on a phone
@@ -72,15 +71,26 @@ export default function InstallApp({ signedIn }) {
     if (!seen) { const t = setTimeout(() => setHint(true), 4000); return () => clearTimeout(t); }
   }, [signedIn, mode]);
 
-  // Opening the home-screen app starts on Home. iPhones can keep the address the app was added from (often the
-  // collection) instead of the start address, so the first page of each launch on Collection or the homepage moves on.
+  // Opening TCG Boogie from the home screen starts on Home. iPhones open a home-screen icon at the page it was saved
+  // from (often the collection), whether it opens as an app or in Safari, so a fresh open from outside the site (not a
+  // reload, a back/forward or a link inside the site) on Collection moves on to Home. The home-screen app also goes
+  // back to Home when it comes back on Collection after half an hour or more in the background.
   useEffect(() => {
-    if (!signedIn || !standalone()) return;
-    try {
-      if (sessionStorage.getItem(LAUNCHED)) return;
-      sessionStorage.setItem(LAUNCHED, "1");
-    } catch { return; }
-    if (["/", "/app", "/app/collection"].includes(window.location.pathname) && !window.location.search) window.location.replace("/app/home");
+    if (!signedIn) return;
+    const START = ["/", "/app", "/app/collection"];
+    const onStart = () => START.includes(window.location.pathname) && !window.location.search;
+    const nav = performance.getEntriesByType?.("navigation")?.[0];
+    const fresh = (!nav || nav.type === "navigate") && !document.referrer && window.history.length <= 1;
+    // Phones only (the app, or an iPhone home-screen icon opening in Safari): a desktop tab typed to /app/collection stays.
+    if (fresh && onStart() && (standalone() || isIOS())) return void window.location.replace("/app/home");
+    if (!standalone()) return;
+    let hiddenAt = 0;
+    const onVis = () => {
+      if (document.visibilityState === "hidden") hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt > 30 * 60000 && onStart()) window.location.replace("/app/home");
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [signedIn]);
 
   const dismiss = () => { setHint(false); try { localStorage.setItem(DISMISS, "1"); } catch { /* fine */ } };
