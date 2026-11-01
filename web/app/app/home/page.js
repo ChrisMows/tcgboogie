@@ -246,6 +246,26 @@ export default async function HomePage({ searchParams }) {
 const RANGE_ROWS = [[1, "1 day"], [7, "7 days"], [30, "30 days"], [90, "90 days"], [365, "1 year"], [0, "All time"]];
 const held = (it) => unitValue(it) * (it.quantity || 1);
 
+/** A return card's small line with a fill under it, in the card's color. */
+function RetLine({ points, up, id }) {
+  if (points.length < 2) return <span className="ret-line" />;
+  const W = 140, H = 56, min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
+  const d = points.map((v, i) => `${i ? "L" : "M"}${((i / (points.length - 1)) * W).toFixed(1)},${(H - 4 - ((v - min) / span) * (H - 8)).toFixed(1)}`).join(" ");
+  const color = up ? "#d3ff66" : "#f85149";
+  return (
+    <svg className="ret-line sensitive" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={`ret-fill-${id}`} x2="0" y2="1">
+          <stop stopColor={color} stopOpacity=".28" />
+          <stop offset="1" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${d} L${W},${H} L0,${H} Z`} fill={`url(#ret-fill-${id})`} />
+      <path d={d} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Row({ it, children }) {
   return (
     <Link href={`/app/cards/${it.productId}`} className="mini-row">
@@ -279,26 +299,43 @@ function Performance({ c, hasCards, historyDays }) {
   // A range shows when the history reaches back that far (and isn't the same day as All time); All time always shows.
   const first = c.snapshots.filter((p) => p.value > 0).map((p) => p.day).sort()[0];
   const reaches = (d) => first && first <= new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+  // Each range's line, price moves only like its figure: the saved daily values from the range's start, less what the
+  // cards added since then are worth (so a card bought mid-range doesn't read as a jump).
+  const line = (since) => {
+    const start = new Date(`${since}T23:59:59.999Z`).getTime();
+    const later = c.owned.filter((it) => new Date(it.createdAt).getTime() > start && unitValue(it) !== null)
+      .map((it) => ({ at: new Date(it.createdAt).getTime(), value: held(it) }));
+    return c.snapshots.filter((p) => p.value > 0 && p.day >= since).sort((a, b) => a.day.localeCompare(b.day)).map((p) => {
+      const end = new Date(`${p.day}T23:59:59.999Z`).getTime();
+      return p.value - later.filter((x) => x.at <= end).reduce((t, x) => t + x.value, 0);
+    });
+  };
   const ranges = RANGE_ROWS.map(([d, label]) => ({ d, label, ch: changes[d] }))
-    .filter((r) => r.ch && (r.d === 0 || (reaches(r.d) && r.ch.since !== allSince)));
+    .filter((r) => r.ch && (r.d === 0 || (reaches(r.d) && r.ch.since !== allSince)))
+    .map((r) => ({ ...r, line: line(r.ch.since) }));
 
   return (
     <>
       <PerformanceChart points={chartSeries(c.snapshots, historyDays)} summary={summary} changes={changes} historyDays={historyDays} />
 
-      {/* Returns: one strip, a cell per range the history covers. */}
+      {/* Returns: a card per range the history covers, with its price-only line. */}
       <section className="home-section">
-        <div className="home-head"><h2>Returns</h2></div>
-        <div className="panel home-ranges">
-          {ranges.map(({ d, label, ch }) => (
-            <div key={d}>
-              <span className="small muted">{label}</span>
-              <b className={`sensitive ${ch.change >= 0 ? "up" : "down"}`}>{signed(ch.change)}</b>
-              <span className={`small ${ch.change >= 0 ? "up" : "down"}`}>{pct(ch.pct)}</span>
-            </div>
-          ))}
+        <div className="home-head home-head-note"><h2>Returns</h2><span className="small muted">Market price changes only.</span></div>
+        <div className="ret-cards">
+          {ranges.map(({ d, label, ch, line: pts }) => {
+            const up = ch.change >= 0;
+            return (
+              <div key={d} className={`panel ret-card ${up ? "up" : "down"}`}>
+                <span className="ret-label">{label}</span>
+                <span className="ret-arrow" aria-hidden="true">{up ? "↗" : "↘"}</span>
+                <b className="ret-amount sensitive">{signed(ch.change)}</b>
+                <span className="ret-pill">{pct(ch.pct)}</span>
+                <RetLine points={pts} up={up} id={d} />
+              </div>
+            );
+          })}
         </div>
-        <p className="hint">Price moves only: cards you added during a range don&apos;t count as gains.{allSince ? ` All time is since ${shortDay(allSince)}.` : ""}</p>
+        <p className="hint">Newly added cards are excluded from returns.{allSince ? ` All time is since ${shortDay(allSince)}.` : ""}</p>
       </section>
 
       {/* Profit: the number, then what they paid against what those cards are worth now, as two bars. */}
