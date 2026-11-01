@@ -41,6 +41,9 @@ export async function install({ forPush = false } = {}) {
   window.dispatchEvent(new CustomEvent("tcgb-install-ios", { detail: { forPush } }));
 }
 
+/** The steps to re-add an old home-screen icon so it opens on Home (components/HomePromo.js offers them). */
+export const showUpdateSteps = () => window.dispatchEvent(new CustomEvent("tcgb-install-ios", { detail: { update: true } }));
+
 /** A menu button: "📲 Add to home screen", only on devices that can. */
 export function InstallButton({ className = "", onDone }) {
   const mode = useInstall();
@@ -49,6 +52,13 @@ export function InstallButton({ className = "", onDone }) {
 }
 
 const DISMISS = "tcgb-install-hint";
+
+/** Copies the Home address for the update steps (Safari is where the new icon gets added). */
+function CopyHome() {
+  const [done, setDone] = useState(false);
+  const copy = () => navigator.clipboard?.writeText("https://tcgboogie.com/app/home").then(() => setDone(true)).catch(() => {});
+  return <button type="button" className="link-btn small" onClick={copy}>{done ? "Copied" : "Copy link"}</button>;
+}
 
 /**
  * Mounted once in the root layout: the iPhone steps when asked for, and a one-time hint for members on a phone
@@ -60,7 +70,7 @@ export default function InstallApp({ signedIn }) {
   const [hint, setHint] = useState(false);
 
   useEffect(() => {
-    const show = (e) => setSteps(e.detail?.forPush ? "push" : true);
+    const show = (e) => setSteps(e.detail?.update ? "update" : e.detail?.forPush ? "push" : true);
     window.addEventListener("tcgb-install-ios", show);
     return () => window.removeEventListener("tcgb-install-ios", show);
   }, []);
@@ -71,37 +81,15 @@ export default function InstallApp({ signedIn }) {
     if (!seen) { const t = setTimeout(() => setHint(true), 4000); return () => clearTimeout(t); }
   }, [signedIn, mode]);
 
-  // Opening TCG Boogie from the home screen starts on Home. iPhones open a home-screen icon at the page it was saved
-  // from (often the collection), whether it opens as an app or in Safari, so a fresh open from outside the site (not a
-  // reload, a back/forward or a link inside the site) on Collection moves on to Home. The home-screen app also goes
-  // back to Home when it comes back on Collection after half an hour or more in the background.
+  // Opening TCG Boogie from the home screen starts on Home: app/layout.js moves an iPhone that opens on Collection
+  // on before the page draws. The home-screen app also goes back to Home when it comes back on Collection after half
+  // an hour or more in the background.
   useEffect(() => {
-    if (!signedIn) return;
-    const START = ["/", "/app", "/app/collection"];
-    // Any address on these pages: the icon may have been saved with extras, like /app/collection?tab=wishlist.
-    const onStart = () => START.includes(window.location.pathname.replace(/\/+$/, "") || "/");
-    const nav = performance.getEntriesByType?.("navigation")?.[0];
-    let fromSite = false;
-    try { fromSite = Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin; } catch { /* no referrer */ }
-    const fresh = nav?.type !== "reload" && nav?.type !== "back_forward" && !fromSite;
-    // Phones only (the app, or an iPhone home-screen icon opening in Safari): a desktop tab typed to /app/collection stays.
-    const phone = standalone() || isIOS();
-    if (phone && (onStart() || standalone())) {
-      // What the phone reported, for Admin → Logs while we make sure this works on iPhones (app/api/pv).
-      const launch = { path: window.location.pathname + window.location.search, start: onStart(), nav: nav?.type || null, referrer: document.referrer ? "set" : "", history: window.history.length, standalone: standalone(), moved: fresh && onStart() };
-      const body = JSON.stringify({ path: window.location.pathname, launch });
-      try {
-        if (!navigator.sendBeacon?.("/api/pv", new Blob([body], { type: "application/json" }))) {
-          fetch("/api/pv", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
-        }
-      } catch { /* fine */ }
-    }
-    if (fresh && onStart() && phone) return void window.location.replace("/app/home");
-    if (!standalone()) return;
+    if (!signedIn || !standalone()) return;
     let hiddenAt = 0;
     const onVis = () => {
       if (document.visibilityState === "hidden") hiddenAt = Date.now();
-      else if (hiddenAt && Date.now() - hiddenAt > 30 * 60000 && onStart()) window.location.replace("/app/home");
+      else if (hiddenAt && Date.now() - hiddenAt > 30 * 60000 && window.location.pathname === "/app/collection") window.location.replace("/app/home");
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
@@ -128,15 +116,26 @@ export default function InstallApp({ signedIn }) {
           <div className="panel install-steps" role="dialog" aria-label="Add to Home Screen" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/icon-192.png" alt="" width={64} height={64} />
-            <h2>{steps === "push" ? "Push alerts need TCG Boogie on your home screen" : "Add TCG Boogie to your home screen"}</h2>
+            <h2>{steps === "update" ? "Update your TCG Boogie app" : steps === "push" ? "Push alerts need TCG Boogie on your home screen" : "Add TCG Boogie to your home screen"}</h2>
             {steps === "push" && <p className="small muted" style={{ marginTop: -4 }}>On iPhone, Apple only lets apps on the home screen send notifications. Here&apos;s how:</p>}
+            {steps === "update" ? (
+              <>
+                <p className="small muted" style={{ marginTop: -4 }}>Apple doesn&apos;t let websites update a home-screen icon, so it takes one quick re-add. Your collection and settings are saved to your account; nothing is lost.</p>
+                <ol>
+                  <li>Press and hold the TCG Boogie icon on your home screen, tap <b>Delete Bookmark</b> (or <b>Remove App</b>), then <b>Delete</b>.</li>
+                  <li>Open Safari and go to <b>tcgboogie.com/app/home</b>. <CopyHome /></li>
+                  <li>Tap the <b>Share</b> button <span className="install-share" aria-hidden="true">⬆︎</span>, then <b>Add to Home Screen</b>, then <b>Add</b>. It now opens straight to Home.</li>
+                </ol>
+              </>
+            ) : (
             <ol>
               <li>Tap the <b>Share</b> button <span className="install-share" aria-hidden="true">⬆︎</span> at the bottom of Safari (top right on iPad).</li>
               <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
               <li>Tap <b>Add</b>. TCG Boogie opens full-screen from your home screen, like an app.</li>
               {steps === "push" && <li>Open TCG Boogie from your home screen and tap <b>Turn on push</b> when we ask.</li>}
             </ol>
-            <p className="small muted">In Chrome on iPhone, the Share button is at the right of the address bar; the rest is the same.</p>
+            )}
+            {steps !== "update" && <p className="small muted">In Chrome on iPhone, the Share button is at the right of the address bar; the rest is the same.</p>}
             <button type="button" className="btn primary" onClick={() => setSteps(false)}>Got it</button>
           </div>
         </div>

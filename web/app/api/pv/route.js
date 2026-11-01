@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { allow } from "@/lib/rate-limit";
-import { log } from "@/lib/log";
 import { getCurrentUser } from "@/lib/session";
 import { bump, creditSignup, firstVisitToday } from "@/lib/traffic";
 
@@ -30,13 +29,6 @@ export async function POST(req) {
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
     if (!await allow("pageView", ip)) return done;
     const body = await req.json().catch(() => ({}));
-    // components/InstallApp.js: how a member's phone opened on Collection (start-on-Home check), for Admin → Logs.
-    // Any signed-in member, while we make sure this works on iPhones; it only happens when a phone opens on Collection.
-    if (body.launch) {
-      const user = await getCurrentUser().catch(() => null);
-      if (user && !user.demo) await log("website", "info", `Phone app opened on ${String(body.launch.path || "").slice(0, 80)} (start-on-Home check)`, { ...body.launch, ua: ua.slice(0, 160) }, user.id);
-      return done;
-    }
     const path = pageKey(body.path);
     if (SKIP.test(path)) return done;
 
