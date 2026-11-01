@@ -86,7 +86,7 @@ export default function InstallApp({ signedIn }) {
     // Phones only (the app, or an iPhone home-screen icon opening in Safari): a desktop tab typed to /app/collection stays.
     const phone = standalone() || isIOS();
     if (phone && onStart()) {
-      // What the phone reported, for Admin → Logs while we make sure this works on iPhones (app/api/pv logs admins only).
+      // What the phone reported, for Admin → Logs while we make sure this works on iPhones (app/api/pv).
       const launch = { path: window.location.pathname, nav: nav?.type || null, referrer: document.referrer ? "set" : "", history: window.history.length, standalone: standalone(), moved: fresh };
       try { navigator.sendBeacon?.("/api/pv", new Blob([JSON.stringify({ path: window.location.pathname, launch })], { type: "application/json" })); } catch { /* fine */ }
     }
