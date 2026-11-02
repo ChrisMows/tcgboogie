@@ -1,0 +1,66 @@
+{
+  "packageId": "com.tcgboogie.app",
+  "host": "tcgboogie.com",
+  "name": "TCG Boogie",
+  "launcherName": "TCG Boogie",
+  "display": "standalone",
+  "themeColor": "#0B0E12",
+  "themeColorDark": "#0B0E12",
+  "navigationColor": "#0B0E12",
+  "navigationColorDark": "#0B0E12",
+  "navigationDividerColor": "#0B0E12",
+  "navigationDividerColorDark": "#0B0E12",
+  "backgroundColor": "#0B0E12",
+  "enableNotifications": true,
+  "startUrl": "/app/home",
+  "iconUrl": "https://tcgboogie.com/icons/icon-512.png",
+  "maskableIconUrl": "https://tcgboogie.com/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:/Users/Chris/.tcgboogie/android-upload.jks",
+    "alias": "upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 2,
+  "shortcuts": [
+    {
+      "name": "Deals",
+      "shortName": "Deals",
+      "url": "https://tcgboogie.com/app/deals",
+      "chosenIconUrl": "https://tcgboogie.com/icons/icon-192.png"
+    },
+    {
+      "name": "Card scanner",
+      "shortName": "Card scanner",
+      "url": "https://tcgboogie.com/app/collection/photo",
+      "chosenIconUrl": "https://tcgboogie.com/icons/icon-192.png"
+    },
+    {
+      "name": "Price alerts",
+      "shortName": "Price alerts",
+      "url": "https://tcgboogie.com/app/watches",
+      "chosenIconUrl": "https://tcgboogie.com/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://tcgboogie.com/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://tcgboogie.com/",
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}

@@ -36,6 +36,10 @@ const nextConfig = {
       { source: "/app/billing", destination: "/app/account#plan", permanent: false },
     ];
   },
+  // The Android app's Digital Asset Links (app/api/assetlinks/route.js).
+  async rewrites() {
+    return [{ source: "/.well-known/assetlinks.json", destination: "/api/assetlinks" }];
+  },
   async headers() {
     // Security headers on every page.
     return [

@@ -44,6 +44,7 @@ function vendors(on) {
     { key: "stripe", name: "Stripe", what: "Premium subscriptions and the free trial", price: "Stripe's fee per payment", limit: "—", status: on.stripe ? "live" : "off" },
     { key: "x", name: "X (Twitter) API", what: "Posting Market Movers and release notes; the X ad pixel (ri3dv) and its Sign up / Start trial / Purchase events", price: "Per post (pixel free)", limit: "—", status: on.x ? "live" : "off" },
     { key: "tcgdex", name: "TCGdex", what: "Pictures for cards TCGplayer has none for", price: "Free", limit: "—", status: "live" },
+    { key: "play", name: "Google Play", what: "The Android app (android-app/, the site in a Trusted Web Activity; new site features need no app update)", price: "$25 once", limit: "—", status: "off", note: "Being set up: closed test (12 testers, 14 days) before it goes public" },
     { key: "epn", name: "eBay Partner Network", what: "Commission on eBay links (earns money)", price: "Pays you", limit: "—", status: "live" },
   ];
 }

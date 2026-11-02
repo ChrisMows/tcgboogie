@@ -1,0 +1,10 @@
+# Build output and local tool settings. The signing key lives outside the repo (twa-manifest.json signingKey.path).
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.idsig
+*.jks
+*.keystore
