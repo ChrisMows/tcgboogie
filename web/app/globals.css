@@ -1239,6 +1239,12 @@ details.era > .set-grid { margin-bottom: 14px; }
   .info-tip-pop, .fs-pop { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
 }
 @media (max-width: 600px) { .side .tabbar a, .side .tabbar a.on { background: none; padding: 4px 2px; } }
+/* Seven tabs (admins: Admin as well as Profile): slimmer labels and icon pills so "Collection" still fits. */
+@media (max-width: 420px) {
+  .side .tabbar:has(> a:nth-child(7)) { padding-left: 0; padding-right: 0; }
+  .tabbar:has(> a:nth-child(7)) a { font-size: 10px; letter-spacing: -0.02em; padding: 4px 0; }
+  .tabbar:has(> a:nth-child(7)) .tabbar-icon { padding: 4px 9px; }
+}
 
 /* Card page: filter the latest sales by grade */
 .sale-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
@@ -2269,14 +2275,17 @@ body:has(.install-hint) .helper-fab { display: none; }
 .sig-head h3, .sig-title { margin: 0 0 2px; }
 .sig-head p { margin: 0; }
 .sig-title { margin-bottom: 14px; }
-.sig-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+/* Each card spans five shared rows (picture, name, set, grade and value, buttons) via subgrid, so every row lines up
+   across the cards whatever wraps: a long name grows its row for all of them instead of pushing one picture up. */
+.sig-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 18px; row-gap: 4px; }
 .sig-cards.n1 { grid-template-columns: minmax(0, 260px); justify-content: center; }
 .sig-cards.n2 { grid-template-columns: repeat(2, minmax(0, 240px)); justify-content: center; }
-.sig-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 0; }
-.sig-pic { width: 100%; flex: 1; display: flex; justify-content: center; align-items: flex-end; margin-bottom: 8px; }
+.sig-card { display: grid; grid-row: span 5; grid-template-rows: subgrid; justify-items: center; align-content: start; text-align: center; min-width: 0; padding-bottom: 14px; }
+.sig-card > * { max-width: 100%; }
+.sig-pic { width: 100%; display: flex; justify-content: center; align-items: flex-end; margin-bottom: 8px; } /* a raw card sits level with the bottom of a slab */
 .sig-pic > * { width: 100% !important; min-width: 0 !important; max-width: 220px; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45)); }
 .sig-name { overflow-wrap: anywhere; }
-.sig-actions { display: flex; gap: 14px; margin-top: 4px; }
+.sig-actions { display: flex; gap: 14px; margin-top: 4px; align-self: start; }
 .sig-empty { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 30px 16px; border: 2px dashed var(--border-strong); border-radius: 14px; background: none; color: var(--text); cursor: pointer; text-align: center; font: inherit; }
 .sig-empty:hover { border-color: var(--accent); }
 .sig-empty > span:first-child { font-size: 30px; color: var(--accent); }
@@ -2330,6 +2339,6 @@ body:has(.install-hint) .helper-fab { display: none; }
   .prof-stats b { font-size: 19px; }
   .prof-tabs { display: flex; }
   .prof-tabs button { flex: 1; padding: 8px 10px; }
-  .sig-cards, .sig-cards.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .sig-cards, .sig-cards.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
   .sig-cards.n3 > li:last-child { grid-column: 1 / -1; max-width: 50%; justify-self: center; }
 }

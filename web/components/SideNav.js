@@ -21,7 +21,7 @@ const BOTTOM = [
   ["/app/account", "Settings", "⚙", false],
 ];
 
-// Phones: five tabs fit, so Settings is in the profile-picture menu at the top.
+// Phones: Profile last (Settings is in the profile-picture menu at the top, and in Profile).
 const TABS = [
   { href: "/app/home", label: "Home", icon: "⌂", isOn: (p) => p.startsWith("/app/home") },
   { href: "/app/collection", label: "Collection", icon: "▦", isOn: inCollection },
@@ -29,6 +29,7 @@ const TABS = [
   { href: "/app/deals", label: "Deals", icon: "⚡", isOn: (p) => p.startsWith("/app/deals") },
   { href: "/app/watches", label: "Alerts", icon: "🔔", isOn: (p) => p.startsWith("/app/watches") },
   { href: "/app/admin", label: "Admin", icon: "🛡", isOn: (p) => p.startsWith("/app/admin") || p.startsWith("/app/logs"), adminOnly: true },
+  { href: "/app/profile", label: "Profile", icon: "👤", isOn: (p) => p.startsWith("/app/profile") },
 ];
 
 export default function SideNav({ planLabel, premium, isAdmin }) {
