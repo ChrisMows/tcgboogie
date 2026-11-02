@@ -54,7 +54,7 @@
 .home .game-live .game-vote-tag.live { display: none; } /* phones only (see max-width: 600px) */
 .home .game-vote { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; transition: opacity 0.15s; }
 .home .game-vote:hover, .home .game-vote:focus-visible { opacity: 1; color: #fff; }
-.home .game-vote.italic { font-style: italic; }
+.home .starwars { letter-spacing: 2px; font-size: 20px; white-space: nowrap; }
 .home .game-vote-tag { font: 600 10px var(--font-body, inherit); font-style: normal; letter-spacing: 0.5px; color: #8b97a6; }
 .home .game-vote:hover .game-vote-tag { color: var(--accent, #d3ff66); }
 .home .game-voted { margin-top: 14px; font-size: 14px; color: #c8d0da; text-align: center; }

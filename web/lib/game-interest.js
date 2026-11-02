@@ -4,7 +4,7 @@ import { db, schema } from "@/lib/db";
 
 // "Notify me" for games we don't cover yet (homepage). Each member counts once per game. Admin → Requests shows the
 // totals (which game to add next) and who asked (who to tell when it's live).
-export const GAMES = { magic: "Magic: The Gathering", lorcana: "Disney Lorcana", onepiece: "One Piece", yugioh: "Yu-Gi-Oh!" };
+export const GAMES = { magic: "Magic: The Gathering", lorcana: "Disney Lorcana", yugioh: "Yu-Gi-Oh!", starwars: "Star Wars: Unlimited" };
 const { gameInterest } = schema;
 
 /** Record a member's vote. Returns false for an unknown game. */

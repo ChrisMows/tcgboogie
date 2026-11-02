@@ -460,7 +460,7 @@ export const rateLimits = pgTable("rate_limit", {
 export const gameInterest = pgTable("game_interest", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  game: text("game").notNull(), // magic / lorcana / onepiece / yugioh
+  game: text("game").notNull(), // magic / lorcana / yugioh / starwars (older rows may say onepiece, no longer offered)
   notifiedAt: timestamp("notified_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("game_interest_unique").on(t.userId, t.game)]);

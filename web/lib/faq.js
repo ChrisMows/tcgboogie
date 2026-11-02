@@ -14,7 +14,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
         `Yes. Free is free forever, no card needed, and includes: ${lists.free.join(" · ")}. Premium is $${premium.price}/month plus sales tax.`],
       ["What's the difference between Free and Premium?",
         `Free includes: ${lists.free.join(" · ")}. Premium adds: ${lists.premium.join(" · ")}.`],
-      ["Will you add Magic, Lorcana, One Piece or Yu-Gi-Oh!?",
+      ["Will you add Magic, Lorcana, Yu-Gi-Oh! or Star Wars: Unlimited?",
         "They're on the way. Tap a game on the homepage to vote for it: the most-wanted game comes first, and we'll email you when it's live."],
       ["Are you affiliated with eBay or TCGplayer?",
         "No, we're independent. Some eBay links earn us a small commission if you buy. It never changes your price."],
