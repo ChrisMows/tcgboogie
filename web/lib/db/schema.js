@@ -39,8 +39,12 @@ export const users = pgTable("user", {
   emailUpdates: boolean("email_updates").notNull().default(true), // release notes by email (Admin -> Release emails)
   // Collection alert settings (Premium): { setDeals: bool, sellHigh: bool, sellHighPct: number }
   collectionPrefs: jsonb("collection_prefs"),
+  // Profile: { items: [collection item ids] } (up to 3 signature cards, in order), { showValues } for the shared page.
+  showcase: jsonb("showcase"),
+  // The shared profile's link (/p/<token>); null = not shared. A new token each time sharing is switched on.
+  shareToken: text("share_token"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-});
+}, (t) => [uniqueIndex("user_share_token_idx").on(t.shareToken)]);
 
 export const accounts = pgTable(
   "account",

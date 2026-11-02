@@ -2,6 +2,7 @@ import RecentSales from "@/components/RecentSales";
 import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
 import MissingPicture from "@/components/MissingPicture";
+import SignatureButton from "@/components/SignatureButton";
 import { setLabel } from "@/lib/sets";
 import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
@@ -119,7 +120,7 @@ export default async function CardPage({ params, searchParams }) {
   const dealId = (await searchParams)?.deal;
   const found = dealId ? await getDeal(dealId).catch(() => null) : null;
   const deal = found && String(found.productId) === String(p.id) ? found : null;
-  const [items, binders, watches, profiles] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id), store.listProfiles(user.id)]);
+  const [items, binders, watches, profiles, showcase] = await Promise.all([store.listItems(user.id), store.listBinders(user.id), store.listWatches(user.id), store.listProfiles(user.id), store.getShowcase(user.id)]);
   // A deal filter that already picks this card: the lightning then links to it instead of opening the quick setup.
   const dealFilter = profiles.some((pr) => (pr.filters?.cards || []).some((c) => String(c.productId) === String(p.id)));
   // Value your copies from today's prices (the saved value can lag behind).
@@ -166,6 +167,11 @@ export default async function CardPage({ params, searchParams }) {
   };
   const owned = mine.filter((it) => it.list === "owned").reduce((n, it) => n + it.quantity, 0);
   const wished = mine.some((it) => it.list === "wishlist");
+  // Signature card (Profile): the copy already picked, else the most valuable copy you own.
+  const ownedCopies = mine.filter((it) => it.list === "owned").sort((a, b) => (b.unitValue ?? -1) - (a.unitValue ?? -1));
+  const ownedIds = new Set(items.filter((it) => it.list === "owned").map((it) => it.id));
+  const signatureIds = showcase.items.filter((id) => ownedIds.has(id));
+  const sigCopy = ownedCopies.find((it) => signatureIds.includes(it.id)) || ownedCopies[0] || null;
   const gradeIdea = (() => {
     // The grader that pays best at its cheapest tier.
     const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
@@ -252,6 +258,7 @@ export default async function CardPage({ params, searchParams }) {
         </div>
         <aside className="card-hero-side">
           {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
+          {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
           <div className="card-report-row">
             {!isSealed && (
               <span className="price-wrong">

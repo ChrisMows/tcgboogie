@@ -490,3 +490,41 @@ export async function ensureStarterProfile(user) {
   await createProfile(user.id, "My deals", defaultFilters(user.plan));
   return listProfiles(user.id);
 }
+
+// ---------- profile: signature cards and the shared profile link ----------
+const SIGNATURE_MAX = 3;
+export { SIGNATURE_MAX };
+
+/** { items: [collection item ids], showValues, shareToken } (items may name copies since sold or removed: callers keep the ones still owned). */
+export async function getShowcase(userId) {
+  if (isDemo(userId)) {
+    const p = demo().prefs;
+    return { items: [...(p.showcase?.items || [])], showValues: Boolean(p.showcase?.showValues), shareToken: p.shareToken || null };
+  }
+  const row = await getUser(userId);
+  return { items: [...(row?.showcase?.items || [])], showValues: Boolean(row?.showcase?.showValues), shareToken: row?.shareToken || null };
+}
+
+async function saveShowcase(userId, fields) {
+  if (isDemo(userId)) return void (demo().prefs.showcase = { ...(demo().prefs.showcase || {}), ...fields });
+  await db.update(users).set({ showcase: sql`coalesce(${users.showcase}, '{}'::jsonb) || ${JSON.stringify(fields)}::jsonb` }).where(eq(users.id, userId));
+}
+
+/** The member's signature cards, in order (ids of their own owned copies; the caller checks ownership). */
+export const setSignatureItems = (userId, ids) => saveShowcase(userId, { items: ids.slice(0, SIGNATURE_MAX) });
+export const setShareValues = (userId, on) => saveShowcase(userId, { showValues: Boolean(on) });
+
+/** Sharing on: a fresh link (an old one never comes back). Off: the link stops working at once. */
+export async function setSharing(userId, on) {
+  const token = on ? crypto.randomUUID().replace(/-/g, "").slice(0, 16) : null;
+  if (isDemo(userId)) return void (demo().prefs.shareToken = token);
+  await db.update(users).set({ shareToken: token }).where(eq(users.id, userId));
+}
+
+/** The member whose shared profile this link is, or null. */
+export async function sharedProfileOwner(token) {
+  if (!token || !/^[a-f0-9]{16}$/.test(token)) return null;
+  if (!db) return demo().prefs.shareToken === token ? { id: "demo", name: "Demo Collector", ...demo().prefs } : null;
+  const [row] = await db.select().from(users).where(eq(users.shareToken, token)).limit(1);
+  return row || null;
+}

@@ -8,6 +8,7 @@ import { InstallButton } from "@/components/InstallApp";
 
 const ITEMS = [
   ["/app/home", "Home"],
+  ["/app/profile", "Profile"],
   ["/app/collection", "Collection"],
   ["/app/account", "Settings"],
   ["/app/account#plan", "Plan & billing"],

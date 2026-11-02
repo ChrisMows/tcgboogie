@@ -17,6 +17,7 @@ const LINKS = [
 const BOTTOM = [
   ["/app/admin", "Admin", "🛡", true],
   ["/app/logs", "Logs", "📜", true],
+  ["/app/profile", "Profile", "👤", false],
   ["/app/account", "Settings", "⚙", false],
 ];
 

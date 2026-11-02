@@ -441,7 +441,7 @@ export default async function Account({ searchParams }) {
         <RevealSetting />
       </div>
 
-      <div className="panel" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
+      <div className="panel" id="delete" style={{ borderColor: "rgba(248,81,73,0.35)" }}>
         <h2>Delete account</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Permanently deletes your account, deal filters, price alerts, collection and alert history.
