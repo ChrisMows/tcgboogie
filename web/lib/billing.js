@@ -15,6 +15,7 @@ import { TERMS_VERSION } from "@/lib/terms";
 const { users, appSettings, stripeEvents } = schema;
 const SITE = process.env.AUTH_URL || "https://tcgboogie.com";
 const PRICE_KEY = "tcgboogie_premium_monthly"; // Stripe lookup key for the Premium price
+const ULTRA_PRICE_KEY = "tcgboogie_ultra_monthly"; // ...and for the Ultra price
 const TAX_CODE = "txcd_10103001"; // Stripe tax code: Software as a service (SaaS), personal use
 const EVENTS = [
   "checkout.session.completed",
@@ -112,10 +113,55 @@ export async function premiumPrice() {
   return created.id;
 }
 
+/** The Stripe price for Ultra, found or created like Premium's. metadata.plan stays on old prices if the amount ever changes. */
+export async function ultraPrice() {
+  const cents = Math.round(PLANS.ultra.price * 100);
+  const found = await stripe("GET", "prices", { lookup_keys: [ULTRA_PRICE_KEY], active: "true", limit: 1, expand: ["data.product"] });
+  const p = found.data?.[0];
+  if (p && p.unit_amount === cents && p.currency === "usd" && p.recurring?.interval === "month") return p.id;
+  const product = p?.product?.id || (await stripe("POST", "products", {
+    name: "TCG Boogie Ultra",
+    description: "Everything in Premium, plus Grade & Flip: cards worth buying raw to grade.",
+    statement_descriptor: "TCG BOOGIE",
+    tax_code: TAX_CODE,
+  })).id;
+  await log("payments", "info", `Creating Stripe price: Ultra $${PLANS.ultra.price}/month`, { replaces: p?.id || null });
+  const created = await stripe("POST", "prices", {
+    product, currency: "usd", unit_amount: cents, recurring: { interval: "month" }, metadata: { plan: "ultra" },
+    lookup_key: ULTRA_PRICE_KEY, transfer_lookup_key: "true", nickname: `Ultra $${PLANS.ultra.price}/month`, tax_behavior: "exclusive",
+  });
+  return created.id;
+}
+const isUltraPrice = (price) => price?.lookup_key === ULTRA_PRICE_KEY || price?.metadata?.plan === "ultra";
+const isUltraSub = (sub) => isUltraPrice(sub?.items?.data?.[0]?.price);
+
+/**
+ * Switch a live subscription between Premium and Ultra, right away. Up: the difference for the rest of the month is
+ * charged now (a trial just carries on, at the new plan's price when it ends). Down: the unused part is credited
+ * against the next bill. Throws if Stripe refuses (say, a declined card): nothing has changed then.
+ */
+export async function changePlan(user, plan) {
+  if (!hasLiveSubscription(user)) throw new Error("No subscription to change.");
+  const sub = await stripe("GET", `subscriptions/${encodeURIComponent(user.stripeSubscriptionId)}`);
+  const item = sub.items?.data?.[0];
+  if (!item) throw new Error("No subscription to change.");
+  const up = plan === "ultra";
+  if (isUltraSub(sub) === up) { await applySubscription(sub, user.id); return; } // already there (a double click)
+  const price = up ? await ultraPrice() : await premiumPrice();
+  const updated = await stripe("POST", `subscriptions/${sub.id}`, {
+    items: [{ id: item.id, price }],
+    proration_behavior: sub.status === "trialing" ? "none" : up ? "always_invoice" : "create_prorations",
+    ...(up && sub.status !== "trialing" ? { payment_behavior: "error_if_incomplete" } : {}),
+  });
+  await log("payments", "info", `Plan changed to ${up ? "Ultra" : "Premium"}`, { subscription: sub.id, status: sub.status }, user.id);
+  await applySubscription(updated, user.id);
+}
+
 /**
  * After a price change (lib/plans.js): move every current Premium subscription onto today's price, from its next bill.
  * No proration: nobody is charged or refunded now; the next invoice is simply at the new price. Members on a trial
- * pay the new price when it ends. Safe to run again (subscriptions already on the price are skipped).
+ * pay the new price when it ends. Safe to run again (subscriptions already on the price are skipped). Ultra
+ * subscriptions are left alone: this must never drop one to the Premium price.
  * Returns { moved, already, failed }.
  */
 export async function moveSubscribersToCurrentPrice() {
@@ -128,6 +174,7 @@ export async function moveSubscribersToCurrentPrice() {
       if (!PAID.includes(sub.status)) continue;
       const item = sub.items?.data?.[0];
       if (!item) continue;
+      if (isUltraPrice(item.price)) continue;
       if (item.price?.id === price) { out.already++; continue; }
       try {
         await stripe("POST", `subscriptions/${sub.id}`, { items: [{ id: item.id, price }], proration_behavior: "none" });
@@ -244,9 +291,10 @@ async function customerFor(user) {
   return c.id;
 }
 
-/** Start Checkout for Premium. Returns the Stripe-hosted page to send the member to. */
-export async function checkoutUrl(user) {
-  const [customer, price, tax] = await Promise.all([customerFor(user), premiumPrice(), taxActive()]);
+/** Start Checkout for Premium or Ultra. Returns the Stripe-hosted page to send the member to. */
+export async function checkoutUrl(user, plan = "premium") {
+  const ultra = plan === "ultra";
+  const [customer, price, tax] = await Promise.all([customerFor(user), ultra ? ultraPrice() : premiumPrice(), taxActive()]);
   let trial = trialDaysFor(user);
   if (trial) {
     // Belt and braces: no trial if this Stripe customer has ever had a subscription.
@@ -264,7 +312,7 @@ export async function checkoutUrl(user) {
       metadata: { userId: user.id, terms: TERMS_VERSION, ...(trial ? { trialDays: trial } : {}) },
       ...(trial ? { trial_period_days: trial, trial_settings: { end_behavior: { missing_payment_method: "cancel" } } } : {}),
     },
-    ...(trial ? { custom_text: { submit: { message: `You won't be charged today. Your first payment of $${PLANS.premium.price} plus tax is on ${firstCharge}, unless you cancel before then in Settings (one click). We email you 3 days before.` } } } : {}),
+    ...(trial ? { custom_text: { submit: { message: `You won't be charged today. Your first payment of $${(ultra ? PLANS.ultra : PLANS.premium).price} plus tax is on ${firstCharge}, unless you cancel before then in Settings (one click). We email you 3 days before.` } } } : {}),
     allow_promotion_codes: "true",
     customer_update: { name: "auto", address: "auto" },
     // We're the seller and handle sales tax with Stripe Tax (below), so Stripe's Managed Payments (Stripe as seller
@@ -273,9 +321,9 @@ export async function checkoutUrl(user) {
     // Sales tax from the member's billing address (Stripe Tax), on the first payment and every renewal.
     ...(tax ? { automatic_tax: { enabled: "true" }, billing_address_collection: "required" } : {}),
     success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
-    cancel_url: `${SITE}/app/premium?billing=cancelled#enroll`,
+    cancel_url: `${SITE}/app/${ultra ? "ultra" : "premium"}?billing=cancelled#enroll`,
   });
-  await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id, salesTax: tax }, user.id);
+  await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id, salesTax: tax, plan: ultra ? "ultra" : "premium" }, user.id);
   return s.url;
 }
 
@@ -372,20 +420,22 @@ async function syncSubscription(subscriptionId, userId) {
 }
 
 /** A Discord DM to the admin about a Premium change worth knowing: a new trial or subscriber, a cancel, an end. */
-async function tellAdmin(u, status, cancelling, renews) {
+async function tellAdmin(u, status, cancelling, renews, ultra = false) {
   const was = u.subscriptionStatus || "none";
   const when = renews ? longDate(renews.getTime()) : null;
-  const msg = status === "trialing" && was !== "trialing" ? ["🆓 Premium trial started", `${u.email}${when ? ` · trial ends ${when}` : ""}`]
+  const name = ultra || u.ultra ? "Ultra" : "Premium";
+  const msg = ultra !== Boolean(u.ultra) && PAID.includes(status) && PAID.includes(was) ? [ultra ? "🚀 Upgraded to Ultra" : "⬇️ Moved down to Premium", u.email]
+    : status === "trialing" && was !== "trialing" ? [`🆓 ${name} trial started`, `${u.email}${when ? ` · trial ends ${when}` : ""}`]
     : status === "active" && was === "trialing" ? ["💳 Trial converted: now paying", u.email]
-      : status === "active" && !PAID.includes(was) ? ["💎 New Premium member", u.email]
-        : cancelling && !u.cancelAtPeriodEnd && PAID.includes(status) ? ["⚠️ Premium cancelling", `${u.email}${when ? ` · ends ${when}` : ""}`]
-          : !PAID.includes(status) && PAID.includes(was) ? ["👋 Premium ended", `${u.email} is back on Free`]
-            : status === "past_due" && was !== "past_due" ? ["❗ Premium payment failed", `${u.email} · Stripe will retry`] : null;
+      : status === "active" && !PAID.includes(was) ? [`💎 New ${name} member`, u.email]
+        : cancelling && !u.cancelAtPeriodEnd && PAID.includes(status) ? [`⚠️ ${name} cancelling`, `${u.email}${when ? ` · ends ${when}` : ""}`]
+          : !PAID.includes(status) && PAID.includes(was) ? [`👋 ${name} ended`, `${u.email} is back on Free`]
+            : status === "past_due" && was !== "past_due" ? [`❗ ${name} payment failed`, `${u.email} · Stripe will retry`] : null;
   if (!msg) return;
   try {
     const [{ n }] = await db.select({ n: count() }).from(users).where(inArray(users.subscriptionStatus, PAID));
     const { discordAdmins } = await import("@/lib/admin-alerts");
-    await discordAdmins({ title: msg[0], description: `${msg[1]}\n${n} on Premium now (paying or in trial)`, url: `${SITE}/app/admin?tab=members` });
+    await discordAdmins({ title: msg[0], description: `${msg[1]}\n${n} paying or in trial now`, url: `${SITE}/app/admin?tab=members` });
   } catch { /* the DM is a nice-to-have */ }
 }
 
@@ -405,12 +455,14 @@ async function applySubscription(sub, userId) {
   if (u.stripeSubscriptionId && u.stripeSubscriptionId !== sub.id && !PAID.includes(sub.status) && PAID.includes(u.subscriptionStatus)) return;
   const end = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
   const tier = PAID.includes(sub.status) ? "premium" : "free";
+  const ultra = tier === "premium" && isUltraSub(sub);
   const cancelling = Boolean(sub.cancel_at_period_end || sub.cancel_at);
   const fields = {
     stripeCustomerId: sub.customer,
     stripeSubscriptionId: sub.id,
     subscriptionStatus: sub.status,
     tier,
+    ultra,
     currentPeriodEnd: end ? new Date(end * 1000) : null,
     cancelAtPeriodEnd: cancelling,
   };
@@ -418,13 +470,14 @@ async function applySubscription(sub, userId) {
   const changed = await db.update(users).set(fields).where(and(eq(users.id, id), or(
     sql`${users.subscriptionStatus} is distinct from ${sub.status}`,
     sql`${users.tier} is distinct from ${tier}`,
+    sql`${users.ultra} is distinct from ${ultra}`,
     sql`${users.cancelAtPeriodEnd} is distinct from ${cancelling}`,
   ))).returning({ id: users.id });
   if (changed.length) {
     await log("payments", sub.status === "past_due" || sub.status === "unpaid" ? "warn" : "info",
-      `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${cancelling ? " (cancels at month end)" : ""}; plan ${tier}`,
+      `Subscription ${u.subscriptionStatus || "none"} → ${sub.status}${cancelling ? " (cancels at month end)" : ""}; plan ${ultra ? "ultra" : tier}`,
       { subscription: sub.id, renews: fields.currentPeriodEnd?.toISOString() ?? null }, id);
-    await tellAdmin(u, sub.status, cancelling, fields.currentPeriodEnd);
+    await tellAdmin(u, sub.status, cancelling, fields.currentPeriodEnd, ultra);
   } else {
     await db.update(users).set(fields).where(eq(users.id, id)); // e.g. the renewal date moved on
   }
@@ -484,25 +537,27 @@ export async function handleWebhook(raw, signature) {
       await syncSubscription(o.id);
       if (event.type === "customer.subscription.trial_will_end" && o.status === "trialing" && !o.cancel_at_period_end && !o.cancel_at && o.trial_end) {
         const when = longDate(o.trial_end * 1000);
+        const plan = isUltraSub(o) ? PLANS.ultra : PLANS.premium;
         await emailMember(o.customer, o.metadata?.userId, {
-          subject: `Your Premium trial ends ${when}`,
+          subject: `Your ${plan.label} trial ends ${when}`,
           heading: "Your free trial ends soon",
           lines: [
-            `Your TCG Boogie Premium trial ends on ${when}. Then your card is charged $${PLANS.premium.price} plus tax, and Premium renews monthly.`,
-            "Want to keep Premium? Do nothing. Not for you? Cancel in Settings before then and you won't be charged.",
+            `Your TCG Boogie ${plan.label} trial ends on ${when}. Then your card is charged $${plan.price} plus tax, and ${plan.label} renews monthly.`,
+            `Want to keep ${plan.label}? Do nothing. Not for you? Cancel in Settings before then and you won't be charged.`,
           ],
           button: { label: "Review billing", url: SETTINGS_BILLING },
         });
       }
       if (event.type === "customer.subscription.deleted") {
+        const ended = isUltraSub(o) ? PLANS.ultra.label : PLANS.premium.label;
         await emailMember(o.customer, o.metadata?.userId, {
-          subject: "Your Premium has ended",
+          subject: `Your ${ended} has ended`,
           heading: "You're back on Free",
           lines: [
-            "Your TCG Boogie Premium subscription has ended and you won't be charged again.",
+            `Your TCG Boogie ${ended} subscription has ended and you won't be charged again.`,
             "Your collection, filters and settings are all still here. Anything over the Free limits is paused, not deleted.",
           ],
-          button: { label: "Come back to Premium", url: `${SITE}/app/premium` },
+          button: { label: `Come back to ${ended}`, url: `${SITE}/app/${isUltraSub(o) ? "ultra" : "premium"}` },
         });
       }
     } else if (event.type.startsWith("invoice.")) {

@@ -178,7 +178,7 @@ const ERROR_FACET = {
 const facetsWithErrors = (errors) => new Set(Object.keys(errors || {}).map((k) => ERROR_FACET[k]).filter(Boolean));
 
 function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
-  const premium = plan.key === "premium";
+  const premium = plan.key !== "free";
   switch (k) {
     case "sets": return <SetPicker f={f} set={set} allSets={allSets} />;
     case "cards": return <><CardPicker f={f} set={set} cap={plan.maxCardsPerFilter ?? null} /><Err msg={errors.cards} /></>;
@@ -394,7 +394,7 @@ export default function FilterStudio({ profiles: initial, plan, deals, sample, p
   const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }));
   const toggle = (key, value) => setDraft((d) => ({ ...d, [key]: d[key].includes(value) ? d[key].filter((x) => x !== value) : [...d[key], value] }));
   const reset = (facet) => setDraft((d) => ({ ...d, ...facet.reset(defaults, d) }));
-  const premium = plan.key === "premium";
+  const premium = plan.key !== "free";
   const atLimit = profiles.length >= plan.maxProfiles;
   const filtersOf = (p) => (p.id === openId ? draft : clampToPlan(p.filters, plan));
   const statusOf = (p, i) => (i >= plan.maxProfiles ? "locked" : p.active ? "on" : "paused");

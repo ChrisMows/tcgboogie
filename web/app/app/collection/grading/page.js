@@ -2,6 +2,7 @@ import Link from "next/link";
 import GradingCheck, { GradingTile } from "@/components/GradingCheck";
 import { gradingCandidates } from "@/lib/grading";
 import { findGradingGaps } from "@/lib/grading-gap";
+import { PLANS } from "@/lib/plans";
 import { loadCollection } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 
@@ -18,7 +19,7 @@ export default async function GradingPage() {
   ]);
   const candidates = gradingCandidates(c.owned, c.products);
   const rawCards = new Set(c.owned.filter((it) => it.kind === "raw" && it.productType === "card" && it.condition === "Near Mint").map((it) => `${it.productId}:${it.printing || ""}`)).size;
-  const premium = Boolean(user.plan.gradingFinder);
+  const ultra = Boolean(user.plan.gradingFinder);
   const best = finder.cards[0];
   return (
     <>
@@ -31,7 +32,7 @@ export default async function GradingPage() {
       </div>
       <GradingCheck candidates={candidates} rawCards={rawCards} ownedCards={c.owned.length} full={Boolean(user.plan.gradingCheck)} />
 
-      {finder.total > 0 && (premium ? (
+      {finder.total > 0 && (ultra ? (
         <Link href="/app/grade-and-flip" className="panel gf-promo gf-promo-link">
           <span className="gf-promo-icon" aria-hidden="true">💎</span>
           <span><b>Find cards worth buying to grade</b><span className="muted small"> · Grade & Flip has {finder.total.toLocaleString("en-US")} modern safe bets with PSA right now, beyond your own cards.</span></span>
@@ -40,7 +41,7 @@ export default async function GradingPage() {
       ) : (
         <section className="panel gf-promo">
           <div className="gf-promo-text">
-            <span className="badge accent">Premium</span>
+            <span className="badge accent">Ultra</span>
             <h2>Grade & Flip: cards worth buying raw to grade</h2>
             <p className="muted">
               Beyond your own collection, we&apos;re tracking <b>{finder.total.toLocaleString("en-US")} modern cards</b> right now that would make money
@@ -48,8 +49,7 @@ export default async function GradingPage() {
               {best && <> Today&apos;s top pick: <b>{best.name.replace(/\s*\(.*\)$/, "")}</b>, raw {money(best.raw)}, PSA 10 {money(best.top)}, about <b className="up">{money(best.profit10)}</b> profit.</>}
             </p>
             <div className="gf-promo-actions">
-              <Link href="/app/premium?from=grading-finder" className="btn primary">See Premium</Link>
-              <Link href="/app/grade-and-flip" className="btn">Preview the top 3</Link>
+              <Link href="/app/ultra?from=grading-finder" className="btn primary">See Ultra · ${PLANS.ultra.price}/mo</Link>
             </div>
           </div>
           {best && <div className="gf-promo-card"><GradingTile c={best} /></div>}

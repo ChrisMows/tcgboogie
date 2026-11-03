@@ -12,7 +12,7 @@ export const QUOTAS = {
   ebayListing: { limit: "sellPerMonth", noun: "eBay listings" },
 };
 
-const canUpgrade = (user) => user.plan?.key !== "premium";
+const canUpgrade = (user) => user.plan?.key === "free";
 
 const { rateLimits } = schema;
 const month = (d = new Date()) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;

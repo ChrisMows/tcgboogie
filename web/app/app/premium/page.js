@@ -59,10 +59,10 @@ export default async function Premium({ searchParams }) {
 
           {subscribed ? (
             <div className="premium-state">
-              <b>{user.subscriptionStatus === "trialing" ? "Your free trial is on 🎉" : <>You&apos;re on Premium 🎉</>}</b>
+              <b>{user.subscriptionStatus === "trialing" ? "Your free trial is on 🎉" : <>You&apos;re on {user.ultra ? "Ultra" : "Premium"} 🎉</>}</b>
               <span className="muted">
                 {user.cancelAtPeriodEnd ? <>Ends {fmt(user.currentPeriodEnd)}, then back to Free.</>
-                  : user.subscriptionStatus === "trialing" && user.currentPeriodEnd ? <>First charge ${price} on {fmt(user.currentPeriodEnd)}. Cancel before then in Settings and you pay nothing.</>
+                  : user.subscriptionStatus === "trialing" && user.currentPeriodEnd ? <>First charge ${user.ultra ? PLANS.ultra.price : price} on {fmt(user.currentPeriodEnd)}. Cancel before then in Settings and you pay nothing.</>
                   : user.currentPeriodEnd ? <>Renews {fmt(user.currentPeriodEnd)}.</> : null}
               </span>
               <Link href="/app/account#billing" className="btn">Billing</Link>
@@ -99,7 +99,7 @@ export default async function Premium({ searchParams }) {
       </div>
 
       <p className="premium-links small muted">
-        <Link href="/#pricing">Compare plans</Link> · <Link href="/terms#premium">Billing &amp; cancellation terms</Link> · No refunds for partial months.
+        <Link href="/app/ultra">Flipping cards? See Ultra</Link> · <Link href="/#pricing">Compare plans</Link> · <Link href="/terms#premium">Billing &amp; cancellation terms</Link> · No refunds for partial months.
       </p>
     </div>
   );

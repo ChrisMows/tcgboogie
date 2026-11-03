@@ -2,6 +2,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { appraiserReady } from "@/lib/appraise";
 import { billingLive } from "@/lib/billing";
+import { PLANS } from "@/lib/plans";
 import { db, schema } from "@/lib/db";
 import { emailCap, emailSender } from "@/lib/mail";
 import { channelsReady } from "@/lib/notify";
@@ -112,7 +113,7 @@ function features(free, premium, sms) {
       what: "Which raw cards would gain the most from grading.", free: free.gradingCheck ? "✓" : "Top 3", premium: premium.gradingCheck ? "✓" : "Top 3" },
     { area: "Collection", name: "Grade & Flip", link: "/app/grade-and-flip", grows: "shared", vendors: ["vps"],
       what: "Cards anywhere with a big raw-to-graded price gap. Copies prices already saved (grading_gap table, filled by the cron job): no price lookups.",
-      free: free.gradingFinder ? "✓" : "Top 3", premium: premium.gradingFinder ? "✓" : "Top 3" },
+      free: "—", premium: "— (Ultra only)" },
     { area: "Collection", name: "Trade analyzer", link: "/app/collection/trade", grows: "use", vendors: ["ppt"],
       what: "Prices both sides of a trade and grades its fairness.", free: yes(free.tradeAnalyzer), premium: yes(premium.tradeAnalyzer) },
     { area: "Collection", name: "Export", link: "/app/collection", grows: "shared", vendors: [],
@@ -136,8 +137,8 @@ function features(free, premium, sms) {
     { area: "Email and help", name: "Boogie Bot", link: "/app/admin?tab=helper", grows: "use", vendors: ["claude"],
       what: "The site helper that answers members' questions (visitors 8 a day per IP; 2,000 a day site-wide).", free: "25 a day", premium: "80 a day" },
 
-    { area: "Running the site", name: "Premium billing", link: "/app/admin", grows: "member", vendors: ["stripe"],
-      what: `Subscriptions at $${premium.price} a month${premium.trialDays ? `, ${premium.trialDays}-day free trial` : ""}.`, free: "—", premium: "✓" },
+    { area: "Running the site", name: "Premium and Ultra billing", link: "/app/admin", grows: "member", vendors: ["stripe"],
+      what: `Subscriptions at $${premium.price} a month, Ultra at $${PLANS.ultra.price}${premium.trialDays ? `, ${premium.trialDays}-day free trial` : ""}. Moving between them is prorated.`, free: "—", premium: "✓" },
     { area: "Running the site", name: "Usage and warnings", link: "/app/admin?tab=usage", grows: "shared", vendors: ["discord", "vps"],
       what: "Admin -> Usage, and Discord DMs to you at 75% and 90% of any limit, for each new member and for Premium trials, upgrades, cancels and ends.", free: "—", premium: "—" },
     { area: "Running the site", name: "Website and database", link: "/app/admin", grows: "shared", vendors: ["hostinger", "vps"],

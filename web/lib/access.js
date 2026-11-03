@@ -22,9 +22,16 @@ export function compActive(user, now = Date.now()) {
   return Boolean(user.compUnlimited) || Boolean(user.compUntil && new Date(user.compUntil).getTime() > now);
 }
 
-/** The plan a member actually gets: paid Premium, or complimentary Premium, else Free. */
+/** Is the member paying (or given it free)? "premium" covers Premium and Ultra, see effectivePlanKey for which. */
 export function effectiveTier(user) {
   if (!user) return "free";
   if (isAdminEmail(user.email)) return "premium";
   return user.tier === "premium" || compActive(user) ? "premium" : "free";
+}
+
+/** Which plan's features a member gets (lib/plans.js planFor): admins and paying Ultra members get Ultra. */
+export function effectivePlanKey(user) {
+  const tier = effectiveTier(user);
+  if (tier === "free") return "free";
+  return isAdminEmail(user.email) || (user.ultra && user.tier === "premium") ? "ultra" : "premium";
 }

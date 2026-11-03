@@ -43,9 +43,9 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "sh
 const ACTIONS = { grant_comp: "Granted complimentary Premium", revoke_comp: "Removed complimentary Premium", set_plan: "Changed plan", rename: "Renamed", remove_phone: "Removed phone number", features: "Changed features", card_request: "Card request", x_post: "Posted to X" };
 
 function PlanBadge({ m, compact }) {
-  if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">Premium</span> : <span className="badge">Free</span>;
+  if (compact) return m.comp ? <span className="badge accent">Comp{m.compUnlimited ? " ∞" : ""}</span> : m.effective === "premium" ? <span className="badge good">{m.ultra ? "Ultra" : "Premium"}</span> : <span className="badge">Free</span>;
   if (m.comp) return <span className="badge accent">Premium · comp{m.compUnlimited ? " ∞" : ` to ${fmtDate(m.compUntil)}`}</span>;
-  return m.effective === "premium" ? <span className="badge good">Premium{m.subscriptionStatus ? ` · ${m.subscriptionStatus}` : ""}</span> : <span className="badge">Free</span>;
+  return m.effective === "premium" ? <span className="badge good">{m.ultra ? "Ultra" : "Premium"}{m.subscriptionStatus ? ` · ${m.subscriptionStatus}` : ""}</span> : <span className="badge">Free</span>;
 }
 
 export default async function Admin({ searchParams }) {

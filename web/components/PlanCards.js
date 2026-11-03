@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { billingLive } from "@/lib/billing";
 import ComparePlans from "@/components/ComparePlans";
-import { effectivePlans, planGroups, planHighlights, trialDays } from "@/lib/plan-copy";
+import { effectivePlans, planGroups, planHighlights, trialDays, ULTRA_PERKS } from "@/lib/plan-copy";
 
-/** Free vs Premium cards plus the full comparison in a pop-up (homepage #pricing). */
+/** Free, Premium and Ultra cards plus the full comparison in a pop-up (homepage #pricing). */
 // What each plan includes comes from lib/plan-copy.js (the plans as Admin → Features left them).
 export default async function PlanCards({ signedIn = false }) {
   const plans = await effectivePlans();
-  const { free, premium } = plans;
+  const { free, premium, ultra } = plans;
   const lists = planHighlights(plans);
   const trial = billingLive() ? trialDays(plans) : 0;
   const upgrade = signedIn ? "/app/premium" : "/login?mode=signup&plan=premium";
+  const toUltra = signedIn ? "/app/ultra" : "/login?mode=signup&next=%2Fapp%2Fultra";
   return (
     <>
       <div className="plans">
@@ -40,9 +41,21 @@ export default async function PlanCards({ signedIn = false }) {
             {billingLive() ? " Secure checkout by Stripe." : " Card payments launch soon."}
           </div>
         </div>
+        <div className="plan">
+          <h3>{ultra.label}</h3>
+          <div className="price">${ultra.price}<small> / month</small></div>
+          <div className="tax-note">Plus applicable sales tax</div>
+          <div className="muted">{ultra.tagline}</div>
+          {trial > 0 && <div className="premium-trial">{trial} days free for new members</div>}
+          <ul>
+            <li className="plus-all">Everything in Premium, plus:</li>
+            {ULTRA_PERKS.map((f) => <li key={f}>{f}</li>)}
+          </ul>
+          <Link href={toUltra} className="btn block">{trial > 0 ? `Try Ultra free for ${trial} days` : "Get Ultra"}</Link>
+        </div>
       </div>
       <div className="compare-all">
-        <ComparePlans groups={planGroups(plans)} free={{ label: free.label }} premium={{ label: premium.label, price: premium.price }}
+        <ComparePlans groups={planGroups(plans)} free={{ label: free.label }} premium={{ label: premium.label, price: premium.price }} ultra={{ label: ultra.label, price: ultra.price, perks: ULTRA_PERKS }}
           trial={trial} signedIn={signedIn} label="Compare every feature" />
       </div>
     </>

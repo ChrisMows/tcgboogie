@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth, authEnabled } from "@/auth";
-import { effectiveTier, isAdminEmail } from "@/lib/access";
+import { effectiveTier, isAdminEmail, effectivePlanKey } from "@/lib/access";
 import { refreshFeatures } from "@/lib/features";
 import { planFor } from "@/lib/plans";
 import * as store from "@/lib/store";
@@ -20,7 +20,9 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   await refreshFeatures();
   if (demoMode) {
     const jar = await cookies();
-    const tier = jar.get("demo_tier")?.value === "free" ? "free" : "premium";
+    const view = jar.get("demo_tier")?.value;
+    const planKey = view === "free" ? "free" : view === "premium" ? "premium" : "ultra";
+    const tier = planKey === "free" ? "free" : "premium";
     const prefs = store.demoPrefs();
     return {
       id: "demo",
@@ -28,7 +30,7 @@ export const getCurrentUser = cache(async function getCurrentUser() {
       email: "demo@tcgboogie.com",
       image: null,
       tier,
-      plan: planFor(tier),
+      plan: planFor(planKey),
       ...prefs,
       providers: prefs.discordConnected ? ["email", "discord"] : ["email"],
       isAdmin: true, // demo only, so the admin panel can be previewed locally
@@ -48,10 +50,12 @@ export const getCurrentUser = cache(async function getCurrentUser() {
       void store.refreshDiscordImage(row.id);
     }
   }
-  // Admins get Premium, and can preview the site as a Free member (admin bar at the top).
+  // Admins get Ultra, and can preview the site as a Free or Premium member (admin bar at the top).
   const isAdmin = isAdminEmail(row.email);
-  const tier = isAdmin ? ((await cookies()).get("admin_view")?.value === "free" ? "free" : "premium") : effectiveTier(row);
-  return { ...row, tier, plan: planFor(tier), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
+  const adminView = isAdmin ? (await cookies()).get("admin_view")?.value : null;
+  const planKey = !isAdmin ? effectivePlanKey(row) : adminView === "free" ? "free" : adminView === "premium" ? "premium" : "ultra";
+  const tier = isAdmin ? (planKey === "free" ? "free" : "premium") : effectiveTier(row);
+  return { ...row, tier, plan: planFor(planKey), isAdmin, providers, discordConnected: providers.includes("discord"), demo: false };
 });
 
 /**

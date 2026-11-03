@@ -62,6 +62,7 @@ export default async function Account({ searchParams }) {
   const premiumPerks = planHighlights(await effectivePlans()).premium; // what Premium adds, as Admin → Features set it
   const params = await searchParams;
   const premium = user.tier === "premium";
+  const paid = user.ultra ? PLANS.ultra : PLANS.premium; // the plan this member's subscription is on
   const canDiscord = user.plan.watchAlertChannels.includes("discord"); // Admin → Features
   const canSms = user.plan.watchAlertChannels.includes("sms");
   const canPush = user.plan.watchAlertChannels.includes("push");
@@ -94,7 +95,7 @@ export default async function Account({ searchParams }) {
 
   return (
     <>
-      {params?.billing === "welcome" && <XCheckout trial={trialing} subscriptionId={user.stripeSubscriptionId} price={user.plan.price ?? PLANS.premium.price} />}
+      {params?.billing === "welcome" && <XCheckout trial={trialing} subscriptionId={user.stripeSubscriptionId} price={paid.price} />}
       <div className="page-head">
         <div>
           <h1>Settings</h1>
@@ -107,7 +108,7 @@ export default async function Account({ searchParams }) {
           <div>
             <div className="small muted">Your plan</div>
             <div className="plan-panel-name">
-              {subscribed ? "Premium" : user.plan.label}{" "}
+              {subscribed ? paid.label : user.plan.label}{" "}
               {subscribed && user.subscriptionStatus === "past_due" ? <span className="badge warn">Payment due</span>
                 : subscribed && user.cancelAtPeriodEnd ? <span className="badge">Ending</span>
                 : trialing ? <span className="badge accent">Free trial</span>
@@ -116,10 +117,10 @@ export default async function Account({ searchParams }) {
             <div className="small muted">
               {subscribed ? (
                 user.cancelAtPeriodEnd
-                  ? <>Cancelled. You keep Premium until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
-                  : trialing ? <>Free until <b>{periodEnd}</b>, then ${PLANS.premium.price}/month + tax</>
-                  : <>${PLANS.premium.price}/month + tax{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
-              ) : user.isAdmin && !user.demo ? <>Admin account: Premium included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
+                  ? <>Cancelled. You keep {paid.label} until <b>{periodEnd}</b>, then you&apos;re on Free. No more charges.</>
+                  : trialing ? <>Free until <b>{periodEnd}</b>, then ${paid.price}/month + tax</>
+                    : <>${paid.price}/month + tax{periodEnd ? <> · renews <b>{periodEnd}</b></> : null}</>
+              ) : user.isAdmin && !user.demo ? <>Admin account: Ultra included. Previewing as <b>{user.plan.label}</b> (switch in the admin bar).</>
                 : compActive(user) ? <>Complimentary Premium{user.compUnlimited ? ", no end date" : ` until ${fmt(user.compUntil)}`}. You won&apos;t be charged.</>
                 : premium ? `$${PLANS.premium.price}/month` : "Free forever."}
               {subscribed && user.isAdmin && !user.demo && !premium ? <> · previewing the site as <b>Free</b></> : null}
@@ -128,8 +129,9 @@ export default async function Account({ searchParams }) {
           {subscribed ? (
             <div className="row" style={{ flex: "none", gap: 8, justifyContent: "flex-end" }}>
               {user.cancelAtPeriodEnd && (
-                <form action={changeRenewal}><input type="hidden" name="renew" value="on" /><button className="btn primary">Keep Premium</button></form>
+                <form action={changeRenewal}><input type="hidden" name="renew" value="on" /><button className="btn primary">Keep {paid.label}</button></form>
               )}
+              {!user.ultra && !user.cancelAtPeriodEnd && <Link href="/app/ultra" className="btn primary">Upgrade to Ultra</Link>}
               <a href="#billing" className="btn">Billing</a>
             </div>
           ) : showUpgrade ? (
@@ -141,7 +143,7 @@ export default async function Account({ searchParams }) {
         </div>
         {subscribed && user.subscriptionStatus === "past_due" && (
           <div className="notice warn" style={{ marginTop: 12 }}>
-            Your last payment didn&apos;t go through. Stripe will try again over the next few days; update your card under <a href="#billing">Billing</a> to keep Premium.
+            Your last payment didn&apos;t go through. Stripe will try again over the next few days; update your card under <a href="#billing">Billing</a> to keep {paid.label}.
           </div>
         )}
         {payments && testMode && !subscribed && showUpgrade && (
@@ -161,7 +163,7 @@ export default async function Account({ searchParams }) {
           <div className="bill-facts">
             <div>
               <span className="small muted">Plan</span>
-              <b>{subscribed ? `Premium · $${PLANS.premium.price}/month` : "Free"}</b>
+              <b>{subscribed ? `${paid.label} · $${paid.price}/month` : "Free"}</b>
               <span className="small muted">
                 {trialing ? "Free trial" : subscribed && user.subscriptionStatus === "past_due" ? "Payment due" : subscribed ? "Active" : "No subscription"}
                 {bill?.started ? ` · since ${fmt(bill.started)}` : ""}
@@ -171,7 +173,7 @@ export default async function Account({ searchParams }) {
               <span className="small muted">{subscribed && !user.cancelAtPeriodEnd ? "Next charge" : "Next charge"}</span>
               {subscribed && !user.cancelAtPeriodEnd ? (
                 <>
-                  <b>{bill?.next ? money(bill.next.amount) : `$${PLANS.premium.price}`}{bill?.next?.exact ? "" : " + tax"}</b>
+                  <b>{bill?.next ? money(bill.next.amount) : `$${paid.price}`}{bill?.next?.exact ? "" : " + tax"}</b>
                   <span className="small muted">on {bill?.next ? fmt(bill.next.date) : periodEnd}{trialing ? " (when your trial ends)" : ""}</span>
                 </>
               ) : subscribed ? (

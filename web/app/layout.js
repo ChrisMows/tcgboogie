@@ -89,10 +89,13 @@ twq('config','ri3dv');}`}</Script>
               <b>Demo mode</b>
               <span className="muted">Sample data, nothing is saved permanently. Preview as:</span>
               <form action={setDemoTier.bind(null, "free")}>
-                <button className={`btn sm ${user?.tier === "free" ? "primary" : ""}`}>Free</button>
+                <button className={`btn sm ${user?.plan?.key === "free" ? "primary" : ""}`}>Free</button>
               </form>
               <form action={setDemoTier.bind(null, "premium")}>
-                <button className={`btn sm ${user?.tier === "premium" ? "primary" : ""}`}>Premium</button>
+                <button className={`btn sm ${user?.plan?.key === "premium" ? "primary" : ""}`}>Premium</button>
+              </form>
+              <form action={setDemoTier.bind(null, "ultra")}>
+                <button className={`btn sm ${user?.plan?.key === "ultra" ? "primary" : ""}`}>Ultra</button>
               </form>
             </div>
           </div>
@@ -103,10 +106,13 @@ twq('config','ri3dv');}`}</Script>
               <b>Admin</b>
               <span className="muted">Preview the site as:</span>
               <form action={setAdminView.bind(null, "free")}>
-                <button className={`btn sm ${user.tier === "free" ? "primary" : ""}`}>Free member</button>
+                <button className={`btn sm ${user.plan.key === "free" ? "primary" : ""}`}>Free member</button>
               </form>
               <form action={setAdminView.bind(null, "premium")}>
-                <button className={`btn sm ${user.tier === "premium" ? "primary" : ""}`}>Premium member</button>
+                <button className={`btn sm ${user.plan.key === "premium" ? "primary" : ""}`}>Premium member</button>
+              </form>
+              <form action={setAdminView.bind(null, "ultra")}>
+                <button className={`btn sm ${user.plan.key === "ultra" ? "primary" : ""}`}>Ultra member</button>
               </form>
             </div>
           </div>

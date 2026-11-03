@@ -30,7 +30,7 @@ export default function Terms() {
         <li>Give us accurate information, including the phone number you use for text alerts.</li>
       </ul>
 
-      <h2 id="premium">3. Premium subscription</h2>
+      <h2 id="premium">3. Premium and Ultra subscriptions</h2>
       <ul>
         <li><b>Price.</b> Premium costs ${price} per month, plus any sales tax that applies where you live. The total is shown before you pay.</li>
         {trial > 0 && (
@@ -40,6 +40,7 @@ export default function Terms() {
             the trial in Settings → Billing and you&apos;re never charged; Premium stays on until the trial&apos;s last day. One trial per member;
             we may decline a trial if it looks like it&apos;s being repeated.</li>
         )}
+        <li><b>Ultra.</b> Ultra costs ${PLANS.ultra.price} per month, plus any sales tax that applies, and includes everything in Premium plus the Ultra features. Everything in this section about Premium (free trial, billing, cancelling, refunds) applies to Ultra too. Moving up from Premium takes effect right away: you&apos;re charged the difference for the rest of your billing month that day, or if you&apos;re on a free trial, your trial carries on and the Ultra price applies when it ends. Moving down takes effect right away too, and the unused part of what you paid is credited against your next bill.</li>
         <li><b>Billing.</b> You&apos;re charged when you subscribe (or when your free trial ends), then automatically every month on the same date until you cancel. Payments are processed securely by Stripe; we never see or store your full card number.</li>
         <li><b>Cancelling.</b> You can cancel anytime in Settings → Billing, in one click. When you cancel, Premium stays on through the end of the period you&apos;ve already paid for, then your account returns to the Free plan automatically. You won&apos;t be charged again.</li>
         <li><b>Refunds.</b> Payments aren&apos;t refunded for partial months, including the month you cancel in, except where the law requires it. If you believe you were charged in error, email <a href="mailto:support@tcgboogie.com">support@tcgboogie.com</a> and we&apos;ll make it right.</li>

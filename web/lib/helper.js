@@ -47,7 +47,7 @@ Deal filter), price alerts that hit, deals their filters caught, their cards tha
   spread, every card is found and valued, then it asks whether to add them all (or pick which) and opens the collection.
 /app/collection/import — import a CSV from TCGplayer, Collectr, PriceCharting, any app or a spreadsheet.
 /app/collection/grading — Worth Grading?: which raw cards would profit from grading.
-/app/grade-and-flip — Grade & Flip (Premium; Free sees the top 3; in the side menu, the ☰ menu and Collection's buttons): cards anywhere, not just the member's, whose graded price is far above the raw price, with filters for grader, service level, raw price range, minimum profit, safe bets only, English/Japanese.
+/app/grade-and-flip — Grade & Flip (Ultra only; in the side menu, the ☰ menu and Collection's buttons): cards anywhere, not just the member's, whose graded price is far above the raw price, with filters for grader, service level, raw price range, minimum profit, safe bets only, English/Japanese.
 /app/collection/trade — Trade Analyzer: price both sides of a trade and get a fairness grade out of 10.
 /app/cards/<id> — a card's page (open any card): prices, graded sales, Add to collection, a price alert, Sell on eBay
   for a copy you own, "✎ Price wrong?" to report an eBay sale we're missing, and "📷 Missing picture?" when the card
@@ -119,7 +119,7 @@ async function knowledge() {
   const [faq, plans] = await Promise.all([currentFaq(), effectivePlans()]);
   const faqText = faq.map(([, title, items]) => `## ${title}\n${items.map(([q, a]) => `Q: ${q}\nA: ${a}`).join("\n\n")}`).join("\n\n");
   const planText = planRows(plans).map(([what, free, premium]) => `- ${what}: Free ${free} | Premium ${premium}`).join("\n");
-  const text = `${RULES}\n\n# Page map\n${PAGE_MAP}\n\n# Plans (Premium is $${plans.premium.price}/month plus tax)\n${planText}\n\n# FAQ\n${faqText}`;
+  const text = `${RULES}\n\n# Page map\n${PAGE_MAP}\n\n# Plans (Premium is $${plans.premium.price}/month plus tax; Ultra is $${plans.ultra.price}/month plus tax: everything in Premium plus Grade & Flip, more coming soon; page /app/ultra)\n${planText}\n\n# FAQ\n${faqText}`;
   cached = { text, at: Date.now() };
   return text;
 }

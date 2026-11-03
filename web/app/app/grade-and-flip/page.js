@@ -2,19 +2,39 @@ import Link from "next/link";
 import { GradingTile } from "@/components/GradingCheck";
 import { DEFAULT_SHIPPING, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
 import { ERAS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
+import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Grade & Flip" };
 
-const FREE_ROWS = 3;
 const GRADERS = Object.keys(GRADING_COMPANIES);
 const num = (v, d, lo, hi) => { const n = Number(v); return v === undefined || v === "" || !Number.isFinite(n) ? d : Math.min(hi, Math.max(lo, n)); };
 const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 const money = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
 
+/** What members on other plans see: no cards, just what Ultra is. */
+function UltraOnly() {
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Grade &amp; Flip</h1>
+          <p>Raw cards selling far below their graded price, anywhere in the catalog: buy raw, grade, flip for a profit.</p>
+        </div>
+      </div>
+      <div className="panel empty-state">
+        <h2>🔒 Grade &amp; Flip is part of Ultra</h2>
+        <p className="muted">Every card ranked by profit after grading fees and shipping, with filters for grading company, budget, era and how safe a bet it is.</p>
+        <Link href="/app/ultra?from=grading-finder" className="btn primary">See Ultra · ${PLANS.ultra.price}/mo</Link>
+      </div>
+    </>
+  );
+}
+
 /** Grade & Flip: cards anywhere in our catalog that would make money bought raw and graded. Filters are a GET form. */
 export default async function GradingFinderPage({ searchParams }) {
   const user = await requireUser("/app/grade-and-flip");
+  if (!user.plan.gradingFinder) return <UltraOnly />;
   const sp = await searchParams;
   const grader = GRADERS.includes(sp?.grader) ? sp.grader : "PSA";
   const co = GRADING_COMPANIES[grader];
@@ -31,9 +51,7 @@ export default async function GradingFinderPage({ searchParams }) {
     sort: sp?.sort === "return" ? "return" : "profit",
     limit: 60,
   };
-  const full = Boolean(user.plan.gradingFinder);
   const [{ cards, total }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
-  const shown = full ? cards : cards.slice(0, FREE_ROWS);
 
   return (
     <>
@@ -106,8 +124,8 @@ export default async function GradingFinderPage({ searchParams }) {
         <span><span className="badge warn">Needs a {co.top}</span> riskier</span>
       </div>
 
-      {shown.length > 0 ? (
-        <div className="gr-grid">{shown.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
+      {cards.length > 0 ? (
+        <div className="gr-grid">{cards.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
       ) : (
         <div className="panel gr-empty">
           <div className="gr-empty-icon" aria-hidden="true">🔎</div>
@@ -117,14 +135,7 @@ export default async function GradingFinderPage({ searchParams }) {
           </div>
         </div>
       )}
-      {!full && total > FREE_ROWS && (
-        <div className="panel gr-more">
-          <b>🔒 {(total - FREE_ROWS).toLocaleString("en-US")} more {total - FREE_ROWS === 1 ? "card" : "cards"} worth grading</b>
-          <span className="muted small">See every card with Premium.</span>
-          <Link href="/app/premium?from=grading-finder" className="btn sm primary">See Premium</Link>
-        </div>
-      )}
-      {full && total > cards.length && <p className="hint">Showing the top {cards.length}. Narrow the raw price or raise the profit to see others.</p>}
+      {total > cards.length && <p className="hint">Showing the top {cards.length}. Narrow the raw price or raise the profit to see others.</p>}
 
       <p className="hint">
         We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated daily.

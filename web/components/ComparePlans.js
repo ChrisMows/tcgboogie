@@ -8,7 +8,7 @@ import Link from "next/link";
 // A native <dialog>: Esc closes it, focus stays inside, and a click on the dimmed backdrop closes it too.
 const mark = (v) => (v === "✓" ? <span className="cmp-yes" aria-label="Included">✓</span> : v === "—" ? <span className="cmp-no" aria-label="Not included">✕</span> : v);
 
-export default function ComparePlans({ groups, free, premium, trial = 0, signedIn = false, label = "Compare plans", className = "btn" }) {
+export default function ComparePlans({ groups, free, premium, ultra = null, trial = 0, signedIn = false, label = "Compare plans", className = "btn" }) {
   const ref = useRef(null);
   const titleId = useId(); // the page can have more than one (hero and pricing)
   const close = () => ref.current?.close();
@@ -49,6 +49,15 @@ export default function ComparePlans({ groups, free, premium, trial = 0, signedI
               ))}
             </section>
           ))}
+          {ultra && (
+            <div className="cmp-ultra">
+              <div>
+                <b>{ultra.label} · ${ultra.price}/mo</b>: everything in {premium.label}, plus:
+                <ul>{ultra.perks.map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+              <Link href={signedIn ? "/app/ultra" : "/login?mode=signup&next=%2Fapp%2Fultra"} className="btn sm" onClick={close}>See {ultra.label}</Link>
+            </div>
+          )}
           <div className="cmp-foot">
             <Link href={upgrade} className="btn primary" onClick={close}>{cta}</Link>
             <span className="small muted">

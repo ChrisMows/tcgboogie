@@ -14,6 +14,7 @@ export const users = pgTable("user", {
   avatarCheckedAt: timestamp("avatar_checked_at", { mode: "date" }), // last automatic Discord picture check
   // Plan: "free" or "premium". Set by billing (Stripe) later; the Discord bot reads it to grant the role.
   tier: text("tier").notNull().default("free"),
+  ultra: boolean("ultra").notNull().default(false), // on the Ultra plan (tier stays "premium"): set by billing from the Stripe price
   // Billing (Stripe). Deleting an account deletes the Stripe customer first, which cancels any subscription.
   stripeCustomerId: text("stripe_customer_id"),
   subscriptionStatus: text("subscription_status"), // active / past_due / canceled ... (from Stripe)

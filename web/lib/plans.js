@@ -24,7 +24,7 @@ export const PLANS = {
     collectionExport: false,
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
-    gradingFinder: false, // Grade & Flip: cards anywhere worth buying raw to grade (Free sees the top 3)
+    gradingFinder: false, // Grade & Flip: Ultra only (see ULTRA below)
     photoAppraiser: false, // snap a photo of cards: identify, price, add
     photoSearch: true, // Add cards: search by picture (camera or upload)
     photoSearchPerMonth: null, // search-by-picture photos a month (null = no monthly limit)
@@ -64,7 +64,7 @@ export const PLANS = {
     collectionExport: true,
     collectionAlerts: true,
     gradingCheck: true,
-    gradingFinder: true,
+    gradingFinder: false, // Grade & Flip: Ultra only (see ULTRA below)
     photoAppraiser: true,
     photoSearch: true,
     photoSearchTotal: null, // no lifetime total: 100 a month
@@ -80,6 +80,18 @@ export const PLANS = {
     reportSales: true,
   },
 };
+
+// Ultra is Premium plus its own features: everything Premium has (including what Admin → Plans changes) and these on
+// top. A member on Ultra still has tier "premium" (every "is this member paying?" check, the Discord role and the bot
+// read that); users.ultra says which paid plan it is, and lib/access.js effectivePlanKey turns the two into a plan.
+export const ULTRA = {
+  key: "ultra",
+  label: "Ultra",
+  price: 14.99,
+  tagline: "Everything in Premium, plus tools for flipping cards.",
+  gradingFinder: true, // Grade & Flip
+};
+PLANS.ultra = { ...PLANS.premium, ...ULTRA };
 
 // Admin → Plans: the number limits, editable without code changes (app_setting "plan_limits":
 // { free: { key: number|null }, premium: {…} }; null = unlimited). Loaded by lib/features.js with the features.
@@ -145,8 +157,6 @@ export const FEATURES = [
   { key: "csvImport", group: "Collection", label: "Import a CSV from another app", get: (p) => p.collectionImport, set: (p, on) => ({ collectionImport: on }) },
   { key: "gradingCheck", group: "Collection", label: "Full Worth Grading? list", help: "Without it, members see the top 3 cards.",
     get: (p) => p.gradingCheck, set: (p, on) => ({ gradingCheck: on }) },
-  { key: "gradingFinder", group: "Collection", label: "Grade & Flip", help: "Cards anywhere (not just their own) with a big gap between the raw and graded price. Without it, members see the top 3.",
-    get: (p) => p.gradingFinder, set: (p, on) => ({ gradingFinder: on }) },
   { key: "performance", group: "Collection", label: "Collection performance (Home → Performance)", help: "Returns, profit on what members paid, best and worst buys. Without it, the tab shows an invitation to Premium.",
     get: (p) => p.collectionPerformance, set: (p, on) => ({ collectionPerformance: on }) },
   { key: "photoAppraiser", group: "Collection", label: "Card scanner", get: (p) => p.photoAppraiser, set: (p, on) => ({ photoAppraiser: on }) },
@@ -183,6 +193,7 @@ export function setFeatureOverrides(map, limits) {
 }
 
 export function planFor(tier) {
+  if (tier === "ultra") return { ...planFor("premium"), ...ULTRA };
   const base = PLANS[tier] || PLANS.free;
   const overrides = g.__tcgbFeatures || {};
   const limits = g.__tcgbLimits?.[base.key] || {};

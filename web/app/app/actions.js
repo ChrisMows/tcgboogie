@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
 import crypto from "node:crypto";
-import { billingLive, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
+import { billingLive, changePlan, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
 import { log, logError } from "@/lib/log";
 import { TERMS_VERSION } from "@/lib/terms";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
@@ -170,13 +170,29 @@ export async function startCheckout(formData) {
   const user = await requireUser();
   if (user.demo || !billingLive()) billingError("off");
   // The Premium page asks members to agree to the terms before paying; keep a record of who agreed to which version.
-  if (formData?.get("agree") !== "on") redirect("/app/premium?agree=missing#enroll");
+  const plan = formData?.get("plan") === "ultra" ? "ultra" : "premium";
+  if (formData?.get("agree") !== "on") redirect(`/app/${plan}?agree=missing#enroll`);
   if (!await allow("billing", user.id)) billingError("slow");
-  if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription
+  if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription (changePlanAction moves between plans)
   let url;
   await log("payments", "info", `Agreed to the Terms of Service (version ${TERMS_VERSION}) and started checkout`, { terms: TERMS_VERSION }, user.id);
-  try { url = await checkoutUrl(user); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
+  try { url = await checkoutUrl(user, plan); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
   redirect(url);
+}
+
+/** A subscriber moves between Premium and Ultra (lib/billing.js changePlan). */
+export async function changePlanAction(formData) {
+  const user = await requireUser();
+  const plan = formData?.get("plan") === "ultra" ? "ultra" : "premium";
+  if (user.demo || !billingLive()) billingError("off");
+  if (plan === "ultra" && formData?.get("agree") !== "on") redirect("/app/ultra?agree=missing#enroll");
+  if (!await allow("billing", user.id)) billingError("slow");
+  try { await changePlan(user, plan); } catch (e) {
+    await logError("payments", "Plan change failed", e, { plan }, user.id);
+    redirect(plan === "ultra" ? "/app/ultra?billing=declined#enroll" : "/app/account?billing=error#plan");
+  }
+  revalidatePath("/app", "layout");
+  redirect(plan === "ultra" ? "/app/grade-and-flip" : "/app/account#plan");
 }
 
 /** Manage subscription: Stripe's billing page (card, invoices, cancel). */
@@ -364,13 +380,13 @@ export async function disconnectProvider(provider) {
 export async function setAdminView(tier) {
   const user = await requireUser();
   if (!user.isAdmin) return;
-  (await cookies()).set("admin_view", tier === "free" ? "free" : "premium", { path: "/", sameSite: "lax", httpOnly: true, secure: true });
+  (await cookies()).set("admin_view", ["free", "premium"].includes(tier) ? tier : "ultra", { path: "/", sameSite: "lax", httpOnly: true, secure: true });
   revalidatePath("/", "layout");
 }
 
 /** Demo only: switch the preview between Free and Premium to see how each plan looks. */
 export async function setDemoTier(tier) {
   if (!demoMode) return;
-  (await cookies()).set("demo_tier", tier === "free" ? "free" : "premium", { path: "/", sameSite: "lax" });
+  (await cookies()).set("demo_tier", ["free", "premium"].includes(tier) ? tier : "ultra", { path: "/", sameSite: "lax" });
   revalidatePath("/", "layout");
 }

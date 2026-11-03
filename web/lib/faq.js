@@ -1,6 +1,7 @@
 import "server-only";
 import { DISCORD_INVITE } from "@/lib/social";
 import { billingLive } from "@/lib/billing";
+import { PLANS } from "@/lib/plans";
 import { channels, effectivePlans, planHighlights, textSoon, trialDays } from "@/lib/plan-copy";
 
 // The FAQ (app/faq) and the site helper (lib/helper.js) both read these. Questions grouped by topic. Answers that describe what each plan includes are
@@ -12,6 +13,8 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
     ["start", "Getting started", [
       ["Is it really free?",
         `Yes. Free is free forever, no card needed, and includes: ${lists.free.join(" · ")}. Premium is $${premium.price}/month plus sales tax.`],
+      ["What's Ultra?",
+        `Ultra is $${PLANS.ultra.price}/month plus tax: everything in Premium, plus Grade & Flip, which finds cards worth buying raw to grade, ranked by profit. More tools for flipping cards are coming. New subscribers get the same free trial as Premium. On Premium already? Upgrading charges just the difference for the rest of your billing month.`],
       ["What's the difference between Free and Premium?",
         `Free includes: ${lists.free.join(" · ")}. Premium adds: ${lists.premium.join(" · ")}.`],
       ["Will you add Magic, Lorcana, Yu-Gi-Oh! or Star Wars: Unlimited?",
@@ -77,7 +80,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
       ["Which of my cards are worth grading?",
         `Open Worth Grading? from your collection. For each raw Near Mint card we compare today's raw price with recent graded sales at PSA, BGS, CGC, SGC or TAG, take off the grading cost you pick, and show the profit. ${free.gradingCheck ? "Every plan shows the full list." : "Free shows the top 3; Premium shows them all."}`],
       ["Can you find cards worth buying to grade?",
-        `Yes: open Grade & Flip from the menu (or the button on your collection). It ranks thousands of cards, not just yours, where recent graded sales are far above the raw Near Mint price after the grading fee and shipping. Filter by grading company, service level, what you'd pay raw and the profit you want; by default it only shows safe bets, cards that still pay off one grade below the top. ${free.gradingFinder ? "Every plan shows the full list." : "Free shows the top 3; Premium shows them all."}`],
+        `Yes: open Grade & Flip from the menu (or the button on your collection). It ranks thousands of cards, not just yours, where recent graded sales are far above the raw Near Mint price after the grading fee and shipping. Filter by grading company, service level, what you'd pay raw and the profit you want; by default it only shows safe bets, cards that still pay off one grade below the top. Grade & Flip is part of Ultra ($${PLANS.ultra.price}/month plus tax).`],
       ["What's the Trade Analyzer?",
         "Put in what you'd give (from your collection or any card) and what you'd get, in any condition or grade, plus cash. We price both sides at today's market and grade the trade out of 10 for fairness: 10 is even, and the grade is the same whichever side you're on."],
       ["Can I sell my cards on eBay from here?",

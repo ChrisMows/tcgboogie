@@ -11,7 +11,7 @@ import { getCurrentUser } from "@/lib/session";
 import { GAMES, myGames } from "@/lib/game-interest";
 import { homeShowcase } from "@/lib/deals";
 import { billingLive } from "@/lib/billing";
-import { effectivePlans, planGroups, trialDays } from "@/lib/plan-copy";
+import { effectivePlans, planGroups, trialDays, ULTRA_PERKS } from "@/lib/plan-copy";
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { saleLine } from "@/lib/deal-outcome";
 import "./home.css";
@@ -129,7 +129,7 @@ export default async function Home({ searchParams }) {
               <Link className="btn primary" href="/login?mode=signup">Start free <span>↗</span></Link>
               <a className="btn" href="#tools">See what it does</a>
               <ComparePlans groups={planGroups(plans)} free={{ label: plans.free.label }} premium={{ label: plans.premium.label, price: plans.premium.price }}
-                trial={trial} signedIn={Boolean(user)} className="btn ghost cmp-open" label="Compare plans" />
+                ultra={{ label: plans.ultra.label, price: plans.ultra.price, perks: ULTRA_PERKS }} trial={trial} signedIn={Boolean(user)} className="btn ghost cmp-open" label="Compare plans" />
             </div>
             <p className="micro">✓ &nbsp; Free forever. No card needed.</p>
           </div>
