@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GradingTile } from "@/components/GradingCheck";
 import { DEFAULT_SHIPPING, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
-import { findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
+import { ERAS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Grade & Flip" };
@@ -27,6 +27,7 @@ export default async function GradingFinderPage({ searchParams }) {
     minProfit: num(sp?.profit, MIN_PROFIT, 0, 100000),
     safeOnly: sp?.safe !== "0", // on unless switched off: a card that only pays at a 10 is a gamble
     language: ["english", "japanese", "all"].includes(sp?.lang) ? sp.lang : "english",
+    era: ERAS[sp?.era] ? sp.era : "modern", // vintage rarely grades a 10, so modern comes first
     sort: sp?.sort === "return" ? "return" : "profit",
     limit: 60,
   };
@@ -77,6 +78,12 @@ export default async function GradingFinderPage({ searchParams }) {
           </select>
         </label>
         <label className="gr-field">
+          <span className="small muted">Era</span>
+          <select name="era" defaultValue={opts.era}>
+            {Object.entries(ERAS).map(([k, e]) => <option key={k} value={k}>{e.label}</option>)}
+          </select>
+        </label>
+        <label className="gr-field">
           <span className="small muted">Sort by</span>
           <select name="sort" defaultValue={opts.sort}>
             <option value="profit">Most profit</option><option value="return">Best return on what you spend</option>
@@ -123,7 +130,7 @@ export default async function GradingFinderPage({ searchParams }) {
         We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated daily.
         Graded prices are recent sales with enough data to trust; raw prices are TCGplayer Near Mint market. Grading fees are
         the graders&apos; published prices as of October 2026, and a card worth more than a level allows is priced at the level it
-        needs. No grade is guaranteed: check centering, corners, edges and surface before you buy, and raw copies sold as
+        needs. Older cards rarely come back a 10 (decades of handling, older printing), which is why we start on modern. No grade is guaranteed: check centering, corners, edges and surface before you buy, and raw copies sold as
         &quot;Near Mint&quot; aren&apos;t always.
       </p>
     </>

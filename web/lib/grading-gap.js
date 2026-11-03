@@ -1,6 +1,6 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { allSampleCards, fromCard, gradedReliable } from "@/lib/catalog";
+import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { GRADING_COMPANIES, gradingMath } from "@/lib/grading";
 
@@ -26,6 +26,7 @@ const GRADE_LIST = sql.raw(`any(array[${GRADE_KEYS.map((k) => `'${k}'`).join(","
  */
 export async function refreshGradingGaps({ batches = 8 } = {}) {
   if (!db) return { copied: 0 };
+  await listSets().catch(() => null); // the era filter reads the saved set list: keep it from expiring (a lookup a week)
   const [mark] = await db.select().from(appSettings).where(eq(appSettings.key, WATERMARK)).limit(1);
   let after = mark?.value?.at ? new Date(mark.value.at) : new Date(0);
   let copied = 0, seen = 0;
@@ -117,6 +118,18 @@ function demoRows() {
   }).filter(Boolean);
 }
 
+// Eras: vintage cards rarely come back a 10 (old printing, decades of handling), so the finder starts on modern. English
+// cards go by their set's release date (the saved set list, lib/catalog.js listSets); Japanese set names carry the era's
+// code instead: SM (Sun & Moon, 2016-19), S (Sword & Shield, 2019-22), SV (Scarlet & Violet, 2023-25), M (Mega, 2025-).
+export const ERAS = {
+  modern: { label: "Modern: Sun & Moon to today (2017 on)", since: "2017-02-01", jp: "^(sm|s|sv|m)[0-9]" },
+  newest: { label: "Newest: Scarlet & Violet and Mega (2023 on)", since: "2023-03-01", jp: "^(sv|m)[0-9]" },
+  all: { label: "All eras, vintage too (10s are much rarer)", since: null, jp: null },
+};
+const SETS_KEY = "/sets[?]sortBy=releaseDate"; // the saved set list's request (listSets)
+const inEra = (era, r, released) => !ERAS[era]?.since || (r.language === "japanese"
+  ? new RegExp(ERAS[era].jp, "i").test(r.setName || "") : Boolean(released[r.setName] && released[r.setName] >= ERAS[era].since));
+
 // A handful of graded sales can still be junk the reliability rule lets through (a $66,000 "PSA 10" of a card whose
 // 9 sells for $1,875, a $99,999 placeholder, an $18,600 10 of a $29 card). Real gem premiums stay inside these: the top
 // grade at most 8x the grade below and 40x raw, the grade below at most 6x raw (checked on the live data, Nov 2026).
@@ -126,19 +139,20 @@ const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.to
 /**
  * Cards worth grading at a grader and service level, best first. opts: grader, tier (service level index), own (own
  * fee instead), shipping, minRaw / maxRaw (what the raw copy costs), minProfit, safeOnly (the grade below the top still
- * pays), language ("english" / "japanese" / "all"), sort ("profit" / "return"), limit.
+ * pays), language ("english" / "japanese" / "all"), era (ERAS key, "modern" by default), sort ("profit" / "return"), limit.
  * Returns { cards, total } (total: how many qualify before the limit).
  */
 export async function findGradingGaps(opts = {}) {
   const { grader = "PSA", tier = 0, own = null, shipping = 5, minRaw = 0, maxRaw = null, minProfit = 25, safeOnly = false,
-    language = "english", sort = "profit", limit = 60 } = opts;
+    language = "english", era = "modern", sort = "profit", limit = 60 } = opts;
   const co = GRADING_COMPANIES[grader];
   const tk = keyOf(grader, co.top), nk = keyOf(grader, co.next);
   // The cheapest this grading can cost (a pricier card may need a higher level): rules out most cards in the database.
   const floor = (own ?? co.tiers[Math.min(tier, co.tiers.length - 1)].fee) + shipping;
   let rows;
   if (!db) {
-    rows = demoRows().filter((r) => language === "all" || r.language === language);
+    const released = Object.fromEntries((await listSets()).map((st) => [st.name, st.releaseDate]));
+    rows = demoRows().filter((r) => (language === "all" || r.language === language) && inEra(era, r, released));
   } else {
     // Grade keys come from GRADING_COMPANIES (psa10, bgs9_5...), never from the request, so they can go in as text.
     const g = (k, f) => sql.raw(`(graded->'${k}'->>'${f}')`);
@@ -150,6 +164,13 @@ export async function findGradingGaps(opts = {}) {
     ];
     if (maxRaw !== null) where.push(sql`${gradingGap.raw} <= ${maxRaw}::float`);
     if (language !== "all") where.push(sql`${gradingGap.language} = ${language}`);
+    const e = ERAS[era];
+    if (e?.since) {
+      // Set names and patterns come from ERAS, not the request.
+      where.push(sql`((${gradingGap.language} = 'japanese' and ${gradingGap.setName} ~* ${sql.raw(`'${e.jp}'`)}) or (${gradingGap.language} <> 'japanese' and ${gradingGap.setName} in (
+        select x->>'name' from ${catalogCache}, jsonb_array_elements(case when jsonb_typeof(${catalogCache.data}->'data') = 'array' then ${catalogCache.data}->'data' else '[]'::jsonb end) x
+        where ${catalogCache.key} ~ ${sql.raw(`'${SETS_KEY}'`)} and ${catalogCache.key} !~ 'japanese' and left(x->>'releaseDate', 10) >= ${sql.raw(`'${e.since}'`)})))`);
+    }
     if (safeOnly) where.push(sql`${g(nk, "r")}::boolean and ${next} - ${gradingGap.raw} - ${floor}::float >= 0`);
     // Believable prices only (see plausible below).
     where.push(sql`${top} <= ${sql.raw(String(TOP_X_RAW))} * ${gradingGap.raw}`);
