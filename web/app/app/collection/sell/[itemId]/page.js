@@ -5,7 +5,7 @@ import SellForm from "@/components/SellForm";
 import { createPolicies } from "../actions";
 import { itemLabel, unitValue } from "@/lib/collection";
 import { ebayAccount, ebaySellReady, listingsFor, sellerPolicies, suggestDescription, suggestTitle } from "@/lib/ebay-sell";
-import { ebaySearch } from "@/lib/ebay-link";
+import { cardSearchQuery, ebaySearch } from "@/lib/ebay-link";
 import FeatureLocked from "@/components/FeatureLocked";
 import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
@@ -110,7 +110,7 @@ export default async function SellPage({ params, searchParams }) {
 
   const value = unitValue(item);
   const grade = item.kind === "graded" ? ` ${item.grader} ${item.grade}` : "";
-  const sold = ebaySearch(`${item.name.replace(/\s*\(.*\)$/, "")} ${item.number || ""}${grade}`.trim(), { sold: true, source: "sell-page-sold" });
+  const sold = ebaySearch(`${cardSearchQuery({ name: item.name, number: item.number || " ", setName: item.setName })}${grade}`.trim(), { sold: true, source: "sell-page-sold" });
   const past = await listingsFor(user.id, item.id);
   const facts = [
     "Category: Pokémon single cards",

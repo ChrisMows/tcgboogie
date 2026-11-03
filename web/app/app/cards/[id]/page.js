@@ -19,7 +19,7 @@ import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { targetPrice } from "@/lib/watches";
-import { dealSoldSearch, ebayLink, ebaySearch } from "@/lib/ebay-link";
+import { cardSearchQuery, dealSoldSearch, ebayLink, ebaySearch } from "@/lib/ebay-link";
 import { getDeal } from "@/lib/deals";
 import { saleLine } from "@/lib/deal-outcome";
 
@@ -144,8 +144,8 @@ export default async function CardPage({ params, searchParams }) {
   const thinGraded = allGraded.filter(([, g]) => g.reliable === false);
   const isSealed = p.type === "sealed";
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
-  const ebayQuery = p.topps ? p.topps.query
-    : `${p.name.replace(/\s*\(.*\)$/, "")} ${p.number || p.setName || ""}${language === "japanese" ? " Japanese" : ""}`.trim();
+  // Special prints (Prize Pack, prerelease stamps...) add their words, so eBay doesn't show the regular card instead.
+  const ebayQuery = p.topps ? p.topps.query : cardSearchQuery({ name: p.name, number: p.number, setName: p.setName, language });
   const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
   const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
   // Sold searches per grade ("… PSA 10"), for the graded cells.
