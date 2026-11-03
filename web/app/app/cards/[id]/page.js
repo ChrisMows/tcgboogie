@@ -226,7 +226,7 @@ export default async function CardPage({ params, searchParams }) {
         <div className="card-hero-info">
           <div className="card-name-row">
             <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
-            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} />
+            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} wished={wished} canWish={owned === 0} />
           </div>
           <div className="muted">
             {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}

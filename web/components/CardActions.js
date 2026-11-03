@@ -22,9 +22,9 @@ export function AddCardButton({ label }) {
 export const alertLabel = (watch) => (watch.mode === "high" ? "Alert on new highs" : watch.mode === "low" ? "Alert on new lows"
   : watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`);
 
-/** The bell and lightning icons beside a card's name: the price alert and deal alert pop-ups (or, once set, a link to
- * the alert / the deal filter). */
-export function CardAlertIcons({ watch, deals = false, dealFilter = false }) {
+/** The bell, lightning and heart icons beside a card's name: the price alert and deal alert pop-ups (or, once set, a
+ * link to the alert / the deal filter), and on and off the wishlist (not for a card you already own). */
+export function CardAlertIcons({ watch, deals = false, dealFilter = false, wished = false, canWish = false }) {
   return (
     <span className="card-icons">
       {watch ? <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>
@@ -33,6 +33,11 @@ export function CardAlertIcons({ watch, deals = false, dealFilter = false }) {
       {deals && (dealFilter ? <Link href="/app/deals" className="alert-bell set" title="You get deal alerts on this card" aria-label="Deal alerts: on for this card">⚡</Link>
         : <button type="button" className="alert-bell" title="Deal alerts" aria-label="Get deal alerts for this card"
           onClick={() => window.dispatchEvent(new Event("tcgb:deal-alert"))}>⚡</button>)}
+      {(canWish || wished) && (
+        <button type="button" className={`alert-bell ${wished ? "set" : ""}`} aria-pressed={wished}
+          title={wished ? "On your wishlist: tap to remove" : "Add to wishlist"} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+          onClick={() => window.dispatchEvent(new Event("tcgb:wishlist"))}>❤️</button>
+      )}
     </span>
   );
 }
@@ -68,6 +73,17 @@ export default function CardActions({ product, mine, binders, watch, plan, price
   const paid = owned.filter((it) => it.purchasePrice !== null && it.purchasePrice !== undefined);
   const cost = paid.reduce((s, it) => s + it.purchasePrice * it.quantity, 0);
   const gain = paid.length ? paid.reduce((s, it) => s + ((unitValue(it) ?? it.purchasePrice) - it.purchasePrice) * it.quantity, 0) : null;
+
+  // The heart beside the card's name (CardAlertIcons).
+  useEffect(() => {
+    const toggle = () => {
+      if (pending) return;
+      if (wish) run(() => removeFromWishlist(product.id), "Removed from your wishlist.");
+      else run(() => quickAdd(product.id, "wishlist"), "Added to your wishlist.", { href: "/app/collection?tab=wishlist", label: "Wishlist" });
+    };
+    window.addEventListener("tcgb:wishlist", toggle);
+    return () => window.removeEventListener("tcgb:wishlist", toggle);
+  });
 
   const run = (fn, msg, action) => start(async () => {
     const r = await fn();
@@ -133,14 +149,8 @@ export default function CardActions({ product, mine, binders, watch, plan, price
         <div className="you-own wish"><b>♥ On your wishlist</b> <span className="small muted">Got it? Move it to your collection in one tap.</span></div>
       ) : null}
 
-      {(wish || copies === 0) && <div className="action-row">
-        {wish && (
-          <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
-        )}
-        {copies === 0 && (
-          wish ? <button type="button" className="btn" disabled={pending} onClick={() => run(() => removeFromWishlist(product.id), "Removed from your wishlist.")}>♥ Wishlisted</button>
-            : <button type="button" className="btn" disabled={pending} onClick={() => run(() => quickAdd(product.id, "wishlist"), "Added to your wishlist.", { href: "/app/collection?tab=wishlist", label: "Wishlist" })}>♡ Wishlist</button>
-        )}
+      {wish && <div className="action-row">
+        <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
       </div>}
 
       {panel === "add" && !wish && (
