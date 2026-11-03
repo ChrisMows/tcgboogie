@@ -11,6 +11,7 @@ const LINKS = [
   [PHOTO, "Card scanner", "📷", (p) => p.startsWith(PHOTO)],
   ["/app/collection", "Collection", "▦", inCollection],
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
+  ["/app/grading-finder", "Grading finder", "💎", (p) => p.startsWith("/app/grading-finder")],
   ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
 ];
 // Bottom section, also A–Z. Admin and Logs are for admins only.

@@ -7,8 +7,8 @@ import PackLoader from "@/components/PackLoader";
 // menu stays put. The address has already changed to the page being opened, so the label says what's on its way.
 const LABELS = [
   ["/app/home", "Loading your home page…"],
+  ["/app/grading-finder", "Finding cards worth grading…"],
   ["/app/collection/photo", "Opening the card scanner…"],
-  ["/app/collection/grading/finder", "Finding cards worth grading…"],
   ["/app/collection/grading", "Checking what's worth grading…"],
   ["/app/collection/import", "Opening import…"],
   ["/app/collection/sell", "Getting your listing ready…"],

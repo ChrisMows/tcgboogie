@@ -47,7 +47,7 @@ Deal filter), price alerts that hit, deals their filters caught, their cards tha
   spread, every card is found and valued, then it asks whether to add them all (or pick which) and opens the collection.
 /app/collection/import — import a CSV from TCGplayer, Collectr, PriceCharting, any app or a spreadsheet.
 /app/collection/grading — Worth Grading?: which raw cards would profit from grading.
-/app/collection/grading/finder — Grading finder (Premium; Free sees the top 3): cards anywhere, not just the member's, whose graded price is far above the raw price, with filters for grader, service level, raw price range, minimum profit, safe bets only, English/Japanese.
+/app/grading-finder — Grading finder (Premium; Free sees the top 3; in the side menu, the ☰ menu and Collection's buttons): cards anywhere, not just the member's, whose graded price is far above the raw price, with filters for grader, service level, raw price range, minimum profit, safe bets only, English/Japanese.
 /app/collection/trade — Trade Analyzer: price both sides of a trade and get a fairness grade out of 10.
 /app/cards/<id> — a card's page (open any card): prices, graded sales, Add to collection, a price alert, Sell on eBay
   for a copy you own, "✎ Price wrong?" to report an eBay sale we're missing, and "📷 Missing picture?" when the card

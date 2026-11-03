@@ -31,6 +31,7 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
     exportAllowed
       ? { key: "export", label: "Export", icon: "⤓", href: "/app/collection/export", download: true }
       : { key: "export", label: "Export", icon: "🔒", href: "/app/premium?from=export" },
+    { key: "finder", label: "Grading finder", icon: plan?.gradingFinder ? "🔎" : "🔒", href: "/app/grading-finder" },
     { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
     { key: "movers", label: "Top Movers", icon: "📈", panel: true },
     { key: "trade", label: "Trade Analyzer", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },

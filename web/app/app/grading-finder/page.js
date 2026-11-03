@@ -1,0 +1,131 @@
+import Link from "next/link";
+import { GradingTile } from "@/components/GradingCheck";
+import { DEFAULT_SHIPPING, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
+import { findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
+import { requireUser } from "@/lib/session";
+
+export const metadata = { title: "Grading finder" };
+
+const FREE_ROWS = 3;
+const GRADERS = Object.keys(GRADING_COMPANIES);
+const num = (v, d, lo, hi) => { const n = Number(v); return v === undefined || v === "" || !Number.isFinite(n) ? d : Math.min(hi, Math.max(lo, n)); };
+const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
+const money = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
+
+/** Grading finder: cards anywhere in our catalog that would make money bought raw and graded. Filters are a GET form. */
+export default async function GradingFinderPage({ searchParams }) {
+  const user = await requireUser("/app/grading-finder");
+  const sp = await searchParams;
+  const grader = GRADERS.includes(sp?.grader) ? sp.grader : "PSA";
+  const co = GRADING_COMPANIES[grader];
+  const tier = num(sp?.tier, 0, 0, co.tiers.length - 1);
+  const opts = {
+    grader, tier,
+    shipping: num(sp?.ship, DEFAULT_SHIPPING, 0, 999),
+    minRaw: num(sp?.min, 0, 0, 100000),
+    maxRaw: sp?.max ? num(sp.max, null, 0, 100000) : null,
+    minProfit: num(sp?.profit, MIN_PROFIT, 0, 100000),
+    safeOnly: sp?.safe !== "0", // on unless switched off: a card that only pays at a 10 is a gamble
+    language: ["english", "japanese", "all"].includes(sp?.lang) ? sp.lang : "english",
+    sort: sp?.sort === "return" ? "return" : "profit",
+    limit: 60,
+  };
+  const full = Boolean(user.plan.gradingFinder);
+  const [{ cards, total }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
+  const shown = full ? cards : cards.slice(0, FREE_ROWS);
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Grading finder</h1>
+          <p>Cards anywhere, not just yours, where the graded price is far above the raw price: worth buying raw and sending in.</p>
+        </div>
+      </div>
+
+      <form className="panel gf-filters" method="get">
+        <label className="gr-field">
+          <span className="small muted">Grading company</span>
+          <select name="grader" defaultValue={grader}>{GRADERS.map((g) => <option key={g} value={g}>{g} (top grade {GRADING_COMPANIES[g].top})</option>)}</select>
+        </label>
+        <label className="gr-field">
+          <span className="small muted">{grader} service level</span>
+          <select name="tier" defaultValue={String(tier)}>
+            {co.tiers.map((t, i) => <option key={t.name} value={i}>{t.name} · {fee(t.fee)}{t.days ? ` · ~${t.days} days` : ""}</option>)}
+          </select>
+        </label>
+        <label className="gr-field gr-small">
+          <span className="small muted">Raw price from</span>
+          <span className="gr-money"><span className="muted">$</span><input type="number" name="min" min="0" step="1" defaultValue={opts.minRaw || ""} placeholder="0" /></span>
+        </label>
+        <label className="gr-field gr-small">
+          <span className="small muted">up to</span>
+          <span className="gr-money"><span className="muted">$</span><input type="number" name="max" min="0" step="1" defaultValue={opts.maxRaw ?? ""} placeholder="Any" /></span>
+        </label>
+        <label className="gr-field gr-small">
+          <span className="small muted">Profit at least</span>
+          <span className="gr-money"><span className="muted">$</span><input type="number" name="profit" min="0" step="5" defaultValue={opts.minProfit} /></span>
+        </label>
+        <label className="gr-field gr-small">
+          <span className="small muted">Shipping per card</span>
+          <span className="gr-money"><span className="muted">$</span><input type="number" name="ship" min="0" step="1" defaultValue={opts.shipping} /></span>
+        </label>
+        <label className="gr-field">
+          <span className="small muted">Cards</span>
+          <select name="lang" defaultValue={opts.language}>
+            <option value="english">English</option><option value="japanese">Japanese</option><option value="all">English and Japanese</option>
+          </select>
+        </label>
+        <label className="gr-field">
+          <span className="small muted">Sort by</span>
+          <select name="sort" defaultValue={opts.sort}>
+            <option value="profit">Most profit</option><option value="return">Best return on what you spend</option>
+          </select>
+        </label>
+        <label className="gr-field">
+          <span className="small muted">Risk</span>
+          <select name="safe" defaultValue={opts.safeOnly ? "1" : "0"}>
+            <option value="1">Safe bets: a {co.next} still pays</option><option value="0">Include cards that need a {co.top}</option>
+          </select>
+        </label>
+        <button type="submit" className="btn primary">Find cards</button>
+      </form>
+
+      <div className="gr-legend small muted">
+        <span className="gr-eq">
+          {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
+        </span>
+        <span><span className="badge good">✓ Safe bet</span> a {co.next} still pays</span>
+        <span><span className="badge warn">Needs a {co.top}</span> riskier</span>
+      </div>
+
+      {shown.length > 0 ? (
+        <div className="gr-grid">{shown.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
+      ) : (
+        <div className="panel gr-empty">
+          <div className="gr-empty-icon" aria-hidden="true">🔎</div>
+          <div className="gr-empty-text">
+            <b>Nothing matches yet</b>
+            <span className="muted">Try a lower profit, a higher raw price limit, including cards that need a {co.top}, or another grading company.</span>
+          </div>
+        </div>
+      )}
+      {!full && total > FREE_ROWS && (
+        <div className="panel gr-more">
+          <b>🔒 {(total - FREE_ROWS).toLocaleString("en-US")} more {total - FREE_ROWS === 1 ? "card" : "cards"} worth grading</b>
+          <span className="muted small">See every card with Premium.</span>
+          <Link href="/app/premium?from=grading-finder" className="btn sm primary">See Premium</Link>
+        </div>
+      )}
+      {full && total > cards.length && <p className="hint">Showing the top {cards.length}. Narrow the raw price or raise the profit to see others.</p>}
+
+      <p className="hint">
+        We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated daily.
+        Graded prices are recent sales with enough data to trust; raw prices are TCGplayer Near Mint market. Grading fees are
+        the graders&apos; published prices as of October 2026, and a card worth more than a level allows is priced at the level it
+        needs. No grade is guaranteed: check centering, corners, edges and surface before you buy, and raw copies sold as
+        &quot;Near Mint&quot; aren&apos;t always.
+      </p>
+    </>
+  );
+}
