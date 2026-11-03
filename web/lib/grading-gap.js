@@ -117,6 +117,12 @@ function demoRows() {
   }).filter(Boolean);
 }
 
+// A handful of graded sales can still be junk the reliability rule lets through (a $66,000 "PSA 10" of a card whose
+// 9 sells for $1,875, a $99,999 placeholder, an $18,600 10 of a $29 card). Real gem premiums stay inside these: the top
+// grade at most 8x the grade below and 40x raw, the grade below at most 6x raw (checked on the live data, Nov 2026).
+const TOP_X_NEXT = 8, TOP_X_RAW = 40, NEXT_X_RAW = 6;
+const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.top <= TOP_X_NEXT * c.next && c.next <= NEXT_X_RAW * c.raw));
+
 /**
  * Cards worth grading at a grader and service level, best first. opts: grader, tier (service level index), own (own
  * fee instead), shipping, minRaw / maxRaw (what the raw copy costs), minProfit, safeOnly (the grade below the top still
@@ -145,13 +151,16 @@ export async function findGradingGaps(opts = {}) {
     if (maxRaw !== null) where.push(sql`${gradingGap.raw} <= ${maxRaw}::float`);
     if (language !== "all") where.push(sql`${gradingGap.language} = ${language}`);
     if (safeOnly) where.push(sql`${g(nk, "r")}::boolean and ${next} - ${gradingGap.raw} - ${floor}::float >= 0`);
+    // Believable prices only (see plausible below).
+    where.push(sql`${top} <= ${sql.raw(String(TOP_X_RAW))} * ${gradingGap.raw}`);
+    where.push(sql`(coalesce(${g(nk, "r")}::boolean, false) = false or (${top} <= ${sql.raw(String(TOP_X_NEXT))} * ${next} and ${next} <= ${sql.raw(String(NEXT_X_RAW))} * ${gradingGap.raw}))`);
     rows = await db.select().from(gradingGap).where(sql.join(where, sql` and `))
       .orderBy(sql`${top} - ${gradingGap.raw} desc`).limit(600);
   }
   const cards = rows.map(candidate).map((c) => {
     const m = gradingMath(c, grader, tier, { own, shipping });
     return m && { ...c, ...m, roi: m.profit10 / (c.raw + m.cost) };
-  }).filter((c) => c && c.verdict !== "skip" && c.profit10 >= minProfit && (!safeOnly || c.verdict === "safe")
+  }).filter((c) => c && plausible(c) && c.verdict !== "skip" && c.profit10 >= minProfit && (!safeOnly || c.verdict === "safe")
     && c.raw >= minRaw && (maxRaw === null || c.raw <= maxRaw));
   cards.sort(sort === "return" ? (a, b) => b.roi - a.roi : (a, b) => b.profit10 - a.profit10);
   return { cards: cards.slice(0, limit), total: cards.length, capped: rows.length === 600 };
