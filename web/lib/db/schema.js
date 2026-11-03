@@ -484,3 +484,20 @@ export const siteTraffic = pgTable("site_traffic", {
   key: text("key").notNull(),
   count: integer("count").notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.day, t.kind, t.key] })]);
+
+// Grading finder (lib/grading-gap.js): each card's raw Near Mint price and graded sale prices, copied out of the
+// price-service answers already saved in catalog_cache (no extra lookups). A few hundred bytes a card instead of
+// ~85 KB, so the finder can rank thousands. Shared data, not member data: rebuilt from catalog_cache at any time.
+export const gradingGap = pgTable("grading_gap", {
+  productId: text("product_id").notNull(),
+  language: text("language").notNull(), // english / japanese
+  name: text("name").notNull(),
+  setName: text("set_name"),
+  number: text("number"),
+  image: text("image"),
+  printing: text("printing"),
+  raw: doublePrecision("raw").notNull(), // Near Mint market price of the main printing
+  graded: jsonb("graded").notNull(), // { psa10: { p: price, n: recent sales, r: reliable }, ... }
+  sourceAt: timestamp("source_at", { mode: "date" }).notNull(), // when the saved price-service answer was fetched
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.productId, t.language] }), index("grading_gap_source_at").on(t.sourceAt)]);

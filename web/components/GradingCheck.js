@@ -16,15 +16,16 @@ const run = (candidates, grader, tier, opts) => candidates.map((c) => {
   return m && { ...c, ...m };
 }).filter(Boolean).sort((a, b) => b.profit10 - a.profit10);
 
-function Tile({ c, dim }) {
+/** One card's grading numbers (also used by the Grading finder, components/GradingFinder.js). */
+export function GradingTile({ c, dim }) {
   const co = GRADING_COMPANIES[c.grader];
   const top = `${c.grader} ${co.top}`, next = `${c.grader} ${co.next}`;
   return (
-    <Link href={`/app/cards/${encodeURIComponent(c.productId)}`} className={`gr-tile ${dim ? "dim" : ""}`}>
+    <Link href={`/app/cards/${encodeURIComponent(c.productId)}${c.language === "japanese" ? "?lang=japanese" : ""}`} className={`gr-tile ${dim ? "dim" : ""}`}>
       <div className="gr-art"><CardThumb item={c} width={92} />{c.copies > 1 && <span className="qty-badge">×{c.copies}</span>}</div>
       <div className="gr-body">
         <b className="gr-name" title={c.name}>{c.name.replace(/\s*\(.*\)$/, "")}</b>
-        <span className="small muted gr-set">{c.setName}{c.number ? ` · ${c.number.split("/")[0]}` : ""}</span>
+        <span className="small muted gr-set">{c.setName}{c.number ? ` · ${c.number.split("/")[0]}` : ""}{c.language === "japanese" ? " · Japanese" : ""}</span>
         <div className={`gr-profit ${c.profit10 >= 0 ? "up" : "down"}`}>{plus(c.profit10)}</div>
         <span className="small muted">profit as a {top}</span>
         <div className="gr-flow" aria-label={`Raw ${money(c.raw)}, ${top} ${money(c.top)}${c.next !== null ? `, ${next} ${money(c.next)}` : ""}`}>
@@ -156,7 +157,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       {shown.length > 0 && (
         <div className="gr-grid">
-          {shown.map((c) => <Tile key={`${c.productId}:${c.printing}`} c={c} />)}
+          {shown.map((c) => <GradingTile key={`${c.productId}:${c.printing}`} c={c} />)}
         </div>
       )}
       {!full && worth.length > FREE_ROWS && (
@@ -172,7 +173,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
           <button type="button" className="link-btn small" onClick={() => setShowSkip(!showSkip)} aria-expanded={showSkip}>
             {showSkip ? "Hide" : "Show"} {skip.length} {skip.length === 1 ? "card" : "cards"} not worth grading with {grader}
           </button>
-          {showSkip && <div className="gr-grid">{skip.map((c) => <Tile key={`${c.productId}:${c.printing}`} c={c} dim />)}</div>}
+          {showSkip && <div className="gr-grid">{skip.map((c) => <GradingTile key={`${c.productId}:${c.printing}`} c={c} dim />)}</div>}
         </div>
       )}
 

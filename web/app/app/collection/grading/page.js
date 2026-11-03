@@ -20,6 +20,10 @@ export default async function GradingPage() {
           <p>Which of your raw cards would make money if you got them graded.</p>
         </div>
       </div>
+      <div className="seg gf-tabs" role="tablist" aria-label="Worth grading">
+        <Link href="/app/collection/grading" role="tab" aria-selected="true" className="on">My cards</Link>
+        <Link href="/app/collection/grading/finder" role="tab" aria-selected="false">Find cards to grade{user.plan.gradingFinder ? "" : " 🔒"}</Link>
+      </div>
       <GradingCheck candidates={candidates} rawCards={rawCards} ownedCards={c.owned.length} full={Boolean(user.plan.gradingCheck)} />
     </>
   );

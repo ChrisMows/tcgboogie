@@ -9,6 +9,7 @@ import { runSellHigh } from "@/lib/sell-high";
 import { sendAdminAlerts } from "@/lib/admin-alerts";
 import { continueReleaseEmails } from "@/lib/release-email";
 import { recordDailySnapshots } from "@/lib/snapshots";
+import { refreshGradingGaps } from "@/lib/grading-gap";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -48,6 +49,10 @@ async function handle(req) {
     // Every member's collection value for today (once a day, late UTC), so the value chart has every day.
     try { summary.snapshots = await recordDailySnapshots(); } catch (e) {
       await log("website", "warn", `Daily collection values crashed: ${e.message}`);
+    }
+    // Grading finder: copy the card prices the bot refreshed since the last run (no lookups, lib/grading-gap.js).
+    try { summary.gradingGaps = await refreshGradingGaps(); } catch (e) {
+      await log("prices", "warn", `Grading finder refresh failed: ${e.message}`);
     }
     // Release emails that stopped part-way (the day's email limit, a restart) carry on.
     try { summary.releaseEmails = await continueReleaseEmails(); } catch (e) {

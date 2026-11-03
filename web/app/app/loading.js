@@ -8,6 +8,7 @@ import PackLoader from "@/components/PackLoader";
 const LABELS = [
   ["/app/home", "Loading your home page…"],
   ["/app/collection/photo", "Opening the card scanner…"],
+  ["/app/collection/grading/finder", "Finding cards worth grading…"],
   ["/app/collection/grading", "Checking what's worth grading…"],
   ["/app/collection/import", "Opening import…"],
   ["/app/collection/sell", "Getting your listing ready…"],

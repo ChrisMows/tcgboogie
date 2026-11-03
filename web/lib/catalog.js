@@ -95,7 +95,7 @@ const status = globalThis.__tcgPptStatus ?? (globalThis.__tcgPptStatus = { at: n
  * Is a graded price backed by enough recent sales to show as a value? One sale from two years ago isn't:
  * the service must rate it medium/high confidence, or there must be 3+ sales with one in the last 6 months.
  */
-function gradedReliable({ sales, lastSale, confidence }) {
+export function gradedReliable({ sales, lastSale, confidence }) {
   if (confidence === "high" || confidence === "medium") return true;
   const recent = lastSale && Date.now() - new Date(lastSale).getTime() < 183 * 86400000;
   return Boolean(recent && (sales ?? 0) >= 3);
@@ -226,7 +226,7 @@ function conditionName(raw) {
     || ({ nm: "Near Mint", lp: "Lightly Played", mp: "Moderately Played", hp: "Heavily Played", dmg: "Damaged" })[s] || null;
 }
 
-function fromCard(c) {
+export function fromCard(c) {
   const prices = {};
   for (const [printing, byCond] of Object.entries(c.prices?.variants || {})) {
     prices[printing] = {};
