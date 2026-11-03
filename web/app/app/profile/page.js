@@ -58,7 +58,7 @@ export default async function ProfilePage({ searchParams }) {
         <div className="prof-who">
           <div className="prof-name">
             <h2>{user.name || "Your profile"}</h2>
-            {premium ? <span className="home-pro">PREMIUM</span> : <Link href="/app/premium?from=profile" className="prof-free small">Free plan · Upgrade</Link>}
+            {premium ? <span className="home-pro">{user.plan.key === "ultra" ? "ULTRA" : "PREMIUM"}</span> : <Link href="/app/premium?from=profile" className="prof-free small">Free plan · Upgrade</Link>}
           </div>
           <span className="small muted">Collector since {since(user.createdAt || Date.now())}</span>
         </div>

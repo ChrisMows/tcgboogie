@@ -7,7 +7,7 @@ import HomeTabs from "@/components/HomeTabs";
 import Sparkline from "@/components/Sparkline";
 import PerformanceChart from "@/components/PerformanceChart";
 import { chartSeries, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
-import { trialDaysFor } from "@/lib/billing";
+import { hasLiveSubscription, trialDaysFor } from "@/lib/billing";
 import { withLinks } from "@/lib/deal-links";
 import { dealsFor } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
@@ -35,7 +35,7 @@ export default async function HomePage({ searchParams }) {
   const user = await requireUser("/app/home");
   const onPremium = user.tier === "premium";
   const asked = (await searchParams)?.view;
-  const view = asked === "performance" || asked === "premium" ? asked : "overview";
+  const view = ["performance", "premium", "ultra"].includes(asked) ? asked : "overview";
   const premium = Boolean(user.plan.liveFeed);
   const [c, watches, profiles, found, feed, pushDevices, lastVisit, plans] = await Promise.all([
     loadCollection(user),
@@ -237,7 +237,8 @@ export default async function HomePage({ searchParams }) {
           </>
         )}
         performance={<Performance c={c} hasCards={hasCards} historyDays={user.plan.collectionPerformance ? null : user.plan.collectionHistoryDays} />}
-        premium={<PremiumTab plans={plans} onPremium={onPremium} trial={trialDaysFor(user)} missed={premium ? 0 : mine.length} watches={watches.length} />}
+        premium={<PremiumTab plans={plans} onPremium={onPremium} onUltra={user.plan.key === "ultra"} trial={trialDaysFor(user)} missed={premium ? 0 : mine.length} watches={watches.length} />}
+        ultra={<UltraTab plans={plans} onUltra={user.plan.key === "ultra"} subscribed={hasLiveSubscription(user)} trial={trialDaysFor(user)} />}
       />
     </>
   );
@@ -411,7 +412,7 @@ function Performance({ c, hasCards, historyDays }) {
 // The Premium tab: what changes with Premium, from the plans as Admin → Features left them (lib/plan-copy.js). Not on
 // Premium: their own numbers where we have them and a button to the Premium page to join. On Premium: what they have,
 // and a link to billing.
-function PremiumTab({ plans, onPremium, trial, missed, watches }) {
+function PremiumTab({ plans, onPremium, onUltra, trial, missed, watches }) {
   const price = PLANS.premium.price;
   const rows = planGroups(plans).flatMap((g) => g.rows.filter(([, free, prem]) => free !== prem).map((r) => [g.group, ...r]));
   const join = (
@@ -424,8 +425,8 @@ function PremiumTab({ plans, onPremium, trial, missed, watches }) {
       <>
         <div className="panel home-premium-hero">
           <div className="eyebrow-sm">TCG BOOGIE PREMIUM</div>
-          <h2>You&apos;re on Premium 🎉</h2>
-          <p className="muted">Every deal reaches you live, while you can still bid. Here&apos;s everything your plan adds over Free.</p>
+          <h2>{onUltra ? "Ultra includes all of Premium" : <>You&apos;re on Premium 🎉</>}</h2>
+          <p className="muted">Every deal reaches you live, while you can still bid. Here&apos;s everything {onUltra ? "Premium" : "your plan"} adds over Free.</p>
           <Link href="/app/account#billing" className="btn">Billing</Link>
         </div>
         <PlanRows rows={rows} />
@@ -463,6 +464,65 @@ function PremiumTab({ plans, onPremium, trial, missed, watches }) {
         {join}
         <span className="small muted">Your collection and settings stay the same whichever plan you&apos;re on.</span>
       </div>
+    </>
+  );
+}
+
+// The Ultra tab: what Ultra adds over Premium. On Ultra: what they have. Otherwise a button to the Ultra page (which
+// offers a subscriber the upgrade and everyone else checkout).
+function UltraTab({ plans, onUltra, subscribed, trial }) {
+  const price = plans.ultra.price;
+  const rows = [
+    ["Everything in Premium", "✓", "✓"],
+    ["Grade & Flip: cards worth buying raw to grade, ranked by profit after fees", "—", "✓"],
+    ["More tools for flipping cards", "—", "Coming soon"],
+  ];
+  const table = (
+    <section className="home-section">
+      <div className="home-head"><h2>What changes with Ultra</h2></div>
+      <div className="panel home-compare">
+        <div className="home-compare-row head"><span /><span className="small muted">Premium</span><span className="small home-ultra-word">Ultra</span></div>
+        {rows.map(([what, prem, ultra]) => (
+          <div key={what} className="home-compare-row">
+            <span className="small">{what}</span>
+            <span className="small muted">{prem}</span>
+            <b className="small">{ultra}</b>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+  if (onUltra) {
+    return (
+      <>
+        <div className="panel home-premium-hero home-ultra-hero">
+          <div className="eyebrow-sm">TCG BOOGIE ULTRA</div>
+          <h2>You&apos;re on Ultra 🎉</h2>
+          <p className="muted">Everything in Premium, plus Grade &amp; Flip: raw cards selling far below their graded price, ranked by profit.</p>
+          <div className="row" style={{ gap: 8, justifyContent: "center" }}>
+            <Link href="/app/grade-and-flip" className="btn primary">Open Grade &amp; Flip</Link>
+            <Link href="/app/account#billing" className="btn">Billing</Link>
+          </div>
+        </div>
+        {table}
+      </>
+    );
+  }
+  const offer = trial > 0 && !subscribed;
+  return (
+    <>
+      <div className="panel home-premium-hero home-ultra-hero">
+        <div className="eyebrow-sm">TCG BOOGIE ULTRA</div>
+        <h2>Find cards worth flipping</h2>
+        <p className="muted">Grade &amp; Flip ranks raw cards selling far below their graded price, after grading fees and shipping. Everything in Premium is included, and more flipping tools are on the way.</p>
+        <div className="home-premium-price"><b>${price}</b><span className="muted">/month plus tax · cancel anytime</span></div>
+        <Link href="/app/ultra?from=grading-finder#enroll" className="btn primary home-join">
+          {subscribed ? "Upgrade to Ultra" : offer ? `Start your ${trial}-day free trial` : `Join Ultra · $${price}/month`}
+        </Link>
+        {subscribed && <p className="hint" style={{ margin: "8px 0 0" }}>You pay just the difference for the rest of this billing month.</p>}
+        {offer && <p className="hint" style={{ margin: "8px 0 0" }}>$0 today. We email you 3 days before your first charge.</p>}
+      </div>
+      {table}
     </>
   );
 }

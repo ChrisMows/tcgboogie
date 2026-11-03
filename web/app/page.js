@@ -37,6 +37,8 @@ const TOOLS = [
     tag: (f) => (f.tradeAnalyzer ? null : "Premium") },
   { icon: "💎", title: "Worth Grading?", body: "Which of your raw cards pay off at PSA, CGC, BGS and more.",
     tag: (f) => (f.gradingCheck ? null : "Full list on Premium") },
+  { icon: "📈", title: "Grade & Flip", body: "Raw cards selling far below their graded price, ranked by profit after fees.",
+    tag: () => "Ultra" },
   { icon: "🏷", title: "Sell on eBay", body: "List a card from your collection in a minute, priced from real sales.",
     tag: (f) => (!f.sellOnEbay || f.sellPerMonth === 0 ? "Premium" : f.sellPerMonth === null ? null : `${f.sellPerMonth} a month free`) },
   { icon: "🌏", title: "Every language", body: "English and Japanese built in. Korean, Chinese and more on request." },

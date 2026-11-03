@@ -113,7 +113,7 @@ async function Status({ ping, test, why, stripe, recap, backup }) {
     <>
       <div className="stats">
         <div className="stat"><b>{counts.total}</b><span>members</span></div>
-        <div className="stat"><b>{counts.premium}</b><span>on Premium ({counts.comp} complimentary)</span></div>
+        <div className="stat"><b>{counts.premium}</b><span>paying ({counts.ultra} on Ultra, {counts.comp} complimentary)</span></div>
         <div className="stat"><b>{counts.week}</b><span>joined this week</span></div>
         <div className="stat"><b className={problems ? "down" : "up"}>{problems ? `${problems} to check` : "All good"}</b><span>system status</span></div>
       </div>

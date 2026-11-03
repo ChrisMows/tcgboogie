@@ -33,7 +33,7 @@ export async function submitIdea(user, { text, source, page, context }) {
     description: body.slice(0, 1500),
     url: `${SITE}/app/admin?tab=ideas`,
     fields: [
-      { name: "From", value: `${user ? `${user.name || user.email || "A member"} (${user.tier === "premium" ? "Premium" : "Free"})` : "A visitor"} · ${SOURCES[src]}${page ? ` · ${clean(page, 80)}` : ""}` },
+      { name: "From", value: `${user ? `${user.name || user.email || "A member"} (${user.plan?.label || (user.tier === "premium" ? "Premium" : "Free")})` : "A visitor"} · ${SOURCES[src]}${page ? ` · ${clean(page, 80)}` : ""}` },
       ...(ctx && Object.keys(ctx).length ? [{ name: "Context", value: Object.entries(ctx).map(([k, v]) => `${k}: ${v}`).join("\n").slice(0, 1000) }] : []),
       { name: "Review", value: `[Open Admin → Ideas](${SITE}/app/admin?tab=ideas)` },
     ],

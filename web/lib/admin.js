@@ -211,12 +211,13 @@ export async function searchMembers(q) {
 }
 
 export async function memberCounts() {
-  if (!db) { const u = demoUsers(); return { total: u.length, premium: u.filter((x) => effectiveTier(x) === "premium").length, comp: u.filter(compActive).length, week: 2 }; }
+  if (!db) { const u = demoUsers(); return { total: u.length, premium: u.filter((x) => effectiveTier(x) === "premium").length, ultra: u.filter((x) => x.ultra).length, comp: u.filter(compActive).length, week: 2 }; }
   const all = await db.select().from(users);
   const weekAgo = Date.now() - 7 * 86400000;
   return {
     total: all.length,
     premium: all.filter((u) => effectiveTier(u) === "premium").length,
+    ultra: all.filter((u) => u.ultra).length,
     comp: all.filter(compActive).length,
     week: all.filter((u) => new Date(u.createdAt).getTime() > weekAgo).length,
   };

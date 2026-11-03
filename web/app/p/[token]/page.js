@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SignatureShowcase from "@/components/SignatureShowcase";
-import { effectiveTier } from "@/lib/access";
+import { effectivePlanKey, effectiveTier } from "@/lib/access";
 import { avatarFor, initials } from "@/lib/avatar";
 import { loadPictures, pictureFor } from "@/lib/card-images";
 import { loadProducts } from "@/lib/portfolio";
@@ -40,7 +40,7 @@ export default async function SharedProfile({ params }) {
         <div className="prof-who">
           <div className="prof-name">
             <h1>{name}</h1>
-            {premium && <span className="home-pro">PREMIUM</span>}
+            {premium && <span className="home-pro">{effectivePlanKey(owner) === "ultra" ? "ULTRA" : "PREMIUM"}</span>}
           </div>
           <span className="small muted">Collector on TCG Boogie</span>
         </div>

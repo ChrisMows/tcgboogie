@@ -7,9 +7,9 @@ import { useRef, useState } from "react";
 // right on a phone does too). The collection value sits above Overview; Performance's chart shows it there. Performance
 // is Premium: for Free members it slides in blurred, with an invitation to Premium in front of it. The view is kept in
 // the address (?view=performance).
-// premium: the Premium tab (what Premium adds; a button to join for members not on it); null hides it.
-export default function HomeTabs({ initial = "overview", locked, header, overview, performance, premium = null }) {
-  const tabs = ["overview", "performance", ...(premium ? ["premium"] : [])];
+// premium / ultra: the plan tabs (what each plan adds; a button to join for members not on it); null hides one.
+export default function HomeTabs({ initial = "overview", locked, header, overview, performance, premium = null, ultra = null }) {
+  const tabs = ["overview", "performance", ...(premium ? ["premium"] : []), ...(ultra ? ["ultra"] : [])];
   const [tab, setTab] = useState(initial);
   const [dir, setDir] = useState(0);
   const touch = useRef(null);
@@ -46,11 +46,14 @@ export default function HomeTabs({ initial = "overview", locked, header, overvie
         {premium && (
           <button type="button" role="tab" aria-selected={tab === "premium"} className={`home-tab-premium ${tab === "premium" ? "on" : ""}`} onClick={() => go("premium")}>Premium</button>
         )}
+        {ultra && (
+          <button type="button" role="tab" aria-selected={tab === "ultra"} className={`home-tab-ultra ${tab === "ultra" ? "on" : ""}`} onClick={() => go("ultra")}>Ultra</button>
+        )}
       </div>
       {/* Overview only: Performance opens on its own chart, which shows the value (locked, the value stays above the blurred view). */}
       {(tab === "overview" || (tab === "performance" && locked)) && header}
       <div key={tab} className="home-pane" data-dir={dir} role="tabpanel" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {tab === "overview" ? overview : tab === "premium" ? premium : locked ? (
+        {tab === "overview" ? overview : tab === "premium" ? premium : tab === "ultra" ? ultra : locked ? (
           <div className="home-locked">
             <div className="home-locked-view" aria-hidden="true" inert>{performance}</div>
             <div className="panel home-upsell" role="dialog" aria-label="Performance is part of Premium">
