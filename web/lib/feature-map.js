@@ -110,7 +110,7 @@ function features(free, premium, sms) {
       free: per(free.sellOnEbay ? free.sellPerMonth : 0, "a month"), premium: per(premium.sellOnEbay ? premium.sellPerMonth : 0, "a month") },
     { area: "Collection", name: "Worth grading?", link: "/app/collection", grows: "card", vendors: ["ppt"],
       what: "Which raw cards would gain the most from grading.", free: free.gradingCheck ? "✓" : "Top 3", premium: premium.gradingCheck ? "✓" : "Top 3" },
-    { area: "Collection", name: "Grading finder", link: "/app/grading-finder", grows: "shared", vendors: ["vps"],
+    { area: "Collection", name: "Grade & Flip", link: "/app/grade-and-flip", grows: "shared", vendors: ["vps"],
       what: "Cards anywhere with a big raw-to-graded price gap. Copies prices already saved (grading_gap table, filled by the cron job): no price lookups.",
       free: free.gradingFinder ? "✓" : "Top 3", premium: premium.gradingFinder ? "✓" : "Top 3" },
     { area: "Collection", name: "Trade analyzer", link: "/app/collection/trade", grows: "use", vendors: ["ppt"],

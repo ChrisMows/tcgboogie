@@ -58,7 +58,7 @@ export function planGroups({ free, premium, sms }) {
       ["Export your collection as CSV", (p) => yes(p.collectionExport)],
       ["Trade Analyzer, with a fairness grade", (p) => yes(p.tradeAnalyzer)],
       ["Worth Grading?", (p) => (p.gradingCheck ? "Full list" : "Top 3")],
-      ["Grading finder: cards anywhere worth buying raw to grade", (p) => (p.gradingFinder ? "Full list" : "Top 3")],
+      ["Grade & Flip: cards anywhere worth buying raw to grade", (p) => (p.gradingFinder ? "Full list" : "Top 3")],
       ["Sell on eBay from your collection", (p) => allowance(p.sellOnEbay, p.sellPerMonth).replace(/a month$/, "listings a month")],
     ]],
     ["Photo tools", [
@@ -92,7 +92,7 @@ function lines(p, sms) {
         : p.photoSearchPerMonth == null ? "Unlimited search by picture" : `Search by picture (${p.photoSearchPerMonth} photos a month)`],
     ["appraiser", p.photoAppraiser && p.appraisePerMonth !== 0, p.appraisePerMonth == null ? "Card scanner" : `Card scanner (${p.appraisePerMonth} photos a month)`],
     ["grading", true, p.gradingCheck ? "Every Worth Grading? pick" : "Worth Grading? top 3 picks"],
-    ["gradingFinder", p.gradingFinder, "Grading finder: cards worth buying raw to grade"],
+    ["gradingFinder", p.gradingFinder, "Grade & Flip: cards worth buying raw to grade"],
     ["history", true, p.collectionHistoryDays === null ? "Full collection history" : `${p.collectionHistoryDays}-day collection history`],
     ["performance", p.collectionPerformance, "Collection performance: profit, returns, best and worst buys"],
     ["export", p.collectionExport, "CSV export"],

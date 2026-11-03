@@ -485,7 +485,7 @@ export const siteTraffic = pgTable("site_traffic", {
   count: integer("count").notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.day, t.kind, t.key] })]);
 
-// Grading finder (lib/grading-gap.js): each card's raw Near Mint price and graded sale prices, copied out of the
+// Grade & Flip (lib/grading-gap.js): each card's raw Near Mint price and graded sale prices, copied out of the
 // price-service answers already saved in catalog_cache (no extra lookups). A few hundred bytes a card instead of
 // ~85 KB, so the finder can rank thousands. Shared data, not member data: rebuilt from catalog_cache at any time.
 export const gradingGap = pgTable("grading_gap", {

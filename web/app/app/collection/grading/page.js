@@ -13,7 +13,7 @@ export default async function GradingPage() {
   const user = await requireUser("/app/collection/grading");
   const [c, finder] = await Promise.all([
     loadCollection(user),
-    // The Grading finder's default search (PSA, cheapest level, safe bets), for the prompt below: what's out there now.
+    // Grade & Flip's default search (PSA, cheapest level, safe bets), for the prompt below: what's out there now.
     findGradingGaps({ safeOnly: true, limit: 1 }).catch(() => ({ cards: [], total: 0 })),
   ]);
   const candidates = gradingCandidates(c.owned, c.products);
@@ -32,16 +32,16 @@ export default async function GradingPage() {
       <GradingCheck candidates={candidates} rawCards={rawCards} ownedCards={c.owned.length} full={Boolean(user.plan.gradingCheck)} />
 
       {finder.total > 0 && (premium ? (
-        <Link href="/app/grading-finder" className="panel gf-promo gf-promo-link">
+        <Link href="/app/grade-and-flip" className="panel gf-promo gf-promo-link">
           <span className="gf-promo-icon" aria-hidden="true">💎</span>
-          <span><b>Find cards worth buying to grade</b><span className="muted small"> · The Grading finder has {finder.total.toLocaleString("en-US")} safe bets with PSA right now, beyond your own cards.</span></span>
+          <span><b>Find cards worth buying to grade</b><span className="muted small"> · Grade & Flip has {finder.total.toLocaleString("en-US")} safe bets with PSA right now, beyond your own cards.</span></span>
           <span className="gf-promo-go" aria-hidden="true">→</span>
         </Link>
       ) : (
         <section className="panel gf-promo">
           <div className="gf-promo-text">
             <span className="badge accent">Premium</span>
-            <h2>Grading finder: cards worth buying raw to grade</h2>
+            <h2>Grade & Flip: cards worth buying raw to grade</h2>
             <p className="muted">
               Beyond your own collection, we&apos;re tracking <b>{finder.total.toLocaleString("en-US")} cards</b> right now that would make money
               bought raw and graded with PSA, even as a 9. Filter by grading company, budget and profit, English or Japanese.
@@ -49,7 +49,7 @@ export default async function GradingPage() {
             </p>
             <div className="gf-promo-actions">
               <Link href="/app/premium?from=grading-finder" className="btn primary">See Premium</Link>
-              <Link href="/app/grading-finder" className="btn">Preview the top 3</Link>
+              <Link href="/app/grade-and-flip" className="btn">Preview the top 3</Link>
             </div>
           </div>
           {best && <div className="gf-promo-card"><GradingTile c={best} /></div>}

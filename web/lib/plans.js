@@ -24,7 +24,7 @@ export const PLANS = {
     collectionExport: false,
     collectionAlerts: false, // "missing from your set" deals and sell-high nudges
     gradingCheck: false, // full "worth grading?" list (Free sees the top 3)
-    gradingFinder: false, // Grading finder: cards anywhere worth buying raw to grade (Free sees the top 3)
+    gradingFinder: false, // Grade & Flip: cards anywhere worth buying raw to grade (Free sees the top 3)
     photoAppraiser: false, // snap a photo of cards: identify, price, add
     photoSearch: true, // Add cards: search by picture (camera or upload)
     photoSearchPerMonth: null, // search-by-picture photos a month (null = no monthly limit)
@@ -145,7 +145,7 @@ export const FEATURES = [
   { key: "csvImport", group: "Collection", label: "Import a CSV from another app", get: (p) => p.collectionImport, set: (p, on) => ({ collectionImport: on }) },
   { key: "gradingCheck", group: "Collection", label: "Full Worth Grading? list", help: "Without it, members see the top 3 cards.",
     get: (p) => p.gradingCheck, set: (p, on) => ({ gradingCheck: on }) },
-  { key: "gradingFinder", group: "Collection", label: "Grading finder", help: "Cards anywhere (not just their own) with a big gap between the raw and graded price. Without it, members see the top 3.",
+  { key: "gradingFinder", group: "Collection", label: "Grade & Flip", help: "Cards anywhere (not just their own) with a big gap between the raw and graded price. Without it, members see the top 3.",
     get: (p) => p.gradingFinder, set: (p, on) => ({ gradingFinder: on }) },
   { key: "performance", group: "Collection", label: "Collection performance (Home → Performance)", help: "Returns, profit on what members paid, best and worst buys. Without it, the tab shows an invitation to Premium.",
     get: (p) => p.collectionPerformance, set: (p, on) => ({ collectionPerformance: on }) },

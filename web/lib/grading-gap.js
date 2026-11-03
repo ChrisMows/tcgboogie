@@ -4,7 +4,7 @@ import { allSampleCards, fromCard, gradedReliable } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { GRADING_COMPANIES, gradingMath } from "@/lib/grading";
 
-// Grading finder (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
+// Grade & Flip (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
 // under what the same card sells for graded. Built only from price-service answers we already saved (catalog_cache:
 // cards members own, watch or have opened), so it costs no lookups. Those answers are ~85 KB each, so the cron job
 // copies the few numbers the finder needs into grading_gap (a few hundred bytes a card) as they're refreshed, and the

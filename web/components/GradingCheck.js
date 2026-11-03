@@ -16,7 +16,7 @@ const run = (candidates, grader, tier, opts) => candidates.map((c) => {
   return m && { ...c, ...m };
 }).filter(Boolean).sort((a, b) => b.profit10 - a.profit10);
 
-/** One card's grading numbers (also used by the Grading finder, components/GradingFinder.js). */
+/** One card's grading numbers (also used by Grade & Flip, app/app/grade-and-flip/page.js). */
 export function GradingTile({ c, dim }) {
   const co = GRADING_COMPANIES[c.grader];
   const top = `${c.grader} ${co.top}`, next = `${c.grader} ${co.next}`;

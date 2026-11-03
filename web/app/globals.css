@@ -1371,7 +1371,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-flow .gr-nine { color: var(--muted); padding-left: 10px; border-left: 1px solid var(--border); }
 .gr-body .badge { margin-top: auto; }
 .gr-more { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0 0; }
-/* Worth grading?'s prompt for the Grading finder (Premium), and the finder's filters */
+/* Worth grading?'s prompt for Grade & Flip (Premium), and the finder's filters */
 .gf-promo { margin-top: 18px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
 .gf-promo-text { flex: 1 1 320px; display: grid; gap: 8px; justify-items: start; }
 .gf-promo-text h2 { margin: 0; font-size: 18px; }

@@ -50,9 +50,9 @@ async function handle(req) {
     try { summary.snapshots = await recordDailySnapshots(); } catch (e) {
       await log("website", "warn", `Daily collection values crashed: ${e.message}`);
     }
-    // Grading finder: copy the card prices the bot refreshed since the last run (no lookups, lib/grading-gap.js).
+    // Grade & Flip: copy the card prices the bot refreshed since the last run (no lookups, lib/grading-gap.js).
     try { summary.gradingGaps = await refreshGradingGaps(); } catch (e) {
-      await log("prices", "warn", `Grading finder refresh failed: ${e.message}`);
+      await log("prices", "warn", `Grade & Flip refresh failed: ${e.message}`);
     }
     // Release emails that stopped part-way (the day's email limit, a restart) carry on.
     try { summary.releaseEmails = await continueReleaseEmails(); } catch (e) {

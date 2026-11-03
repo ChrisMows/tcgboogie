@@ -5,9 +5,9 @@ export const RELEASES = [
   {
     version: "1.3",
     date: "2026-11-03",
-    title: "Grading finder",
+    title: "Grade & Flip",
     items: [
-      { tag: "New", title: "Grading finder", href: "/app/grading-finder",
+      { tag: "New", title: "Grade & Flip", href: "/app/grade-and-flip",
         text: "A new page in the menu (and a button on your collection) that looks beyond your own cards: we rank thousands of cards, English and Japanese, where the graded price is far above the raw price, after the grading fee and shipping. Pick the grading company and service level, what you'd pay for the raw copy, the least profit you want, and whether a card must still pay off one grade below the top (on by default, so you're not betting on a perfect 10). Every card links to its page with the real sales behind the numbers. Premium; Free shows the top 3." },
     ],
   },
