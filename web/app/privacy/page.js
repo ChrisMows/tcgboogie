@@ -6,7 +6,7 @@ export default function Privacy() {
   return (
     <div className="wrap doc">
       <h1>Privacy</h1>
-      <p className="updated">Last updated October 28, 2026</p>
+      <p className="updated">Last updated November 2, 2026</p>
       <p>
         This page explains what TCG Boogie collects, why, who it&apos;s shared with, and how to remove it. We keep it to the
         minimum needed to run the service.
@@ -38,7 +38,7 @@ export default function Privacy() {
         <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
         <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; works out the columns of an import file we don&apos;t recognise, from its first few rows; answers the questions you ask Boogie Bot, our site helper; and, when an admin asks, sorts the ideas you send us into themes. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
         <li><b>PokemonPriceTracker</b>, our price service: the card searches and card lookups that show prices. It doesn&apos;t get your account details.</li>
-        <li><b>X (Twitter)</b>, for our ads on X: its advertising pixel tells X which pages were visited from our ads, so we can see which ads work and show ads to people who visited. It doesn&apos;t get your name, email or collection.</li>
+        <li><b>X (Twitter)</b>, for our ads on X: its advertising pixel tells X which pages were visited from our ads, and when someone who came from an ad creates an account or buys Premium (with the price), so we can see which ads work and show ads to people who visited. It doesn&apos;t get your name, email or collection.</li>
       </ul>
       <p>We don&apos;t sell your data. Apart from X&apos;s pixel above, we don&apos;t share anything with advertisers.</p>
 
@@ -75,7 +75,9 @@ export default function Privacy() {
         You can see and change your information in Settings, export your collection as a spreadsheet (Premium), and delete your account. You can also
         email us to get a copy of your data, correct it, or delete it, and we&apos;ll respond within 30 days. Depending on
         where you live (for example California or the EU/UK) you may have further rights under local law; we honor them for
-        every member. We don&apos;t sell or &quot;share&quot; personal information for advertising.
+        every member. We don&apos;t sell personal information. Under California law, X&apos;s advertising pixel (see Who we
+        share it with) counts as &quot;sharing&quot; for cross-context advertising; you can opt out by blocking third-party
+        cookies or using a tracker blocker, and if your browser sends a Global Privacy Control signal we don&apos;t load the pixel at all.
       </p>
 
       <h2>Keeping it safe</h2>
