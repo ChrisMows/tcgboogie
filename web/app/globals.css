@@ -1177,6 +1177,11 @@ details.era > .set-grid { margin-bottom: 14px; }
 .report-sale-open:hover { background: var(--accent-soft); }
 #report-sale { scroll-margin-top: 90px; }
 .cond-cell.few { border-style: dashed; }
+/* Card page, Graded: one row per grading company, highest grade first */
+.grade-rows { display: grid; gap: 10px; }
+.grade-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: start; }
+.grade-row-name { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; padding-top: 10px; }
+@media (max-width: 600px) { .grade-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } .grade-row-name { padding-top: 0; } }
 .few-tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--warn, #e3b341); }
 @media (max-width: 700px) { .price-wrong { align-items: flex-start; max-width: none; } .price-wrong-tip { text-align: left; } }
 .price-wrong { align-items: stretch; }
@@ -2153,6 +2158,10 @@ body:has(.install-hint) .helper-fab { display: none; }
 .home-tabs button.home-tab-premium, .home-premium-word { background: linear-gradient(90deg, #ffd66b, #f0a35e); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .home-tabs button.home-tab-premium.on { border-bottom-color: #f5c451; }
 .home-tabs button.home-tab-premium:not(.on) { opacity: 0.75; }
+/* Ultra: a violet-to-blue holo, so it stands apart from Premium's gold and the site's lime. */
+.home-tabs button.home-tab-ultra, .home-ultra-word { background: linear-gradient(90deg, #c084fc, #60a5fa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.home-tabs button.home-tab-ultra.on { border-bottom-color: #a78bfa; }
+.home-tabs button.home-tab-ultra:not(.on) { opacity: 0.75; }
 .home-head-note { justify-content: flex-start; gap: 14px; }
 .ret-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 .ret-card { position: relative; margin: 0; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; column-gap: 12px; align-items: end; }
@@ -2180,6 +2189,8 @@ body:has(.install-hint) .helper-fab { display: none; }
 .home-premium-hero { text-align: center; padding: 26px 22px; border-color: rgba(245, 196, 81, 0.45);
   background: radial-gradient(120% 90% at 50% 0%, rgba(245, 196, 81, 0.12), transparent 60%), var(--panel); }
 .home-premium-hero .eyebrow-sm { color: #f5c451; }
+.home-ultra-hero { border-color: rgba(167, 139, 250, 0.5); background: radial-gradient(120% 90% at 50% 0%, rgba(167, 139, 250, 0.14), transparent 60%), var(--panel); }
+.home-ultra-hero .eyebrow-sm { color: #c4b5fd; }
 .home-premium-hero h2 { margin: 8px 0; font-size: 26px; }
 .home-premium-hero p { max-width: 520px; margin: 0 auto 14px; }
 .home-premium-price { margin-bottom: 14px; }

@@ -30,13 +30,17 @@ export async function generateMetadata({ params, searchParams }) {
   return { title: p ? p.name : "Card" };
 }
 
-const GRADE_LABEL = (key) => {
-  const m = key.match(/^([a-z]+)(\d+)(?:_(\d|pristine))?$/);
-  if (!m) return key;
-  const grader = GRADERS.find((g) => g.toLowerCase() === m[1]) || m[1].toUpperCase();
-  if (m[3] === "pristine") return `${grader} ${m[2]} Pristine`;
-  return `${grader} ${m[2]}${m[3] ? `.${m[3]}` : ""}`;
+/** A grade key ("psa10", "bgs9_5", "cgc10_pristine", "cgc10 PRISTINE") in parts: { grader, grade: "9.5", rank: 9.5 }. */
+const gradeParts = (key) => {
+  const m = key.match(/^([a-z]+)(\d+)(?:[_ ](\d|pristine))?$/i);
+  if (!m) return { grader: key.toUpperCase(), grade: key, rank: 0 };
+  const grader = GRADERS.find((g) => g.toLowerCase() === m[1].toLowerCase()) || m[1].toUpperCase();
+  const pristine = /pristine/i.test(m[3] || "");
+  return { grader, grade: pristine ? `${m[2]} Pristine` : `${m[2]}${m[3] ? `.${m[3]}` : ""}`, rank: Number(m[2]) + (pristine ? 0.25 : m[3] ? Number(m[3]) / 10 : 0) };
 };
+const GRADE_LABEL = (key) => { const g = gradeParts(key); return g.rank ? `${g.grader} ${g.grade}` : key; };
+const GRADER_ORDER = ["PSA", "CGC", "BGS", "SGC", "TAG", "ACE"]; // then any others, A-Z
+const graderRank = (g) => { const i = GRADER_ORDER.indexOf(g); return i < 0 ? GRADER_ORDER.length : i; };
 
 const LANGUAGE = { japanese: "Japanese", korean: "Korean", chinese: "Chinese", other: "Other language" };
 
@@ -130,18 +134,22 @@ export default async function CardPage({ params, searchParams }) {
   const watch = watches.find((w) => w.productId === p.id);
   const now = p.type === "sealed" ? p.prices?.market : nmPrice(p);
   const printings = p.type === "card" ? Object.entries(p.prices || {}) : [];
-  // Graded: PSA, then CGC, BGS, SGC, TAG; highest grade first. Thin/stale data goes in its own, clearly marked group.
+  // Graded: PSA, then CGC, BGS, SGC, TAG, ACE; highest grade first ("CGC 10 Pristine" just above "CGC 10"). Thin/stale
+  // data goes in its own, clearly marked group.
   const gradeSort = ([a], [b]) => {
-    const order = ["psa", "cgc", "bgs", "sgc", "tag"];
-    // "cgc10_pristine" sorts just above "cgc10".
-    const num = (k) => (k.endsWith("_pristine") ? Number(k.replace(/^\D+/, "").replace("_pristine", "")) + 0.25 : Number(k.replace(/^\D+/, "").replace("_", ".")));
-    const [ga, na] = [a.replace(/[\d_]+(pristine)?$/, ""), num(a)];
-    const [gb, nb] = [b.replace(/[\d_]+(pristine)?$/, ""), num(b)];
-    return (order.indexOf(ga) + 1 || 9) - (order.indexOf(gb) + 1 || 9) || nb - na;
+    const [pa, pb] = [gradeParts(a), gradeParts(b)];
+    return graderRank(pa.grader) - graderRank(pb.grader) || pa.grader.localeCompare(pb.grader) || pb.rank - pa.rank;
   };
   const allGraded = Object.entries(p.graded || {}).sort(gradeSort);
   const graded = allGraded.filter(([, g]) => g.reliable !== false);
   const thinGraded = allGraded.filter(([, g]) => g.reliable === false);
+  // One row per grading company, for the Graded section (already in order).
+  const gradedRows = [];
+  for (const entry of graded) {
+    const { grader } = gradeParts(entry[0]);
+    if (gradedRows.at(-1)?.grader === grader) gradedRows.at(-1).cells.push(entry);
+    else gradedRows.push({ grader, cells: [entry] });
+  }
   const isSealed = p.type === "sealed";
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
   // Special prints (Prize Pack, prerelease stamps...) add their words, so eBay doesn't show the regular card instead.
@@ -301,13 +309,21 @@ export default async function CardPage({ params, searchParams }) {
               ))}
               <h3 className="price-sub">Graded</h3>
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
-                <div className="cond-grid">
-                  {graded.slice(0, 12).map(([key, g]) => (
-                    <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
-                      rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}>
-                      <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-                      <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
-                    </a>
+                <div className="grade-rows">
+                  {gradedRows.map(({ grader, cells }) => (
+                    <div key={grader} className="grade-row">
+                      <span className="grade-row-name">{grader}</span>
+                      <div className="cond-grid">
+                        {cells.map(([key, g]) => (
+                          <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
+                            rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}
+                            aria-label={`${GRADE_LABEL(key)}: ${money(g.price, 0)}`}>
+                            <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
+                            <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
