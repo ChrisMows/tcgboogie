@@ -51,16 +51,22 @@ export async function getMemberCard(productId) {
   } catch { return null; }
 }
 
-/** Member-added cards whose name, set, number or language contain every search word. */
-export async function searchMemberCards(q, limit = 5) {
+const LOOSE_WORD = /^[a-z]{6,}$/; // plain words long enough to match on their first 5 letters
+
+/** Member-added cards whose name, set, number or language contain every search word. With loose (the search box, not imports, where a near match would add the wrong card), failing that, close to it. */
+export async function searchMemberCards(q, limit = 5, { loose = false } = {}) {
   if (!db) return [];
   const words = String(q || "").toLowerCase().replace(/[%_\\]/g, " ").split(/\s+/).filter((w) => w.length > 1).slice(0, 6);
   if (!words.length) return [];
   const text = sql`(${memberCards.name} || ' ' || coalesce(${memberCards.setName}, '') || ' ' || coalesce(${memberCards.number}, '') || ' ' || ${memberCards.language})`;
+  const find = (conditions) => db.select().from(memberCards).where(and(eq(memberCards.hidden, false), ...conditions)).orderBy(desc(memberCards.createdAt)).limit(limit);
   try {
-    const rows = await db.select().from(memberCards)
-      .where(and(eq(memberCards.hidden, false), ...words.map((w) => sql`${text} ilike ${`%${w}%`}`)))
-      .orderBy(desc(memberCards.createdAt)).limit(limit);
+    let rows = await find(words.map((w) => sql`${text} ilike ${`%${w}%`}`));
+    // Nothing with those exact words: allow a misremembered long word, matching a word that starts with the same 5
+    // letters ("paradise veil" finds Paradox Veil). Names from other languages are often translated more than one way.
+    if (loose && !rows.length && words.some((w) => LOOSE_WORD.test(w))) {
+      rows = await find(words.map((w) => (LOOSE_WORD.test(w) ? sql`${text} ~* ${`\\y${w.slice(0, 5)}`}` : sql`${text} ilike ${`%${w}%`}`)));
+    }
     return rows.map(toProduct);
   } catch { return []; }
 }

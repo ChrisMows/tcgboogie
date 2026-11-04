@@ -159,7 +159,7 @@ export async function searchWithRequests(q) {
   const wantTopps = asksForTopps(q);
   const [learned, members, found, topps] = await Promise.all([
     aliasMatches(q).then((rows) => Promise.all(rows.map((r) => getProduct(r.productId, { language: r.language }).catch(() => null)))),
-    searchMemberCards(q),
+    searchMemberCards(q, 5, { loose: true }),
     wantTopps ? Promise.resolve([]) : searchProducts(q),
     searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
   ]);
