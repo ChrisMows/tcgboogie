@@ -28,6 +28,7 @@ const TABS = [
   { href: "/app/collection", label: "Collection", icon: "▦", isOn: inCollection },
   { href: PHOTO, label: "Scan", icon: "📷", isOn: (p) => p.startsWith(PHOTO) },
   { href: "/app/deals", label: "Deals", icon: "⚡", isOn: (p) => p.startsWith("/app/deals") },
+  { href: "/app/grade-and-flip", label: "Flip", icon: "💎", isOn: (p) => p.startsWith("/app/grade-and-flip") },
   { href: "/app/watches", label: "Alerts", icon: "🔔", isOn: (p) => p.startsWith("/app/watches") },
   { href: "/app/admin", label: "Admin", icon: "🛡", isOn: (p) => p.startsWith("/app/admin") || p.startsWith("/app/logs"), adminOnly: true },
   { href: "/app/profile", label: "Profile", icon: "👤", isOn: (p) => p.startsWith("/app/profile") },

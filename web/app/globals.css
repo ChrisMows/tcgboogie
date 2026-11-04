@@ -1256,6 +1256,8 @@ details.era > .set-grid { margin-bottom: 14px; }
   .side .tabbar:has(> a:nth-child(7)) { padding-left: 0; padding-right: 0; }
   .tabbar:has(> a:nth-child(7)) a { font-size: 10px; letter-spacing: -0.02em; padding: 4px 0; }
   .tabbar:has(> a:nth-child(7)) .tabbar-icon { padding: 4px 9px; }
+  .tabbar:has(> a:nth-child(8)) a { font-size: 9.5px; }
+  .tabbar:has(> a:nth-child(8)) .tabbar-icon { padding: 4px 6px; }
 }
 
 /* Card page: filter the latest sales by grade */
