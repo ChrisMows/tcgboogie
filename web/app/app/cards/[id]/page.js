@@ -39,6 +39,7 @@ const gradeParts = (key) => {
   return { grader, grade: pristine ? `${m[2]} Pristine` : `${m[2]}${m[3] ? `.${m[3]}` : ""}`, rank: Number(m[2]) + (pristine ? 0.25 : m[3] ? Number(m[3]) / 10 : 0) };
 };
 const GRADE_LABEL = (key) => { const g = gradeParts(key); return g.rank ? `${g.grader} ${g.grade}` : key; };
+const MAIN_GRADERS = ["PSA", "CGC", "BGS"];
 const GRADER_ORDER = ["PSA", "CGC", "BGS", "SGC", "TAG", "ACE"]; // then any others, A-Z
 const graderRank = (g) => { const i = GRADER_ORDER.indexOf(g); return i < 0 ? GRADER_ORDER.length : i; };
 
@@ -219,6 +220,25 @@ export default async function CardPage({ params, searchParams }) {
   const addRow = addButton && <div className="hero-add-row">{addButton}</div>;
   const details = [p.rarity && p.rarity !== "None" ? p.rarity : null, isSealed ? "Sealed product" : null, LANGUAGE[p.language || language]].filter(Boolean);
 
+  // Graded: PSA, CGC and BGS always show; the smaller grading companies stay folded behind a plus.
+  const mainGradeRows = gradedRows.filter((r) => MAIN_GRADERS.includes(r.grader));
+  const moreGradeRows = gradedRows.filter((r) => !MAIN_GRADERS.includes(r.grader));
+  const gradeRow = ({ grader, cells }) => (
+    <div key={grader} className="grade-row">
+      <span className="grade-row-name">{grader}</span>
+      <div className="cond-grid">
+        {cells.map(([key, g]) => (
+          <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
+            rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}
+            aria-label={`${GRADE_LABEL(key)}: ${money(g.price, 0)}`}>
+            <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
+            <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+
   // Under the chart. With a chart this is its own row, so the chart can end level with the buttons under the picture.
   const hasChart = !p.topps && !p.memberAdded;
   const belowChart = (
@@ -335,21 +355,13 @@ export default async function CardPage({ params, searchParams }) {
               <h3 className="price-sub">Graded</h3>
               {graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="grade-rows">
-                  {gradedRows.map(({ grader, cells }) => (
-                    <div key={grader} className="grade-row">
-                      <span className="grade-row-name">{grader}</span>
-                      <div className="cond-grid">
-                        {cells.map(([key, g]) => (
-                          <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
-                            rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}
-                            aria-label={`${GRADE_LABEL(key)}: ${money(g.price, 0)}`}>
-                            <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-                            <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                  {mainGradeRows.map(gradeRow)}
+                  {moreGradeRows.length > 0 && (
+                    <details className="more-grades" open={mainGradeRows.length === 0}>
+                      <summary><span className="more-grades-icon" aria-hidden="true" />{moreGradeRows.map((r) => r.grader).join(", ")}</summary>
+                      <div className="grade-rows">{moreGradeRows.map(gradeRow)}</div>
+                    </details>
+                  )}
                 </div>
               )}
               {thinGraded.length > 0 && (
