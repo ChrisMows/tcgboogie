@@ -1960,25 +1960,63 @@ body:has(.install-hint) .helper-fab { display: none; }
   .release-body { padding: 2px 14px 14px; }
 }
 
-/* Card page: art | name, price and chart | add, report and "You own" (3 columns on wide screens; the side column
-   drops under the chart on medium screens and everything stacks on phones). Prices and sales span the full width. */
+/* Card page: the picture with Missing picture and Price wrong under it | name, price, add button and chart, then your
+   copies. Everything stacks on phones. Prices and sales span the full width. */
 @media (min-width: 861px) {
-  .card-hero { grid-template-columns: 240px minmax(0, 1fr); }
-  .card-hero-side { grid-column: 2; }
+  .card-hero { grid-template-columns: 260px minmax(0, 1fr); gap: 32px; }
 }
-@media (min-width: 1180px) {
-  .card-hero { grid-template-columns: 240px minmax(0, 1fr) 300px; gap: 28px; }
-  .card-hero-side { grid-column: 3; }
+.card-hero-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card-hero-left .card-report-row { flex-direction: column; flex-wrap: nowrap; gap: 10px; }
+.card-hero-left .card-report-row .price-wrong { flex: none; flex-direction: column; align-items: stretch; width: 100%; max-width: none; }
+.card-hero-left .price-wrong-tip { flex: none; text-align: left; }
+.card-hero-left .price-wrong-btn { width: 100%; flex: none; padding: 12px 10px; justify-content: center; }
+@media (max-width: 860px) {
+  .card-hero-left .card-report-row { flex-direction: row; align-items: flex-start; }
+  .card-hero-left .card-report-row .price-wrong { flex: 1 1 0; width: auto; min-width: 0; }
+  .card-hero-left .price-wrong-btn { padding: 10px 6px; }
 }
-.card-hero-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.card-hero-side .card-add-btn { margin-top: 0; width: 100%; }
-.card-hero-side .card-report-row { flex-direction: row; gap: 8px; }
-.card-hero-side .card-report-row .price-wrong { flex: 1 1 0; width: auto; max-width: none; }
-.card-hero-side .price-wrong-btn { padding: 10px 8px; width: 100%; }
-.card-hero-side .card-actions .you-own { margin: 4px 0 0; }
-.hero-chart { margin: 14px 0 6px; }
-.hero-chart .chart-value { font: 600 34px var(--font-head), sans-serif; letter-spacing: -0.02em; }
-.hero-chart .chart-empty { height: 80px; }
+.card-hero-info h1 { font-size: 40px; line-height: 1.15; }
+@media (max-width: 600px) { .card-hero-info h1 { font-size: 26px; } }
+.card-title-no { color: var(--muted); font-weight: 400; font-size: 0.75em; letter-spacing: -0.01em; }
+.card-sub { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 17px; font-weight: 500; margin-top: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.card-sub > span + span::before { content: "•"; margin: 0 10px; color: var(--muted); }
+.card-sub-set, .card-sub-set a { color: var(--accent); }
+@media (max-width: 600px) { .card-sub { font-size: 14px; } .card-sub > span + span::before { margin: 0 7px; } }
+.card-hero-info > .notice { margin-top: 16px; }
+.chart-lead { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin: 14px 0; }
+.chart-lead > div:first-child { min-width: 0; }
+.chart-detailed .chart-lead > div:first-child { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
+.chart-detailed .chart-lead > div:first-child > :first-child { grid-column: 1 / -1; }
+.chart-lead .hero-price { margin: 0; }
+.chart-lead .card-add-btn, .hero-add-row .card-add-btn { margin-top: 0; min-width: 260px; padding: 15px 24px; font-size: 16px; justify-content: center; }
+.hero-add-row { margin: 14px 0; }
+@media (max-width: 600px) { .chart-lead .card-add-btn, .hero-add-row .card-add-btn { width: 100%; min-width: 0; } }
+.chart-panel { border: 1px solid var(--border-strong); border-radius: 14px; padding: 14px 22px 10px 12px; }
+.chart-panel .range-btns { margin: 0 0 12px 4px; }
+.chart-panel .range-btns button, .chart-panel .range-btns a { font-size: 14px; padding: 7px 13px; }
+.chart-axes { display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-rows: 270px 26px; }
+.chart-y, .chart-x, .chart-plot { position: relative; min-width: 0; }
+.chart-y span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.chart-x { grid-column: 2; }
+.chart-x span { position: absolute; top: 8px; transform: translateX(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.chart-axes .chart-svg { height: 100%; overflow: visible; }
+.chart-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg, #000); pointer-events: none; }
+.chart-dot.down { background: #f85149; }
+.chart-panel .chart-empty { height: 120px; }
+@media (max-width: 600px) {
+  .chart-panel { padding: 10px 14px 6px 6px; }
+  .chart-panel .range-btns button, .chart-panel .range-btns a { font-size: 12px; padding: 5px 9px; }
+  .chart-axes { grid-template-columns: 50px minmax(0, 1fr); grid-template-rows: 200px 26px; }
+  .chart-y span, .chart-x span { font-size: 11px; }
+  .chart-x span:nth-child(even) { display: none; }
+}
+.card-hero-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; margin-top: 14px; }
+.card-hero-side:empty { display: none; }
+.card-hero-side .card-actions .you-own { margin: 0; }
+.card-hero-side .action-row { margin-top: 10px; }
+.hero-chart { margin: 0 0 6px; }
+.hero-chart .chart-value { font: 600 44px var(--font-head), sans-serif; letter-spacing: -0.02em; }
+@media (max-width: 600px) { .hero-chart .chart-value { font-size: 34px; } }
 .you-own-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 13px; }
 .copy-what { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .copy-qty { font-weight: 700; color: var(--muted); }
@@ -2014,9 +2052,6 @@ body:has(.install-hint) .helper-fab { display: none; }
 .card-prices .recent-sale > b { text-align: right; }
 @media (max-width: 600px) { .prices-head .ebay-links { flex: 1 1 100%; flex-wrap: wrap; } .prices-head .ebay-btn.sell { flex-basis: 100%; } }
 .card-prices .report-sale-open { margin-top: 10px; }
-/* Card page chart: the price change sits to the right of the price, not under it */
-.hero-chart .chart-head > div:first-child { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
-.hero-chart .chart-head > div:first-child > :first-child { grid-column: 1 / -1; }
 /* Signed-out header on phones: a shorter "Start free" button so the header fits (it was pushing the page wider than the screen) */
 .header-cta .cta-short { display: none; }
 @media (max-width: 420px) {

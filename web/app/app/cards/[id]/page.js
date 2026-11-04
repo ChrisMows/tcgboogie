@@ -212,6 +212,13 @@ export default async function CardPage({ params, searchParams }) {
 
   const commission = ebay?.affiliate || ebaySold?.affiliate ? " eBay links may earn us a commission." : "";
 
+  // The top of the page: the name without the " - 151/128" our price data adds (the number sits beside it), and the
+  // add button, which sits to the right of the price (or under the note when there's no price).
+  const shownName = p.number ? p.name.split(` - ${p.number}`).join("") : p.name;
+  const addButton = wished ? null : <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />;
+  const addRow = addButton && <div className="hero-add-row">{addButton}</div>;
+  const details = [p.rarity && p.rarity !== "None" ? p.rarity : null, isSealed ? "Sealed product" : null, LANGUAGE[p.language || language]].filter(Boolean);
+
   return (
     <>
       <div className="crumbs">
@@ -222,37 +229,55 @@ export default async function CardPage({ params, searchParams }) {
 
       {savedOnly && <div className="notice">Showing the last prices we saved for this card. Fresh prices will be back shortly.</div>}
       <div className="card-hero">
-        <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
+        <div className="card-hero-left">
+          <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
+          <div className="card-report-row">
+            <MissingPicture productId={p.id} language={p.language || language} />
+            {!isSealed && (
+              <span className="price-wrong">
+                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">🏷️ Price wrong?</a>
+              </span>
+            )}
+          </div>
+        </div>
         <div className="card-hero-info">
           <div className="card-name-row">
-            <h1>{p.name} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
+            <h1>{shownName}{p.number ? <span className="card-title-no"> #{p.number}</span> : null} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
             <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} wished={wished} canWish={owned === 0} />
           </div>
-          <div className="muted">
-            {p.setName && (language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>)}
-            {p.number ? ` · #${p.number}` : ""}{p.rarity && p.rarity !== "None" ? ` · ${p.rarity}` : ""}{isSealed ? " · Sealed product" : ""}
-            {LANGUAGE[p.language || language] ? ` · ${LANGUAGE[p.language || language]}` : ""}
+          <div className="card-sub">
+            {p.setName && <span className="card-sub-set">{language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>}</span>}
+            {details.map((d) => <span key={d} className="muted">{d}</span>)}
           </div>
           {p.topps && !now ? (
-            <div className="notice no-price">
-              <b>No eBay price yet</b> for this Topps card. We check eBay&apos;s current listings every few days{p.topps.checkedAt ? " and didn't find enough of this card last time" : ""}, so you
-              can add it to your collection with your own value in the meantime.
-            </div>
+            <>
+              <div className="notice no-price">
+                <b>No eBay price yet</b> for this Topps card. We check eBay&apos;s current listings every few days{p.topps.checkedAt ? " and didn't find enough of this card last time" : ""}, so you
+                can add it to your collection with your own value in the meantime.
+              </div>
+              {addRow}
+            </>
           ) : p.topps ? (
-            <div className="hero-price">
-              <span className="small muted">Typical eBay asking price · raw Near Mint</span>
-              <b>{money(now)}</b>
-              <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${money(p.topps.low)} to ${money(p.topps.high)})` : ""}</span>
+            <div className="chart-lead">
+              <div className="hero-price">
+                <span className="small muted">Typical eBay asking price · raw Near Mint</span>
+                <b>{money(now)}</b>
+                <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${money(p.topps.low)} to ${money(p.topps.high)})` : ""}</span>
+              </div>
+              {addButton}
             </div>
           ) : p.memberAdded ? (
-            <div className="notice no-price">
-              <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
-              so you can still add it to your collection with your own value, set price alerts and report sales you see.
-            </div>
+            <>
+              <div className="notice no-price">
+                <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
+                so you can still add it to your collection with your own value, set price alerts and report sales you see.
+              </div>
+              {addRow}
+            </>
           ) : (
             <div className="hero-chart">
               <ValueChart points={(p.history || []).map((h) => ({ day: h.date, value: h.price }))} historyDays={null} current={now}
-                label={isSealed ? "Market price" : "Raw Near Mint market price"} height={150} shared />
+                label={isSealed ? "Market price" : "Raw Near Mint market price"} height={270} shared detailed action={addButton} />
             </div>
           )}
           {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
@@ -263,21 +288,12 @@ export default async function CardPage({ params, searchParams }) {
               {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
             </Link>
           )}
-        </div>
-        <aside className="card-hero-side">
-          {!wished && <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />}
-          {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
-          <div className="card-report-row">
-            {!isSealed && (
-              <span className="price-wrong">
-                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">✎ Price wrong?</a>
-              </span>
-            )}
-            <MissingPicture productId={p.id} language={p.language || language} />
+          <div className="card-hero-side">
+            {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
+            <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
+              plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
           </div>
-          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-            plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
-        </aside>
+        </div>
       </div>
 
       <div className="panel card-prices">
