@@ -24,7 +24,7 @@ function UltraOnly() {
       </div>
       <div className="panel empty-state">
         <h2>🔒 Grade &amp; Flip is part of Ultra</h2>
-        <p className="muted">Every card gets a Flip Score from 0 to 100 for its profit after fees, its return, what a lower grade would still pay and how often it sells, with filters for grading company, budget and era.</p>
+        <p className="muted">Every card gets a Flip Score from 1 to 10 for its profit after fees, its return, what a lower grade would still pay and how often it sells, with filters for grading company, budget and era.</p>
         <Link href="/app/ultra?from=grading-finder" className="btn primary">See Ultra · ${PLANS.ultra.price}/mo</Link>
       </div>
     </>
@@ -122,9 +122,9 @@ export default async function GradingFinderPage({ searchParams }) {
         </span>
       </div>
       <div className="gr-score-key small muted">
-        <span><b>Flip Score, 0 to 100:</b> profit ({FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
+        <span><b>Flip Score, 1 to 10:</b> profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
         <span className="gr-score-tiers">
-          {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${FLIP_TIERS[i - 1].min - 1}`}</span>)}
+          {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}</span>)}
         </span>
       </div>
 

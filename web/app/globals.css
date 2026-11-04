@@ -1408,7 +1408,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-lower.pays { color: var(--good); }
 .gr-score { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 8px; }
 .gr-lower + .gr-score { margin-top: auto; }
-.gr-score-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--tier); color: var(--tier); font: 700 17px var(--font-head), sans-serif; }
+.gr-score-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--tier); color: var(--tier); font: 700 15px var(--font-head), sans-serif; }
 .gr-score-body { flex: 1; min-width: 0; display: grid; gap: 5px; }
 .gr-score-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; white-space: nowrap; }
 .gr-score-label b { color: var(--tier); }

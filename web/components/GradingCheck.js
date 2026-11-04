@@ -23,12 +23,12 @@ function FlipScore({ c, top, next }) {
   return (
     <>
       <span className={`small gr-lower ${c.profit9 !== null && c.profit9 >= 0 ? "pays" : ""}`}>{lower}</span>
-      <span className={`gr-score ${tier.key}`} aria-label={`Flip Score ${score} out of 100, ${tier.label}`}
+      <span className={`gr-score ${tier.key}`} aria-label={`Flip Score ${score.toFixed(1)} out of 10, ${tier.label}`}
         title={`Profit ${parts.profit}/${FLIP_POINTS.profit} · Return ${parts.return}/${FLIP_POINTS.return} · If it grades lower ${parts.safety}/${FLIP_POINTS.safety} · Demand ${parts.demand}/${FLIP_POINTS.demand}`}>
-        <b className="gr-score-num">{score}</b>
+        <b className="gr-score-num">{score.toFixed(1)}</b>
         <span className="gr-score-body">
           <span className="gr-score-label"><b>{tier.label}</b><span className="muted">Flip Score</span></span>
-          <span className="gr-score-bar"><i style={{ width: `${score}%` }} /></span>
+          <span className="gr-score-bar"><i style={{ width: `${score * 10}%` }} /></span>
         </span>
       </span>
     </>
