@@ -107,24 +107,19 @@ function releaseImage(x, { bg, bold, medium }) {
   );
 }
 
-/** A feature on the same background: the kicker, its name and line, three points, and the plan and price. */
-function featureImage(x, { bg, bold, medium }) {
-  const VIOLET = "#c4b5fd";
+/** A feature on the same background: a kicker and the price over a real screenshot of the page (public/share), and when it was taken. */
+async function featureImage(x, { bg, bold, medium }) {
+  const shot = `data:image/png;base64,${(await read(x.shot)).toString("base64")}`;
   return new ImageResponse(
     (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: S, height: S, fontFamily: "Grotesk", color: "#f4f5ef",
         backgroundImage: `url(${bg})`, backgroundSize: `${S}px ${S}px` }}>
-        <div style={{ display: "flex", marginTop: 150, padding: "6px 18px", borderRadius: 999, background: VIOLET, color: "#1a1333", fontSize: 26, fontWeight: 700, letterSpacing: 2 }}>{x.kicker}</div>
-        <div style={{ display: "flex", fontSize: 76, fontWeight: 700, lineHeight: 1.1, marginTop: 18, textShadow: "0 0 28px rgba(167,139,250,0.55)" }}>{x.title}</div>
-        <div style={{ display: "flex", fontSize: 32, fontWeight: 500, lineHeight: 1.25, marginTop: 14, maxWidth: 540, textAlign: "center", justifyContent: "center", color: "#d9dee6" }}>{x.tagline}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 34, width: 560 }}>
-          {x.points.map((p) => (
-            <div key={p} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 25, fontWeight: 500 }}>
-              <span style={{ display: "flex", flex: "none", width: 12, height: 12, borderRadius: 999, background: LIME }} /><span style={{ display: "flex" }}>{p}</span>
-            </div>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 116 }}>
+          <div style={{ display: "flex", padding: "6px 18px", borderRadius: 999, background: "#c4b5fd", color: "#1a1333", fontSize: 24, fontWeight: 700, letterSpacing: 2 }}>{x.kicker}</div>
+          <div style={{ display: "flex", padding: "6px 18px", borderRadius: 999, background: LIME, color: "#15200c", fontSize: 24, fontWeight: 700 }}>{x.footer}</div>
         </div>
-        <div style={{ display: "flex", marginTop: 32, padding: "8px 22px", borderRadius: 999, background: LIME, color: "#15200c", fontSize: 25, fontWeight: 700 }}>{x.footer}</div>
+        <img src={shot} width={860} height={789} alt="" style={{ marginTop: 12, borderRadius: 16, border: "2px solid rgba(196,181,253,0.7)", boxShadow: "0 0 50px rgba(0,0,0,0.8)" }} />
+        <div style={{ display: "flex", marginTop: 8, fontSize: 20, fontWeight: 500, color: "#c9d1dd" }}>{x.note}</div>
       </div>
     ),
     {

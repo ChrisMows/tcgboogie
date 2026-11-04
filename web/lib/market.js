@@ -180,9 +180,8 @@ export function releasePosts() {
 export function featurePosts() {
   return [{
     kind: "feature", id: "feature-grade-and-flip", kicker: "NEW ON ULTRA", title: "Grade & Flip",
-    tagline: "Find raw cards selling far below their graded price",
-    points: ["Thousands of cards, English and Japanese", "Profit after grading fees and shipping", "A Flip Score from 1 to 10 on every card"],
-    footer: "Ultra · $14.99/month plus tax",
+    shot: "public/share/grade-and-flip.png", note: "Live results from Nov 3, 2026. Prices change daily and no grade is guaranteed.",
+    footer: "$14.99/month plus tax",
     caption: ["💎 New on TCG Boogie Ultra: Grade & Flip", "",
       "Find raw cards selling far below their graded price, each scored 1 to 10 on profit after fees, risk and demand.", "",
       "$14.99/month plus tax, 7-day free trial for new subscribers.", "", `${SITE}/pricing`, "#pokemon #pokemontcg #tcgboogie"].join("\n"),
