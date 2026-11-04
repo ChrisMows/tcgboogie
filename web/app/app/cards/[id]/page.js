@@ -219,6 +219,26 @@ export default async function CardPage({ params, searchParams }) {
   const addRow = addButton && <div className="hero-add-row">{addButton}</div>;
   const details = [p.rarity && p.rarity !== "None" ? p.rarity : null, isSealed ? "Sealed product" : null, LANGUAGE[p.language || language]].filter(Boolean);
 
+  // Under the chart. With a chart this is its own row, so the chart can end level with the buttons under the picture.
+  const hasChart = !p.topps && !p.memberAdded;
+  const belowChart = (
+    <>
+      {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
+      {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
+      {gradeIdea && gradeIdea.verdict !== "skip" && (
+        <Link href="/app/collection/grading" className="grade-idea">
+          💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
+          {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
+        </Link>
+      )}
+      <div className="card-hero-side">
+        {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
+        <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
+          plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
+      </div>
+    </>
+  );
+
   return (
     <>
       <div className="crumbs">
@@ -280,20 +300,9 @@ export default async function CardPage({ params, searchParams }) {
                 label={isSealed ? "Market price" : "Raw Near Mint market price"} height={270} shared detailed action={addButton} />
             </div>
           )}
-          {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
-          {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
-          {gradeIdea && gradeIdea.verdict !== "skip" && (
-            <Link href="/app/collection/grading" className="grade-idea">
-              💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
-              {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
-            </Link>
-          )}
-          <div className="card-hero-side">
-            {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
-            <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-              plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
-          </div>
+          {!hasChart && belowChart}
         </div>
+        {hasChart && <div className="card-hero-below">{belowChart}</div>}
       </div>
 
       <div className="panel card-prices">

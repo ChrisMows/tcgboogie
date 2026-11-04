@@ -1963,7 +1963,13 @@ body:has(.install-hint) .helper-fab { display: none; }
 /* Card page: the picture with Missing picture and Price wrong under it | name, price, add button and chart, then your
    copies. Everything stacks on phones. Prices and sales span the full width. */
 @media (min-width: 861px) {
-  .card-hero { grid-template-columns: 260px minmax(0, 1fr); gap: 32px; }
+  /* The chart stretches so it ends level with the buttons under the picture; what's under it starts a new row. */
+  .card-hero { grid-template-columns: 260px minmax(0, 1fr); gap: 0 32px; align-items: stretch; }
+  .card-hero-below { grid-column: 2; }
+  .card-hero-info { display: flex; flex-direction: column; }
+  .hero-chart, .chart-detailed, .chart-panel { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .chart-panel .chart-axes { flex: 1 1 auto; grid-template-rows: minmax(150px, 1fr) 26px; }
+  .chart-panel .chart-empty { flex: 1 1 auto; }
 }
 .card-hero-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .card-hero-left .card-report-row { flex-direction: column; flex-wrap: nowrap; gap: 10px; }
@@ -1994,12 +2000,12 @@ body:has(.install-hint) .helper-fab { display: none; }
 .chart-panel { border: 1px solid var(--border-strong); border-radius: 14px; padding: 14px 22px 10px 12px; }
 .chart-panel .range-btns { margin: 0 0 12px 4px; }
 .chart-panel .range-btns button, .chart-panel .range-btns a { font-size: 14px; padding: 7px 13px; }
-.chart-axes { display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-rows: 270px 26px; }
+.chart-axes { display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-rows: 220px 26px; }
 .chart-y, .chart-x, .chart-plot { position: relative; min-width: 0; }
 .chart-y span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .chart-x { grid-column: 2; }
 .chart-x span { position: absolute; top: 8px; transform: translateX(-50%); font-size: 12px; color: var(--muted); white-space: nowrap; }
-.chart-axes .chart-svg { height: 100%; overflow: visible; }
+.chart-axes .chart-svg { position: absolute; inset: 0; height: 100%; overflow: visible; }
 .chart-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg, #000); pointer-events: none; }
 .chart-dot.down { background: #f85149; }
 .chart-panel .chart-empty { height: 120px; }
@@ -2014,7 +2020,7 @@ body:has(.install-hint) .helper-fab { display: none; }
 .card-hero-side:empty { display: none; }
 .card-hero-side .card-actions .you-own { margin: 0; }
 .card-hero-side .action-row { margin-top: 10px; }
-.hero-chart { margin: 0 0 6px; }
+.hero-chart { margin: 0; }
 .hero-chart .chart-value { font: 600 44px var(--font-head), sans-serif; letter-spacing: -0.02em; }
 @media (max-width: 600px) { .hero-chart .chart-value { font-size: 34px; } }
 .you-own-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 13px; }
