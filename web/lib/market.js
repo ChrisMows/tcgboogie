@@ -174,6 +174,22 @@ export function releasePosts() {
 }
 
 /**
+ * One-off posts about a feature (Admin -> Social media), with a share image (lib/sale-image.js draws kind "feature").
+ * Add one here to queue it; like everything in that queue it only goes out when an admin taps Post to X.
+ */
+export function featurePosts() {
+  return [{
+    kind: "feature", id: "feature-grade-and-flip", kicker: "NEW ON ULTRA", title: "Grade & Flip",
+    tagline: "Find raw cards selling far below their graded price",
+    points: ["Thousands of cards, English and Japanese", "Profit after grading fees and shipping", "A Flip Score from 1 to 10 on every card"],
+    footer: "Ultra · $14.99/month plus tax",
+    caption: ["💎 New on TCG Boogie Ultra: Grade & Flip", "",
+      "Find raw cards selling far below their graded price, each scored 1 to 10 on profit after fees, risk and demand.", "",
+      "$14.99/month plus tax, 7-day free trial for new subscribers.", "", `${SITE}/pricing`, "#pokemon #pokemontcg #tcgboogie"].join("\n"),
+  }];
+}
+
+/**
  * A sale post with the numbers the admin confirmed (Admin -> Social media "Check before posting"): the sale price and,
  * for a caught deal, the market value (the % under is worked out again), or for a new high, the previous high.
  * Returns { x, error }: an error when the corrected numbers no longer make it a deal or a record.
@@ -193,9 +209,10 @@ export function withConfirmed(x, { price, market, prevHigh }) {
   return { x: out, error: null };
 }
 
-/** One post by its id ("high-123", "big-123", "deal-123", "release-2026-10-25"), for its share image and X post. */
+/** One post by its id ("high-123", "big-123", "deal-123", "release-2026-10-25", "feature-grade-and-flip"), for its share image and X post. */
 export async function marketItem(id) {
   if (String(id).startsWith("release-")) return releasePosts().find((x) => x.id === String(id)) || null;
+  if (String(id).startsWith("feature-")) return featurePosts().find((x) => x.id === String(id)) || null;
   const f = await marketFeed();
   return [...f.highs, ...f.big, ...f.deals].find((x) => x.id === String(id)) || null;
 }

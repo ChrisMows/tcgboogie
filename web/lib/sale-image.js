@@ -107,9 +107,38 @@ function releaseImage(x, { bg, bold, medium }) {
   );
 }
 
-/** The share image for one post (lib/market.js: a sale, a caught deal, or release notes), as an ImageResponse (a PNG). */
+/** A feature on the same background: the kicker, its name and line, three points, and the plan and price. */
+function featureImage(x, { bg, bold, medium }) {
+  const VIOLET = "#c4b5fd";
+  return new ImageResponse(
+    (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: S, height: S, fontFamily: "Grotesk", color: "#f4f5ef",
+        backgroundImage: `url(${bg})`, backgroundSize: `${S}px ${S}px` }}>
+        <div style={{ display: "flex", marginTop: 150, padding: "6px 18px", borderRadius: 999, background: VIOLET, color: "#1a1333", fontSize: 26, fontWeight: 700, letterSpacing: 2 }}>{x.kicker}</div>
+        <div style={{ display: "flex", fontSize: 76, fontWeight: 700, lineHeight: 1.1, marginTop: 18, textShadow: "0 0 28px rgba(167,139,250,0.55)" }}>{x.title}</div>
+        <div style={{ display: "flex", fontSize: 32, fontWeight: 500, lineHeight: 1.25, marginTop: 14, maxWidth: 540, textAlign: "center", justifyContent: "center", color: "#d9dee6" }}>{x.tagline}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 34, width: 560 }}>
+          {x.points.map((p) => (
+            <div key={p} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 25, fontWeight: 500 }}>
+              <span style={{ display: "flex", flex: "none", width: 12, height: 12, borderRadius: 999, background: LIME }} /><span style={{ display: "flex" }}>{p}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", marginTop: 32, padding: "8px 22px", borderRadius: 999, background: LIME, color: "#15200c", fontSize: 25, fontWeight: 700 }}>{x.footer}</div>
+      </div>
+    ),
+    {
+      width: S, height: S,
+      fonts: [{ name: "Grotesk", data: bold, weight: 700, style: "normal" }, { name: "Grotesk", data: medium, weight: 500, style: "normal" }],
+      headers: { "Cache-Control": "public, max-age=3600" },
+    },
+  );
+}
+
+/** The share image for one post (lib/market.js: a sale, a caught deal, release notes or a feature), as an ImageResponse (a PNG). */
 export async function saleImage(x) {
   if (x.kind === "release") return releaseImage(x, await load());
+  if (x.kind === "feature") return featureImage(x, await load());
   const [{ bg, bold, medium }, img] = await Promise.all([load(), picture(x.image)]);
   const kicker = x.kind === "high" ? "NEW HIGH" : x.kind === "deal" ? `SOLD ${x.off}% UNDER MARKET` : "BIG SALE";
   const sub = x.kind === "high" ? `Previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `Market ${money(x.market, 0)}` : "Sold on eBay";

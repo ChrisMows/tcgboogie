@@ -284,7 +284,7 @@ export async function postSale(id, formData) {
   if (done) redirect("/app/admin?tab=sales&err=already");
   // Sales are posted only after the admin confirms the numbers (and may correct them): see "Check before posting".
   let x = found;
-  if (found.kind !== "release") {
+  if (found.kind !== "release" && found.kind !== "feature") {
     if (formData.get("verified") !== "on") redirect("/app/admin?tab=sales&err=unchecked");
     const r = withConfirmed(found, { price: formData.get("price"), market: formData.get("market"), prevHigh: formData.get("prevHigh") });
     if (r.error) redirect(`/app/admin?tab=sales&err=${encodeURIComponent(r.error)}`);

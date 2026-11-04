@@ -10,7 +10,7 @@ import { listRequests, pendingCount } from "@/lib/card-requests";
 import { approveCardRequest, approveReadCard, declineCardRequest, doneCardRequest, postSale, removeMemberCard, setIdeas, setRequestPicture, skipSale } from "./actions";
 import { desc } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { marketFeed, releasePosts } from "@/lib/market";
+import { featurePosts, marketFeed, releasePosts } from "@/lib/market";
 import { xReady } from "@/lib/x";
 import { gameTotals } from "@/lib/game-interest";
 import { helperReport } from "@/lib/helper";
@@ -519,7 +519,7 @@ const firstLine = (t) => String(t || "").split(/\n/)[0];
 async function Sales({ ok, err }) {
   const [feed, done] = await Promise.all([marketFeed(), db ? db.select().from(schema.socialPosts).orderBy(desc(schema.socialPosts.at)).limit(200) : []]);
   const handled = new Set(done.map((d) => d.key));
-  const queue = [...releasePosts(), ...feed.deals.slice(0, 8), ...feed.highs, ...feed.big.slice(0, 8)].filter((x) => !handled.has(x.id));
+  const queue = [...featurePosts(), ...releasePosts(), ...feed.deals.slice(0, 8), ...feed.highs, ...feed.big.slice(0, 8)].filter((x) => !handled.has(x.id));
   const posted = done.filter((d) => d.status === "posted").slice(0, 20);
   const ready = xReady();
   const ERR = { gone: "That sale isn't in the feed anymore.", already: "That one was already posted or skipped.", unchecked: "Tick \"I checked these numbers\" before posting." };
@@ -535,7 +535,7 @@ async function Sales({ ok, err }) {
           X_ACCESS_SECRET) in Hostinger&apos;s environment variables, then redeploy.
         </div>
       )}
-      <p className="muted">Posts ready for X: <Link href="/updates">release notes</Link>, plus <Link href="/sales">Market Movers</Link> (caught deals, new highs and the week&apos;s biggest sales). Edit the caption if you like, then post or skip.</p>
+      <p className="muted">Posts ready for X: new features, <Link href="/updates">release notes</Link>, plus <Link href="/sales">Market Movers</Link> (caught deals, new highs and the week&apos;s biggest sales). Edit the caption if you like, then post or skip.</p>
       {queue.length === 0 ? <div className="panel muted">Nothing new to post right now.</div> : (
         <div className="post-queue">
           {queue.map((x) => (
@@ -543,8 +543,8 @@ async function Sales({ ok, err }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <a href={`/sales/image/${x.id}.png`} target="_blank" rel="noopener noreferrer"><img src={`/sales/image/${x.id}.png`} alt="" width={260} height={260} loading="lazy" /></a>
               <div className="post-body">
-                <span className="badge accent">{x.kind === "release" ? "Release notes" : x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
-                {x.kind !== "release" && (
+                <span className="badge accent">{x.kind === "feature" ? "New feature" : x.kind === "release" ? "Release notes" : x.kind === "high" ? "New high" : x.kind === "deal" ? "Caught deal" : "Big sale"}</span>
+                {x.kind !== "release" && x.kind !== "feature" && (
                   <fieldset className="post-check">
                     <legend>Check before posting</legend>
                     {x.title && <div className="small muted post-check-title">eBay title: “{x.title}”</div>}
