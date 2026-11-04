@@ -1398,7 +1398,14 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gf-promo-go { margin-left: auto; color: var(--accent); font-size: 18px; }
 .cmp-ultra { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: 10px 16px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
 .cmp-ultra ul { margin: 4px 0 0; padding-left: 18px; }
-.gf-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 0 0 14px; }
+.gf-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 0; }
+.gf-filter-box { margin: 0 0 14px; padding-top: 12px; padding-bottom: 12px; }
+.gf-filter-box summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; list-style: none; }
+.gf-filter-box summary::-webkit-details-marker { display: none; }
+.gf-filter-box[open] summary { margin-bottom: 14px; }
+.gf-filter-box[open] .more-grades-icon::before { content: "−"; }
+.gf-filter-box summary:hover .more-grades-icon::before { color: var(--accent); border-color: var(--accent); }
+.gf-filter-sum { display: grid; gap: 2px; min-width: 0; }
 .gf-filters .btn { margin-left: auto; }
 /* Grade & Flip's Flip Score */
 .gr-score, .gr-score-chip { --tier: var(--muted); }
@@ -1417,8 +1424,14 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-score-label .muted { font-size: 11px; }
 .gr-score-bar { display: block; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
 .gr-score-bar i { display: block; height: 100%; border-radius: 3px; background: var(--tier); }
-.gr-score-key { display: grid; gap: 8px; margin: 0 2px 14px; }
-.gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.gr-score-key { margin: 0 2px 14px; }
+.gr-score-key > span { display: block; margin-top: 8px; }
+.gr-score-key summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.gr-score-key summary::-webkit-details-marker { display: none; }
+.gr-score-key summary:hover { color: var(--accent); }
+.gr-score-key .more-grades-icon::before { width: 18px; height: 18px; font-size: 13px; }
+.gr-score-key[open] .more-grades-icon::before { content: "−"; }
+.gr-score-key > .gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .gr-score-chip { display: inline-flex; align-items: center; gap: 6px; }
 .gr-score-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); }
 @media (max-width: 600px) { .gf-filters .gr-field:not(.gr-small) { flex: 1 1 100%; } .gf-filters .gr-field select { width: 100%; } .gf-filters .btn { width: 100%; } }

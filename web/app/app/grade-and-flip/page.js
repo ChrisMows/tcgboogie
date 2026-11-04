@@ -52,6 +52,16 @@ export default async function GradingFinderPage({ searchParams }) {
     limit: 60,
   };
   const [{ cards, total }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
+  // What the folded filters are set to, shown on their bar so the cards come first without hiding the search.
+  const chosen = [
+    grader, co.tiers[tier].name,
+    { english: "English", japanese: "Japanese", all: "English and Japanese" }[opts.language],
+    ERAS[opts.era].label.split(/[:,]/)[0],
+    opts.minRaw || opts.maxRaw !== null ? `Raw ${money(opts.minRaw)}${opts.maxRaw !== null ? ` to ${money(opts.maxRaw)}` : " and up"}` : null,
+    `${money(opts.minProfit)}+ profit`,
+    opts.safeOnly ? null : `Includes cards that need a ${co.top}`,
+    { score: "Best Flip Score", profit: "Most profit", return: "Best return" }[opts.sort],
+  ].filter(Boolean).join(" · ");
 
   return (
     <>
@@ -62,7 +72,12 @@ export default async function GradingFinderPage({ searchParams }) {
         </div>
       </div>
 
-      <form className="panel gf-filters" method="get">
+      <details className="panel gf-filter-box">
+        <summary>
+          <span className="gf-filter-sum"><b>Filters</b><span className="small muted">{chosen}</span></span>
+          <span className="more-grades-icon" aria-hidden="true" />
+        </summary>
+      <form className="gf-filters" method="get">
         <label className="gr-field">
           <span className="small muted">Grading company</span>
           <select name="grader" defaultValue={grader}>{GRADERS.map((g) => <option key={g} value={g}>{g} (top grade {GRADING_COMPANIES[g].top})</option>)}</select>
@@ -115,18 +130,20 @@ export default async function GradingFinderPage({ searchParams }) {
         </label>
         <button type="submit" className="btn primary">Find cards</button>
       </form>
+      </details>
 
       <div className="gr-legend small muted">
         <span className="gr-eq">
           {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
         </span>
       </div>
-      <div className="gr-score-key small muted">
-        <span><b>Flip Score, 1 to 10:</b> profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
+      <details className="gr-score-key small muted">
+        <summary><span className="more-grades-icon" aria-hidden="true" />What&apos;s a Flip Score?</summary>
+        <span>A score from 1 to 10: profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
         <span className="gr-score-tiers">
           {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}</span>)}
         </span>
-      </div>
+      </details>
 
       {cards.length > 0 ? (
         <div className="gr-grid">{cards.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
