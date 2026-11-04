@@ -2062,6 +2062,50 @@ body:has(.install-hint) .helper-fab { display: none; }
 .card-hero-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; margin-top: 14px; }
 .card-hero-side:empty { display: none; }
 .card-hero-side .card-actions .you-own { margin: 0; }
+/* "In your collection": the copy's value, quantity and details, edited right in the box */
+.card-hero-side .you-own:not(.wish) { background: transparent; border-color: var(--border-strong); border-radius: 14px; padding: 18px 20px; }
+.own-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.own-head h2 { margin: 0; font-size: 18px; }
+.own-check { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #15200c; font-size: 14px; font-weight: 800; }
+.own-check::before { content: "✓"; }
+.own-chip { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 8px; background: var(--panel-3); border: 1px solid var(--border-strong); white-space: nowrap; }
+.own-note { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.own-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; margin-top: 16px; align-items: start; }
+.own-row .field { margin-top: 0; }
+.own-field { display: grid; gap: 6px; min-width: 0; }
+.own-field span.field { font-size: 13px; color: var(--muted); }
+.own-qty { display: grid; gap: 6px; }
+.own-qty .stepper { width: 100%; }
+.own-qty .stepper input { flex: 1; min-width: 0; width: auto; }
+.own-money { display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--bg); }
+.own-money:focus-within { border-color: var(--accent); }
+.own-money input, .own-money input:focus { border: 0; background: transparent; padding: 11px 0; min-width: 0; width: 100%; outline: none; box-shadow: none; font-size: 16px; font-weight: 600; }
+.own-market { font: 600 20px var(--font-head), sans-serif; padding: 9px 0; }
+.own-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; margin-top: 14px; border-top: 1px solid var(--border); font-size: 14px; }
+.own-total b { font-size: 16px; }
+.own-gain { margin-top: 0; padding-top: 0; border-top: 0; }
+.own-more { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.own-more summary { display: flex; align-items: center; gap: 10px; padding: 12px 0; cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; }
+.own-more summary::-webkit-details-marker { display: none; }
+.own-more summary:hover { color: var(--accent); }
+.own-more-arrow, .own-line-arrow { flex: none; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
+.own-more[open] .own-more-arrow, .own-line-head[aria-expanded="true"] .own-line-arrow { transform: rotate(45deg); }
+.own-optional { font-size: 11.5px; font-weight: 500; color: var(--muted); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border-strong); }
+.own-more-body { padding-bottom: 14px; }
+.own-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.own-remove { background: none; border: 0; padding: 8px 0; color: var(--bad, #f85149); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.own-remove:hover { text-decoration: underline; }
+.own-actions .btn { padding-left: 26px; padding-right: 26px; }
+.own-line { border-top: 1px solid var(--border); margin-top: 12px; }
+.own-line-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 0 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.own-line-head .copy-what { flex: 1; }
+.own-line .own-copy { margin-top: 4px; }
+.own-sum { margin-top: 12px; }
+@media (max-width: 600px) {
+  .card-hero-side .you-own:not(.wish) { padding: 14px; }
+  .own-row { grid-template-columns: minmax(0, 1fr) 124px; gap: 10px; }
+  .own-actions .btn { flex: 1; }
+}
 .card-hero-side .action-row { margin-top: 10px; }
 .hero-chart { margin: 0; }
 .hero-chart .chart-value { font: 600 44px var(--font-head), sans-serif; letter-spacing: -0.02em; }

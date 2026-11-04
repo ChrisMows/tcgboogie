@@ -84,7 +84,7 @@ export const TOURS = {
     steps: [
       { path: "/app/collection?tab=binders", target: t("binder-new"), text: "Name your binder (e.g. \"For trade\") and tap + Add binder." },
       { path: "/app/collection", target: ".tile-link, .item-row .item-name", text: "To put a card in a binder, open the card.", at: "^/app/cards/" },
-      { at: "^/app/cards/", target: t("item-edit"), text: "Tap Edit on your copy.", tap: true },
+      { at: "^/app/cards/", target: t("item-edit"), text: "Open the details of your copy.", tap: true },
       { at: "^/app/cards/", target: t("item-binder"), text: "Pick the binder here and tap Save changes. When you add new cards, you can choose a binder at the same time." },
       { path: "/app/collection?tab=binders", target: `.binder-grid, ${t("binder-new")}`, text: "Back on the Binders tab, each binder shows its cards and value. Tap one to see just those cards." },
     ],

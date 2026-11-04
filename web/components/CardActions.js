@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, dealAlertForCard, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
-import { itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { CONDITIONS, GRADERS, fitGrade, gradeKey, gradeOption, gradesFor, itemLabel, marketValue, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
 import DealSheet from "@/components/DealSheet";
 
@@ -39,6 +39,150 @@ export function CardAlertIcons({ watch, deals = false, dealFilter = false, wishe
           onClick={() => window.dispatchEvent(new Event("tcgb:wishlist"))}>❤️</button>
       )}
     </span>
+  );
+}
+
+const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
+
+/**
+ * One copy in "In your collection": what it's worth, how many, and what you paid, edited right here and saved together.
+ * A copy with no market price takes the member's own value; a market price always takes over from it (lib/collection.js).
+ */
+function OwnedCopy({ it, product, binders, pending, errors, onSave, onRemove, heading, detailsOpen }) {
+  const isCard = product.type === "card";
+  const printings = isCard ? Object.keys(product.prices || {}) : [];
+  const start = {
+    kind: it.kind, printing: it.printing || printings[0] || null, condition: it.condition || "Near Mint", grader: it.grader || "PSA", grade: it.grade || "10",
+    quantity: String(it.quantity), customValue: it.customValue ?? "", purchasePrice: it.purchasePrice ?? "",
+    purchaseDate: it.purchaseDate ? String(it.purchaseDate).slice(0, 10) : "", certNumber: it.certNumber || "", binderId: it.binderId || "", notes: it.notes || "",
+  };
+  const [d, setD] = useState(start);
+  const set = (field) => (e) => setD((x) => ({ ...x, [field]: e.target.value }));
+  const dirty = Object.keys(start).some((k) => String(start[k] ?? "") !== String(d[k] ?? ""));
+  // The stored price until the member changes which copy this is; then what that condition or grade sells for.
+  const sameCopy = ["kind", "printing", "condition", "grader", "grade"].every((k) => start[k] === d[k]);
+  const market = sameCopy ? it.unitValue ?? null : marketValue(product, d);
+  const own = d.customValue === "" ? null : Number(d.customValue);
+  const each = market ?? (Number.isFinite(own) ? own : null);
+  const qty = Math.max(0, Number(d.quantity) || 0);
+  const paid = d.purchasePrice === "" ? null : Number(d.purchasePrice);
+  const gain = each !== null && Number.isFinite(paid) && paid !== null ? (each - paid) * qty : null;
+  const gradedKeys = Object.keys(product.graded || {});
+  return (
+    <form className="own-copy" onSubmit={(e) => { e.preventDefault(); onSave(d); }}>
+      {heading}
+      {market === null && <p className="own-note">No market price yet. Set your own value below.</p>}
+      <div className="own-row">
+        <div className="own-field">
+          {market === null ? (
+            <>
+              <label className="field" htmlFor={`own-value-${it.id}`}>Your value per copy</label>
+              <span className="own-money"><span aria-hidden="true">$</span>
+                <input id={`own-value-${it.id}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" value={d.customValue} onChange={set("customValue")} />
+              </span>
+              <span className="hint">Used until a market price becomes available.</span>
+              <Err msg={errors.customValue} />
+            </>
+          ) : (
+            <>
+              <span className="field">Market value per copy</span>
+              <b className="own-market">{money(market)}</b>
+            </>
+          )}
+        </div>
+        <div className="own-qty">
+          <label className="field" htmlFor={`own-qty-${it.id}`}>Quantity</label>
+          <div className="stepper">
+            <button type="button" onClick={() => setD((x) => ({ ...x, quantity: String(Math.max(1, (Number(x.quantity) || 1) - 1)) }))} aria-label="One fewer">−</button>
+            <input id={`own-qty-${it.id}`} type="number" min="1" max="9999" value={d.quantity} onChange={set("quantity")} />
+            <button type="button" onClick={() => setD((x) => ({ ...x, quantity: String(Math.min(9999, (Number(x.quantity) || 0) + 1)) }))} aria-label="One more">+</button>
+          </div>
+          <Err msg={errors.quantity} />
+        </div>
+      </div>
+      <div className="own-total"><span>Collection value</span><b>{money(each !== null ? each * qty : null)}</b></div>
+      {gain !== null && <div className="own-total own-gain"><span>Profit on what you paid</span><b className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))}</b></div>}
+      <details className="own-more" open={detailsOpen}>
+        <summary data-tour={detailsOpen ? undefined : "item-edit"}>
+          <span className="own-more-arrow" aria-hidden="true" />
+          {isCard ? "Condition, purchase details & notes" : "Purchase details & notes"} <span className="own-optional">Optional</span>
+        </summary>
+        <div className="form-grid own-more-body">
+          {isCard && (
+            <div>
+              <label className="field" htmlFor={`own-kind-${it.id}`}>Type</label>
+              <select id={`own-kind-${it.id}`} value={d.kind} onChange={set("kind")}><option value="raw">Raw card</option><option value="graded">Graded slab</option></select>
+            </div>
+          )}
+          {isCard && printings.length > 1 && (
+            <div>
+              <label className="field" htmlFor={`own-printing-${it.id}`}>Printing</label>
+              <select id={`own-printing-${it.id}`} value={d.printing || ""} onChange={set("printing")}>{printings.map((x) => <option key={x}>{x}</option>)}</select>
+            </div>
+          )}
+          {isCard && d.kind === "raw" && (
+            <div>
+              <label className="field" htmlFor={`own-cond-${it.id}`}>Condition</label>
+              <select id={`own-cond-${it.id}`} value={d.condition} onChange={set("condition")}>{CONDITIONS.map((c) => <option key={c}>{c}</option>)}</select>
+            </div>
+          )}
+          {isCard && d.kind === "graded" && (
+            <>
+              <div>
+                <label className="field" htmlFor={`own-grader-${it.id}`}>Graded by</label>
+                <select id={`own-grader-${it.id}`} value={d.grader} onChange={(e) => { const g = e.target.value; setD((x) => ({ ...x, grader: g, grade: fitGrade(g, x.grade) })); }}>{GRADERS.map((g) => <option key={g}>{g}</option>)}</select>
+              </div>
+              <div>
+                <label className="field" htmlFor={`own-grade-${it.id}`}>Grade</label>
+                <select id={`own-grade-${it.id}`} value={d.grade} onChange={set("grade")}>
+                  {gradesFor(d.grader).map((g) => <option key={g} value={g}>{gradeOption(d.grader, g)}{gradedKeys.includes(gradeKey(d.grader, g)) ? "" : " (no recent sales)"}</option>)}
+                </select>
+                <Err msg={errors.grade} />
+              </div>
+              <div>
+                <label className="field" htmlFor={`own-cert-${it.id}`}>Cert number</label>
+                <input id={`own-cert-${it.id}`} type="text" value={d.certNumber} onChange={set("certNumber")} />
+              </div>
+            </>
+          )}
+          <div>
+            <label className="field" htmlFor={`own-paid-${it.id}`}>Paid per copy</label>
+            <input id={`own-paid-${it.id}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={d.purchasePrice} onChange={set("purchasePrice")} />
+            <Err msg={errors.purchasePrice} />
+          </div>
+          <div>
+            <label className="field" htmlFor={`own-date-${it.id}`}>Date bought</label>
+            <input id={`own-date-${it.id}`} type="date" value={d.purchaseDate} max={new Date().toISOString().slice(0, 10)} onChange={set("purchaseDate")} />
+            <Err msg={errors.purchaseDate} />
+          </div>
+          {binders.length > 0 && (
+            <div>
+              <label className="field" htmlFor={`own-binder-${it.id}`}>Binder</label>
+              <select id={`own-binder-${it.id}`} data-tour="item-binder" value={d.binderId} onChange={set("binderId")}>
+                <option value="">No binder</option>
+                {binders.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
+          {market !== null && (
+            <div>
+              <label className="field" htmlFor={`own-value-${it.id}`}>Your own value per copy</label>
+              <input id={`own-value-${it.id}`} type="number" min="0" step="0.01" placeholder="If the market price goes away" value={d.customValue} onChange={set("customValue")} />
+              <Err msg={errors.customValue} />
+            </div>
+          )}
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="field" htmlFor={`own-notes-${it.id}`}>Notes</label>
+            <input id={`own-notes-${it.id}`} type="text" maxLength={300} value={d.notes} onChange={set("notes")} placeholder="e.g. pulled from a booster box, centering 55/45" />
+          </div>
+        </div>
+      </details>
+      <Err msg={errors._} />
+      <div className="own-actions">
+        <button type="button" className="own-remove" disabled={pending} onClick={() => window.confirm("Remove this from your collection?") && onRemove()}>Remove</button>
+        <button className="btn primary" disabled={pending || !dirty}>{pending ? "Saving..." : "Save changes"}</button>
+      </div>
+    </form>
   );
 }
 
@@ -101,48 +245,35 @@ export default function CardActions({ product, mine, binders, watch, plan, price
     <div className="card-actions">
       {copies > 0 ? (
         <div className="you-own">
-          <div className="you-own-head"><b>✓ In your collection</b></div>
-          {owned.map((it) => {
-            const each = unitValue(it);
-            const lineGain = it.purchasePrice != null && each != null ? (each - it.purchasePrice) * it.quantity : null;
-            return (
-            <div key={it.id} className="copy-row">
-              <div className="copy-line">
-                <span className="copy-what"><span className="copy-qty">{it.quantity}×</span><span className="copy-label">{itemLabel(it)}</span></span>
-                <span className="copy-value">
-                  <b>{money(each != null ? each * it.quantity : null)}</b>
-                  {it.quantity > 1 && <span className="small muted">{money(each)} each</span>}
-                </span>
+          {owned.length === 1 ? (
+            <OwnedCopy key={owned[0].id} it={owned[0]} product={product} binders={binders} pending={pending} errors={errors}
+              onSave={(input) => run(() => editItem(owned[0].id, input), "Saved.")} onRemove={() => run(() => removeItem(owned[0].id), "Removed.")}
+              heading={<div className="own-head"><span className="own-check" aria-hidden="true" /><h2>In your collection</h2><span className="own-chip">{itemLabel(owned[0])}</span></div>} />
+          ) : (
+            <>
+              <div className="own-head"><span className="own-check" aria-hidden="true" /><h2>In your collection</h2></div>
+              {owned.map((it) => {
+                const each = unitValue(it);
+                const open = editing === it.id;
+                return (
+                  <div key={it.id} className="own-line">
+                    <button type="button" className="own-line-head" data-tour="item-edit" aria-expanded={open} onClick={() => { setErrors({}); setEditing(open ? null : it.id); }}>
+                      <span className="copy-what"><span className="copy-qty">{it.quantity}×</span><span className="own-chip">{itemLabel(it)}</span></span>
+                      <span className="copy-value"><b>{money(each != null ? each * it.quantity : null)}</b>{it.quantity > 1 && <span className="small muted">{money(each)} each</span>}</span>
+                      <span className="own-line-arrow" aria-hidden="true" />
+                    </button>
+                    {open && (
+                      <OwnedCopy detailsOpen it={it} product={product} binders={binders} pending={pending} errors={errors}
+                        onSave={(input) => run(() => editItem(it.id, input), "Saved.")} onRemove={() => run(() => removeItem(it.id), "Removed.")} />
+                    )}
+                  </div>
+                );
+              })}
+              <div className="own-total own-sum">
+                <span>Collection value{gain !== null ? <> · <span className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))} ({cost ? pct(gain / cost) : "—"})</span></> : null}</span>
+                <b>{money(worth)}</b>
               </div>
-              <div className="copy-line">
-                <span className="small muted copy-meta">
-                  {it.purchasePrice ? <>Paid {money(it.purchasePrice)}{lineGain !== null && <> · <span className={lineGain >= 0 ? "up" : "down"}>{lineGain >= 0 ? "+" : "−"}{money(Math.abs(lineGain))}</span></>}</> : null}
-                  {it.purchasePrice && binders.find((b) => b.id === it.binderId) ? " · " : ""}{binders.find((b) => b.id === it.binderId)?.name}
-                </span>
-                <span className="copy-tools">
-                  <span className="stepper xs">
-                    <button type="button" disabled={pending} onClick={() => (it.quantity > 1 || window.confirm("Remove this copy from your collection?")) && run(() => changeQuantity(it.id, -1))} aria-label="One fewer">−</button>
-                    <span>{it.quantity}</span>
-                    <button type="button" disabled={pending} onClick={() => run(() => changeQuantity(it.id, 1))} aria-label="One more">+</button>
-                  </span>
-                  <button type="button" className="link-btn small" data-tour="item-edit" onClick={() => { setErrors({}); setEditing(editing === it.id ? null : it.id); }}>{editing === it.id ? "Close" : "Edit"}</button>
-                </span>
-              </div>
-              {editing === it.id && (
-                <div className="copy-edit">
-                  <ItemForm product={product} initial={it} binders={binders} allowList={false} submitLabel="Save changes" pending={pending} errors={errors}
-                    onSubmit={(input) => run(() => editItem(it.id, input), "Saved.")} />
-                  <button type="button" className="btn sm danger" style={{ marginTop: 10 }} onClick={() => window.confirm("Remove this from your collection?") && run(() => removeItem(it.id), "Removed.")}>Remove from collection</button>
-                </div>
-              )}
-            </div>
-            );
-          })}
-          {owned.length > 1 && (
-            <div className="copy-line you-own-total">
-              <span className="small muted">Total{gain !== null ? <> · <span className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))} ({cost ? pct(gain / cost) : "—"})</span></> : null}</span>
-              <b>{money(worth)}</b>
-            </div>
+            </>
           )}
         </div>
       ) : wish ? (
