@@ -14,7 +14,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
       ["Is it really free?",
         `Yes. Free is free forever, no card needed, and includes: ${lists.free.join(" · ")}. Premium is $${premium.price}/month plus sales tax.`],
       ["What's Ultra?",
-        `Ultra is $${PLANS.ultra.price}/month plus tax: everything in Premium, plus Grade & Flip, which finds cards worth buying raw to grade, ranked by profit. More tools for flipping cards are coming. New subscribers get the same free trial as Premium. On Premium already? Upgrading charges just the difference for the rest of your billing month.`],
+        `Ultra is $${PLANS.ultra.price}/month plus tax: everything in Premium, plus Grade & Flip, which finds cards worth buying raw to grade, scored 0 to 100 on profit, risk and demand. More tools for flipping cards are coming. New subscribers get the same free trial as Premium. On Premium already? Upgrading charges just the difference for the rest of your billing month.`],
       ["What's the difference between Free and Premium?",
         `Free includes: ${lists.free.join(" · ")}. Premium adds: ${lists.premium.join(" · ")}.`],
       ["Will you add Magic, Lorcana, Yu-Gi-Oh! or Star Wars: Unlimited?",

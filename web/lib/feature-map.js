@@ -112,7 +112,7 @@ function features(free, premium, sms) {
     { area: "Collection", name: "Worth grading?", link: "/app/collection", grows: "card", vendors: ["ppt"],
       what: "Which raw cards would gain the most from grading.", free: free.gradingCheck ? "✓" : "Top 3", premium: premium.gradingCheck ? "✓" : "Top 3" },
     { area: "Collection", name: "Grade & Flip", link: "/app/grade-and-flip", grows: "shared", vendors: ["vps"],
-      what: "Cards anywhere with a big raw-to-graded price gap. Copies prices already saved (grading_gap table, filled by the cron job): no price lookups.",
+      what: "Cards anywhere with a big raw-to-graded price gap. Copies prices already saved (grading_gap table, filled by the cron job): no price lookups. Each card gets a Flip Score (lib/grading.js flipScore).",
       free: "—", premium: "— (Ultra only)" },
     { area: "Collection", name: "Trade analyzer", link: "/app/collection/trade", grows: "use", vendors: ["ppt"],
       what: "Prices both sides of a trade and grades its fairness.", free: yes(free.tradeAnalyzer), premium: yes(premium.tradeAnalyzer) },

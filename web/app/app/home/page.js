@@ -474,7 +474,7 @@ function UltraTab({ plans, onUltra, subscribed, trial }) {
   const price = plans.ultra.price;
   const rows = [
     ["Everything in Premium", "✓", "✓"],
-    ["Grade & Flip: cards worth buying raw to grade, ranked by profit after fees", "—", "✓"],
+    ["Grade & Flip: cards worth buying raw to grade, scored 0 to 100 on profit, risk and demand", "—", "✓"],
     ["More tools for flipping cards", "—", "Coming soon"],
   ];
   const table = (
@@ -498,7 +498,7 @@ function UltraTab({ plans, onUltra, subscribed, trial }) {
         <div className="panel home-premium-hero home-ultra-hero">
           <div className="eyebrow-sm">TCG BOOGIE ULTRA</div>
           <h2>You&apos;re on Ultra 🎉</h2>
-          <p className="muted">Everything in Premium, plus Grade &amp; Flip: raw cards selling far below their graded price, ranked by profit.</p>
+          <p className="muted">Everything in Premium, plus Grade &amp; Flip: raw cards selling far below their graded price, scored 0 to 100 on profit, risk and demand.</p>
           <div className="row" style={{ gap: 8, justifyContent: "center" }}>
             <Link href="/app/grade-and-flip" className="btn primary">Open Grade &amp; Flip</Link>
             <Link href="/app/account#billing" className="btn">Billing</Link>

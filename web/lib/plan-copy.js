@@ -14,7 +14,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** What Ultra adds over Premium (the pricing card, the Ultra page, the Compare plans pop-up). */
 export const ULTRA_PERKS = [
-  "Grade & Flip: cards worth buying raw to grade, ranked by profit",
+  "Grade & Flip: cards worth buying raw to grade, scored 0 to 100 on profit, risk and demand",
   "More tools for flipping cards, coming soon",
 ];
 

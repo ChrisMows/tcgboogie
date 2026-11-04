@@ -35,7 +35,7 @@ export default async function GradingPage() {
       {finder.total > 0 && (ultra ? (
         <Link href="/app/grade-and-flip" className="panel gf-promo gf-promo-link">
           <span className="gf-promo-icon" aria-hidden="true">💎</span>
-          <span><b>Find cards worth buying to grade</b><span className="muted small"> · Grade & Flip has {finder.total.toLocaleString("en-US")} modern safe bets with PSA right now, beyond your own cards.</span></span>
+          <span><b>Find cards worth buying to grade</b><span className="muted small"> · Grade & Flip has {finder.total.toLocaleString("en-US")} modern cards where a PSA 9 still pays right now, beyond your own cards.</span></span>
           <span className="gf-promo-go" aria-hidden="true">→</span>
         </Link>
       ) : (

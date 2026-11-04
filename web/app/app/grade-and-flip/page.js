@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { GradingTile } from "@/components/GradingCheck";
-import { DEFAULT_SHIPPING, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
 import { ERAS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
@@ -24,7 +24,7 @@ function UltraOnly() {
       </div>
       <div className="panel empty-state">
         <h2>🔒 Grade &amp; Flip is part of Ultra</h2>
-        <p className="muted">Every card ranked by profit after grading fees and shipping, with filters for grading company, budget, era and how safe a bet it is.</p>
+        <p className="muted">Every card gets a Flip Score from 0 to 100 for its profit after fees, its return, what a lower grade would still pay and how often it sells, with filters for grading company, budget and era.</p>
         <Link href="/app/ultra?from=grading-finder" className="btn primary">See Ultra · ${PLANS.ultra.price}/mo</Link>
       </div>
     </>
@@ -48,7 +48,7 @@ export default async function GradingFinderPage({ searchParams }) {
     safeOnly: sp?.safe !== "0", // on unless switched off: a card that only pays at a 10 is a gamble
     language: ["english", "japanese", "all"].includes(sp?.lang) ? sp.lang : "english",
     era: ERAS[sp?.era] ? sp.era : "modern", // vintage rarely grades a 10, so modern comes first
-    sort: sp?.sort === "return" ? "return" : "profit",
+    sort: ["profit", "return"].includes(sp?.sort) ? sp.sort : "score",
     limit: 60,
   };
   const [{ cards, total }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
@@ -104,13 +104,13 @@ export default async function GradingFinderPage({ searchParams }) {
         <label className="gr-field">
           <span className="small muted">Sort by</span>
           <select name="sort" defaultValue={opts.sort}>
-            <option value="profit">Most profit</option><option value="return">Best return on what you spend</option>
+            <option value="score">Best Flip Score</option><option value="profit">Most profit</option><option value="return">Best return on what you spend</option>
           </select>
         </label>
         <label className="gr-field">
           <span className="small muted">Risk</span>
           <select name="safe" defaultValue={opts.safeOnly ? "1" : "0"}>
-            <option value="1">Safe bets: a {co.next} still pays</option><option value="0">Include cards that need a {co.top}</option>
+            <option value="1">Only cards where a {co.next} still pays</option><option value="0">Include cards that need a {co.top}</option>
           </select>
         </label>
         <button type="submit" className="btn primary">Find cards</button>
@@ -120,8 +120,12 @@ export default async function GradingFinderPage({ searchParams }) {
         <span className="gr-eq">
           {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
         </span>
-        <span><span className="badge good">✓ Safe bet</span> a {co.next} still pays</span>
-        <span><span className="badge warn">Needs a {co.top}</span> riskier</span>
+      </div>
+      <div className="gr-score-key small muted">
+        <span><b>Flip Score, 0 to 100:</b> profit ({FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
+        <span className="gr-score-tiers">
+          {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${FLIP_TIERS[i - 1].min - 1}`}</span>)}
+        </span>
       </div>
 
       {cards.length > 0 ? (

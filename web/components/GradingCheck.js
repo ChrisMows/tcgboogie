@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { DEFAULT_SHIPPING, GRADING_COMPANIES, gradingMath } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_POINTS, GRADING_COMPANIES, gradingMath } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -15,6 +15,25 @@ const run = (candidates, grader, tier, opts) => candidates.map((c) => {
   const m = gradingMath(c, grader, tier, opts);
   return m && { ...c, ...m };
 }).filter(Boolean).sort((a, b) => b.profit10 - a.profit10);
+
+/** Grade & Flip's Flip Score on a card, and what the grade below the top would do. */
+function FlipScore({ c, top, next }) {
+  const { score, tier, parts } = c.flip;
+  const lower = c.profit9 === null ? `Needs a ${top}: no recent ${next} sales` : c.profit9 >= 0 ? `✓ ${plus(c.profit9)} even as a ${next}` : `Needs a ${top}: ${plus(c.profit9)} as a ${next}`;
+  return (
+    <>
+      <span className={`small gr-lower ${c.profit9 !== null && c.profit9 >= 0 ? "pays" : ""}`}>{lower}</span>
+      <span className={`gr-score ${tier.key}`} aria-label={`Flip Score ${score} out of 100, ${tier.label}`}
+        title={`Profit ${parts.profit}/${FLIP_POINTS.profit} · Return ${parts.return}/${FLIP_POINTS.return} · If it grades lower ${parts.safety}/${FLIP_POINTS.safety} · Demand ${parts.demand}/${FLIP_POINTS.demand}`}>
+        <b className="gr-score-num">{score}</b>
+        <span className="gr-score-body">
+          <span className="gr-score-label"><b>{tier.label}</b><span className="muted">Flip Score</span></span>
+          <span className="gr-score-bar"><i style={{ width: `${score}%` }} /></span>
+        </span>
+      </span>
+    </>
+  );
+}
 
 /** One card's grading numbers (also used by Grade & Flip, app/app/grade-and-flip/page.js). */
 export function GradingTile({ c, dim }) {
@@ -35,9 +54,11 @@ export function GradingTile({ c, dim }) {
           {c.next !== null && <span className="gr-nine"><i>{next}</i>{money(c.next)}</span>}
         </div>
         <span className="small muted gr-cost-note">{c.tier ? `${c.tier.name} ${fee(c.tier.fee)}` : "Your price"} + shipping{c.bumped ? ` · its value needs ${c.tier.name}` : ""}</span>
+        {c.flip ? <FlipScore c={c} top={top} next={next} /> : <>
         {c.verdict === "safe" && <span className="badge good" title={`Even a ${next} covers the cost`}>✓ Safe bet</span>}
         {c.verdict === "needs10" && <span className="badge warn" title={`Only pays off if it gets a ${top}`}>Needs a {co.top}</span>}
         {c.verdict === "skip" && <span className="badge">Not worth it</span>}
+        </>}
       </div>
     </Link>
   );

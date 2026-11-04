@@ -1398,6 +1398,27 @@ details.era > .set-grid { margin-bottom: 14px; }
 .cmp-ultra ul { margin: 4px 0 0; padding-left: 18px; }
 .gf-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 0 0 14px; }
 .gf-filters .btn { margin-left: auto; }
+/* Grade & Flip's Flip Score */
+.gr-score, .gr-score-chip { --tier: var(--muted); }
+.gr-score.excellent, .gr-score-chip.excellent { --tier: var(--accent); }
+.gr-score.strong, .gr-score-chip.strong { --tier: var(--good); }
+.gr-score.good, .gr-score-chip.good { --tier: #58a6ff; }
+.gr-score.fair, .gr-score-chip.fair { --tier: var(--warn); }
+.gr-lower { color: var(--muted); }
+.gr-lower.pays { color: var(--good); }
+.gr-score { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 8px; }
+.gr-lower + .gr-score { margin-top: auto; }
+.gr-score-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--tier); color: var(--tier); font: 700 17px var(--font-head), sans-serif; }
+.gr-score-body { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.gr-score-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; white-space: nowrap; }
+.gr-score-label b { color: var(--tier); }
+.gr-score-label .muted { font-size: 11px; }
+.gr-score-bar { display: block; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.gr-score-bar i { display: block; height: 100%; border-radius: 3px; background: var(--tier); }
+.gr-score-key { display: grid; gap: 8px; margin: 0 2px 14px; }
+.gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.gr-score-chip { display: inline-flex; align-items: center; gap: 6px; }
+.gr-score-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); }
 @media (max-width: 600px) { .gf-filters .gr-field:not(.gr-small) { flex: 1 1 100%; } .gf-filters .gr-field select { width: 100%; } .gf-filters .btn { width: 100%; } }
 .gr-skip { margin-top: 16px; display: grid; gap: 12px; justify-items: start; }
 .gr-skip .gr-grid { width: 100%; }

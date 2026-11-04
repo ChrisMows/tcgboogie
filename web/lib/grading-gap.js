@@ -2,7 +2,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
-import { GRADING_COMPANIES, gradingMath } from "@/lib/grading";
+import { GRADING_COMPANIES, flipScore, gradingMath } from "@/lib/grading";
 
 // Grade & Flip (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
 // under what the same card sells for graded. Built only from price-service answers we already saved (catalog_cache:
@@ -139,12 +139,12 @@ const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.to
 /**
  * Cards worth grading at a grader and service level, best first. opts: grader, tier (service level index), own (own
  * fee instead), shipping, minRaw / maxRaw (what the raw copy costs), minProfit, safeOnly (the grade below the top still
- * pays), language ("english" / "japanese" / "all"), era (ERAS key, "modern" by default), sort ("profit" / "return"), limit.
+ * pays), language ("english" / "japanese" / "all"), era (ERAS key, "modern" by default), sort ("score" / "profit" / "return"), limit.
  * Returns { cards, total } (total: how many qualify before the limit).
  */
 export async function findGradingGaps(opts = {}) {
   const { grader = "PSA", tier = 0, own = null, shipping = 5, minRaw = 0, maxRaw = null, minProfit = 25, safeOnly = false,
-    language = "english", era = "modern", sort = "profit", limit = 60 } = opts;
+    language = "english", era = "modern", sort = "score", limit = 60 } = opts;
   const co = GRADING_COMPANIES[grader];
   const tk = keyOf(grader, co.top), nk = keyOf(grader, co.next);
   // The cheapest this grading can cost (a pricier card may need a higher level): rules out most cards in the database.
@@ -180,10 +180,11 @@ export async function findGradingGaps(opts = {}) {
   }
   const cards = rows.map(candidate).map((c) => {
     const m = gradingMath(c, grader, tier, { own, shipping });
-    return m && { ...c, ...m, roi: m.profit10 / (c.raw + m.cost) };
+    return m && { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[grader].topSales) };
   }).filter((c) => c && plausible(c) && c.verdict !== "skip" && c.profit10 >= minProfit && (!safeOnly || c.verdict === "safe")
     && c.raw >= minRaw && (maxRaw === null || c.raw <= maxRaw));
-  cards.sort(sort === "return" ? (a, b) => b.roi - a.roi : (a, b) => b.profit10 - a.profit10);
+  cards.sort(sort === "return" ? (a, b) => b.roi - a.roi : sort === "profit" ? (a, b) => b.profit10 - a.profit10
+    : (a, b) => b.flip.score - a.flip.score || b.profit10 - a.profit10);
   return { cards: cards.slice(0, limit), total: cards.length, capped: rows.length === 600 };
 }
 

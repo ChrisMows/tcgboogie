@@ -46,6 +46,39 @@ export const GRADING_COMPANIES = {
   ] },
 };
 
+// Grade & Flip's Flip Score, 0 to 100: how good an opportunity a card is, out of these points.
+export const FLIP_POINTS = { profit: 30, return: 20, safety: 30, demand: 20 };
+export const FLIP_TIERS = [
+  { key: "excellent", label: "Excellent", min: 80 },
+  { key: "strong", label: "Strong", min: 65 },
+  { key: "good", label: "Good", min: 50 },
+  { key: "fair", label: "Fair", min: 35 },
+  { key: "long", label: "Long shot", min: 0 },
+];
+const THIN_SALES = 5; // fewer top-grade sales than this in 90 days can't score Excellent: the price rests on too little
+const scale = (v, lo, hi) => Math.max(0, Math.min(1, Math.log(Math.max(v, 1e-9) / lo) / Math.log(hi / lo))); // on a log scale, so $100 to $200 counts as much as $1,000 to $2,000
+
+/**
+ * The Flip Score for gradingMath's numbers. Profit runs from $25 to $2,000, return (profit / raw price + grading) from 25%
+ * to 800%, demand from 3 to 100 top-grade sales in 90 days. Safety is what the grade below the top leaves on the money
+ * spent: losing it all scores 0, breaking even half, doubling it full marks, and no recent sales of that grade a low 15%.
+ * Ranges checked on the live data, Nov 2026. Returns { score, tier, parts } (parts: the points each one earned).
+ */
+export function flipScore({ raw, cost, profit10, profit9 }, topSales) {
+  const spend = raw + cost;
+  const left = profit9 === null ? null : profit9 / spend;
+  const safety = left === null ? 0.15 : left < 0 ? 0.5 * (1 + left) : 0.5 + 0.5 * Math.min(1, left);
+  const parts = {
+    profit: Math.round(FLIP_POINTS.profit * scale(profit10, 25, 2000)),
+    return: Math.round(FLIP_POINTS.return * scale(profit10 / spend, 0.25, 8)),
+    safety: Math.round(FLIP_POINTS.safety * Math.max(0, safety)),
+    demand: Math.round(FLIP_POINTS.demand * scale(topSales ?? 0, 3, 100)),
+  };
+  const total = parts.profit + parts.return + parts.safety + parts.demand;
+  const score = (topSales ?? 0) < THIN_SALES ? Math.min(total, FLIP_TIERS[0].min - 1) : total;
+  return { score, tier: FLIP_TIERS.find((t) => score >= t.min), parts };
+}
+
 const keyOf = (grader, grade) => `${grader.toLowerCase()}${grade.replace(".", "_")}`;
 const reliable = (g) => (g && g.reliable !== false && g.price ? g.price : null);
 
