@@ -22,7 +22,7 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
   const [certNumber, setCertNumber] = useState(initial?.certNumber || "");
   const [binderId, setBinderId] = useState(initial?.binderId || "");
   const [notes, setNotes] = useState(initial?.notes || "");
-  const [more, setMore] = useState(Boolean(initial?.customValue || initial?.notes || initial?.certNumber));
+  const [more, setMore] = useState(Boolean(initial?.purchasePrice || initial?.purchaseDate || initial?.notes || initial?.certNumber));
 
   const value = marketValue(product, { kind, printing, condition, grader, grade });
   const gradedKeys = Object.keys(product.graded || {});
@@ -91,9 +91,10 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
         </div>
         {owned && (
           <div>
-            <label className="field" htmlFor="if-paid">Paid per copy (optional)</label>
-            <input id="if-paid" type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
-            <Err msg={errors.purchasePrice} />
+            <label className="field" htmlFor="if-own">Your own value per copy (optional)</label>
+            <input id="if-own" type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={customValue} onChange={(e) => setCustomValue(e.target.value)} />
+            <span className="small muted">Used only while we have no market price for this copy. A market price always takes over.</span>
+            <Err msg={errors.customValue} />
           </div>
         )}
         {owned && binders.length > 0 && (
@@ -110,14 +111,19 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
 
       <div className="value-line">
         {value !== null ? <>Worth about <b>{money(value)}</b> each{Number(quantity) > 1 ? <> · <b>{money(value * quantity)}</b> for {quantity}</> : null}</>
-          : <span className="muted">{kind === "graded" ? `No recent ${grader} ${grade} sales to value it from. You can set your own value below.` : "No current price for this one yet."}</span>}
+          : <span className="muted">{kind === "graded" ? `No recent ${grader} ${grade} sales to value it from. You can set your own value above.` : "No current price for this one yet."}</span>}
       </div>
 
       {owned && (
-        <button type="button" className="link-btn" onClick={() => setMore(!more)}>{more ? "− Fewer details" : "+ More details (date, cert number, your own value, notes)"}</button>
+        <button type="button" className="link-btn" onClick={() => setMore(!more)}>{more ? "− Fewer details" : `+ More details (price paid, date, ${kind === "graded" ? "cert number, " : ""}notes)`}</button>
       )}
-      {owned && more && (
+      {owned && (more || errors.purchasePrice || errors.purchaseDate) && (
         <div className="form-grid" style={{ marginTop: 10 }}>
+          <div>
+            <label className="field" htmlFor="if-paid">Paid per copy</label>
+            <input id="if-paid" type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
+            <Err msg={errors.purchasePrice} />
+          </div>
           <div>
             <label className="field" htmlFor="if-date">Date bought</label>
             <input id="if-date" type="date" value={purchaseDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setPurchaseDate(e.target.value)} />
@@ -129,12 +135,6 @@ export default function ItemForm({ product, initial, binders = [], onSubmit, sub
               <input id="if-cert" type="text" value={certNumber} onChange={(e) => setCertNumber(e.target.value)} />
             </div>
           )}
-          <div>
-            <label className="field" htmlFor="if-own">Your own value per copy</label>
-            <input id="if-own" type="number" min="0" step="0.01" placeholder="Only if there's no market price" value={customValue} onChange={(e) => setCustomValue(e.target.value)} />
-            <span className="small muted">Used only while we have no market price for this copy. A market price always takes over.</span>
-            <Err msg={errors.customValue} />
-          </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="field" htmlFor="if-notes">Notes</label>
             <input id="if-notes" type="text" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. pulled from a booster box, centering 55/45" />
