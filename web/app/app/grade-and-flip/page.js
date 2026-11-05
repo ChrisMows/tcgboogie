@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GradeFlipFilters from "@/components/GradeFlipFilters";
 import { GradingTile } from "@/components/GradingCheck";
 import { gradeLabel } from "@/lib/collection";
 import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
@@ -85,59 +86,7 @@ export default async function GradingFinderPage({ searchParams }) {
           <span className="gf-filter-sum"><b>Filters</b><span className="small muted">{chosen}</span></span>
           <span className="more-grades-icon" aria-hidden="true" />
         </summary>
-      <form className="gf-filters" method="get">
-        <label className="gr-field">
-          <span className="small muted">Grading company and grade</span>
-          <select name="grader" defaultValue={target}>{Object.keys(GRADE_TARGETS).map((g) => <option key={g} value={g}>{targetName(g)}</option>)}</select>
-        </label>
-        <label className="gr-field">
-          <span className="small muted">{grader} service level</span>
-          <select name="tier" defaultValue={String(tier)}>
-            {co.tiers.map((t, i) => <option key={t.name} value={i}>{t.name} · {fee(t.fee)}{t.days ? ` · ~${t.days} days` : ""}</option>)}
-          </select>
-        </label>
-        <label className="gr-field gr-small">
-          <span className="small muted">Raw price from</span>
-          <span className="gr-money"><span className="muted">$</span><input type="number" name="min" min="0" step="1" defaultValue={opts.minRaw || ""} placeholder="0" /></span>
-        </label>
-        <label className="gr-field gr-small">
-          <span className="small muted">up to</span>
-          <span className="gr-money"><span className="muted">$</span><input type="number" name="max" min="0" step="1" defaultValue={opts.maxRaw ?? ""} placeholder="Any" /></span>
-        </label>
-        <label className="gr-field gr-small">
-          <span className="small muted">Profit at least</span>
-          <span className="gr-money"><span className="muted">$</span><input type="number" name="profit" min="0" step="5" defaultValue={opts.minProfit} /></span>
-        </label>
-        <label className="gr-field gr-small">
-          <span className="small muted">Shipping per card</span>
-          <span className="gr-money"><span className="muted">$</span><input type="number" name="ship" min="0" step="1" defaultValue={opts.shipping} /></span>
-        </label>
-        <label className="gr-field">
-          <span className="small muted">Cards</span>
-          <select name="lang" defaultValue={opts.language}>
-            <option value="english">English</option><option value="japanese">Japanese</option><option value="all">English and Japanese</option>
-          </select>
-        </label>
-        <label className="gr-field">
-          <span className="small muted">Era</span>
-          <select name="era" defaultValue={opts.era}>
-            {Object.entries(ERAS).map(([k, e]) => <option key={k} value={k}>{e.label}</option>)}
-          </select>
-        </label>
-        <label className="gr-field">
-          <span className="small muted">Sort by</span>
-          <select name="sort" defaultValue={opts.sort}>
-            <option value="score">Best Flip Score</option><option value="profit">Most profit</option><option value="return">Best return on what you spend</option>
-          </select>
-        </label>
-        <label className="gr-field">
-          <span className="small muted">Risk</span>
-          <select name="safe" defaultValue={opts.safeOnly ? "1" : "0"}>
-            <option value="1">Only cards where a {nextShort} still pays</option><option value="0">Include cards that need a {topShort}</option>
-          </select>
-        </label>
-        <button type="submit" className="btn primary">Find cards</button>
-      </form>
+      <GradeFlipFilters key={`${target}:${tier}`} opts={opts} eras={Object.fromEntries(Object.entries(ERAS).map(([k, e]) => [k, e.label]))} />
       </details>
 
       <div className="gr-legend small muted">
