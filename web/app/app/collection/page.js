@@ -5,7 +5,7 @@ import CollectionHero from "@/components/CollectionHero";
 import CollectionView from "@/components/CollectionView";
 import FeatureIntro from "@/components/FeatureIntro";
 import { catalogLive } from "@/lib/catalog";
-import { chartSeries, itemLabel, marketChange, ownedCounts, unitValue } from "@/lib/collection";
+import { chartSeries, marketChange, ownedCounts, unitValue } from "@/lib/collection";
 import { loadCollection } from "@/lib/portfolio";
 import { quotaStatus } from "@/lib/quota";
 import { requireUser } from "@/lib/session";
@@ -23,10 +23,6 @@ export default async function CollectionPage({ searchParams }) {
   const [watches, profiles] = await Promise.all([store.listWatches(user.id), store.listProfiles(user.id)]);
   const { summary } = c;
 
-  const movers = c.owned.filter((it) => it.change7 !== null && Math.abs(it.change7) >= 0.005 && unitValue(it) !== null)
-    .sort((a, b) => Math.abs(b.change7 * unitValue(b) * b.quantity) - Math.abs(a.change7 * unitValue(a) * a.quantity)).slice(0, 5)
-    .map((it) => ({ id: it.id, productId: it.productId, image: it.image, number: it.number, productType: it.productType, kind: it.kind, grader: it.grader, grade: it.grade,
-      name: it.name.replace(/\s*\(.*\)$/, ""), label: itemLabel(it), change7: it.change7 }));
   const list = tab === "wishlist" ? c.wishlist : c.owned;
   // Opened from a binder tile: the Collection tab starts filtered to that binder.
   const binderParam = String(sp?.binder || "");
@@ -61,7 +57,7 @@ export default async function CollectionPage({ searchParams }) {
     <>
       <h1 className="sr-only">Collection</h1>
       {intro && <FeatureIntro card={intro} />}
-      <CollectionHero summary={summary} day={day} week={week} sinceVisit={sinceVisit} changes={changes} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer} movers={movers}
+      <CollectionHero summary={summary} day={day} week={week} sinceVisit={sinceVisit} changes={changes} adding={adding} exportAllowed={!!user.plan.collectionExport} tradeAllowed={!!user.plan.tradeAnalyzer}
         chart={chartSeries(c.snapshots, null)} historyDays={user.plan.collectionHistoryDays} plan={user.plan} prefs={c.prefs}
         hasCards={c.owned.length > 0} />
 

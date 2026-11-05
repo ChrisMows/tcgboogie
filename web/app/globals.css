@@ -291,6 +291,13 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .chg-range { font-size: 0.85em; opacity: 0.65; margin-left: 2px; font-weight: 600; }
 .chg.up { color: var(--accent); }
 .chg.down { color: var(--bad); }
+.chg-day { font-size: 12px; font-weight: 600; color: var(--muted); }
+.chg-day.up { color: var(--accent); }
+.chg-day.down { color: var(--bad); }
+.movers-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.movers-tools select { width: auto; }
+.movers-total { margin-left: auto; font-weight: 600; }
+.movers-list-head { display: flex; justify-content: space-between; gap: 8px; }
 
 .compare-all { display: flex; justify-content: center; margin: 28px auto 0; }
 

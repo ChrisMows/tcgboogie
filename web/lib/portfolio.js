@@ -75,16 +75,17 @@ export async function loadCollection(user) {
       it.unitValue = mv;
       it.valueUpdatedAt = new Date();
     }
+    // Each chart range's price change (key 0 = all the history we have), so the list follows the chart's range.
+    // Only when the history covers the range: no "1Y" figure from 90 days of prices. Graded copies use their own
+    // saved daily values (they have no price-service history).
+    const changes = it.kind === "graded" ? itemRangeChanges(hist[it.id], it.unitValue ?? it.customValue) : rangeChanges(p);
     enriched.push({
       ...it,
       // A picture saved because TCGplayer has none comes first: the copy's own saved link is TCGplayer's missing one.
       image: pictureFor(it.productId) || it.image || p?.image || null,
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
-      change7: it.kind === "graded" ? null : change(p, 7),
-      // Each chart range's price change (key 0 = all the history we have), so the list follows the chart's range.
-      // Only when the history covers the range: no "1Y" figure from 90 days of prices. Graded copies use their own
-      // saved daily values (they have no price-service history).
-      changes: it.kind === "graded" ? itemRangeChanges(hist[it.id], it.unitValue ?? it.customValue) : rangeChanges(p),
+      change7: it.kind === "graded" ? changes?.[7] ?? null : change(p, 7),
+      changes,
       createdAt: String(it.createdAt),
       valueUpdatedAt: it.valueUpdatedAt ? String(it.valueUpdatedAt) : null,
     });

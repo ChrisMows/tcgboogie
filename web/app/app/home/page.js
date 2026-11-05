@@ -183,7 +183,7 @@ export default async function HomePage({ searchParams }) {
             {/* Their cards that moved most this week. */}
             {(risers.length > 0 || fallers.length > 0) && (
               <section className="home-section">
-                <div className="home-head"><h2>📈 Your movers this week</h2><Link href="/app/collection">Collection</Link></div>
+                <div className="home-head"><h2>📈 Your movers this week</h2><Link href="/app/collection/movers">See all</Link></div>
                 <div className="home-movers">
                   {[["Up", risers], ["Down", fallers]].filter(([, list]) => list.length).map(([label, list]) => (
                     <div key={label} className="panel home-list">

@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import {
   changeQuantity, editItem, moveToCollection, removeItem, watchProduct,
 } from "@/app/app/collection/actions";
-import { KINDS, SORTS, isOwnValue, itemLabel, money, pct, unitValue } from "@/lib/collection";
+import { KINDS, SORTS, isOwnValue, itemLabel, itemMove, money, pct, unitValue } from "@/lib/collection";
 import { rangeLabel, useChartRange } from "@/lib/chart-range";
 import { rarityCodes } from "@/lib/rarity";
 
@@ -20,12 +20,24 @@ const changeFor = (it, range) => (it.changes ? it.changes[range ?? 0] ?? null : 
 function Change({ it }) {
   const range = useChartRange();
   const v = changeFor(it, range);
-  if (v === null || v === undefined) return null;
+  if (v === null || v === undefined || range === 1) return null; // on 1D, DayChange already says it
   const flat = Math.abs(v) < 0.005;
   return (
     <span className={`chg ${flat ? "" : v > 0 ? "up" : "down"}`} title={`Price change, ${rangeLabel(range) === "All" ? "all the history we have" : `last ${rangeLabel(range)}`}`}>
       {flat ? "•" : v > 0 ? "▲" : "▼"} {pct(Math.abs(v)).replace("+", "")} <span className="chg-range">{rangeLabel(range)}</span>
     </span>
+  );
+}
+
+/** A line's move over the last day in dollars and percent, e.g. "▼ $180.00 (-17.1%) 1D": whatever range the chart is on. */
+function DayChange({ it, quantity }) {
+  const m = itemMove(it, 1, quantity);
+  if (!m) return null;
+  const flat = Math.abs(m.dollars) < 0.005;
+  return (
+    <div className={`chg-day sensitive ${flat ? "" : m.dollars > 0 ? "up" : "down"}`} title="Price change over the last day">
+      {flat ? "•" : m.dollars > 0 ? "▲" : "▼"} {money(Math.abs(m.dollars))} ({pct(m.pct)}) <span className="chg-range">1D</span>
+    </div>
   );
 }
 
@@ -172,6 +184,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                   <Change it={it} />
                   {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
                 </div>
+                <DayChange it={it} quantity={wishlist ? 1 : it.quantity} />
               </Link>
               {wishlist && (
                 <div className="tile-actions">
@@ -212,6 +225,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 <div className={`item-value ${isOwnValue(it) ? "own-value" : ""}`} title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>
                   <b>{money(v !== null ? v * (wishlist ? 1 : it.quantity) : null)}</b>
                   {isOwnValue(it) && <span className="own-value-tag">✎ Your value</span>}
+                  <DayChange it={it} quantity={wishlist ? 1 : it.quantity} />
                   <div className="small muted">{!wishlist && it.quantity > 1 && v !== null ? `${money(v)} each · ` : ""}<Change it={it} /></div>
                 </div>
                 {!wishlist && (

@@ -94,7 +94,7 @@ function features(free, premium, sms) {
       what: "Profile (avatar menu): picture, name, plan, card/graded/sealed counts and value, up to 3 signature cards, and Settings and Support as links. Share my profile (off by default) makes a private /p/<token> link showing the picture, first name, plan and signature cards (values only if switched on); off kills the link. Reads saved values only; two columns on user (showcase, share_token).",
       free: "✓", premium: "✓" },
     { area: "Collection", name: "Collection tracker", link: "/app/collection", grows: "card", vendors: ["ppt"],
-      what: "Every card's value, updated daily, with the value chart and top movers.",
+      what: "Every card's value, updated daily, with its change over the last day and the value chart. Top Movers (/app/collection/movers) lists every card up and down by range. Reads saved prices only; graded copies use their own saved daily values (item_value_daily), written when the member opens Home or Collection.",
       free: `✓ · ${free.collectionHistoryDays === null ? "all-time" : `${free.collectionHistoryDays}-day`} chart`,
       premium: `✓ · ${premium.collectionHistoryDays === null ? "all-time" : `${premium.collectionHistoryDays}-day`} chart` },
     { area: "Collection", name: "Card scanner", link: "/app/collection/photo", grows: "use", vendors: ["claude", "ppt"],

@@ -77,6 +77,17 @@ export function change(product, days = 7) {
   return then ? (now - then) / then : null;
 }
 
+/**
+ * How far one collection line moved in price over `days` (0 = all the history we have): { pct, dollars }, dollars for
+ * `quantity` copies. null without a value or with no history that far back.
+ */
+export function itemMove(item, days, quantity = item.quantity || 1) {
+  const p = item.changes?.[days] ?? (days === 7 ? item.change7 : null);
+  const v = unitValue(item);
+  if (p === null || p === undefined || v === null || p <= -1) return null;
+  return { pct: p, dollars: (v - v / (1 + p)) * quantity };
+}
+
 /** Totals for a list of owned items. */
 export function summarize(items) {
   let value = 0, cost = 0, costed = 0, copies = 0, unpriced = 0;

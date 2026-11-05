@@ -33,6 +33,8 @@ Deal filter), price alerts that hit, deals their filters caught, their cards tha
   - At the top: the collection value, then a row of round buttons: Add cards, Alerts, Chart (value over time), Export
     (CSV), Sets, Top Movers, Trade Analyzer, Worth Grading?. The eye button next to the value hides totals for
     screenshots.
+  - /app/collection/movers (Top Movers): every card in the collection that moved, up and down, by range (1D to All),
+    sorted by card value, biggest $ move or biggest % move. Each card in the collection also shows its 1-day change.
   - Adding cards: the Add cards search box (type the name and number, e.g. "Charizard ex 199"; the 📷 camera is search
     by picture), plus chips "Tap cards in a set", "Photo of many cards" and "Import a file".
   - Under any search: "Can't find it? Request a card or sealed product" — paste a TCGplayer link or an eBay listing

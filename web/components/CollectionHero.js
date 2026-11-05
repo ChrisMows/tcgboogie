@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import CardThumb from "@/components/CardThumb";
 import CollectionAlerts from "@/components/CollectionAlerts";
 import HideValues from "@/components/HideValues";
 import ValueChart from "@/components/ValueChart";
@@ -16,11 +15,11 @@ const sinceLabel = (day) => {
 };
 
 /**
- * Collection page top: the total, front and center, then a row of round actions in alphabetical order. Top movers,
- * alerts and the value chart open in a panel right under the row (one at a time); the chart is open to start with.
+ * Collection page top: the total, front and center, then a row of round actions in alphabetical order. Alerts and the
+ * value chart open in a panel right under the row (one at a time); the chart is open to start with.
  */
-export default function CollectionHero({ summary, day, week, sinceVisit, changes, adding, exportAllowed, tradeAllowed = true, movers, chart, historyDays, plan, prefs, hasCards }) {
-  const [open, setOpen] = useState(hasCards ? "chart" : null); // "movers" | "alerts" | "chart"; the chart starts open
+export default function CollectionHero({ summary, day, week, sinceVisit, changes, adding, exportAllowed, tradeAllowed = true, chart, historyDays, plan, prefs, hasCards }) {
+  const [open, setOpen] = useState(hasCards ? "chart" : null); // "alerts" | "chart"; the chart starts open
   const toggle = (k) => setOpen((o) => (o === k ? null : k));
 
   // Alphabetical (Add cards stays first while it reads "Done").
@@ -33,7 +32,7 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
       : { key: "export", label: "Export", icon: "🔒", href: "/app/premium?from=export" },
     { key: "finder", label: "Grade & Flip", icon: plan?.gradingFinder ? "🔎" : "🔒", href: "/app/grade-and-flip" },
     { key: "sets", label: "Sets", icon: "▦", href: "/app/collection/sets" },
-    { key: "movers", label: "Top Movers", icon: "📈", panel: true },
+    { key: "movers", label: "Top Movers", icon: "📈", href: "/app/collection/movers" },
     { key: "trade", label: "Trade Analyzer", icon: tradeAllowed ? "⇄" : "🔒", href: "/app/collection/trade" },
     { key: "grading", label: "Worth Grading?", icon: "💎", href: "/app/collection/grading" },
   ];
@@ -81,18 +80,6 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
         })}
       </nav>
 
-      {open === "movers" && (
-        <div className="panel coll-pop">
-          <h2>Top movers · 7 days</h2>
-          {movers.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No big moves this week.</p> : movers.map((it) => (
-            <Link key={it.id} href={`/app/cards/${it.productId}`} className="mini-row">
-              <CardThumb item={it} width={30} />
-              <span className="mini-text"><b>{it.name}</b><span className="small muted">{it.label}</span></span>
-              <span className={`small ${it.change7 >= 0 ? "up" : "down"}`}>{it.change7 >= 0 ? "▲" : "▼"} {pct(it.change7)}</span>
-            </Link>
-          ))}
-        </div>
-      )}
       {open === "alerts" && <CollectionAlerts plan={plan} prefs={prefs} />}
       {open === "chart" && (
         <div className="panel coll-chart coll-pop">
