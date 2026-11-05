@@ -2,7 +2,7 @@ import "server-only";
 import { eq, inArray, sql } from "drizzle-orm";
 import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
-import { gradeKey } from "@/lib/collection";
+import { gradeKey, splitTen } from "@/lib/collection";
 import { GRADE_TARGETS, GRADING_COMPANIES, flipScore, gapStateOn, gapTrail, gradingMath } from "@/lib/grading";
 
 // Grade & Flip (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
@@ -16,11 +16,10 @@ const WATERMARK = "grading_gap_watermark"; // fetched_at of the last saved answe
 const BATCH = 500;
 export const NEW_DAYS = 7; // "New to your list": passes the filters now but didn't this many days ago
 const NEW_SHOWN = 12;
-// The grades the finder uses: the only ones copied out. The price service reports one 10 per grader, so CGC Pristine and
-// BGS Black Label come from our own tracked sales instead (mergeSalesGrades).
-const targets = Object.values(GRADE_TARGETS);
-const SALES_KEYS = [...new Set(targets.filter((t) => t.sales).map((t) => gradeKey(t.grader, t.top)))];
-const GRADE_KEYS = [...new Set(targets.flatMap((t) => [gradeKey(t.grader, t.top), gradeKey(t.grader, t.next)]))].filter((k) => !SALES_KEYS.includes(k));
+// The grades the finder uses: the only ones copied out. CGC Pristine and BGS Black Label sit inside the service's cgc10 and
+// bgs10, in their labels (lib/collection.js splitTen).
+const GRADE_KEYS = [...new Set(Object.values(GRADE_TARGETS).flatMap((t) => [gradeKey(t.grader, t.top), gradeKey(t.grader, t.next)]))]
+  .filter((k) => !/_(pristine|black)$/.test(k));
 const GRADE_LIST = sql.raw(`any(array[${GRADE_KEYS.map((k) => `'${k}'`).join(",")}])`); // fixed keys, not request data
 
 /**
@@ -46,7 +45,7 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
         'sales', (select jsonb_object_agg(g.key, jsonb_build_object(
                     'smartMarketPrice', jsonb_build_object('price', g.value->'smartMarketPrice'->'price', 'confidence', g.value->'smartMarketPrice'->'confidence'),
                     'averagePrice', g.value->'averagePrice', 'medianPrice', g.value->'medianPrice', 'count', g.value->'count',
-                    'totalSales', g.value->'totalSales', 'lastSaleDate', g.value->'lastSaleDate'))
+                    'totalSales', g.value->'totalSales', 'lastSaleDate', g.value->'lastSaleDate', 'labels', g.value->'labels'))
                   from jsonb_each(case when jsonb_typeof(d->'ebay'->'salesByGrade') = 'object' then d->'ebay'->'salesByGrade' else '{}'::jsonb end) g
                   where g.key = ${GRADE_LIST}),
         'outliers', d->'ebay'->'smartPriceOutlierByGrade',
@@ -70,10 +69,7 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       const today = new Date().toISOString().slice(0, 10);
       const values = fresh.map((v) => {
         const old = known.get(`${v.productId}:${v.language}`);
-        // Grades from our own sales aren't in the price service's answer: keep them (mergeSalesGrades updates them).
-        const kept = Object.fromEntries(SALES_KEYS.filter((k) => old?.graded?.[k]).map((k) => [k, old.graded[k]]));
-        const next = { ...v, graded: { ...v.graded, ...kept } };
-        return { ...next, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, next, today) : [] }; // firstSeen is only written on a first insert
+        return { ...v, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, v, today) : [] }; // firstSeen is only written on a first insert
       });
       await db.insert(gradingGap).values(values).onConflictDoUpdate({
         target: [gradingGap.productId, gradingGap.language],
@@ -87,29 +83,7 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       .onConflictDoUpdate({ target: appSettings.key, set: { value: { at: after.toISOString() }, updatedAt: new Date() } });
     if (rows.length < BATCH) break;
   }
-  await mergeSalesGrades();
   return { seen, copied };
-}
-
-/**
- * CGC Pristine and BGS Black Label from our own tracked sales in the last 90 days: the median, trusted from 2 sales up
- * (one sale can be a fluke, and the Flip Score already holds anything under 5 sales back from Excellent).
- */
-async function mergeSalesGrades() {
-  await db.execute(sql`
-    with s as (
-      select product_id, language, price, case when grader = 'CGC' then 'cgc10_pristine' else 'bgs10_black' end as key from sale
-      where kind = 'graded' and sold_at > now() - interval '90 days'
-        and ((grader = 'CGC' and grade ~* 'pristine|black') or (grader = 'BGS' and grade ~* 'black'))
-    ), a as (
-      select product_id, language, key, percentile_cont(0.5) within group (order by price) as p, count(*)::int as n from s group by 1, 2, 3
-    ), j as (
-      select product_id, language, jsonb_object_agg(key, jsonb_build_object('p', round(p::numeric, 2), 'n', n, 'r', n >= 2)) as g from a group by 1, 2
-    )
-    update grading_gap x set graded = (x.graded - 'cgc10_pristine' - 'bgs10_black') || coalesce(j.g, '{}'::jsonb)
-    from grading_gap y left join j on j.product_id = y.product_id and j.language = y.language
-    where x.product_id = y.product_id and x.language = y.language
-      and (j.g is not null or y.graded->'cgc10_pristine' is not null or y.graded->'bgs10_black' is not null)`);
 }
 
 /** One saved answer -> a grading_gap row, or null when it has no Near Mint price or no graded sales. */
@@ -127,6 +101,14 @@ function toRow({ key, fetched_at: fetchedAt, card: c }) {
     if (!price) continue;
     const sales = c.recent?.[g] !== undefined ? c.recent[g] : s?.count ?? s?.totalSales ?? null;
     const lastSale = s?.lastSaleDate ? String(s.lastSaleDate).slice(0, 10) : null;
+    // CGC and BGS 10s: a price per slab label (the card page's rule).
+    const split = splitTen(g, s, sales);
+    if (split?.length) {
+      for (const l of split) {
+        graded[l.key] = { p: Math.round(l.price * 100) / 100, n: l.sales, r: gradedReliable({ sales: l.allSales, lastSale: l.lastSale, confidence: l.confidence }) };
+      }
+      continue;
+    }
     graded[g] = { p: Math.round(price * 100) / 100, n: sales, r: gradedReliable({ sales, lastSale, confidence: s?.smartMarketPrice?.confidence || null }) };
   }
   if (!Object.keys(graded).length) return null;
@@ -176,7 +158,9 @@ const inEra = (era, r, released) => !ERAS[era]?.since || (r.language === "japane
 // 9 sells for $1,875, a $99,999 placeholder, an $18,600 10 of a $29 card). Real gem premiums stay inside these: the top
 // grade at most 8x the grade below and 40x raw, the grade below at most 6x raw (checked on the live data, Nov 2026).
 const TOP_X_NEXT = 8, TOP_X_RAW = 40, NEXT_X_RAW = 6;
-const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.top <= TOP_X_NEXT * c.next && c.next <= NEXT_X_RAW * c.raw));
+// A real Black Label can sell for far more (Mega Charizard X ex: $27,950 against $2,051 as a BGS 10 Pristine, Nov 2026).
+const RARE_X_NEXT = 40, RARE_X_RAW = 150;
+const plausible = (c, rare) => c.top <= (rare ? RARE_X_RAW : TOP_X_RAW) * c.raw && (c.next === null || (c.top <= (rare ? RARE_X_NEXT : TOP_X_NEXT) * c.next && c.next <= (rare ? RARE_X_NEXT : NEXT_X_RAW) * c.raw));
 
 /**
  * Cards worth grading at a target grade (GRADE_TARGETS) and service level, best first. opts: target, tier (service level index), own (own
@@ -218,8 +202,8 @@ export async function findGradingGaps(opts = {}) {
     }
     if (safeOnly) where.push(sql`${g(nk, "r")}::boolean and ${next} - ${gradingGap.raw} - ${floor}::float >= 0`);
     // Believable prices only (see plausible below).
-    where.push(sql`${top} <= ${sql.raw(String(TOP_X_RAW))} * ${gradingGap.raw}`);
-    where.push(sql`(coalesce(${g(nk, "r")}::boolean, false) = false or (${top} <= ${sql.raw(String(TOP_X_NEXT))} * ${next} and ${next} <= ${sql.raw(String(NEXT_X_RAW))} * ${gradingGap.raw}))`);
+    where.push(sql`${top} <= ${sql.raw(String(t.rare ? RARE_X_RAW : TOP_X_RAW))} * ${gradingGap.raw}`);
+    where.push(sql`(coalesce(${g(nk, "r")}::boolean, false) = false or (${top} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : TOP_X_NEXT))} * ${next} and ${next} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : NEXT_X_RAW))} * ${gradingGap.raw}))`);
     rows = await db.select().from(gradingGap).where(sql.join(where, sql` and `))
       .orderBy(sql`${top} - ${gradingGap.raw} desc`).limit(600);
   }
@@ -229,7 +213,7 @@ export async function findGradingGaps(opts = {}) {
     const m = gradingMath(c, target, tier, { own, shipping });
     if (!m) return null;
     const card = { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[target].topSales) };
-    return plausible(card) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
+    return plausible(card, t.rare) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
       && card.raw >= minRaw && (maxRaw === null || card.raw <= maxRaw) ? card : null;
   };
   const since = new Date(Date.now() - NEW_DAYS * 86400000).toISOString().slice(0, 10);
@@ -240,8 +224,6 @@ export async function findGradingGaps(opts = {}) {
     const then = gapStateOn(r, since);
     if (!then || judge(then)) return null;
     const was = candidate(then).grades[target];
-    // No price for this grade back then isn't news for the second 10s: their sales are thin, and BGS 10 only began being copied here in Nov 2026.
-    if (!was.top && (t.sales || t.next === "9.5")) return null;
     if (then.raw > card.raw) return `Raw down from ${whole(then.raw)}`;
     if (!was.top) return `New ${card.topName} sales`;
     if (card.top > was.top) return `${card.topName} up from ${whole(was.top)}`;

@@ -7,7 +7,7 @@ import { getMemberCard, isMemberId } from "@/lib/member-cards";
 import { isToppsId, toppsCard } from "@/lib/topps";
 import { FAMILIES } from "@/lib/pokemon-families";
 import { nameWords, setsInSearch, wordMatches, withWords } from "@/lib/search-words";
-import { gradeKey } from "@/lib/collection";
+import { gradeKey, mixedKey, splitTen } from "@/lib/collection";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -267,8 +267,18 @@ export function fromCard(c) {
     if (!price) continue;
     const days = Object.entries(byDay[key] || {}).map(([date, d]) => ({ date: date.slice(0, 10), grade: key, price: r2(d?.average), count: d?.count || 1 }))
       .filter((d) => d.price > 0 && Date.now() - new Date(d.date).getTime() < 90 * 24 * HOUR);
-    recentSales.push(...days);
     const sales = byDay[key] ? days.reduce((n, d) => n + d.count, 0) : g?.count ?? g?.totalSales ?? null;
+    // CGC and BGS 10s: a price per slab label. The days don't say which label sold, so they stay apart from both.
+    const split = splitTen(key, g, byDay[key] ? sales : null);
+    if (split?.length) {
+      recentSales.push(...days.map((d) => ({ ...d, grade: mixedKey(key) })));
+      for (const l of split) {
+        graded[l.key] = { price: r2(l.price), sales: l.sales, approx: Boolean(byDay[key]), lastSale: l.lastSale, confidence: l.confidence, labelled: true,
+          reliable: gradedReliable({ sales: l.allSales, lastSale: l.lastSale, confidence: l.confidence }) };
+      }
+      continue;
+    }
+    recentSales.push(...days);
     const lastSale = g?.lastSaleDate ? String(g.lastSaleDate).slice(0, 10) : null;
     const confidence = g?.smartMarketPrice?.confidence || null;
     graded[key] = { price: r2(price), sales, lastSale, confidence, reliable: gradedReliable({ sales, lastSale, confidence }) };
@@ -362,6 +372,17 @@ async function withOurSales(p, prefetched) {
   const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS)); // a month old counts half
   for (const key of keys) {
     if (p.graded?.[key] === undefined && !ours[key]) continue; // the service flagged this grade's data as unreliable
+    if (p.graded?.[key]?.labelled) {
+      // A price for this exact label from the service stands: it rests on far more sales than we track. Our own sales
+      // still list, in place of the same sale among the days of either label.
+      for (const r of ours[key] || []) {
+        const date = r.soldAt.toISOString().slice(0, 10);
+        const same = recent.findIndex((d) => d.grade === mixedKey(key) && d.date === date && d.count === 1 && Math.abs(d.price - r.price) < 1);
+        if (same >= 0) recent.splice(same, 1);
+        recent.push({ date, grade: key, price: r.price, count: 1, source: "ebay", url: r.url });
+      }
+      continue;
+    }
     const service = recent.filter((d) => d.grade === key);
     const mine = (ours[key] || []).filter((r) => {
       const day = r.soldAt.toISOString().slice(0, 10);

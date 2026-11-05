@@ -45,6 +45,34 @@ export const gradeLabel = (grader, grade) => gradeOption(grader, normGrade(grade
 /** "CGC 10 Gem Mint", "BGS 10 Black Label", "PSA 10". */
 export const gradeName = (grader, grade) => `${grader} ${gradeLabel(grader, grade)}`;
 
+// The price service's one "10" for CGC and BGS is a blend: its labels part splits the totals and price by slab label, but
+// not the day-by-day sales. So each label gets its own key, and the days are kept apart as "<key>_mixed" (either label).
+// CGC's few Perfect 10s are left out. Sales with no label go with the everyday 10, only when that has no sales of its own.
+const TEN_LABELS = {
+  cgc10: [["cgc10", ["gemMint", "unlabeled"]], ["cgc10_pristine", ["pristine"]]],
+  bgs10: [["bgs10", ["pristine", "unlabeled"]], ["bgs10_black", ["blackLabel"]]],
+};
+export const mixedKey = (key) => `${key.replace(/_(pristine|black)$/, "")}_mixed`;
+/**
+ * A grade's labels as separate prices: [{ key, price, sales, allSales, lastSale, confidence }], or null when it isn't split.
+ * recent: its sales in the last 90 days, of either label. A label's share of those is an estimate, from its share of all
+ * sales (sales); allSales is the real count.
+ */
+export function splitTen(key, g, recent = null) {
+  const labels = g?.labels;
+  if (!TEN_LABELS[key] || !labels || typeof labels !== "object") return null;
+  const out = [];
+  for (const [outKey, names] of TEN_LABELS[key]) {
+    const l = names.map((n) => labels[n]).find((x) => x?.count > 0);
+    const price = l?.smartMarketPrice?.price ?? l?.medianPrice ?? l?.averagePrice ?? null;
+    if (!price) continue;
+    const share = g.count > 0 ? l.count / g.count : 0;
+    const lastSale = l.lastSaleDate ? String(l.lastSaleDate).slice(0, 10) : null;
+    out.push({ key: outKey, price, allSales: l.count, sales: recent === null ? l.count : Math.round(recent * share), lastSale, confidence: l.smartMarketPrice?.confidence || null });
+  }
+  return out;
+}
+
 /** ('PSA', '9.5') -> 'psa9_5', the key slab prices are stored under (same as the bot's grade_key). */
 export const gradeKey = (grader, grade) => (grader && grade
   ? `${grader.toLowerCase()}${normGrade(grader, grade).replace(" Pristine", "_pristine").replace(" Black Label", "_black").replace(".", "_")}` : null);

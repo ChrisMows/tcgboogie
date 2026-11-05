@@ -48,15 +48,15 @@ export const GRADING_COMPANIES = {
 };
 
 // The grades a member can aim for: each grader's usual top grade (the plain IDs, also a grader's name in GRADING_COMPANIES)
-// plus the second 10s CGC and BGS give. next is the grade to fall back on when it misses. sales: priced from our own
-// tracked eBay sales, since the price service reports a single 10 per grader.
+// plus the second 10s CGC and BGS give. next is the grade to fall back on when it misses. rare: a Black Label can really
+// sell for many times the grade below, so the finder's checks for junk prices allow more.
 export const GRADE_TARGETS = {
   PSA: { grader: "PSA", top: "10", next: "9" },
   "BGS-95": { grader: "BGS", top: "9.5", next: "9" },
   "BGS-10": { grader: "BGS", top: "10", next: "9.5" },
-  "BGS-BL": { grader: "BGS", top: "10 Black Label", next: "10", sales: true },
+  "BGS-BL": { grader: "BGS", top: "10 Black Label", next: "10", rare: true },
   CGC: { grader: "CGC", top: "10", next: "9" },
-  "CGC-PR": { grader: "CGC", top: "10 Pristine", next: "10", sales: true },
+  "CGC-PR": { grader: "CGC", top: "10 Pristine", next: "10" },
   SGC: { grader: "SGC", top: "10", next: "9" },
   TAG: { grader: "TAG", top: "10", next: "9" },
 };

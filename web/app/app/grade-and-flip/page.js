@@ -170,7 +170,6 @@ export default async function GradingFinderPage({ searchParams }) {
           <div className="gr-empty-text">
             <b>Nothing matches yet</b>
             <span className="muted">Try a lower profit, a higher raw price limit, including cards that need a {topShort}, or another grading company or grade.</span>
-            {t.sales && <span className="muted small">{name} prices come from our own tracked eBay sales (2 or more in the last 90 days), so this list is short by nature.</span>}
           </div>
         </div>
       )}

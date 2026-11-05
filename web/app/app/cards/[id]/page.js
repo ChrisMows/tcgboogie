@@ -30,11 +30,12 @@ export async function generateMetadata({ params, searchParams }) {
   return { title: p ? p.name : "Card" };
 }
 
-/** A grade key ("psa10", "bgs9_5", "cgc10_pristine", "bgs10_black") in parts: { grader, grade: "10 Gem Mint", rank: 10 }. */
+/** A grade key ("psa10", "bgs9_5", "cgc10_pristine", "bgs10_black", "cgc10_mixed") in parts: { grader, grade: "10 Gem Mint", rank: 10 }. */
 const gradeParts = (key) => {
-  const m = key.match(/^([a-z]+)(\d+)(?:[_ ](\d|pristine|black))?$/i);
+  const m = key.match(/^([a-z]+)(\d+)(?:[_ ](\d|pristine|black|mixed))?$/i);
   if (!m) return { grader: key.toUpperCase(), grade: key, rank: 0 };
   const grader = GRADERS.find((g) => g.toLowerCase() === m[1].toLowerCase()) || m[1].toUpperCase();
+  if (/mixed/i.test(m[3] || "")) return { grader, grade: `${m[2]} (either label)`, rank: Number(m[2]) };
   const label = /pristine/i.test(m[3] || "") ? ["Pristine", 0.25] : /black/i.test(m[3] || "") ? ["Black Label", 0.5] : null;
   return { grader, grade: gradeLabel(grader, label ? `${m[2]} ${label[0]}` : `${m[2]}${m[3] ? `.${m[3]}` : ""}`), rank: Number(m[2]) + (label ? label[1] : m[3] ? Number(m[3]) / 10 : 0) };
 };
@@ -50,7 +51,7 @@ const COND_ORDER = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily
 const condRank = (c) => (COND_ORDER.indexOf(c) + 1) || 99;
 
 const saleNote = (g) => {
-  const n = g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"} in 90 days` : "";
+  const n = g.sales ? `${g.approx ? "About " : ""}${g.sales} sale${g.sales === 1 ? "" : "s"} in 90 days` : "";
   const last = g.lastSale ? `last ${new Date(`${g.lastSale}T12:00:00`).toLocaleDateString("en-US", { month: "short", year: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? undefined : "numeric", day: new Date(g.lastSale).getFullYear() === new Date().getFullYear() ? "numeric" : undefined })}` : "";
   const range = g.low && g.high && g.low !== g.high ? `$${Math.round(g.low).toLocaleString()}–$${Math.round(g.high).toLocaleString()}` : "";
   return [n, range, last].filter(Boolean).join(" · ");
@@ -232,7 +233,7 @@ export default async function CardPage({ params, searchParams }) {
             rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}
             aria-label={`${GRADE_LABEL(key)}: ${money(g.price, 0)}`}>
             <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
-            <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
+            <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.approx ? "~" : ""}${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
           </a>
         ))}
       </div>
@@ -327,7 +328,7 @@ export default async function CardPage({ params, searchParams }) {
 
       <div className="panel card-prices">
         <div className="prices-head">
-          <h2>Prices and sales</h2>
+          <h2>Prices and Sales</h2>
           {ebayLinks}
         </div>
         {isSealed ? (

@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { getProduct, prefetchProducts } from "@/lib/catalog";
-import { gradeKey, gradeName, money } from "@/lib/collection";
+import { gradeKey, gradeName, mixedKey, money } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { credible, realOff, recentDeals } from "@/lib/deals";
 import { slim } from "@/lib/portfolio";
@@ -118,7 +118,7 @@ async function build() {
     const before = [
       ...ours.filter((o) => o.productId === r.productId && o.grader === r.grader && o.grade === r.grade && o.soldAt < r.soldAt)
         .map((o) => ({ price: o.price, count: 1 })),
-      ...(p?.recentSales || []).filter((s) => s.grade === key && s.date < day && s.source !== "ebay").map((s) => ({ price: s.price, count: s.count || 1 })),
+      ...(p?.recentSales || []).filter((s) => (s.grade === key || s.grade === mixedKey(key)) && s.date < day && s.source !== "ebay").map((s) => ({ price: s.price, count: s.count || 1 })),
     ].filter((s) => Number.isFinite(s.price) && s.price > 0);
     const prev = before.length ? Math.max(...before.map((s) => s.price)) : 0; // the best figure we know
     const bar = before.length ? Math.max(...before.map((s) => (s.count > 1 ? s.price * BUSY_DAY : s.price))) : 0; // what a record must beat
