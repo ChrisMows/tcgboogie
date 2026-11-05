@@ -14,8 +14,9 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 
 from . import db, shared
+from .parse import says_pristine_10
 
-log = logging.getLogger("dealfinder.sales")
+log =logging.getLogger("dealfinder.sales")
 
 
 def _money(v):
@@ -114,7 +115,7 @@ class SaleTracker:
             return
         ident = dict(ident)
         # CGC's 10 is two grades that sell very differently: Pristine 10 (worth more) and Gem Mint 10.
-        if str(ident.get("grader")).upper() == "CGC" and str(ident.get("grade")) == "10" and "pristine" in summary.get("title", "").lower():
+        if str(ident.get("grader")).upper() == "CGC" and str(ident.get("grade")) == "10" and says_pristine_10(summary.get("title", "")):
             ident["grade"] = "10 Pristine"
         self.pending[item_id] = {"ends": ends, "ident": ident, "title": summary.get("title", ""),
                                  "url": summary.get("itemWebUrl") or ""}

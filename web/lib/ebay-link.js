@@ -60,7 +60,7 @@ export function cardSearchQuery({ name, number, setName, language }) {
 export function dealSoldSearch(d, source = "deal-sold") {
   const itemNumber = String(d.id || "").split("|")[1] || (/^\d{9,14}$/.test(String(d.id || "")) ? String(d.id) : "");
   if (itemNumber) return ebaySearch(itemNumber, { sold: true, sealed: true, source });
-  const grade = d.kind === "graded" && d.grader && d.grade ? ` ${d.grader} ${String(d.grade).replace(/\.0$/, "")}` : "";
+  const grade = d.kind === "graded" && d.grader && d.grade ? ` ${d.grader} ${String(d.gradeText || d.grade).replace(/\.0$/, "")}` : "";
   const query = `${cardSearchQuery({ name: d.name, number: d.number || " ", setName: d.setName, language: null })}${grade}${d.language === "japanese" ? " Japanese" : ""}`
     .replace(/\s+/g, " ").trim();
   return ebaySearch(query, { sold: true, sealed: d.kind === "sealed", source });

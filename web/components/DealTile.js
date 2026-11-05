@@ -6,7 +6,7 @@ import { gradeName } from "@/lib/collection";
 const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 export function gradeLabel(d) {
-  return d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw · ${d.condition}` : gradeName(d.grader, d.grade);
+  return d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw · ${d.condition}` : gradeName(d.grader, d.gradeText || d.grade);
 }
 
 export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false, cardHref = null }) {

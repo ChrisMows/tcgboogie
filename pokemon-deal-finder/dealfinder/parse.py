@@ -124,6 +124,14 @@ def normalize_grader(text):
     return None
 
 
+def says_pristine_10(text):
+    """Does the text call this slab a Pristine 10? Next to the number only: "CGC 10, pristine condition!" is a seller's
+    own word for an everyday 10, and valuing it as a Pristine would make it look like a deal."""
+    t = str(text or "").lower()  # not norm_text: a comma has to keep "10, pristine" apart
+    return bool(re.search(r"pristine[\s-]*(?:grade[\s-]*)?10\b|\b10[\s-]*(?:grade[\s-]*)?pristine\b"
+                          r"(?!\s+(?:condition|corners?|edges?|centering|surface|shape|card|copy|slab|case|look\w*))", t))
+
+
 def normalize_grade(value, text_for_labels=""):
     """'10' -> '10', 'Gem Mint 10' -> '10', '9.5' -> '9.5'; adds PRISTINE / BLACK LABEL for 10s."""
     m = re.search(r"(10|[1-9](?:\.5)?)(?![\d.])", str(value or ""))
@@ -134,7 +142,7 @@ def normalize_grade(value, text_for_labels=""):
     if g == "10":
         if "black label" in labels:
             g = "10 BLACK LABEL"
-        elif "pristine" in labels:
+        elif says_pristine_10(str(value)) or says_pristine_10(text_for_labels):  # apart: "10" + "Pristine slab" isn't one
             g = "10 PRISTINE"
     return g
 

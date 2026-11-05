@@ -62,7 +62,7 @@ function DealBox({ deal: d, premium }) {
   // A live listing opens itself; an ended one opens eBay's sold listings for this card and grade, because eBay sends
   // an ended listing's own link to a general product page showing other listings.
   const link = d.ended ? dealSoldSearch(d, "card-page-deal-sold") : ebayLink(d.url, "card-page-deal");
-  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.grade);
+  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.gradeText || d.grade);
   const live = !d.ended;
   return (
     <div className={`deal-box ${live ? "live" : "ended"}`}>
@@ -163,7 +163,7 @@ export default async function CardPage({ params, searchParams }) {
   // Arrived from a deal alert and the auction is still open: the quick-check pop-up (listing + recent sales).
   const quick = deal && !deal.ended && sp?.from === "alert" ? {
     listing: ebayLink(deal.url, "deal-quick-listing"),
-    sold: ebaySearch(`${ebayQuery}${deal.kind === "graded" ? ` ${deal.grader} ${deal.grade}` : ""}`, { sold: true, source: "deal-quick-sold" }),
+    sold: ebaySearch(`${ebayQuery}${deal.kind === "graded" ? ` ${deal.grader} ${deal.gradeText || deal.grade}` : ""}`, { sold: true, source: "deal-quick-sold" }),
   } : null;
 
   // Raw condition prices link to that condition's live listings on TCGplayer (Topps cards: the eBay listings).

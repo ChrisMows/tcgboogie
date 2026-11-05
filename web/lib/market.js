@@ -139,7 +139,7 @@ async function build() {
     .sort((a, b) => realOff(b) - realOff(a)).slice(0, 24);
   const dealProducts = await products(caught.map((d) => d.productId).filter(Boolean));
   const deals = caught.map((d) => item("deal", dealProducts[d.productId] || { name: d.name, setName: d.setName, number: d.number, image: d.image, id: d.productId }, {
-    id: `deal-${d.id}`, itemId: d.id, title: d.title, grader: d.kind === "graded" ? d.grader : null, grade: d.kind === "graded" ? d.grade : null,
+    id: `deal-${d.id}`, itemId: d.id, title: d.title, grader: d.kind === "graded" ? d.grader : null, grade: d.kind === "graded" ? d.gradeText || d.grade : null,
     condition: d.kind === "raw" ? d.condition || "Raw" : d.kind === "sealed" ? "Sealed" : null,
     price: d.soldFor, market: d.marketValue, off: realOff(d), soldAt: d.endsAt, url: d.url,
   }));

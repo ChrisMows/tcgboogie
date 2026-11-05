@@ -45,7 +45,9 @@ def deal_record(rec, card):
         "number": card.get("card_number") or "",
         "printing": card.get("variants") or "",
         "language": card.get("language") or "english",
-        **({} if sealed else {"condition": card.get("grade")} if raw else {"grader": card.get("grader"), "grade": grade}),
+        **({} if sealed else {"condition": card.get("grade")} if raw else {"grader": card.get("grader"), "grade": grade,
+                                                                                   # Which 10: "10 PRISTINE" (grade stays a number, for filters)
+                                                                                   **({"gradeText": card.get("grade")} if " " in str(card.get("grade") or "") else {})}),
         "total": rec.get("total"),
         "marketValue": rec.get("market_value"),
         "discountPct": round(rec.get("discount_pct") or 0),

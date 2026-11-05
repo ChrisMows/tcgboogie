@@ -1,5 +1,6 @@
 """Automatic mode: identify any graded listing's card via PokemonPriceTracker and value it from graded sales."""
 import re
+import statistics
 from datetime import date, timedelta
 from urllib.parse import quote
 
@@ -157,15 +158,80 @@ def merge_our_sales(comps, ours):
     return comps + added, len(added)
 
 
+# CGC's and BGS's 10s come in slab labels that sell very differently (a CGC Pristine 10 about twice a Gem Mint 10), but the
+# service's daily history for "cgc10" and "bgs10" mixes them. Its salesByGrade[...].labels has each label's own price and
+# totals, so those grades are valued from that: (grader, grade) -> (service key, labels to use, first that has sales).
+# Sales with no label count as the everyday 10. A Black Label stays unpriced: too few sales, too volatile to call a deal.
+LABELLED_TENS = {
+    ("CGC", "10"): ("cgc10", ("gemMint", "unlabeled")),
+    ("CGC", "10 PRISTINE"): ("cgc10", ("pristine",)),
+    ("BGS", "10"): ("bgs10", ("pristine", "unlabeled")),
+    ("BGS", "10 PRISTINE"): ("bgs10", ("pristine", "unlabeled")),
+}
+
+
+def label_market_value(ebay, key, names, grader, grade, cfg, today, our_sales):
+    """Market value for one slab label: the service's estimate for that label, only when it's confident in it, the label
+    sold recently and often enough, and our own recorded sales of this label don't disagree. Otherwise no value (and so
+    no deal): the daily history can't settle it, since it doesn't say which label sold."""
+    deal, auto = cfg["deal"], cfg["auto"]
+    what = f"{grader} {grade}"
+    g = (ebay.get("salesByGrade") or {}).get(key) or {}
+    labels = g.get("labels") or {}
+    label = next((labels[n] for n in names if (labels.get(n) or {}).get("count")), None)
+    if not label:
+        return MarketValue(None, reason=f"no {what} sales on record")
+    smart = label.get("smartMarketPrice") or {}
+    price = smart.get("price")
+    if not price or smart.get("confidence") not in ("medium", "high"):
+        return MarketValue(None, reason=f"not enough reliable {what} sales to price it")
+
+    today = today or date.today()
+    lookback = int(deal["comp_lookback_days"])
+    cutoff = (today - timedelta(days=lookback)).isoformat()
+    last = str(label.get("lastSaleDate") or "")[:10]
+    if not last or last < (today - timedelta(days=90)).isoformat():
+        return MarketValue(None, reason=f"no {what} sales in the last 90 days")
+    # The days don't say which label sold, so this label's sales in the window are its share of them.
+    window = 0
+    for day, d in ((ebay.get("priceHistory") or {}).get(key) or {}).items():
+        if day[:10] >= cutoff:
+            try:
+                window += int(d.get("count") or 0)
+            except (TypeError, ValueError):
+                pass
+    total = g.get("count") or 0
+    ours = [s["price"] for s in our_sales or [] if s["sold_date"] >= cutoff]
+    comps = max(round(window * label["count"] / total) if total else 0, len(ours))
+    if comps < int(deal["min_comps"]):
+        return MarketValue(None, comps_in_window=comps, reason=f"only about {comps} {what} sales in the last {lookback} days (need {deal['min_comps']})")
+    if len(ours) >= 3:
+        mine = statistics.median(ours)
+        if abs(mine - price) / price > auto["max_disagreement"]:
+            return MarketValue(None, comps_in_window=comps, reason=f"our recorded {what} sales (${mine:,.0f}) disagree with the service's estimate ${price:,.0f}")
+    if price < auto["min_market_value"]:
+        return MarketValue(None, comps_in_window=comps, reason=f"worth ${price:,.0f}, under the ${auto['min_market_value']:,.0f} minimum")
+    return MarketValue(round(float(price), 2), comps_used=comps, comps_in_window=comps, low=label.get("minPrice"), high=label.get("maxPrice"), latest_sale=last,
+                       reason=f"{what} estimate from about {comps} sales in the last {lookback} days via PokemonPriceTracker (eBay + Fanatics, shipping not included)")
+
+
 def auto_market_value(card, history_days, grader, grade, cfg, today=None, our_sales=None):
     """30-day market value for one grader+grade from the service's daily graded-sales history, plus our own
     recorded eBay sales of that card and grade (our_sales: [{"sold_date", "price"}]). The usual safety checks
-    (enough sales, outliers dropped, prices not swinging too much) apply to the combined list."""
+    (enough sales, outliers dropped, prices not swinging too much) apply to the combined list. CGC and BGS 10s go by
+    their slab label instead (label_market_value)."""
     deal, auto = cfg["deal"], cfg["auto"]
+    ebay = (card or {}).get("ebay") or {}
+    labelled = LABELLED_TENS.get((grader, grade))
+    if labelled and ((ebay.get("salesByGrade") or {}).get(labelled[0]) or {}).get("labels"):
+        if (ebay.get("smartPriceOutlierByGrade") or {}).get(labelled[0]):
+            return MarketValue(None, reason=f"{grader} {grade} price data is flagged as unreliable by the service")
+        if history_days < int(deal["comp_lookback_days"]):
+            return MarketValue(None, reason=f"price history limited to {history_days} days on this plan (need {int(deal['comp_lookback_days'])})")
+        return label_market_value(ebay, labelled[0], labelled[1], grader, grade, cfg, today, our_sales)
     key = grade_key(grader, grade)
     if not key:
         return MarketValue(None, reason=f"{grader} {grade} isn't priced separately")
-    ebay = (card or {}).get("ebay") or {}
     g = (ebay.get("salesByGrade") or {}).get(key)
     if not g and not our_sales:
         return MarketValue(None, reason=f"no {grader} {grade} sales on record")

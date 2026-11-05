@@ -64,7 +64,7 @@ const daysAgo = (iso) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   return d < 1 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
 };
-const dealTag = (d) => (d.kind === "sealed" ? "SEALED" : d.kind === "raw" ? `RAW · ${String(d.condition || "NM").toUpperCase()}` : `GRADED · ${gradeName(d.grader, d.grade)}`);
+const dealTag = (d) => (d.kind === "sealed" ? "SEALED" : d.kind === "raw" ? `RAW · ${String(d.condition || "NM").toUpperCase()}` : `GRADED · ${gradeName(d.grader, d.gradeText || d.grade)}`);
 
 /** The homepage Trade Analyzer, in miniature: a static example. */
 function TradeDemo() {

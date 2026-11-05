@@ -26,7 +26,7 @@ export default function DealQuickCheck({ deal: d, listingHref, soldHref, affilia
   if (!open) return null;
 
   const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.grade);
+  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.gradeText || d.grade);
   const both = () => {
     window.open(listingHref, "_blank", "noopener");
     window.location.href = soldHref;

@@ -60,6 +60,81 @@ def priced_card(grade="psa10", value=3900.0, days=20, per_day=1, smart=3875, con
         "priceHistory": {grade: hist}}}
 
 
+def label(count, price, confidence="medium", days_ago=2):
+    return {"count": count, "minPrice": price * 0.7, "maxPrice": price * 1.4, "lastSaleDate": f"{(TODAY - timedelta(days=days_ago)).isoformat()}T00:00:00.000Z",
+            "smartMarketPrice": {"price": price, "confidence": confidence}}
+
+
+def labelled_card(key="cgc10", labels=None, total=129, sales_per_day=2, days=20, day_price=70.0):
+    """Shaped like the service's answer: the daily history mixes both labels, the labels part splits them."""
+    hist = {(TODAY - timedelta(days=i)).isoformat(): {"average": day_price, "count": sales_per_day} for i in range(days)}
+    return {**UMBREON, "ebay": {"salesByGrade": {key: {"count": total, "smartMarketPrice": {"price": day_price, "confidence": "medium"}, "labels": labels}},
+                                "smartPriceOutlierByGrade": {key: False}, "priceHistory": {key: hist}}}
+
+
+class LabelledTenTests(unittest.TestCase):
+    CGC = {"gemMint": label(63, 44.1), "perfect": label(2, 85, "low"), "pristine": label(48, 92.0), "unlabeled": label(16, 60, "low")}
+
+    def value(self, card, grader, grade, **kw):
+        return auto_market_value(card, 30, grader, grade, AUTO_CFG, today=TODAY, **kw)
+
+    def test_each_cgc_10_gets_its_own_price_not_the_blend(self):
+        card = labelled_card(labels=self.CGC)
+        self.assertEqual(self.value(card, "CGC", "10").value, 44.1)
+        self.assertEqual(self.value(card, "CGC", "10 PRISTINE").value, 92.0)
+
+    def test_bgs_10_is_pristine_with_either_spelling_and_black_label_stays_unpriced(self):
+        card = labelled_card("bgs10", {"pristine": label(83, 2050.88), "unlabeled": label(24, 1955, "low"), "blackLabel": label(10, 27950)}, total=117)
+        self.assertEqual(self.value(card, "BGS", "10").value, 2050.88)
+        self.assertEqual(self.value(card, "BGS", "10 PRISTINE").value, 2050.88)
+        self.assertFalse(self.value(card, "BGS", "10 BLACK LABEL").ok)
+
+    def test_low_confidence_gets_no_value_rather_than_a_guess(self):
+        card = labelled_card(labels={"gemMint": label(63, 44.1, "low"), "pristine": label(48, 92.0)})
+        mv = self.value(card, "CGC", "10")
+        self.assertFalse(mv.ok)
+        self.assertIn("reliable", mv.reason)
+
+    def test_only_unlabeled_sales_count_as_the_everyday_10_if_confident(self):
+        self.assertEqual(self.value(labelled_card(labels={"unlabeled": label(30, 60)}, total=30), "CGC", "10").value, 60)
+        self.assertFalse(self.value(labelled_card(labels={"unlabeled": label(30, 60)}, total=30), "CGC", "10 PRISTINE").ok)
+
+    def test_stale_or_thin_labels_get_no_value(self):
+        self.assertFalse(self.value(labelled_card(labels={"gemMint": label(63, 44.1, days_ago=120)}), "CGC", "10").ok)
+        mv = self.value(labelled_card(labels={"gemMint": label(1, 44.1), "pristine": label(128, 92.0)}), "CGC", "10")
+        self.assertFalse(mv.ok)  # 1 of 129 sales: well under 1 of the 40 in the window
+        self.assertIn("only about", mv.reason)
+
+    def test_our_recorded_sales_can_veto(self):
+        ours = [{"sold_date": TODAY.isoformat(), "price": p} for p in (200.0, 210.0, 190.0)]
+        mv = self.value(labelled_card(labels=self.CGC), "CGC", "10", our_sales=ours)
+        self.assertFalse(mv.ok)
+        self.assertIn("disagree", mv.reason)
+
+    def test_sales_estimate_is_the_labels_share_of_the_window(self):
+        mv = self.value(labelled_card(labels=self.CGC), "CGC", "10")
+        self.assertEqual(mv.comps_used, round(40 * 63 / 129))
+
+    def test_answers_without_labels_and_other_graders_keep_the_daily_history(self):
+        mv = self.value(priced_card(grade="cgc10", value=500.0, smart=500), "CGC", "10")
+        self.assertTrue(mv.ok)
+        self.assertAlmostEqual(mv.value, 500.0, delta=15)
+        self.assertTrue(self.value(priced_card(), "PSA", "10").ok)
+        self.assertFalse(self.value(priced_card(grade="cgc10"), "CGC", "10 PRISTINE").ok)
+
+
+class PristineWordingTests(unittest.TestCase):
+    def test_only_next_to_the_number(self):
+        from dealfinder.parse import normalize_grade
+        for title in ("Umbreon CGC Pristine 10", "Umbreon CGC 10 Pristine", "CGC PRISTINE 10 Charizard", "Mew CGC 10 PRISTINE PSA"):
+            self.assertEqual(normalize_grade("10", title), "10 PRISTINE", title)
+        for title in ("Umbreon CGC 10 Gem Mint pristine condition!", "Pristine slab CGC 10 Gem Mint", "CGC 10 pristine corners", "CGC 10, pristine condition!", "CGC 10 pristine condition"):
+            self.assertEqual(normalize_grade("10", title), "10", title)
+        self.assertEqual(normalize_grade("Pristine 10", ""), "10 PRISTINE")
+        self.assertEqual(normalize_grade("10", "BGS 10 Black Label"), "10 BLACK LABEL")
+        self.assertEqual(normalize_grade("9.5", "BGS 9.5 Gem Mint"), "9.5")
+
+
 class IdentifyTests(unittest.TestCase):
     def test_grade_key(self):
         self.assertEqual(grade_key("PSA", "10"), "psa10")
