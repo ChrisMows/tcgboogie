@@ -7,7 +7,7 @@ import { setLabel } from "@/lib/sets";
 import { GRADE_TARGETS, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import CardActions, { AddCardButton, CardAlertIcons } from "@/components/CardActions";
+import CardActions, { CardAlertIcons } from "@/components/CardActions";
 import Source from "@/components/Source";
 import DealQuickCheck from "@/components/DealQuickCheck";
 import CardThumb from "@/components/CardThumb";
@@ -214,11 +214,10 @@ export default async function CardPage({ params, searchParams }) {
 
   const commission = ebay?.affiliate || ebaySold?.affiliate ? " eBay links may earn us a commission." : "";
 
-  // The top of the page: the name without the " - 151/128" our price data adds (the number sits beside it), and the
-  // add button, which sits to the right of the price (or under the note when there's no price).
+  // The top of the page: the name without the " - 151/128" our price data adds (the number sits in the line under it),
+  // and any "(Alternate Art Secret)" moved to that line too.
   const shownName = p.number ? p.name.split(` - ${p.number}`).join("") : p.name;
-  const addButton = wished ? null : <AddCardButton label={owned ? "+ Another Card" : "+ Add to collection"} />;
-  const addRow = addButton && <div className="hero-add-row">{addButton}</div>;
+  const [, titleName, titleVariant] = shownName.match(/^(.*?)\s*\(([^()]*)\)\s*$/) || [null, shownName, null];
   const details = [p.rarity && p.rarity !== "None" ? p.rarity : null, isSealed ? "Sealed product" : null, LANGUAGE[p.language || language]].filter(Boolean);
 
   // Graded: PSA, CGC and BGS always show; the smaller grading companies stay folded behind a plus.
@@ -249,26 +248,6 @@ export default async function CardPage({ params, searchParams }) {
   const saleLabels = allGraded.filter(([, g]) => g.labelled && g.allSales > 0)
     .map(([key, g]) => ({ grade: GRADE_LABEL(key), count: g.allSales, median: g.median, low: g.low, high: g.high, last: g.lastSale }));
 
-  // Under the chart. With a chart this is its own row, so the chart can end level with the buttons under the picture.
-  const hasChart = !p.topps && !p.memberAdded;
-  const belowChart = (
-    <>
-      {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
-      {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
-      {gradeIdea && gradeIdea.verdict !== "skip" && (
-        <Link href="/app/collection/grading" className="grade-idea">
-          💎 Worth grading? A {gradeIdea.topName} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
-          {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.topShort}.`} →
-        </Link>
-      )}
-      <div className="card-hero-side">
-        {sigCopy && <SignatureButton itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
-        <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
-          plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
-      </div>
-    </>
-  );
-
   return (
     <>
       <div className="crumbs">
@@ -278,6 +257,21 @@ export default async function CardPage({ params, searchParams }) {
       </div>
 
       {savedOnly && <div className="notice">Showing the last prices we saved for this card. Fresh prices will be back shortly.</div>}
+      <div className="card-head">
+        <div className="card-head-text">
+          <h1>{titleName} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
+          <div className="card-sub">
+            {titleVariant && <span>{titleVariant}</span>}
+            {p.setName && <span className="card-sub-set">{language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>}</span>}
+            {p.number && <span>#{p.number}</span>}
+            {details.map((d) => <span key={d} className="muted">{d}</span>)}
+          </div>
+        </div>
+        <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} wished={wished}>
+          {sigCopy && <SignatureButton icon itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
+        </CardAlertIcons>
+      </div>
+
       <div className="card-hero">
         <div className="card-hero-left">
           <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
@@ -285,28 +279,20 @@ export default async function CardPage({ params, searchParams }) {
             <MissingPicture productId={p.id} language={p.language || language} />
             {!isSealed && (
               <span className="price-wrong">
-                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">🏷️ Price wrong?</a>
+                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h13l-3 4.5L18 13H5" /></svg>
+                  Wrong price?
+                </a>
               </span>
             )}
           </div>
         </div>
         <div className="card-hero-info">
-          <div className="card-name-row">
-            <h1>{shownName}{p.number ? <span className="card-title-no"> #{p.number}</span> : null} <CopyButton text={copyText} label="Copy card name, number and set" /></h1>
-            <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} wished={wished} canWish={owned === 0} />
-          </div>
-          <div className="card-sub">
-            {p.setName && <span className="card-sub-set">{language === "japanese" ? p.setName : <Link href={`/app/collection/sets/${encodeURIComponent(p.setName)}`}>{setLabel(p.setName).name}</Link>}</span>}
-            {details.map((d) => <span key={d} className="muted">{d}</span>)}
-          </div>
           {p.topps && !now ? (
-            <>
-              <div className="notice no-price">
-                <b>No eBay price yet</b> for this Topps card. We check eBay&apos;s current listings every few days{p.topps.checkedAt ? " and didn't find enough of this card last time" : ""}, so you
-                can add it to your collection with your own value in the meantime.
-              </div>
-              {addRow}
-            </>
+            <div className="notice no-price">
+              <b>No eBay price yet</b> for this Topps card. We check eBay&apos;s current listings every few days{p.topps.checkedAt ? " and didn't find enough of this card last time" : ""}, so you
+              can add it to your collection with your own value in the meantime.
+            </div>
           ) : p.topps ? (
             <div className="chart-lead">
               <div className="hero-price">
@@ -314,25 +300,31 @@ export default async function CardPage({ params, searchParams }) {
                 <b>{money(now)}</b>
                 <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${money(p.topps.low)} to ${money(p.topps.high)})` : ""}</span>
               </div>
-              {addButton}
             </div>
           ) : p.memberAdded ? (
-            <>
-              <div className="notice no-price">
-                <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
-                so you can still add it to your collection with your own value, set price alerts and report sales you see.
-              </div>
-              {addRow}
-            </>
+            <div className="notice no-price">
+              <b>No pricing data available</b> for this card yet. A member added it and our price service doesn&apos;t cover it,
+              so you can still add it to your collection with your own value, set price alerts and report sales you see.
+            </div>
           ) : (
             <div className="hero-chart">
               <ValueChart points={(p.history || []).map((h) => ({ day: h.date, value: h.price }))} historyDays={null} current={now}
-                label={isSealed ? "Market price" : "Raw Near Mint market price"} height={270} shared detailed action={addButton} />
+                label={isSealed ? "Market price" : "Raw · Near Mint"} height={270} shared detailed />
             </div>
           )}
-          {!hasChart && belowChart}
         </div>
-        {hasChart && <div className="card-hero-below">{belowChart}</div>}
+        <div className="card-hero-side">
+          {deal && <DealBox deal={deal} premium={Boolean(user.plan.liveFeed)} />}
+          {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
+          <CardActions product={p} mine={mine} binders={binders} watch={watch ? { id: watch.id, mode: watch.mode, target: targetPrice(watch), status: watch.status } : null}
+            plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
+          {gradeIdea && gradeIdea.verdict !== "skip" && (
+            <Link href="/app/collection/grading" className="grade-idea">
+              💎 Worth grading? A {gradeIdea.topName} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
+              {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.topShort}.`} →
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="panel card-prices">

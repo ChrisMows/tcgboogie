@@ -76,7 +76,8 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
           <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : current ?? last)}</div>{hideable && <HideValues />}</div>
           {!at && delta !== null && shown.length > 1 && (
             <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>
-              {up ? "▲" : "▼"} {money(Math.abs(moved))} ({pct(delta)}) {range === 1 ? "today" : range ? `in ${range} days` : "all time"}
+              {detailed ? <><b>{up ? "+" : "−"}{money(Math.abs(moved))} ({pct(delta)})</b> <span className="muted">{range === 1 ? "today" : range ? `past ${range} days` : "all time"}</span></>
+                : <>{up ? "▲" : "▼"} {money(Math.abs(moved))} ({pct(delta)}) {range === 1 ? "today" : range ? `in ${range} days` : "all time"}</>}
               {market && <span className="muted"> from price moves</span>}
             </div>
           )}

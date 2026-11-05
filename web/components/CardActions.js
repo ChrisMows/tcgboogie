@@ -7,53 +7,56 @@ import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, dealAlertForCard, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
-import { CONDITIONS, GRADERS, fitGrade, gradeKey, gradeOption, gradesFor, itemLabel, marketValue, money, pct, unitValue } from "@/lib/collection";
+import { CONDITIONS, GRADERS, fitGrade, gradeKey, gradeName, gradeOption, gradesFor, isOwnValue, marketValue, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
 import DealSheet from "@/components/DealSheet";
-
-/** The "add a copy" button next to the card title: opens the add panel below. */
-export function AddCardButton({ label }) {
-  return (
-    <button type="button" className="btn primary card-add-btn" onClick={() => window.dispatchEvent(new Event("tcgb:add-card"))}>{label}</button>
-  );
-}
 
 /** What a member's price alert on this card says, on its button: "Alert at $40", "Alert on new highs"... */
 export const alertLabel = (watch) => (watch.mode === "high" ? "Alert on new highs" : watch.mode === "low" ? "Alert on new lows"
   : watch.status === "triggered" ? "Hit your price!" : `Alert at ${money(watch.target)}`);
 
-/** The bell, lightning and heart icons beside a card's name: the price alert and deal alert pop-ups (or, once set, a
- * link to the alert / the deal filter), and on and off the wishlist (not for a card you already own). */
-export function CardAlertIcons({ watch, deals = false, dealFilter = false, wished = false, canWish = false }) {
+const Icon = ({ children, filled = false }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+);
+const HEART = "M12 20.5s-7.5-4.6-9.3-9.1C1.5 8.2 3.4 5 6.6 5c2 0 3.8 1.1 5.4 3.2C13.6 6.1 15.4 5 17.4 5c3.2 0 5.1 3.2 3.9 6.4-1.8 4.5-9.3 9.1-9.3 9.1z";
+const BOLT = "M13 2 4 14h7l-1 8 9-12h-7l1-8z";
+const BELL = "M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2.2 2.2 0 0 0 4 0";
+
+/** The icons at the top right of a card page: wishlist, deal alert, price alert (or, once set, a link to the alert or
+ * the deal filter), then whatever's passed in (the signature star). */
+export function CardAlertIcons({ watch, deals = false, dealFilter = false, wished = false, children = null }) {
   return (
     <span className="card-icons">
-      {watch ? <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}>🔔</Link>
-        : <button type="button" className="alert-bell" title="Price alert" aria-label="Set a price alert"
-          onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}>🔔</button>}
-      {deals && (dealFilter ? <Link href="/app/deals" className="alert-bell set" title="You get deal alerts on this card" aria-label="Deal alerts: on for this card">⚡</Link>
+      <button type="button" className={`alert-bell ${wished ? "set" : ""}`} aria-pressed={wished}
+        title={wished ? "On your wishlist: tap to remove" : "Add to wishlist"} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+        onClick={() => window.dispatchEvent(new Event("tcgb:wishlist"))}><Icon filled={wished}><path d={HEART} /></Icon></button>
+      {deals && (dealFilter ? <Link href="/app/deals" className="alert-bell set" title="You get deal alerts on this card" aria-label="Deal alerts: on for this card"><Icon filled><path d={BOLT} /></Icon></Link>
         : <button type="button" className="alert-bell" title="Deal alerts" aria-label="Get deal alerts for this card"
-          onClick={() => window.dispatchEvent(new Event("tcgb:deal-alert"))}>⚡</button>)}
-      {(canWish || wished) && (
-        <button type="button" className={`alert-bell ${wished ? "set" : ""}`} aria-pressed={wished}
-          title={wished ? "On your wishlist: tap to remove" : "Add to wishlist"} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-          onClick={() => window.dispatchEvent(new Event("tcgb:wishlist"))}>❤️</button>
-      )}
+          onClick={() => window.dispatchEvent(new Event("tcgb:deal-alert"))}><Icon><path d={BOLT} /></Icon></button>)}
+      {watch ? <Link href="/app/watches" className="alert-bell set" title={alertLabel(watch)} aria-label={`Price alert: ${alertLabel(watch)}`}><Icon filled><path d={BELL} /></Icon></Link>
+        : <button type="button" className="alert-bell" title="Price alert" aria-label="Set a price alert"
+          onClick={() => window.dispatchEvent(new Event("tcgb:price-alert"))}><Icon><path d={BELL} /></Icon></button>}
+      {children}
     </span>
   );
 }
 
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 
+/** A copy's name in the box: "PSA 10", "Raw · Near Mint", "Sealed". */
+const copyName = (it) => (it.kind === "graded" ? gradeName(it.grader, it.grade) : it.kind === "sealed" ? "Sealed" : `Raw · ${it.condition || "Near Mint"}`);
+
 /**
- * One copy in "In your collection": what it's worth, how many, and what you paid, edited right here and saved together.
- * A copy with no market price takes the member's own value; a market price always takes over from it (lib/collection.js).
+ * The chosen copy's details under the table, with Delete and Save changes. A copy with no market price takes the member's
+ * own value, so its details start open; a market price always takes over from it (lib/collection.js). Quantity isn't here:
+ * the steppers in the table save as they're tapped.
  */
-function OwnedCopy({ it, product, binders, pending, errors, onSave, onRemove, heading, detailsOpen }) {
+function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, open, onToggle }) {
   const isCard = product.type === "card";
   const printings = isCard ? Object.keys(product.prices || {}) : [];
   const start = {
     kind: it.kind, printing: it.printing || printings[0] || null, condition: it.condition || "Near Mint", grader: it.grader || "PSA", grade: it.grade || "10",
-    quantity: String(it.quantity), customValue: it.customValue ?? "", purchasePrice: it.purchasePrice ?? "",
+    customValue: it.customValue ?? "", purchasePrice: it.purchasePrice ?? "",
     purchaseDate: it.purchaseDate ? String(it.purchaseDate).slice(0, 10) : "", certNumber: it.certNumber || "", binderId: it.binderId || "", notes: it.notes || "",
   };
   const [d, setD] = useState(start);
@@ -62,52 +65,26 @@ function OwnedCopy({ it, product, binders, pending, errors, onSave, onRemove, he
   // The stored price until the member changes which copy this is; then what that condition or grade sells for.
   const sameCopy = ["kind", "printing", "condition", "grader", "grade"].every((k) => start[k] === d[k]);
   const market = sameCopy ? it.unitValue ?? null : marketValue(product, d);
-  const own = d.customValue === "" ? null : Number(d.customValue);
-  const each = market ?? (Number.isFinite(own) ? own : null);
-  const qty = Math.max(0, Number(d.quantity) || 0);
-  const paid = d.purchasePrice === "" ? null : Number(d.purchasePrice);
-  const gain = each !== null && Number.isFinite(paid) && paid !== null ? (each - paid) * qty : null;
   const gradedKeys = Object.keys(product.graded || {});
   return (
-    <form className="own-copy" onSubmit={(e) => { e.preventDefault(); onSave(d); }}>
-      {heading}
-      {market === null && <p className="own-note">No market price yet. Set your own value below.</p>}
-      <div className="own-row">
-        <div className="own-field">
-          {market === null ? (
-            <>
+    <form className="own-copy" onSubmit={(e) => { e.preventDefault(); onSave({ ...d, quantity: it.quantity }); }}>
+      <details className="own-more" open={open || market === null} onToggle={(e) => onToggle(e.currentTarget.open)}>
+        <summary data-tour="item-edit">
+          {isCard ? "Purchase details & notes" : "Details & notes"}
+          <span className="own-more-arrow" aria-hidden="true" />
+        </summary>
+        {market === null && <p className="own-note">No market price yet. Set your own value below.</p>}
+        <div className="form-grid own-more-body">
+          {market === null && (
+            <div style={{ gridColumn: "1 / -1" }}>
               <label className="field" htmlFor={`own-value-${it.id}`}>Your value per copy</label>
               <span className="own-money"><span aria-hidden="true">$</span>
                 <input id={`own-value-${it.id}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" value={d.customValue} onChange={set("customValue")} />
               </span>
               <span className="hint">Used until a market price becomes available.</span>
               <Err msg={errors.customValue} />
-            </>
-          ) : (
-            <>
-              <span className="field">Market value per copy</span>
-              <b className="own-market">{money(market)}</b>
-            </>
+            </div>
           )}
-        </div>
-        <div className="own-qty">
-          <label className="field" htmlFor={`own-qty-${it.id}`}>Quantity</label>
-          <div className="stepper">
-            <button type="button" onClick={() => setD((x) => ({ ...x, quantity: String(Math.max(1, (Number(x.quantity) || 1) - 1)) }))} aria-label="One fewer">−</button>
-            <input id={`own-qty-${it.id}`} type="number" min="1" max="9999" value={d.quantity} onChange={set("quantity")} />
-            <button type="button" onClick={() => setD((x) => ({ ...x, quantity: String(Math.min(9999, (Number(x.quantity) || 0) + 1)) }))} aria-label="One more">+</button>
-          </div>
-          <Err msg={errors.quantity} />
-        </div>
-      </div>
-      <div className="own-total"><span>Collection value</span><b>{money(each !== null ? each * qty : null)}</b></div>
-      {gain !== null && <div className="own-total own-gain"><span>Profit on what you paid</span><b className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))}</b></div>}
-      <details className="own-more" open={detailsOpen}>
-        <summary data-tour={detailsOpen ? undefined : "item-edit"}>
-          <span className="own-more-arrow" aria-hidden="true" />
-          {isCard ? "Condition, purchase details & notes" : "Purchase details & notes"} <span className="own-optional">Optional</span>
-        </summary>
-        <div className="form-grid own-more-body">
           {isCard && (
             <div>
               <label className="field" htmlFor={`own-kind-${it.id}`}>Type</label>
@@ -145,6 +122,7 @@ function OwnedCopy({ it, product, binders, pending, errors, onSave, onRemove, he
               </div>
             </>
           )}
+          {!sameCopy && market !== null && <p className="own-note" style={{ gridColumn: "1 / -1" }}>Worth {money(market)} per copy once saved.</p>}
           <div>
             <label className="field" htmlFor={`own-paid-${it.id}`}>Paid per copy</label>
             <input id={`own-paid-${it.id}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={d.purchasePrice} onChange={set("purchasePrice")} />
@@ -178,8 +156,9 @@ function OwnedCopy({ it, product, binders, pending, errors, onSave, onRemove, he
         </div>
       </details>
       <Err msg={errors._} />
+      <Err msg={errors.quantity} />
       <div className="own-actions">
-        <button type="button" className="own-remove" disabled={pending} onClick={() => window.confirm("Remove this from your collection?") && onRemove()}>Remove</button>
+        <button type="button" className="btn own-remove" disabled={pending} onClick={onDelete}>Delete</button>
         <button className="btn primary" disabled={pending || !dirty}>{pending ? "Saving..." : "Save changes"}</button>
       </div>
     </form>
@@ -206,7 +185,11 @@ export default function CardActions({ product, mine, binders, watch, plan, price
       window.removeEventListener("tcgb:add-card", open); window.removeEventListener("tcgb:price-alert", openAlert); window.removeEventListener("tcgb:deal-alert", openDeal);
     };
   }, []);
-  const [editing, setEditing] = useState(null);
+  const [chosen, setChosen] = useState(null); // the copy Delete, Save and the details act on (the first until a pencil is tapped)
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [confirm, setConfirm] = useState(null); // the copy waiting on "Are you sure you want to remove…?"
+  const confirmRef = useRef(null);
+  useEffect(() => { if (confirm) confirmRef.current?.showModal(); }, [confirm]);
   const [errors, setErrors] = useState({});
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
@@ -217,6 +200,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
   const paid = owned.filter((it) => it.purchasePrice !== null && it.purchasePrice !== undefined);
   const cost = paid.reduce((s, it) => s + it.purchasePrice * it.quantity, 0);
   const gain = paid.length ? paid.reduce((s, it) => s + ((unitValue(it) ?? it.purchasePrice) - it.purchasePrice) * it.quantity, 0) : null;
+  const active = owned.find((it) => it.id === chosen) || owned[0] || null;
 
   // The heart beside the card's name (CardAlertIcons).
   useEffect(() => {
@@ -241,61 +225,96 @@ export default function CardActions({ product, mine, binders, watch, plan, price
     router.refresh();
   });
 
+  const closeConfirm = () => { confirmRef.current?.close(); setConfirm(null); };
+  const addForm = panel === "add" && (
+    <div className="action-panel" ref={panelRef}>
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+        <b style={{ flex: "none" }}>Add to your collection</b>
+        <button type="button" className="link-btn small" style={{ flex: "none" }} disabled={pending}
+          onClick={() => run(() => quickAdd(product.id), product.type === "card" ? "Added a Near Mint copy." : "Added.")}>
+          Just add one {product.type === "card" ? "Near Mint " : ""}copy →
+        </button>
+      </div>
+      <ItemForm product={product} binders={binders} pending={pending} errors={errors}
+        onSubmit={(input) => run(() => addItem(product.id, input), input.list === "wishlist" ? "Added to your wishlist." : (r) => `Added${r.value ? ` · worth ${money(r.value * (input.quantity || 1))}` : ""}`)} />
+    </div>
+  );
+
   return (
     <div className="card-actions">
-      {copies > 0 ? (
-        <div className="you-own">
-          {owned.length === 1 ? (
-            <OwnedCopy key={owned[0].id} it={owned[0]} product={product} binders={binders} pending={pending} errors={errors}
-              onSave={(input) => run(() => editItem(owned[0].id, input), "Saved.")} onRemove={() => run(() => removeItem(owned[0].id), "Removed.")}
-              heading={<div className="own-head"><span className="own-check" aria-hidden="true" /><h2>In your collection</h2><span className="own-chip">{itemLabel(owned[0])}</span></div>} />
-          ) : (
-            <>
-              <div className="own-head"><span className="own-check" aria-hidden="true" /><h2>In your collection</h2></div>
+      <div className="you-own">
+        <div className="own-head">{copies > 0 && <span className="own-check" aria-hidden="true" />}<h2>Your collection</h2></div>
+        {copies > 0 ? (
+          <>
+            <div className="own-stats">
+              <div><b>{copies.toLocaleString("en-US")}</b><span>{copies === 1 ? "Copy owned" : "Copies owned"}</span></div>
+              <div><b className="sensitive">{money(worth)}</b><span>Total value</span></div>
+            </div>
+            {gain !== null && (
+              <div className="own-profit"><span className="muted">Profit on what you paid</span>
+                <b className={`sensitive ${gain >= 0 ? "up" : "down"}`}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))}{cost ? ` (${pct(gain / cost)})` : ""}</b></div>
+            )}
+            <div className="own-table" role="table" aria-label="Your copies">
+              <div className="own-tr own-th" role="row"><span role="columnheader">Variant</span><span role="columnheader">Qty</span><span role="columnheader">Value</span><span /></div>
               {owned.map((it) => {
                 const each = unitValue(it);
-                const open = editing === it.id;
+                const name = copyName(it);
+                const isActive = owned.length > 1 && it.id === active?.id;
                 return (
-                  <div key={it.id} className="own-line">
-                    <button type="button" className="own-line-head" data-tour="item-edit" aria-expanded={open} onClick={() => { setErrors({}); setEditing(open ? null : it.id); }}>
-                      <span className="copy-what"><span className="copy-qty">{it.quantity}×</span><span className="own-chip">{itemLabel(it)}</span></span>
-                      <span className="copy-value"><b>{money(each != null ? each * it.quantity : null)}</b>{it.quantity > 1 && <span className="small muted">{money(each)} each</span>}</span>
-                      <span className="own-line-arrow" aria-hidden="true" />
+                  <div key={it.id} className={`own-tr ${isActive ? "on" : ""}`} role="row">
+                    <span className="own-td-name" role="cell">{name}</span>
+                    <span role="cell">
+                      <span className="stepper xs">
+                        <button type="button" disabled={pending} aria-label={`One fewer ${name}`}
+                          onClick={() => (it.quantity <= 1 ? setConfirm({ id: it.id, name }) : run(() => changeQuantity(it.id, -1)))}>−</button>
+                        <span>{it.quantity}</span>
+                        <button type="button" disabled={pending} aria-label={`One more ${name}`} onClick={() => run(() => changeQuantity(it.id, 1))}>+</button>
+                      </span>
+                    </span>
+                    <b className={`own-td-value sensitive ${isOwnValue(it) ? "own-value" : ""}`} role="cell" title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>{money(each != null ? each * it.quantity : null)}</b>
+                    <button type="button" className="own-edit" title={`Edit ${name}`} aria-label={`Edit ${name}`} aria-pressed={detailsOpen && it.id === active?.id}
+                      onClick={() => { setErrors({}); setChosen(it.id); setDetailsOpen(it.id === active?.id ? !detailsOpen : true); }}>
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.33-2.33a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84z" /></svg>
                     </button>
-                    {open && (
-                      <OwnedCopy detailsOpen it={it} product={product} binders={binders} pending={pending} errors={errors}
-                        onSave={(input) => run(() => editItem(it.id, input), "Saved.")} onRemove={() => run(() => removeItem(it.id), "Removed.")} />
-                    )}
                   </div>
                 );
               })}
-              <div className="own-total own-sum">
-                <span>Collection value{gain !== null ? <> · <span className={gain >= 0 ? "up" : "down"}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))} ({cost ? pct(gain / cost) : "—"})</span></> : null}</span>
-                <b>{money(worth)}</b>
-              </div>
-            </>
-          )}
-        </div>
-      ) : wish ? (
-        <div className="you-own wish"><b>♥ On your wishlist</b> <span className="small muted">Got it? Move it to your collection in one tap.</span></div>
-      ) : null}
+            </div>
+            <button type="button" className="btn primary own-add" aria-expanded={panel === "add"} onClick={() => setPanel(panel === "add" ? null : "add")}>+ Add a copy</button>
+            {addForm}
+            {owned.length > 1 && active && <p className="own-note own-editing">Details below are for <b>{copyName(active)}</b>. Tap a pencil to switch.</p>}
+            {active && (
+              <CopyDetails key={active.id} it={active} product={product} binders={binders} pending={pending} errors={errors} open={detailsOpen} onToggle={setDetailsOpen}
+                onSave={(input) => run(() => editItem(active.id, input), "Saved.")} onDelete={() => setConfirm({ id: active.id, name: copyName(active), quantity: active.quantity })} />
+            )}
+          </>
+        ) : wish ? (
+          <>
+            <p className="own-note"><b>♥ On your wishlist.</b> Got it? Move it to your collection in one tap.</p>
+            <button type="button" className="btn primary own-add" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
+          </>
+        ) : (
+          <>
+            <p className="own-note">Not in your collection yet.</p>
+            <button type="button" className="btn primary own-add" aria-expanded={panel === "add"} onClick={() => setPanel(panel === "add" ? null : "add")}>+ Add to collection</button>
+            {addForm}
+          </>
+        )}
+      </div>
 
-      {wish && <div className="action-row">
-        <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => moveToCollection(wish.id), "Moved to your collection 🎉")}>✓ Got it</button>
-      </div>}
-
-      {panel === "add" && !wish && (
-        <div className="action-panel" ref={panelRef}>
-          <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
-            <b style={{ flex: "none" }}>Add to your collection</b>
-            <button type="button" className="link-btn small" style={{ flex: "none" }} disabled={pending}
-              onClick={() => run(() => quickAdd(product.id), product.type === "card" ? "Added a Near Mint copy." : "Added.")}>
-              Just add one {product.type === "card" ? "Near Mint " : ""}copy →
-            </button>
+      {confirm && (
+        <dialog ref={confirmRef} className="cmp-dialog alert-dialog own-confirm" aria-labelledby="own-confirm-title" onClose={() => setConfirm(null)}
+          onClick={(e) => { if (e.target === confirmRef.current) closeConfirm(); }}>
+          <div className="cmp-inner">
+            <h2 id="own-confirm-title">Are you sure you want to remove this from your collection?</h2>
+            <p className="small muted">{confirm.quantity > 1 ? `All ${confirm.quantity} copies of ${confirm.name}` : confirm.name} · {product.name.replace(/\s*\(.*\)$/, "")}</p>
+            <div className="own-actions">
+              <button type="button" className="btn" autoFocus onClick={closeConfirm}>No</button>
+              <button type="button" className="btn own-remove" disabled={pending}
+                onClick={() => { const { id } = confirm; closeConfirm(); setChosen(null); setDetailsOpen(false); run(() => removeItem(id), "Removed."); }}>Yes</button>
+            </div>
           </div>
-          <ItemForm product={product} binders={binders} pending={pending} errors={errors}
-            onSubmit={(input) => run(() => addItem(product.id, input), input.list === "wishlist" ? "Added to your wishlist." : (r) => `Added${r.value ? ` · worth ${money(r.value * (input.quantity || 1))}` : ""}`)} />
-        </div>
+        </dialog>
       )}
 
       {!watch && (
