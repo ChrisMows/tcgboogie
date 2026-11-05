@@ -1,5 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { gradeName } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { appToken } from "@/lib/ebay-sell";
 import { log } from "@/lib/log";
@@ -53,16 +54,37 @@ export async function itemIdFromLink(input) {
   return null;
 }
 
-function gradeOf(item) {
+/**
+ * Which language a listing is: "japanese", "english", "korean", ... or null when it doesn't say. The title naming Japan
+ * settles it, since sellers often leave eBay's Language field on its default. Otherwise that field: many Japanese cards are
+ * listed with Japanese only there. Other languages come from the field too, and from the title as a last resort.
+ */
+export function listingLanguage(item) {
+  const title = norm(item.title);
+  if (/\bjapanese\b|\bjapan\b|\bjpn?\b/.test(title)) return "japanese";
+  const field = norm((item.localizedAspects || []).find((a) => a.name?.toLowerCase() === "language")?.value);
+  const known = (text) => ["japanese", "english", "korean", "chinese"].find((l) => text.includes(l)) || null;
+  return known(field) || known(title);
+}
+
+/** The grader and grade a listing was sold at, or null. Exported for its tests. */
+export function gradeOf(item) {
   const aspect = (name) => (item.localizedAspects || []).find((a) => a.name?.toLowerCase() === name)?.value || "";
   const graderText = norm(aspect("professional grader"));
   const grader = Object.entries(GRADERS).find(([k]) => graderText.includes(k))?.[1];
   const grade = aspect("grade").match(/\d+(?:\.5)?/)?.[0];
-  // CGC 10 comes as Pristine (worth more) or Gem Mint: keep them apart.
-  const pristine = (g) => (g.grader === "CGC" && g.grade === "10" && /pristine/i.test(`${item.title} ${aspect("grade")}`) ? { ...g, grade: "10 Pristine" } : g);
-  if (grader && grade) return pristine({ grader, grade });
-  const m = String(item.title || "").match(/\b(PSA|CGC|BGS|SGC|TAG)\s*(?:GEM\s*(?:MINT|MT)\s*|PRISTINE\s*)?(\d{1,2}(?:\.5)?)\b/i);
-  return m ? pristine({ grader: m[1].toUpperCase(), grade: m[2] }) : null;
+  // CGC and BGS 10s sell by slab label: keep them apart. "Pristine" counts next to the number only, so "CGC 10, pristine
+  // condition" stays an everyday 10. (BGS's plain 10 is its Pristine.)
+  const text = `${item.title} ${aspect("grade")}`.toLowerCase();
+  const label = (g) => {
+    if (g.grade !== "10") return g;
+    if (g.grader === "BGS" && /black\s*label/.test(text)) return { ...g, grade: "10 Black Label" };
+    if (g.grader === "CGC" && /pristine[\s-]*10\b|\b10[\s-]*pristine\b(?!\s+(?:condition|corners?|edges?|centering|surface|shape|card|copy|slab|case|look\w*))/.test(text)) return { ...g, grade: "10 Pristine" };
+    return g;
+  };
+  if (grader && grade) return label({ grader, grade });
+  const m = String(item.title || "").match(/\b(PSA|CGC|BGS|SGC|TAG)\s*(?:GEM\s*(?:MINT|MT)\s*|PRISTINE\s*|BLACK\s*LABEL\s*)?(\d{1,2}(?:\.5)?)\b/i);
+  return m ? label({ grader: m[1].toUpperCase(), grade: m[2] }) : null;
 }
 
 /** Check and save a reported sale. Returns { ok, message }. */
@@ -107,9 +129,10 @@ export async function reportSale(user, product, input, soldOn = null) {
   if ((number && !new RegExp(`(^|[^0-9])0*${number}([^0-9]|$)`).test(title)) || (nameWord && !title.includes(nameWord))) {
     return { ok: false, message: "That listing's title doesn't match this card (name and number), so we didn't add it." };
   }
-  const japaneseListing = /\bjapanese\b|\bjapan\b|\bjpn?\b/.test(title);
-  if (japaneseListing !== (product.language === "japanese")) {
-    return { ok: false, message: `That listing looks like the ${japaneseListing ? "Japanese" : "English"} version, not this card.` };
+  // Only when the listing clearly says otherwise: it has already matched this card's name and number.
+  const language = listingLanguage(item);
+  if (language && language !== (product.language || "english")) {
+    return { ok: false, message: `That listing is the ${language[0].toUpperCase()}${language.slice(1)} version, not this card.` };
   }
   const g = gradeOf(item);
   if (!g) return { ok: false, message: "We only add graded sales for now (raw card prices come from TCGplayer). We couldn't read a grade on that listing." };
@@ -134,5 +157,7 @@ export async function reportSale(user, product, input, soldOn = null) {
     url: item.itemWebUrl || `https://www.ebay.com/itm/${id}`, source: "member", reportedBy: user.id,
   }).onConflictDoNothing();
   await log("prices", "info", `Sale reported: ${g.grader} ${g.grade} ${product.name} $${price}`, { item: id, product: product.id }, user.id);
-  return { ok: true, message: `Added: ${g.grader} ${g.grade} sold for $${price.toLocaleString("en-US")} on ${soldAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. It now counts toward this card's value.` };
+  // CGC and BGS 10s take their value from the service's price for that label; the sale shows in this card's recent sales.
+  const labelled = (g.grader === "CGC" || g.grader === "BGS") && String(g.grade).startsWith("10");
+  return { ok: true, message: `Added: ${gradeName(g.grader, g.grade)} sold for $${price.toLocaleString("en-US")} on ${soldAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. ${labelled ? "It now shows in this card's recent sales." : "It now counts toward this card's value."}` };
 }
