@@ -44,7 +44,7 @@ export default function ReportSale({ productId, language }) {
   };
   return (
     <form className="report-sale" id="report-sale" onSubmit={submit}>
-      <label className="small" htmlFor="sale-link">Paste the eBay link of a sold, completed listing for this card (graded)</label>
+      <label className="small" htmlFor="sale-link">Paste the eBay link of a sold, completed listing for this card, graded or raw</label>
       <div className="row" style={{ gap: 8 }}>
         <input id="sale-link" autoFocus type="text" inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://www.ebay.com/itm/…" value={link} onChange={(e) => setLink(e.target.value)} required />
         <button className="btn sm primary" style={{ flex: "none" }} disabled={pending}>{pending ? "Checking…" : "Add sale"}</button>
@@ -55,7 +55,7 @@ export default function ReportSale({ productId, language }) {
         </label>
       )}
       {result && <div className={`small ${result.ok ? "good" : "muted"}`} style={{ marginTop: 6 }}>{result.message}</div>}
-      <div className="hint" style={{ margin: "4px 0 0" }}>eBay links only. We check it with eBay directly: it has to have sold and ended, and be this card and grade.</div>
+      <div className="hint" style={{ margin: "4px 0 0" }}>eBay links only. We check it with eBay directly: it has to have sold and ended, and be this card. Raw sales show in the list; the raw value comes from TCGplayer.</div>
     </form>
   );
 }

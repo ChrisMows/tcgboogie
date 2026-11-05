@@ -1,6 +1,7 @@
 import RecentSales from "@/components/RecentSales";
 import CopyButton from "@/components/CopyButton";
 import ReportSale from "@/components/ReportSale";
+import { rawSales } from "@/lib/report-sale";
 import MissingPicture from "@/components/MissingPicture";
 import SignatureButton from "@/components/SignatureButton";
 import { setLabel } from "@/lib/sets";
@@ -245,6 +246,14 @@ export default async function CardPage({ params, searchParams }) {
     key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
   }));
+  // Raw sales members reported list too. They don't change the raw value, which is TCGplayer's.
+  if (p.type === "card") {
+    for (const s of await rawSales(p.id, p.language || "english")) {
+      saleRows.push({ key: `raw-${s.itemId}`, date: s.soldAt.toISOString().slice(0, 10), grade: s.condition ? `Raw · ${s.condition}` : "Raw", price: s.price, count: 1,
+        href: s.url ? ebayLink(s.url, "card-page-sale").href : null });
+    }
+    saleRows.sort((a, b) => b.date.localeCompare(a.date));
+  }
   const saleLabels = allGraded.filter(([, g]) => g.labelled && g.allSales > 0)
     .map(([key, g]) => ({ grade: GRADE_LABEL(key), count: g.allSales, median: g.median, low: g.low, high: g.high, last: g.lastSale }));
 
@@ -279,7 +288,7 @@ export default async function CardPage({ params, searchParams }) {
             <MissingPicture productId={p.id} language={p.language || language} />
             {!isSealed && (
               <span className="price-wrong">
-                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale and we'll update the value.">
+                <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale.">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h13l-3 4.5L18 13H5" /></svg>
                   Wrong price?
                 </a>
@@ -381,7 +390,7 @@ export default async function CardPage({ params, searchParams }) {
               )}
             </div>
             <div className="price-col">
-              <h3>Recent graded sales</h3>
+              <h3>Recent sales</h3>
               {saleRows.length > 0 || saleLabels.length > 0 ? (
                 <RecentSales label={null} labels={saleLabels} sales={saleRows} />
               ) : <p className="small muted" style={{ margin: 0 }}>No individual sales to list yet.</p>}

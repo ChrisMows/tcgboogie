@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { gradeName } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { appToken } from "@/lib/ebay-sell";
@@ -7,7 +7,8 @@ import { log } from "@/lib/log";
 
 // "Report a sale": a member pastes an eBay listing we missed. We read it through eBay's official Browse API (which
 // still returns a listing for a while after it ends), check it really sold and is this card at a readable grade,
-// then save it to our own sales history, where it counts toward the card's graded value.
+// then save it to our own sales history. Graded sales count toward the card's graded value. Raw sales only list on the card
+// page: a raw card's value stays TCGplayer's, since one eBay sale can be any condition.
 const GRADERS = { psa: "PSA", cgc: "CGC", bgs: "BGS", beckett: "BGS", sgc: "SGC", tag: "TAG" };
 const norm = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9/]+/g, " ").trim();
 
@@ -87,6 +88,34 @@ export function gradeOf(item) {
   return m ? label({ grader: m[1].toUpperCase(), grade: m[2] }) : null;
 }
 
+// Ways a slab or something other than one card shows in a title, for listings without a grade we can read.
+const SLAB_WORDS = /\b(?:psa|cgc|bgs|bvg|beckett|sgc|tag|ace|ars|pca|hga|gma|mnt|ksa|aura|cga|bccg)\s*(?:gem\s*(?:mint|mt)\s*|pristine\s*|mint\s*)?\d|(?<!un)(?<!not\s)\bgraded\b|\bslab(?:bed)?\b/i;
+const NOT_ONE_CARD = /\blots?\b|\bbundle\b|\bplayset\b|\bset of\b|\bproxy\b|\bcustom\b|\bfan\s*art\b|\bcode\s*card\b|\bdigital\b|\bsealed\b|\bbooster\b|\b[2-9]\s*x\b|\bx\s*[2-9]\b/i;
+const CONDITIONS = [[/near\s*mint|\bnm\b/i, "Near Mint"], [/lightly|excellent/i, "Lightly Played"], [/moderately|very\s*good/i, "Moderately Played"], [/heavily|poor/i, "Heavily Played"], [/damaged/i, "Damaged"]];
+
+/**
+ * Whether a listing with no readable grade is one raw card, and in what condition. Returns { raw: true, condition } or
+ * { raw: false, why }. eBay marks ungraded cards with condition 4000 and a "Card Condition" (seen on real listings, Nov 2026).
+ * Exported for its tests.
+ */
+export function rawOf(item) {
+  const title = String(item.title || "");
+  if (String(item.conditionId) === "2750" || SLAB_WORDS.test(title)) return { raw: false, why: "That listing looks graded, but we couldn't read its grader and grade." };
+  if (String(item.conditionId) !== "4000") return { raw: false, why: "eBay doesn't list that as an ungraded card, and we couldn't read a grade on it." };
+  if (NOT_ONE_CARD.test(title) || Number(item.lotSize) > 1) return { raw: false, why: "That looks like more than one card, so it doesn't tell us this card's price." };
+  const said = (item.conditionDescriptors || []).find((d) => d.name?.toLowerCase() === "card condition")?.values?.[0]?.content || "";
+  return { raw: true, condition: CONDITIONS.find(([re]) => re.test(said))?.[1] || null };
+}
+
+/** A card's raw sales that members reported in the last 90 days, newest first, for its page. */
+export async function rawSales(productId, language = "english") {
+  if (!db) return [];
+  try {
+    return await db.select().from(schema.sales).where(and(eq(schema.sales.productId, String(productId)), eq(schema.sales.kind, "raw"), eq(schema.sales.language, language),
+      gte(schema.sales.soldAt, new Date(Date.now() - 90 * 86400000)))).orderBy(desc(schema.sales.soldAt)).limit(40);
+  } catch { return []; }
+}
+
 /** Check and save a reported sale. Returns { ok, message }. */
 export async function reportSale(user, product, input, soldOn = null) {
   const id = await itemIdFromLink(input);
@@ -135,7 +164,8 @@ export async function reportSale(user, product, input, soldOn = null) {
     return { ok: false, message: `That listing is the ${language[0].toUpperCase()}${language.slice(1)} version, not this card.` };
   }
   const g = gradeOf(item);
-  if (!g) return { ok: false, message: "We only add graded sales for now (raw card prices come from TCGplayer). We couldn't read a grade on that listing." };
+  const raw = g ? null : rawOf(item);
+  if (raw && !raw.raw) return { ok: false, message: raw.why };
 
   const price = Number(item.currentBidPrice?.value || item.price?.value);
   if (!price) return { ok: false, message: "We couldn't read the sale price on that listing." };
@@ -152,12 +182,15 @@ export async function reportSale(user, product, input, soldOn = null) {
     soldAt = day;
   }
   await db.insert(schema.sales).values({
-    itemId: id, productId: String(product.id), kind: "graded", grader: g.grader, grade: g.grade, language: product.language || "english",
+    itemId: id, productId: String(product.id), language: product.language || "english",
+    ...(g ? { kind: "graded", grader: g.grader, grade: g.grade } : { kind: "raw", condition: raw.condition }),
     price, shipping: Number.isFinite(ship) ? ship : null, soldAt: soldAt, title: String(item.title || "").slice(0, 300),
     url: item.itemWebUrl || `https://www.ebay.com/itm/${id}`, source: "member", reportedBy: user.id,
   }).onConflictDoNothing();
-  await log("prices", "info", `Sale reported: ${g.grader} ${g.grade} ${product.name} $${price}`, { item: id, product: product.id }, user.id);
+  await log("prices", "info", `Sale reported: ${g ? `${g.grader} ${g.grade}` : `raw${raw.condition ? ` ${raw.condition}` : ""}`} ${product.name} $${price}`, { item: id, product: product.id }, user.id);
+  const when = soldAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (!g) return { ok: true, message: `Added: raw${raw.condition ? ` (${raw.condition})` : ""} sold for $${price.toLocaleString("en-US")} on ${when}. It now shows in this card's recent sales. The raw value still comes from TCGplayer.` };
   // CGC and BGS 10s take their value from the service's price for that label; the sale shows in this card's recent sales.
   const labelled = (g.grader === "CGC" || g.grader === "BGS") && String(g.grade).startsWith("10");
-  return { ok: true, message: `Added: ${gradeName(g.grader, g.grade)} sold for $${price.toLocaleString("en-US")} on ${soldAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}. ${labelled ? "It now shows in this card's recent sales." : "It now counts toward this card's value."}` };
+  return { ok: true, message: `Added: ${gradeName(g.grader, g.grade)} sold for $${price.toLocaleString("en-US")} on ${when}. ${labelled ? "It now shows in this card's recent sales." : "It now counts toward this card's value."}` };
 }

@@ -122,7 +122,7 @@ function features(free, premium, sms) {
     { area: "Cards", name: "Card pages", link: "/app/collection", grows: "card", vendors: ["ppt", "ebay", "epn"],
       what: "Prices by condition, graded sales and value history for any card. New lookups: 400 a day per member, 2,000 a day site-wide, saved prices when under 1,000 credits are left.", free: "✓", premium: "✓" },
     { area: "Cards", name: "Report a sale", link: "/app/collection", grows: "use", vendors: ["ebay"],
-      what: "A member pastes an eBay sale we're missing; we verify it with eBay.", free: yes(free.reportSales, "15 a day"), premium: yes(premium.reportSales, "15 a day") },
+      what: "A member pastes an eBay sale we're missing; we verify it with eBay. Graded sales count toward the graded value; raw sales only list on the card page (sale.kind = raw), since raw values come from TCGplayer.", free: yes(free.reportSales, "15 a day"), premium: yes(premium.reportSales, "15 a day") },
     { area: "Cards", name: "Request a card", link: "/app/collection", grows: "use", vendors: ["ppt"],
       what: "Add a card or sealed product we don't list yet.", free: yes(free.cardRequests, "20 a day"), premium: yes(premium.cardRequests, "20 a day") },
     { area: "Cards", name: "Missing picture?", link: "/app/admin?tab=requests&kind=picture", grows: "use", vendors: ["tcgdex", "discord"],
