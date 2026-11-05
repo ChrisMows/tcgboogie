@@ -89,6 +89,15 @@ class LabelledTenTests(unittest.TestCase):
         self.assertEqual(self.value(card, "BGS", "10 PRISTINE").value, 2050.88)
         self.assertFalse(self.value(card, "BGS", "10 BLACK LABEL").ok)
 
+    def test_short_thin_estimate_counts_the_lower_of_it_and_the_median(self):
+        spike = {**label(67, 150.0), "medianPrice": 72.0, "dailyVolume7Day": 3 / 7}
+        spike["smartMarketPrice"] = {**spike["smartMarketPrice"], "method": "7day_filtered_weighted"}
+        self.assertEqual(self.value(labelled_card(labels={"pristine": spike}, total=67), "CGC", "10 PRISTINE").value, 72.0)
+        dip = {**spike, "smartMarketPrice": {**spike["smartMarketPrice"], "price": 59.4}}
+        self.assertEqual(self.value(labelled_card(labels={"pristine": dip}, total=67), "CGC", "10 PRISTINE").value, 59.4)
+        busy = {**spike, "dailyVolume7Day": 2.0}
+        self.assertEqual(self.value(labelled_card(labels={"pristine": busy}, total=67), "CGC", "10 PRISTINE").value, 150.0)
+
     def test_low_confidence_gets_no_value_rather_than_a_guess(self):
         card = labelled_card(labels={"gemMint": label(63, 44.1, "low"), "pristine": label(48, 92.0)})
         mv = self.value(card, "CGC", "10")

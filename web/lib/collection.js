@@ -54,7 +54,17 @@ const TEN_LABELS = {
 };
 export const mixedKey = (key) => `${key.replace(/_(pristine|black)$/, "")}_mixed`;
 /**
- * A grade's labels as separate prices: [{ key, price, sales, allSales, lastSale, confidence }], or null when it isn't split.
+ * One label's price. The service's estimate, except when it's low confidence, or rests on a 7 or 14 day window with only
+ * a handful of sales: there it swings on a sale or two (a CGC Pristine read $59 from 3 sales when its 67 sales' median was
+ * $72), so the label's own median of all its sales stands in.
+ */
+export function labelPrice(l) {
+  const smart = l?.smartMarketPrice?.price ?? null;
+  const thin = l?.smartMarketPrice?.confidence === "low" || (/^(7|14)day/.test(String(l?.smartMarketPrice?.method || "")) && (l?.dailyVolume7Day || 0) * 7 <= 5);
+  return (thin ? l?.medianPrice : null) ?? smart ?? l?.medianPrice ?? l?.averagePrice ?? null;
+}
+/**
+ * A grade's labels as separate prices: [{ key, price, median, low, high, sales, allSales, lastSale, confidence }], or null when it isn't split.
  * recent: its sales in the last 90 days, of either label. A label's share of those is an estimate, from its share of all
  * sales (sales); allSales is the real count.
  */
@@ -64,11 +74,11 @@ export function splitTen(key, g, recent = null) {
   const out = [];
   for (const [outKey, names] of TEN_LABELS[key]) {
     const l = names.map((n) => labels[n]).find((x) => x?.count > 0);
-    const price = l?.smartMarketPrice?.price ?? l?.medianPrice ?? l?.averagePrice ?? null;
+    const price = labelPrice(l);
     if (!price) continue;
     const share = g.count > 0 ? l.count / g.count : 0;
     const lastSale = l.lastSaleDate ? String(l.lastSaleDate).slice(0, 10) : null;
-    out.push({ key: outKey, price, allSales: l.count, sales: recent === null ? l.count : Math.round(recent * share), lastSale, confidence: l.smartMarketPrice?.confidence || null });
+    out.push({ key: outKey, price, median: l.medianPrice ?? null, low: l.minPrice ?? null, high: l.maxPrice ?? null, allSales: l.count, sales: recent === null ? l.count : Math.round(recent * share), lastSale, confidence: l.smartMarketPrice?.confidence || null });
   }
   return out;
 }

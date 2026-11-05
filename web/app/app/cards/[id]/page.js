@@ -240,6 +240,15 @@ export default async function CardPage({ params, searchParams }) {
     </div>
   );
 
+  // Recent sales. CGC and BGS 10s: the service's daily sales don't say which slab label sold, so they aren't listed (they
+  // still count for "new high" checks, lib/market.js). Each label shows its own totals, plus any sales we verified ourselves.
+  const saleRows = (p.recentSales || []).filter((s) => !/_mixed$/.test(s.grade)).map((s) => ({
+    key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
+    href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
+  }));
+  const saleLabels = allGraded.filter(([, g]) => g.labelled && g.allSales > 0)
+    .map(([key, g]) => ({ grade: GRADE_LABEL(key), count: g.allSales, median: g.median, low: g.low, high: g.high, last: g.lastSale }));
+
   // Under the chart. With a chart this is its own row, so the chart can end level with the buttons under the picture.
   const hasChart = !p.topps && !p.memberAdded;
   const belowChart = (
@@ -381,12 +390,8 @@ export default async function CardPage({ params, searchParams }) {
             </div>
             <div className="price-col">
               <h3>Recent graded sales</h3>
-              {(p.recentSales || []).length > 0 ? (
-                <RecentSales label={null}
-                  sales={p.recentSales.map((s) => ({
-                    key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
-                    href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
-                  }))} />
+              {saleRows.length > 0 || saleLabels.length > 0 ? (
+                <RecentSales label={null} labels={saleLabels} sales={saleRows} />
               ) : <p className="small muted" style={{ margin: 0 }}>No individual sales to list yet.</p>}
               {user.plan.reportSales && <ReportSale productId={p.id} language={language} />}
             </div>
@@ -404,7 +409,7 @@ export default async function CardPage({ params, searchParams }) {
               Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.{commission}
             </p>
           ) : <p className="hint">
-            Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more.{" "}
+            Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more. CGC and BGS 10s are valued per slab label, from that label&apos;s own sales.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
           </p>}
         </div>

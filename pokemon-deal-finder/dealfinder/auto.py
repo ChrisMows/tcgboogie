@@ -185,6 +185,11 @@ def label_market_value(ebay, key, names, grader, grade, cfg, today, our_sales):
     price = smart.get("price")
     if not price or smart.get("confidence") not in ("medium", "high"):
         return MarketValue(None, reason=f"not enough reliable {what} sales to price it")
+    # A 7 or 14 day estimate from a handful of sales can swing on one sale. The website shows the label's median then; here
+    # the lower of the two counts, since overstating a value is what makes a false deal.
+    median = label.get("medianPrice")
+    if median and str(smart.get("method") or "")[:5] in ("7day_", "14day") and (label.get("dailyVolume7Day") or 0) * 7 <= 5:
+        price = min(price, median)
 
     today = today or date.today()
     lookback = int(deal["comp_lookback_days"])

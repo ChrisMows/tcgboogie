@@ -273,7 +273,7 @@ export function fromCard(c) {
     if (split?.length) {
       recentSales.push(...days.map((d) => ({ ...d, grade: mixedKey(key) })));
       for (const l of split) {
-        graded[l.key] = { price: r2(l.price), sales: l.sales, approx: Boolean(byDay[key]), lastSale: l.lastSale, confidence: l.confidence, labelled: true,
+        graded[l.key] = { price: r2(l.price), sales: l.sales, approx: Boolean(byDay[key]), allSales: l.allSales, median: l.median, low: l.low, high: l.high, lastSale: l.lastSale, confidence: l.confidence, labelled: true,
           reliable: gradedReliable({ sales: l.allSales, lastSale: l.lastSale, confidence: l.confidence }) };
       }
       continue;
