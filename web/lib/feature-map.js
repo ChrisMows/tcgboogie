@@ -124,7 +124,7 @@ function features(free, premium, sms) {
     { area: "Cards", name: "Report a sale", link: "/app/collection", grows: "use", vendors: ["ebay"],
       what: "A member pastes an eBay sale we're missing; we verify it with eBay. Graded sales count toward the graded value; raw sales only list on the card page (sale.kind = raw), since raw values come from TCGplayer.", free: yes(free.reportSales, "15 a day"), premium: yes(premium.reportSales, "15 a day") },
     { area: "Cards", name: "Request a card", link: "/app/collection", grows: "use", vendors: ["ppt"],
-      what: "Add a card or sealed product we don't list yet.", free: yes(free.cardRequests, "20 a day"), premium: yes(premium.cardRequests, "20 a day") },
+      what: "Add a card or sealed product we don't list yet. Pasting an eBay or TCGplayer link into the Add cards search starts this by itself, and a sold eBay listing's sale is saved with the card (lib/card-requests.js importListingSale).", free: yes(free.cardRequests, "20 a day"), premium: yes(premium.cardRequests, "20 a day") },
     { area: "Cards", name: "Missing picture?", link: "/app/admin?tab=requests&kind=picture", grows: "use", vendors: ["tcgdex", "discord"],
       what: "Finds a picture on TCGdex, or DMs you to add one.", free: "30 a day", premium: "30 a day" },
 

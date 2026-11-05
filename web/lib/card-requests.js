@@ -4,7 +4,7 @@ import { findCard, getProduct, searchProducts } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
-import { linkIn } from "@/lib/report-sale";
+import { linkIn, reportSale } from "@/lib/report-sale";
 import { asksForTopps, searchTopps } from "@/lib/topps";
 import { parseTcgplayerInput } from "@/lib/watches";
 
@@ -112,7 +112,20 @@ export async function submitRequest(user, { query, link, note, kind }) {
   return { status: "pending", message: "Thanks! We'll review it and add it if we can." };
 }
 
-const slimProduct = (p) => ({ id: p.id, name: p.name, setName: p.setName, number: p.number, image: p.image, language: p.language || "english" });
+const slimProduct = (p) => ({ id: p.id, type: p.type, prices: p.prices, name: p.name, setName: p.setName, number: p.number, image: p.image, language: p.language || "english" });
+
+/**
+ * A card just came from an eBay link: if that listing is a completed sale of it, save the sale too (the same checks as
+ * Report a sale). Returns reportSale's answer, or null when it isn't an eBay link or the check failed. A listing that
+ * hasn't sold isn't an error: the member sent it to show which card they meant.
+ */
+export async function importListingSale(user, product, link) {
+  if (!/(^|\.)ebay\./i.test(linkIn(link)?.hostname || "")) return null;
+  try { return await reportSale(user, product, link); } catch (e) {
+    await log("prices", "warn", "Couldn't save the sale from a card link", { link: String(link).slice(0, 300), error: String(e?.message || e).slice(0, 200) }, user.id);
+    return null;
+  }
+}
 
 /** The card is in the price service: mark the request added and teach search the member's words (if they fit). */
 async function found(user, q, url, product, why, requestId = null) {
@@ -202,6 +215,7 @@ export async function approveRequest(admin, id, tcgplayer) {
   await db.update(cardRequests).set({ status: "added", productId: String(product.id), language: product.language || "english",
     reason: `Approved by ${admin.email}`, reviewedBy: admin.email, reviewedAt: new Date() }).where(eq(cardRequests.id, req.id));
   await addAlias(normTerm(req.query), product, req.id);
+  await importListingSale({ id: req.userId }, product, req.link);
   return null;
 }
 
@@ -221,6 +235,7 @@ export async function approveAsRead(admin, id) {
   await db.update(cardRequests).set({ status: "added", productId: String(added.product.id), language: added.product.language || "english",
     reason: `Added as read, approved by ${admin.email}`, reviewedBy: admin.email, reviewedAt: new Date() }).where(eq(cardRequests.id, req.id));
   if (describes(req.query, added.product)) await addAlias(normTerm(req.query), added.product, req.id);
+  await importListingSale({ id: req.userId }, added.product, req.link);
   return null;
 }
 

@@ -27,6 +27,7 @@ export default function CardRequest({ query, label = "Can’t find it? Request a
         <div className={`notice ${res.status === "declined" ? "bad" : res.status === "pending" ? "" : "good"}`} style={{ margin: 0 }}>
           {res.message}{" "}
           {res.product && <Link href={`/app/cards/${encodeURIComponent(res.product.id)}${res.product.language === "japanese" ? "?lang=japanese" : ""}`}>Open {res.product.name} →</Link>}
+          {res.saleNeedsDate && "To add this listing's sale too, open the card and use Report a sale: eBay doesn't give its date. "}
           {res.status === "declined" && <button type="button" className="link-btn" onClick={() => setRes(null)}>Try again</button>}
         </div>
       ) : (

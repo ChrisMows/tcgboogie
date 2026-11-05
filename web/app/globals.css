@@ -1414,6 +1414,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .cmp-ultra { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: 10px 16px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
 .cmp-ultra ul { margin: 4px 0 0; padding-left: 18px; }
 .gf-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 0; }
+.link-sale { display: grid; gap: 6px; margin: 8px 0 0; max-width: 420px; }
 .gf-tabs { margin-top: 0; }
 .gf-tabs a { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .gf-filter-box { margin: 0 0 14px; }

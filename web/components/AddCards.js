@@ -11,11 +11,19 @@ import { useRouter } from "next/navigation";
 import CardThumb from "@/components/CardThumb";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
-import { addItem, productDetails, quickAdd, searchByPhoto, searchCatalog } from "@/app/app/collection/actions";
+import { addItem, cardFromLink, productDetails, quickAdd, searchByPhoto, searchCatalog } from "@/app/app/collection/actions";
+import { reportSaleAction } from "@/app/app/cards/[id]/actions";
 import { money, nmPrice } from "@/lib/collection";
 
 /** Search-as-you-type to add cards and sealed products. Quick "+" adds a Near Mint copy; picking a result opens details. */
 const PAGE = 8; // search results per page (big pictures, so you can tell versions apart)
+
+// An eBay listing or TCGplayer product link in the search bar, with or without words around it (the eBay app's share text).
+const CARD_LINK = /(?:https?:\/\/)?(?:[\w-]+\.)*(?:ebay\.[a-z.]{2,8}\/itm\/(?:[^/\s]+\/)?\d{9,14}|ebay\.us\/\S+|tcgplayer\.com\/(?:[a-z-]+\/)?product\/\d{3,9})\S*/i;
+const cardLinkIn = (text) => {
+  const m = String(text || "").match(CARD_LINK)?.[0];
+  return m ? (/^https?:/i.test(m) ? m : `https://${m}`) : null;
+};
 
 export default function AddCards({ binders, owned = {}, isDemo, autoFocus = false, onClose, photoSearch = false, photoQuota = null }) {
   const router = useRouter();
@@ -35,6 +43,9 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     });
   };
   const [errors, setErrors] = useState({});
+  // What a pasted link came back with: { status, message, saleNeedsDate, link, product }.
+  const [linkNote, setLinkNote] = useState(null);
+  const [soldOn, setSoldOn] = useState("");
   const [counts, setCounts] = useState(owned);
   const [searching, setSearching] = useState(false);
   const [shown, setShown] = useState(PAGE); // results show a page at a time, with big pictures
@@ -46,7 +57,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   // ✕ in the search bar, and after every add: an empty bar, ready for the next card (focused again where there's a
   // keyboard, but not on a phone, where it would pop the keyboard up over the pack opening).
   const clearSearch = (refocus = true) => {
-    setQ(""); setResults(null); setError(null); setShown(PAGE);
+    setQ(""); setResults(null); setError(null); setShown(PAGE); setLinkNote(null);
     if (refocus && window.matchMedia?.("(pointer: fine)").matches) inputRef.current?.focus();
   };
   const [pending, start] = useTransition();
@@ -55,11 +66,21 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
 
   useEffect(() => {
     const term = q.trim();
+    setLinkNote(null);
     if (term.length < 2) { if (!photo) { setResults(null); setError(null); } return; }
     setPhoto(null);
     const n = ++seq.current;
     setSearching(true);
+    const link = cardLinkIn(term);
     const t = setTimeout(async () => {
+      if (link) {
+        const res = await cardFromLink(link).catch(() => ({ status: "declined", message: "We couldn't read that link. Please try again." }));
+        if (n !== seq.current) return;
+        setSearching(false); setResults(null); setError(null); setErrors({}); setSoldOn("");
+        setLinkNote({ ...res, link });
+        if (res.product) pick(res.product);
+        return;
+      }
       const res = await searchCatalog(term);
       if (n !== seq.current) return; // a newer search is on its way
       setSearching(false);
@@ -89,6 +110,15 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
     if (!res.results.length) setError("We read the card but couldn't find it in our catalog. Request it below and we'll add it.");
   }
   const clearPhoto = () => { setPhoto(null); setResults(null); setError(null); };
+
+  // A sold eBay listing with no end date in eBay's data: the member gives the date, then the sale comes in.
+  function addLinkSale(e) {
+    e.preventDefault();
+    start(async () => {
+      const r = await reportSaleAction(linkNote.product.id, linkNote.product.language, linkNote.link, soldOn).catch(() => ({ ok: false, needDate: true, message: "That didn't save. Please try again." }));
+      setLinkNote((n) => n && { ...n, message: r.message, status: r.ok ? "added" : n.status, saleNeedsDate: Boolean(r.needDate) });
+    });
+  }
 
   function quick(p) {
     start(async () => {
@@ -122,8 +152,8 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
       <div className="search-box">
         <span aria-hidden="true">⌕</span>
         <input ref={inputRef} type="text" enterKeyHint="search" value={q} autoFocus={autoFocus} onChange={(e) => { setQ(e.target.value); setPicked(null); }}
-          placeholder="Card name + number, e.g. Black Kyurem 020/027" aria-label="Search cards to add" data-tour="add-search" />
-        {searching && <span className="small muted">Searching…</span>}
+          placeholder="Card name + number, or an eBay or TCGplayer link" aria-label="Search cards to add" data-tour="add-search" />
+        {searching && <span className="small muted">{cardLinkIn(q) ? "Reading link…" : "Searching…"}</span>}
         {q && <button type="button" className="search-clear" onClick={() => clearSearch()} aria-label="Clear search" title="Clear">✕</button>}
         {photoSearch === true && photoOut ? (
           <Link href="/app/premium?from=photo-search" className="photo-search-btn"
@@ -160,7 +190,17 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         </div>
       )}
       {error && <div className="hint">{error}</div>}
-      {q.trim().length >= 2 && !searching && <CardRequest query={q} />}
+      {linkNote?.message && <div className={`notice ${linkNote.status === "declined" ? "bad" : linkNote.status === "pending" ? "" : "good"}`} style={{ margin: "8px 0 0" }}>{linkNote.message}</div>}
+      {linkNote?.saleNeedsDate && (
+        <form className="link-sale" onSubmit={addLinkSale}>
+          <label className="small" htmlFor="link-sold-on">This listing sold. To add its sale too, enter the date eBay shows next to “Sold”.</label>
+          <div className="row" style={{ gap: 8 }}>
+            <input id="link-sold-on" type="date" required value={soldOn} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setSoldOn(e.target.value)} />
+            <button className="btn sm" style={{ flex: "none" }} disabled={pending}>Add sale</button>
+          </div>
+        </form>
+      )}
+      {q.trim().length >= 2 && !searching && !cardLinkIn(q) && <CardRequest query={q} />}
       {q.trim().length >= 2 && !searching && results && results.length === 0 && !photo && (
         <SuggestIdea source="search" className="link-btn small idea-inline" label="Looking for something else, like a feature or another game? Tell us →"
           prompt={`You searched for "${q.trim().slice(0, 60)}". What were you hoping to find or do?`} context={{ search: q.trim() }} />

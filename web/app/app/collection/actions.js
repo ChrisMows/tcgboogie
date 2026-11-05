@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { appraisePhoto, appraiserReady } from "@/lib/appraise";
 import { catalogLive, getProduct } from "@/lib/catalog";
-import { searchWithRequests, submitRequest } from "@/lib/card-requests";
+import { importListingSale, searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { discordAdmins } from "@/lib/admin-alerts";
 import { logError } from "@/lib/log";
@@ -89,6 +89,18 @@ export async function searchByPhoto(formData) {
   }
 }
 
+/** A card link pasted into the Add cards search: a TCGplayer product we carry opens straight away; any other goes through a request. */
+export async function cardFromLink(link) {
+  const user = await requireUser();
+  if (!await allow("search", user.id)) return { status: "declined", message: SLOW_DOWN };
+  const id = /tcgplayer\.com/i.test(link) ? parseTcgplayerInput(link) : null;
+  if (id) {
+    const p = await getProduct(id).catch(() => null);
+    if (p) return { status: "found", product: slim(p) };
+  }
+  return requestCard("", link);
+}
+
 /** "Can't find a card? Request it": what they searched for and a link to the card. */
 export async function requestCard(query, link, kind = "card") {
   const user = await requireUser();
@@ -96,6 +108,12 @@ export async function requestCard(query, link, kind = "card") {
   if (!user.plan.cardRequests) return { status: "declined", message: "Card requests aren't part of your plan." };
   if (!await allow("cardRequest", user.id)) return { status: "declined", message: "That's a lot of requests today. Thanks! Try again tomorrow." };
   const res = await submitRequest(user, { query, link, kind });
+  // The link was a sold eBay listing: its sale comes in with the card.
+  if (res.product && user.plan.reportSales) {
+    const sale = await importListingSale(user, res.product, link);
+    if (sale?.ok && !sale.already) res.message = `${res.message} ${sale.message}`;
+    else if (sale?.needDate) res.saleNeedsDate = true;
+  }
   // Waiting for an admin (Admin → Requests): tell the admins on Discord.
   if (res.status === "pending") {
     const site = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");

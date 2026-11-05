@@ -122,7 +122,7 @@ export async function reportSale(user, product, input, soldOn = null) {
   if (!id) return { ok: false, message: "That doesn't look like an eBay listing link. Open the sold listing on eBay and copy its link (it looks like ebay.com/itm/…)." };
   if (!db) return { ok: false, message: "Not available in the preview." };
   const [dupe] = await db.select({ id: schema.sales.id }).from(schema.sales).where(eq(schema.sales.itemId, id)).limit(1);
-  if (dupe) return { ok: true, message: "We already have that sale. Thanks!" };
+  if (dupe) return { ok: true, already: true, message: "We already have that sale. Thanks!" };
 
   const r = await fetch(`https://api.ebay.com/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id=${id}`, {
     headers: { Authorization: `Bearer ${await appToken()}`, "X-EBAY-C-MARKETPLACE-ID": "EBAY_US" }, cache: "no-store",
