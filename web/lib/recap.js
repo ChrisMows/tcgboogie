@@ -2,7 +2,7 @@ import "server-only";
 import { refreshFeatures } from "@/lib/features";
 import { and, desc, eq, gt, inArray, lte, ne } from "drizzle-orm";
 import { effectiveTier } from "@/lib/access";
-import { change, unitValue } from "@/lib/collection";
+import { itemLabel, recapMovers, unitValue } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { recentDeals } from "@/lib/deals";
 import { clampToPlan, matches } from "@/lib/filters";
@@ -10,6 +10,7 @@ import { log } from "@/lib/log";
 import { channelsReady, sendEmail } from "@/lib/notify";
 import { planFor } from "@/lib/plans";
 import { loadProducts } from "@/lib/portfolio";
+import * as store from "@/lib/store";
 
 // The email recap (Settings -> Email recap): monthly for everyone who leaves it on, sent in the first days of each
 // month (spread over a few days by RECAPS_PER_RUN). Runs with the daily price-alert check. Uses saved values and
@@ -103,14 +104,13 @@ async function buildRecap(user, days, allDeals, now) {
     stat = { label: `Your collection · ${cards.toLocaleString("en-US")} ${cards === 1 ? "card" : "cards"}`, value: money(value),
       change: delta !== null ? `${pct(delta)} ${sinceLabel}` : "", tone: delta > 0 ? "up" : delta < 0 ? "down" : "" };
 
-    // Biggest movers among raw cards, from cached prices only (no credits).
-    const products = await loadProducts([...new Set(owned.filter((it) => it.kind === "raw" || it.kind === "sealed").map((it) => it.productId))], 0);
-    const movers = Object.values(products).map((p) => ({ p, c: change(p, days) })).filter((x) => x.c !== null && Math.abs(x.c) >= 0.05)
-      .sort((a, b) => Math.abs(b.c) - Math.abs(a.c)).slice(0, 3);
-    for (const { p, c } of movers) {
-      const now = p.history?.length ? p.history[p.history.length - 1].price : null; // the series change() reads
-      items.push({ title: short(p.name), sub: [p.setName, p.number ? `#${p.number}` : ""].filter(Boolean).join(" · "), image: p.image || undefined,
-        value: pct(c), tone: c > 0 ? "up" : "down", note: now ? `now ${money(now)}` : "", url: `${SITE}/app/cards/${encodeURIComponent(p.id)}` });
+    // Biggest movers, raw, sealed and graded, from cached prices and saved values only (no credits).
+    const products = await loadProducts([...new Set(owned.filter((it) => it.kind !== "graded").map((it) => it.productId))], 0);
+    const histories = await store.itemHistories(owned.filter((it) => it.kind === "graded").map((it) => it.id)).catch(() => ({}));
+    for (const { it, pct: c, dollars, held } of recapMovers(owned, products, histories, days, now)) {
+      const p = products[it.productId];
+      items.push({ title: short(it.name), sub: [itemLabel(it), it.setName, it.number ? `#${it.number}` : ""].filter(Boolean).join(" · "), image: it.image || p?.image || undefined,
+        value: pct(c), tone: c > 0 ? "up" : "down", note: `${dollars > 0 ? "+" : "-"}${money(Math.abs(dollars))} · now ${money(held)}`, url: `${SITE}/app/cards/${encodeURIComponent(it.productId)}` });
     }
   }
 

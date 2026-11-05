@@ -88,6 +88,30 @@ export function itemMove(item, days, quantity = item.quantity || 1) {
   return { pct: p, dollars: (v - v / (1 + p)) * quantity };
 }
 
+/**
+ * The email recap's biggest movers over `days`, by dollars for all copies, like Home's movers: raw and sealed from the
+ * product's price history, graded from the copy's own saved daily values. With less history than `days`, against the
+ * oldest day we have (as change() does). histories: { itemId: [{ day, value }] } oldest first.
+ */
+export function recapMovers(owned, products, histories, days, now = new Date(), limit = 3) {
+  const today = now.toISOString().slice(0, 10);
+  const cutoff = new Date(now - days * 86400000).toISOString().slice(0, 10);
+  const pctFor = (it) => {
+    if (it.kind !== "graded") return change(products[it.productId], days);
+    const past = (histories[it.id] || []).filter((h) => h.day < today && h.value > 0);
+    const base = [...past].reverse().find((h) => h.day <= cutoff) || past[0];
+    const v = unitValue(it);
+    return base && v !== null ? (v - base.value) / base.value : null;
+  };
+  return owned.map((it) => {
+    const v = unitValue(it);
+    const p = v ? pctFor(it) : null;
+    if (p === null || p <= -1 || Math.abs(p) < 0.005) return null;
+    const quantity = it.quantity || 1;
+    return { it, pct: p, dollars: (v - v / (1 + p)) * quantity, held: v * quantity };
+  }).filter(Boolean).sort((a, b) => Math.abs(b.dollars) - Math.abs(a.dollars)).slice(0, limit);
+}
+
 /** Totals for a list of owned items. */
 export function summarize(items) {
   let value = 0, cost = 0, costed = 0, copies = 0, unpriced = 0;
