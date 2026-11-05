@@ -91,6 +91,13 @@ export const money = (v, digits = 2) =>
   v === null || v === undefined || !Number.isFinite(Number(v))
     ? "—"
     : `${v < 0 ? "-" : ""}$${Math.abs(Number(v)).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+/** A card's amount, easy to read at a glance: $100 and up in whole dollars, $10 and up to one decimal, under $10 to two. */
+export function cardMoney(v) {
+  if (v === null || v === undefined || !Number.isFinite(Number(v))) return "—";
+  const a = Math.abs(Number(v));
+  // Decided on the rounded amount, so $99.97 reads $100, not $100.0.
+  return money(v, Number(a.toFixed(1)) >= 100 ? 0 : Number(a.toFixed(2)) >= 10 ? 1 : 2);
+}
 export const pct = (v) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : `${v > 0 ? "+" : ""}${(v * 100).toFixed(1)}%`);
 
 /** "Holofoil · NM", "PSA 10", "Sealed" */

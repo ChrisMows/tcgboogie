@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import { addItem, changeQuantity, dealAlertForCard, editItem, moveToCollection, quickAdd, removeFromWishlist, removeItem, watchProduct } from "@/app/app/collection/actions";
-import { CONDITIONS, GRADERS, fitGrade, gradeKey, gradeName, gradeOption, gradesFor, isOwnValue, marketValue, money, pct, unitValue } from "@/lib/collection";
+import { CONDITIONS, GRADERS, cardMoney, fitGrade, gradeKey, gradeName, gradeOption, gradesFor, isOwnValue, marketValue, money, pct, unitValue } from "@/lib/collection";
 import AlertSheet from "@/components/AlertSheet";
 import DealSheet from "@/components/DealSheet";
 
@@ -122,7 +122,7 @@ function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, 
               </div>
             </>
           )}
-          {!sameCopy && market !== null && <p className="own-note" style={{ gridColumn: "1 / -1" }}>Worth {money(market)} per copy once saved.</p>}
+          {!sameCopy && market !== null && <p className="own-note" style={{ gridColumn: "1 / -1" }}>Worth {cardMoney(market)} per copy once saved.</p>}
           <div>
             <label className="field" htmlFor={`own-paid-${it.id}`}>Paid per copy</label>
             <input id={`own-paid-${it.id}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="$" value={d.purchasePrice} onChange={set("purchasePrice")} />
@@ -248,11 +248,11 @@ export default function CardActions({ product, mine, binders, watch, plan, price
           <>
             <div className="own-stats">
               <div><b>{copies.toLocaleString("en-US")}</b><span>{copies === 1 ? "Copy owned" : "Copies owned"}</span></div>
-              <div><b className="sensitive">{money(worth)}</b><span>Total value</span></div>
+              <div><b className="sensitive">{cardMoney(worth)}</b><span>Total value</span></div>
             </div>
             {gain !== null && (
               <div className="own-profit"><span className="muted">Profit on what you paid</span>
-                <b className={`sensitive ${gain >= 0 ? "up" : "down"}`}>{gain >= 0 ? "+" : "−"}{money(Math.abs(gain))}{cost ? ` (${pct(gain / cost)})` : ""}</b></div>
+                <b className={`sensitive ${gain >= 0 ? "up" : "down"}`}>{gain >= 0 ? "+" : "−"}{cardMoney(Math.abs(gain))}{cost ? ` (${pct(gain / cost)})` : ""}</b></div>
             )}
             <div className="own-table" role="table" aria-label="Your copies">
               <div className="own-tr own-th" role="row"><span role="columnheader">Variant</span><span role="columnheader">Qty</span><span role="columnheader">Value</span><span /></div>
@@ -271,7 +271,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
                         <button type="button" disabled={pending} aria-label={`One more ${name}`} onClick={() => run(() => changeQuantity(it.id, 1))}>+</button>
                       </span>
                     </span>
-                    <b className={`own-td-value sensitive ${isOwnValue(it) ? "own-value" : ""}`} role="cell" title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>{money(each != null ? each * it.quantity : null)}</b>
+                    <b className={`own-td-value sensitive ${isOwnValue(it) ? "own-value" : ""}`} role="cell" title={isOwnValue(it) ? "You typed this value in; it isn't a market price" : undefined}>{cardMoney(each != null ? each * it.quantity : null)}</b>
                     <button type="button" className="own-edit" title={`Edit ${name}`} aria-label={`Edit ${name}`} aria-pressed={detailsOpen && it.id === active?.id}
                       onClick={() => { setErrors({}); setChosen(it.id); setDetailsOpen(it.id === active?.id ? !detailsOpen : true); }}>
                       <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.33-2.33a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84z" /></svg>

@@ -3,7 +3,7 @@
 import HideValues from "@/components/HideValues";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { money, pct } from "@/lib/collection";
+import { cardMoney, money, pct } from "@/lib/collection";
 import { setChartRange, useChartRange } from "@/lib/chart-range";
 
 const RANGES = [["1D", 1], ["7D", 7], ["30D", 30], ["90D", 90], ["1Y", 365], ["All", null]];
@@ -55,8 +55,8 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
   const ticks = detailed && shown.length > 1 ? priceTicks(min, max) : null;
   const [lo, hi] = ticks ? [ticks[0], ticks[ticks.length - 1]] : [0, 0];
   const y = (v) => (ticks ? H - ((v - lo) / (hi - lo)) * H : H - 10 - ((v - min) / span) * (H - 24));
-  // About 7 dates along the bottom (phones show every other one), always including the first and last.
-  const dateCount = Math.min(7, shown.length);
+  // A few dates along the bottom, always including the first and last.
+  const dateCount = Math.min(4, shown.length);
   const dateAt = ticks ? [...new Set(Array.from({ length: dateCount }, (_, i) => Math.round((i * (shown.length - 1)) / (dateCount - 1))))] : [];
   const longSpan = ticks && shown.length > 1 && new Date(shown[shown.length - 1].day) - new Date(shown[0].day) > 300 * 86400000;
   const dateLabel = (day) => new Date(`${day}T12:00:00`).toLocaleDateString(undefined, longSpan ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
@@ -68,15 +68,16 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
   const moved = changes ? market?.change ?? null : first ? last - first : null;
   const delta = changes ? market?.pct ?? null : first ? (last - first) / first : null;
   const up = (delta ?? 0) >= 0;
+  const show = detailed ? cardMoney : money; // a card's price reads simpler than a collection's total
   const at = hover !== null ? shown[hover] : null;
 
   const summary = (
         <div>
           <div className="small muted">{at ? new Date(`${at.day}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : label}</div>
-          <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{money(at ? at.value : current ?? last)}</div>{hideable && <HideValues />}</div>
+          <div className="chart-value-row"><div className={`chart-value ${hideable ? "sensitive" : ""}`}>{show(at ? at.value : current ?? last)}</div>{hideable && <HideValues />}</div>
           {!at && delta !== null && shown.length > 1 && (
             <div className={`small ${hideable ? "sensitive" : ""} ${up ? "up" : "down"}`}>
-              {detailed ? <><b>{up ? "+" : "−"}{money(Math.abs(moved))} ({pct(delta)})</b> <span className="muted">{range === 1 ? "today" : range ? `past ${range} days` : "all time"}</span></>
+              {detailed ? <><b>{up ? "+" : "−"}{cardMoney(Math.abs(moved))} ({pct(delta)})</b> <span className="muted">{range === 1 ? "today" : range ? `past ${range} days` : "all time"}</span></>
                 : <>{up ? "▲" : "▼"} {money(Math.abs(moved))} ({pct(delta)}) {range === 1 ? "today" : range ? `in ${range} days` : "all time"}</>}
               {market && <span className="muted"> from price moves</span>}
             </div>
@@ -139,7 +140,7 @@ export default function ValueChart({ points, historyDays, height = 180, label = 
           {!ticks ? empty : (
             <div className="chart-axes">
               <div className="chart-y" aria-hidden="true">
-                {ticks.map((t) => <span key={t} style={{ top: `${(y(t) / H) * 100}%` }}>{money(t, t >= 1000 ? 0 : 2)}</span>)}
+                {ticks.map((t) => <span key={t} style={{ top: `${(y(t) / H) * 100}%` }}>{cardMoney(t)}</span>)}
               </div>
               <div className="chart-plot">
                 {svg}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { cardMoney as money } from "@/lib/collection";
 
-const money = (v) => `$${Math.round(Number(v)).toLocaleString("en-US")}`;
 const SHOW = 8;
 
 /**

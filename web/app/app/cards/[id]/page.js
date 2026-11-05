@@ -14,7 +14,7 @@ import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
 import { creditsLow, getProduct } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
-import { COND_SHORT, GRADERS, change, gradeLabel, gradeName, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
+import { COND_SHORT, GRADERS, cardMoney, change, gradeLabel, gradeName, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -230,8 +230,8 @@ export default async function CardPage({ params, searchParams }) {
         {cells.map(([key, g]) => (
           <a key={key} className={`cond-cell cond-link ${g.few ? "few" : ""}`} href={gradeSold(key).href} target="_blank"
             rel={`noopener noreferrer${gradeSold(key).affiliate ? " sponsored" : ""}`} title={`${saleNote(g)}. See ${GRADE_LABEL(key)} sold listings on eBay`}
-            aria-label={`${GRADE_LABEL(key)}: ${money(g.price, 0)}`}>
-            <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
+            aria-label={`${GRADE_LABEL(key)}: ${cardMoney(g.price)}`}>
+            <span className="small muted">{gradeParts(key).rank ? gradeParts(key).grade : GRADE_LABEL(key)}</span><b>{cardMoney(g.price)}</b>
             <span className={g.few ? "few-tag" : "grade-sales"}>{g.few ? "Few sales" : g.sales ? `${g.approx ? "~" : ""}${g.sales} sale${g.sales === 1 ? "" : "s"}` : ""}</span>
           </a>
         ))}
@@ -297,8 +297,8 @@ export default async function CardPage({ params, searchParams }) {
             <div className="chart-lead">
               <div className="hero-price">
                 <span className="small muted">Typical eBay asking price · raw Near Mint</span>
-                <b>{money(now)}</b>
-                <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${money(p.topps.low)} to ${money(p.topps.high)})` : ""}</span>
+                <b>{cardMoney(now)}</b>
+                <span className="small muted">From {p.topps.listings} current listings{p.topps.low && p.topps.high ? ` (${cardMoney(p.topps.low)} to ${cardMoney(p.topps.high)})` : ""}</span>
               </div>
             </div>
           ) : p.memberAdded ? (
@@ -348,7 +348,7 @@ export default async function CardPage({ params, searchParams }) {
                     {Object.entries(byCond).sort(([a], [b]) => condRank(a) - condRank(b)).map(([cond, v]) => (
                       <a key={cond} className="cond-cell cond-link" href={tcgListings(printing, cond)} target="_blank" rel="noopener noreferrer"
                         title={`See ${cond} listings on ${p.topps ? "eBay" : "TCGplayer"}`}>
-                        <span className="small muted">{COND_SHORT[cond] || cond}</span><b>{money(v.market)}</b>
+                        <span className="small muted">{COND_SHORT[cond] || cond}</span><b>{cardMoney(v.market)}</b>
                       </a>
                     ))}
                   </div>
@@ -373,7 +373,7 @@ export default async function CardPage({ params, searchParams }) {
                   <div className="cond-grid">
                     {thinGraded.map(([key, g]) => (
                       <div key={key} className="cond-cell thin" title={saleNote(g)}>
-                        <span className="small muted">{GRADE_LABEL(key)}</span><b>{money(g.price, 0)}</b>
+                        <span className="small muted">{GRADE_LABEL(key)}</span><b>{cardMoney(g.price)}</b>
                       </div>
                     ))}
                   </div>
