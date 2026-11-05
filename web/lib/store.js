@@ -483,6 +483,35 @@ export async function hideIntro(userId, id) {
   await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || ${JSON.stringify({ [id]: true })}::jsonb` }).where(eq(users.id, userId));
 }
 
+/** Grade & Flip's saved filters: [{ id, name, params }], kept with the member's other collection choices. */
+export async function getFlipFilters(userId) {
+  const list = (await getCollectionPrefs(userId)).flipFilters;
+  return Array.isArray(list) ? list : [];
+}
+
+async function writeFlipFilters(userId, list) {
+  if (isDemo(userId)) return void (demoCollection().collectionPrefs.flipFilters = list);
+  await db.update(users).set({ collectionPrefs: sql`coalesce(${users.collectionPrefs}, '{}'::jsonb) || ${JSON.stringify({ flipFilters: list })}::jsonb` }).where(eq(users.id, userId));
+}
+
+/** Adds a filter, or updates the member's own when `id` is given. Null when it's gone or they're at `limit`. */
+export async function saveFlipFilter(userId, { id, name, params }, limit) {
+  const list = await getFlipFilters(userId);
+  if (id) {
+    if (!list.some((f) => f.id === id)) return null;
+    await writeFlipFilters(userId, list.map((f) => (f.id === id ? { id, name, params } : f)));
+    return id;
+  }
+  if (list.length >= limit) return null;
+  const made = crypto.randomUUID().slice(0, 8);
+  await writeFlipFilters(userId, [...list, { id: made, name, params }]);
+  return made;
+}
+
+export async function deleteFlipFilter(userId, id) {
+  await writeFlipFilters(userId, (await getFlipFilters(userId)).filter((f) => f.id !== id));
+}
+
 /** New members start with one profile. */
 export async function ensureStarterProfile(user) {
   const existing = await listProfiles(user.id);

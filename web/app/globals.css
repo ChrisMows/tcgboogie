@@ -1414,13 +1414,13 @@ details.era > .set-grid { margin-bottom: 14px; }
 .cmp-ultra { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: 10px 16px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
 .cmp-ultra ul { margin: 4px 0 0; padding-left: 18px; }
 .gf-filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 0; }
-.gf-filter-box { margin: 0 0 14px; padding-top: 12px; padding-bottom: 12px; }
-.gf-filter-box summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; list-style: none; }
-.gf-filter-box summary::-webkit-details-marker { display: none; }
-.gf-filter-box[open] summary { margin-bottom: 14px; }
-.gf-filter-box[open] .more-grades-icon::before { content: "−"; }
-.gf-filter-box summary:hover .more-grades-icon::before { color: var(--accent); border-color: var(--accent); }
-.gf-filter-sum { display: grid; gap: 2px; min-width: 0; }
+.gf-tabs { margin-top: 0; }
+.gf-tabs a { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.gf-filter-box { margin: 0 0 14px; }
+.gf-filter-sum { display: grid; gap: 2px; min-width: 0; margin-bottom: 14px; }
+.gf-name { max-width: 320px; margin-bottom: 14px; }
+.gf-name input { width: 100%; }
+.gf-details .gf-name { flex: 1 1 100%; margin-bottom: 0; }
 .gf-quick { margin-top: 0; }
 @media (min-width: 900px) { .gf-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; } }
 .gf-details { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }

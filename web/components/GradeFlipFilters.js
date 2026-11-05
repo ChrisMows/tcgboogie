@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+import { deleteFlipFilter, saveFlipFilter } from "@/app/app/grade-and-flip/actions";
 import { gradeLabel } from "@/lib/collection";
-import { DEFAULT_SHIPPING, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetName } from "@/lib/grading";
+import { GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetName } from "@/lib/grading";
 
 const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 
@@ -24,20 +26,23 @@ function Quick({ label, options, value, set, fmt = (o) => o }) {
 }
 
 /**
- * Grade & Flip's filters, a plain GET form: three quick choices (like the lightning on a card page), with the rest
- * under More options. Those stay in the form while folded, so a search always sends them. More options starts open when
- * the search uses something the quick choices can't show. eras: { key: label } (lib/grading-gap.js is server only).
+ * Grade & Flip's filters, a plain GET form: three quick choices (like the lightning on a card page), with the rest folded
+ * under More options. Those stay in the form while folded, so a search always sends them. eras: { key: label }
+ * (lib/grading-gap.js is server only). filter: the saved filter this tab shows, if any. creating: the + New filter tab.
  */
-export default function GradeFlipFilters({ opts, eras }) {
+export default function GradeFlipFilters({ opts, eras, filter = null, creating = false }) {
+  const router = useRouter();
+  const formRef = useRef(null);
   const [target, setTarget] = useState(opts.target);
   const [tier, setTier] = useState(opts.tier);
   const [max, setMax] = useState(opts.maxRaw === null ? "" : String(opts.maxRaw));
   const [profit, setProfit] = useState(String(opts.minProfit));
-  const [more, setMore] = useState(
-    target !== firstTarget(GRADE_TARGETS[target].grader) || tier !== 0 || Boolean(opts.minRaw)
-    || !BUDGETS.includes(max) || !PROFITS.includes(profit) || opts.shipping !== DEFAULT_SHIPPING
-    || opts.language !== "english" || opts.era !== "modern" || opts.sort !== "score" || !opts.safeOnly,
-  );
+  const [more, setMore] = useState(false);
+  const [name, setName] = useState(filter?.name || "");
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [pending, start] = useTransition();
   const t = GRADE_TARGETS[target];
   const co = GRADING_COMPANIES[t.grader];
   const pick = (id) => {
@@ -45,14 +50,35 @@ export default function GradeFlipFilters({ opts, eras }) {
     if (GRADE_TARGETS[id].grader !== t.grader) setTier(0);
     setTarget(id);
   };
+  const save = () => start(async () => {
+    setError(null);
+    const r = await saveFlipFilter({ id: filter?.id || null, name, params: Object.fromEntries(new FormData(formRef.current)) });
+    if (!r.ok) { if (filter && !name.trim()) setMore(true); return setError(r.error); }
+    if (filter) setSaved(true);
+    router.push(`?f=${r.id}`, { scroll: false });
+  });
+  const remove = () => start(async () => {
+    await deleteFlipFilter(filter.id);
+    router.push("/app/grade-and-flip", { scroll: false });
+  });
+  const nameField = (
+    <label className="gr-field gf-name">
+      <span className="small muted">Filter name</span>
+      <input type="text" maxLength={30} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. PSA under $100" />
+    </label>
+  );
   return (
-    <form method="get">
+    <form method="get" ref={formRef} onChange={() => setSaved(false)}>
+      {filter && <input type="hidden" name="f" value={filter.id} />}
+      {creating && <input type="hidden" name="new" value="1" />}
+      {creating && nameField}
       <div className="deal-qs gf-quick">
         <Quick label="Grading company" options={COMPANIES} value={t.grader} set={(g) => { if (g !== t.grader) pick(firstTarget(g)); }} />
         <Quick label="Raw card costs up to" options={BUDGETS} value={max} set={setMax} fmt={(o) => (o ? `$${o}` : "Any")} />
         <Quick label="Profit at least" options={PROFITS} value={profit} set={setProfit} fmt={(o) => `$${o}`} />
       </div>
       <div className="gf-filters gf-details" hidden={!more}>
+        {filter && nameField}
         <label className="gr-field">
           <span className="small muted">Grade</span>
           <select name="grader" value={target} onChange={(e) => pick(e.target.value)}>
@@ -106,9 +132,19 @@ export default function GradeFlipFilters({ opts, eras }) {
           </select>
         </label>
       </div>
+      {error && <div className="err" style={{ marginTop: 10 }}>{error}</div>}
       <div className="alert-foot">
         <button type="submit" className="btn primary">Find cards</button>
+        {creating && <button type="button" className="btn" disabled={pending} onClick={save}>{pending ? "Saving..." : "Save filter"}</button>}
+        {filter && <button type="button" className="btn" disabled={pending} onClick={save}>{pending ? "Saving..." : saved ? "Saved" : "Save changes"}</button>}
         <button type="button" className="link-btn small" aria-expanded={more} onClick={() => setMore(!more)}>{more ? "Fewer options" : "More options"}</button>
+        {filter && (confirming ? (
+          <span className="small gf-delete">
+            Delete this filter?{" "}
+            <button type="button" className="link-btn small" disabled={pending} onClick={remove}>Yes</button>{" · "}
+            <button type="button" className="link-btn small" onClick={() => setConfirming(false)}>No</button>
+          </span>
+        ) : <button type="button" className="link-btn small gf-delete" onClick={() => setConfirming(true)}>Delete filter</button>)}
       </div>
     </form>
   );

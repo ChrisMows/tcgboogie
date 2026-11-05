@@ -4,6 +4,8 @@
 import { gradeKey, gradeLabel, gradeName } from "@/lib/collection";
 
 export const MIN_PROFIT = 25; // below this a top grade isn't worth the wait and the risk
+export const FLIP_FILTER_LIMIT = 5; // saved filters (tabs) a member can keep on Grade & Flip
+export const FLIP_FILTER_FIELDS = ["grader", "tier", "min", "max", "profit", "ship", "lang", "era", "sort", "safe"]; // its form's fields
 export const DEFAULT_SHIPPING = 5; // rough per-card share of insured shipping both ways and supplies
 
 // Each grader's top everyday grade and the one below it (BGS's usual top is a 9.5 Gem Mint; its 10s are rare), and

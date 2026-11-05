@@ -2,10 +2,11 @@ import Link from "next/link";
 import GradeFlipFilters from "@/components/GradeFlipFilters";
 import { GradingTile } from "@/components/GradingCheck";
 import { gradeLabel } from "@/lib/collection";
-import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_POINTS, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
 import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
+import { getFlipFilters } from "@/lib/store";
 
 export const metadata = { title: "Grade & Flip" };
 
@@ -37,7 +38,12 @@ function UltraOnly() {
 export default async function GradingFinderPage({ searchParams }) {
   const user = await requireUser("/app/grade-and-flip");
   if (!user.plan.gradingFinder) return <UltraOnly />;
-  const sp = await searchParams;
+  const query = await searchParams;
+  const saved = await getFlipFilters(user.id);
+  // A saved filter's tab uses its saved choices, until the member changes them and presses Find cards.
+  const current = saved.find((f) => f.id === query?.f) || null;
+  const creating = !current && query?.new === "1";
+  const sp = current ? { ...current.params, ...query } : query;
   const target = targetId(sp?.grader);
   const t = GRADE_TARGETS[target];
   const { grader } = t;
@@ -61,7 +67,10 @@ export default async function GradingFinderPage({ searchParams }) {
   // Load more: the same search with room for another page of cards.
   const moreParams = new URLSearchParams(Object.entries(sp || {}).filter(([k, v]) => k !== "show" && typeof v === "string"));
   moreParams.set("show", String(opts.limit + PAGE));
-  // What the folded filters are set to, shown on their bar so the cards come first without hiding the search.
+  // + New filter starts from the search on screen.
+  const newParams = new URLSearchParams(FLIP_FILTER_FIELDS.filter((k) => typeof sp?.[k] === "string" && sp[k]).map((k) => [k, sp[k]]));
+  newParams.set("new", "1");
+  // What the filters are set to, including anything folded under More options.
   const chosen = [
     name, co.tiers[tier].name,
     { english: "English", japanese: "Japanese", all: "English and Japanese" }[opts.language],
@@ -81,13 +90,17 @@ export default async function GradingFinderPage({ searchParams }) {
         </div>
       </div>
 
-      <details className="panel gf-filter-box">
-        <summary>
-          <span className="gf-filter-sum"><b>Filters</b><span className="small muted">{chosen}</span></span>
-          <span className="more-grades-icon" aria-hidden="true" />
-        </summary>
-      <GradeFlipFilters key={`${target}:${tier}`} opts={opts} eras={Object.fromEntries(Object.entries(ERAS).map(([k, e]) => [k, e.label]))} />
-      </details>
+      <nav className="tabs-row gf-tabs" aria-label="Saved filters">
+        <Link href="/app/grade-and-flip" prefetch={false} className={!current && !creating ? "on" : ""}>Search</Link>
+        {saved.map((f) => <Link key={f.id} href={`?f=${f.id}`} prefetch={false} className={current?.id === f.id ? "on" : ""}>{f.name}</Link>)}
+        {saved.length < FLIP_FILTER_LIMIT && <Link href={`?${newParams}`} prefetch={false} className={creating ? "on" : ""}>+ New filter</Link>}
+      </nav>
+
+      <div className="panel gf-filter-box">
+        <div className="gf-filter-sum"><b>{current ? current.name : creating ? "New filter" : "Filters"}</b><span className="small muted">{chosen}</span></div>
+        <GradeFlipFilters key={JSON.stringify([opts, current?.id, current?.name, creating])} opts={opts} eras={Object.fromEntries(Object.entries(ERAS).map(([k, e]) => [k, e.label]))}
+          filter={current ? { id: current.id, name: current.name } : null} creating={creating} />
+      </div>
 
       <div className="gr-legend small muted">
         <span className="gr-eq">
