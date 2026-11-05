@@ -4,7 +4,7 @@ import ReportSale from "@/components/ReportSale";
 import MissingPicture from "@/components/MissingPicture";
 import SignatureButton from "@/components/SignatureButton";
 import { setLabel } from "@/lib/sets";
-import { GRADING_COMPANIES, gradingCandidates, gradingMath } from "@/lib/grading";
+import { GRADE_TARGETS, gradingCandidates, gradingMath } from "@/lib/grading";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CardActions, { AddCardButton, CardAlertIcons } from "@/components/CardActions";
@@ -14,7 +14,7 @@ import CardThumb from "@/components/CardThumb";
 import ValueChart from "@/components/ValueChart";
 import { creditsLow, getProduct } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
-import { COND_SHORT, GRADERS, change, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
+import { COND_SHORT, GRADERS, change, gradeLabel, gradeName, marketValue, money, nmPrice, pct, pokemonName } from "@/lib/collection";
 import { slim } from "@/lib/portfolio";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
@@ -30,13 +30,13 @@ export async function generateMetadata({ params, searchParams }) {
   return { title: p ? p.name : "Card" };
 }
 
-/** A grade key ("psa10", "bgs9_5", "cgc10_pristine", "cgc10 PRISTINE") in parts: { grader, grade: "9.5", rank: 9.5 }. */
+/** A grade key ("psa10", "bgs9_5", "cgc10_pristine", "bgs10_black") in parts: { grader, grade: "10 Gem Mint", rank: 10 }. */
 const gradeParts = (key) => {
-  const m = key.match(/^([a-z]+)(\d+)(?:[_ ](\d|pristine))?$/i);
+  const m = key.match(/^([a-z]+)(\d+)(?:[_ ](\d|pristine|black))?$/i);
   if (!m) return { grader: key.toUpperCase(), grade: key, rank: 0 };
   const grader = GRADERS.find((g) => g.toLowerCase() === m[1].toLowerCase()) || m[1].toUpperCase();
-  const pristine = /pristine/i.test(m[3] || "");
-  return { grader, grade: pristine ? `${m[2]} Pristine` : `${m[2]}${m[3] ? `.${m[3]}` : ""}`, rank: Number(m[2]) + (pristine ? 0.25 : m[3] ? Number(m[3]) / 10 : 0) };
+  const label = /pristine/i.test(m[3] || "") ? ["Pristine", 0.25] : /black/i.test(m[3] || "") ? ["Black Label", 0.5] : null;
+  return { grader, grade: gradeLabel(grader, label ? `${m[2]} ${label[0]}` : `${m[2]}${m[3] ? `.${m[3]}` : ""}`), rank: Number(m[2]) + (label ? label[1] : m[3] ? Number(m[3]) / 10 : 0) };
 };
 const GRADE_LABEL = (key) => { const g = gradeParts(key); return g.rank ? `${g.grader} ${g.grade}` : key; };
 const MAIN_GRADERS = ["PSA", "CGC", "BGS"];
@@ -61,7 +61,7 @@ function DealBox({ deal: d, premium }) {
   // A live listing opens itself; an ended one opens eBay's sold listings for this card and grade, because eBay sends
   // an ended listing's own link to a general product page showing other listings.
   const link = d.ended ? dealSoldSearch(d, "card-page-deal-sold") : ebayLink(d.url, "card-page-deal");
-  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
+  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.grade);
   const live = !d.ended;
   return (
     <div className={`deal-box ${live ? "live" : "ended"}`}>
@@ -185,8 +185,8 @@ export default async function CardPage({ params, searchParams }) {
     // The grader that pays best at its cheapest tier.
     const [c] = gradingCandidates(mine.filter((it) => it.list === "owned"), { [p.id]: p });
     if (!c) return null;
-    const options = Object.entries(GRADING_COMPANIES).map(([g, co]) => ({ grade: co.top, ...gradingMath(c, g, 0) }))
-      .filter((m) => m.top).sort((a, b) => b.profit10 - a.profit10);
+    const options = Object.keys(GRADE_TARGETS).map((id) => gradingMath(c, id, 0))
+      .filter(Boolean).sort((a, b) => b.profit10 - a.profit10);
     return options[0] || null;
   })();
   // Sell on eBay (Premium, English cards you own): with the other eBay buttons on the prices panel, for your first copy.
@@ -247,8 +247,8 @@ export default async function CardPage({ params, searchParams }) {
       {quick && <DealQuickCheck deal={deal} listingHref={quick.listing.href} soldHref={quick.sold.href} affiliate={quick.listing.affiliate || quick.sold.affiliate} />}
       {gradeIdea && gradeIdea.verdict !== "skip" && (
         <Link href="/app/collection/grading" className="grade-idea">
-          💎 Worth grading? A {gradeIdea.grader} {gradeIdea.grade} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
-          {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.grade}.`} →
+          💎 Worth grading? A {gradeIdea.topName} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
+          {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.topShort}.`} →
         </Link>
       )}
       <div className="card-hero-side">

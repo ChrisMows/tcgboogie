@@ -6,7 +6,7 @@ import HomePromo from "@/components/HomePromo";
 import HomeTabs from "@/components/HomeTabs";
 import Sparkline from "@/components/Sparkline";
 import PerformanceChart from "@/components/PerformanceChart";
-import { chartSeries, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
+import { chartSeries, gradeName, itemLabel, marketChange, money, unitValue } from "@/lib/collection";
 import { hasLiveSubscription, trialDaysFor } from "@/lib/billing";
 import { withLinks } from "@/lib/deal-links";
 import { dealsFor } from "@/lib/deals";
@@ -217,7 +217,7 @@ export default async function HomePage({ searchParams }) {
                           <CardThumb item={thumb} width={96} />
                           <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under` : "💰 Big sale"}</span>
                           <b>{money(x.price, 0)}</b>
-                          <span className="small home-market-name">{[x.grader ? `${x.grader} ${x.grade}` : null, x.name].filter(Boolean).join(" · ")}</span>
+                          <span className="small home-market-name">{[x.grader ? gradeName(x.grader, x.grade) : null, x.name].filter(Boolean).join(" · ")}</span>
                         </Link>
                       </li>
                     );

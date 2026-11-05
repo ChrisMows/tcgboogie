@@ -1,6 +1,7 @@
 // "Is this card worth grading?" Raw Near Mint copies you own, compared with what the same card sells for graded
 // (recent sales, reliable data only) at the grader and service level you pick. Shared by the server (finding
 // candidates) and the page (re-working the numbers when the member changes grader, service level or shipping).
+import { gradeKey, gradeLabel, gradeName } from "@/lib/collection";
 
 export const MIN_PROFIT = 25; // below this a top grade isn't worth the wait and the risk
 export const DEFAULT_SHIPPING = 5; // rough per-card share of insured shipping both ways and supplies
@@ -45,6 +46,23 @@ export const GRADING_COMPANIES = {
     { name: "Premier", fee: 299.95, days: "3–5", max: null },
   ] },
 };
+
+// The grades a member can aim for: each grader's usual top grade (the plain IDs, also a grader's name in GRADING_COMPANIES)
+// plus the second 10s CGC and BGS give. next is the grade to fall back on when it misses. sales: priced from our own
+// tracked eBay sales, since the price service reports a single 10 per grader.
+export const GRADE_TARGETS = {
+  PSA: { grader: "PSA", top: "10", next: "9" },
+  "BGS-95": { grader: "BGS", top: "9.5", next: "9" },
+  "BGS-10": { grader: "BGS", top: "10", next: "9.5" },
+  "BGS-BL": { grader: "BGS", top: "10 Black Label", next: "10", sales: true },
+  CGC: { grader: "CGC", top: "10", next: "9" },
+  "CGC-PR": { grader: "CGC", top: "10 Pristine", next: "10", sales: true },
+  SGC: { grader: "SGC", top: "10", next: "9" },
+  TAG: { grader: "TAG", top: "10", next: "9" },
+};
+export const targetName = (id) => gradeName(GRADE_TARGETS[id].grader, GRADE_TARGETS[id].top);
+/** A saved link's old "BGS" still means its 9.5, the only BGS grade it could mean before. */
+export const targetId = (id) => (id === "BGS" ? "BGS-95" : GRADE_TARGETS[id] ? id : "PSA");
 
 // Grade & Flip's Flip Score, 1 to 10 to one decimal: how good an opportunity a card is, out of these points.
 export const FLIP_POINTS = { profit: 3, return: 2, safety: 3, demand: 2 };
@@ -105,7 +123,6 @@ export function gapStateOn(row, day) {
   return e ? { ...row, raw: e.raw, graded: e.g } : null;
 }
 
-const keyOf = (grader, grade) => `${grader.toLowerCase()}${grade.replace(".", "_")}`;
 const reliable = (g) => (g && g.reliable !== false && g.price ? g.price : null);
 
 /**
@@ -134,8 +151,8 @@ export function gradingCandidates(owned, products) {
     const raw = p?.prices?.[it.printing]?.["Near Mint"]?.market ?? p?.prices?.[Object.keys(p?.prices || {})[0]]?.["Near Mint"]?.market;
     if (!raw) continue;
     const grades = {};
-    for (const [g, co] of Object.entries(GRADING_COMPANIES)) {
-      grades[g] = { top: reliable(p?.graded?.[keyOf(g, co.top)]), next: reliable(p?.graded?.[keyOf(g, co.next)]) };
+    for (const [id, t] of Object.entries(GRADE_TARGETS)) {
+      grades[id] = { top: reliable(p?.graded?.[gradeKey(t.grader, t.top)]), next: reliable(p?.graded?.[gradeKey(t.grader, t.next)]) };
     }
     const copies = owned.filter((x) => x.productId === it.productId && x.kind === "raw" && x.condition === "Near Mint").reduce((n, x) => n + x.quantity, 0);
     out.push({ productId: it.productId, name: it.name, setName: it.setName, number: it.number, image: it.image, printing: it.printing, copies, raw, grades });
@@ -144,15 +161,17 @@ export function gradingCandidates(owned, products) {
 }
 
 /**
- * The numbers for one card at a grader and service level, or null when that grader has no reliable top-grade sales
- * for it. verdict: "safe" (the next grade down still pays), "needs10" (only the top grade pays), or "skip".
+ * The numbers for one card at a target grade (GRADE_TARGETS) and service level, or null when that grade has no reliable
+ * sales for it. verdict: "safe" (the next grade down still pays), "needs10" (only the top grade pays), or "skip".
  */
-export function gradingMath(c, grader = "PSA", tierIndex = 0, opts = {}) {
-  const g = c.grades?.[grader];
+export function gradingMath(c, target = "PSA", tierIndex = 0, opts = {}) {
+  const t = GRADE_TARGETS[target] || GRADE_TARGETS[targetId(target)];
+  const g = c.grades?.[target];
   if (!g?.top) return null;
-  const { cost, tier, bumped } = gradingCost(grader, tierIndex, g.top, opts);
+  const { cost, tier, bumped } = gradingCost(t.grader, tierIndex, g.top, opts);
   const profit10 = g.top - c.raw - cost;
-  const profit9 = g.next !== null ? g.next - c.raw - cost : null;
+  const profit9 = g.next !== null && g.next !== undefined ? g.next - c.raw - cost : null;
   const verdict = profit10 < MIN_PROFIT ? "skip" : profit9 !== null && profit9 >= 0 ? "safe" : "needs10";
-  return { grader, top: g.top, next: g.next, cost, tier, bumped, profit10, profit9, verdict };
+  return { grader: t.grader, top: g.top, next: g.next ?? null, cost, tier, bumped, profit10, profit9, verdict,
+    topName: gradeName(t.grader, t.top), nextName: gradeName(t.grader, t.next), topShort: gradeLabel(t.grader, t.top) };
 }

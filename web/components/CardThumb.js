@@ -4,6 +4,7 @@
  * raw copy and a graded copy of the same card look different side by side.
  */
 import CardPicture from "@/components/CardPicture";
+import { gradeName, normGrade } from "@/lib/collection";
 
 export default function CardThumb({ item, width = 64, className = "" }) {
   const style = { width, minWidth: width };
@@ -48,16 +49,17 @@ const BAND = { CGC: "CERTIFIED GUARANTY CO.", BGS: "BECKETT GRADING", SGC: "SGC 
  * TAG). Slabs are taller than cards, so it's drawn a little narrower to stand the same height as a raw card next to it.
  */
 function Slab({ item, style, className }) {
-  const grade = String(item.grade || "").replace(" Pristine", "").replace(" Black Label", "");
-  const pristine = /pristine/i.test(String(item.grade));
-  const blackLabel = item.grader === "BGS" && /black label/i.test(String(item.grade));
+  const exact = normGrade(item.grader, item.grade); // however the grade was written
+  const grade = exact.replace(" Pristine", "").replace(" Black Label", "");
+  const pristine = /pristine/i.test(exact);
+  const blackLabel = item.grader === "BGS" && /black label/i.test(exact);
   // The special labels: black and gold for CGC Pristine 10 and Beckett's Black Label 10; gold for BGS 10 and 9.5.
   const tier = (item.grader === "CGC" && pristine) || blackLabel ? "slab-black"
     : item.grader === "BGS" && Number(grade) >= 9.5 ? "slab-gold" : "";
   const w = typeof style.width === "number" ? Math.round(style.width * 0.82) : style.width;
   return (
     <div className={`slab slab-${String(item.grader).toLowerCase()} ${tier} ${className}`} style={{ width: w, minWidth: w }}
-      title={`${item.grader} ${item.grade}`} aria-label={`${item.grader} ${item.grade} slab`}>
+      title={gradeName(item.grader, item.grade)} aria-label={`${gradeName(item.grader, item.grade)} slab`}>
       <div className="slab-case">
         <div className="slab-label">
           {BAND[item.grader] && <div className="slab-band"><b>{item.grader}</b><span>{BAND[item.grader]}</span></div>}

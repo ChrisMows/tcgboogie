@@ -2,7 +2,7 @@ import Link from "next/link";
 import XFollow from "@/components/XFollow";
 import { X_HANDLE } from "@/lib/social";
 import CardThumb from "@/components/CardThumb";
-import { money } from "@/lib/collection";
+import { gradeName, money } from "@/lib/collection";
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { marketFeed } from "@/lib/market";
 import { getCurrentUser } from "@/lib/session";
@@ -37,7 +37,7 @@ function Tile({ x }) {
       <div className="sale-art"><CardThumb item={thumb} width={170} /></div>
       <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under market` : "💰 Big sale"}</span>
       <b className="sale-price">{money(x.price, 0)}</b>
-      <span className="sale-name">{[x.grader ? `${x.grader} ${x.grade}` : x.condition, x.name].filter(Boolean).join(" · ")}</span>
+      <span className="sale-name">{[x.grader ? gradeName(x.grader, x.grade) : x.condition, x.name].filter(Boolean).join(" · ")}</span>
       <span className="small muted">
         {[x.set, x.kind === "high" ? `previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `market ${money(x.market, 0)}` : null, x.soldAt ? day(x.soldAt) : null].filter(Boolean).join(" · ")}
       </span>

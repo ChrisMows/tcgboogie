@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { getProduct, prefetchProducts } from "@/lib/catalog";
-import { gradeKey, money } from "@/lib/collection";
+import { gradeKey, gradeName, money } from "@/lib/collection";
 import { db, schema } from "@/lib/db";
 import { credible, realOff, recentDeals } from "@/lib/deals";
 import { slim } from "@/lib/portfolio";
@@ -35,7 +35,7 @@ function specialVersion(title, p) {
   return VARIANT_WORDS.some((w) => t.includes(` ${w} `) && !own.includes(` ${w} `));
 }
 const shortName = (name) => String(name || "").replace(/\s*\(.*\)$/, "").replace(/\s+-\s+\S+$/, "").trim();
-const gradeText = (grader, grade) => (grader && grade ? `${grader} ${grade}` : "");
+const gradeText = (grader, grade) => (grader && grade ? gradeName(grader, grade) : "");
 const hashtags = (name, grader, grade) => {
   const mon = shortName(name).split(/\s+/)[0].replace(/[^A-Za-z]/g, "");
   const n = String(grade || "").match(/^\d+(\.\d)?/)?.[0];

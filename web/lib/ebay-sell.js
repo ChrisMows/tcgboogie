@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { open, seal } from "@/lib/secret-box";
+import { gradeName } from "@/lib/collection";
 
 // "Sell on eBay": members connect their eBay seller account (OAuth, eBay's own sign-in page), then we build a listing
 // from their collection item and post it with eBay's Inventory API.
@@ -240,7 +241,7 @@ const cleanSet = (s) => String(s || "").replace(/^[A-Za-z0-9]+:\s*/, "").replace
 
 /** A suggested title (max 80 characters): what buyers search for. */
 export function suggestTitle(item) {
-  const grade = item.kind === "graded" ? `${item.grader} ${item.grade}` : item.condition ? { "Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP", "Heavily Played": "HP", Damaged: "DMG" }[item.condition] : "";
+  const grade = item.kind === "graded" ? gradeName(item.grader, item.grade) : item.condition ? { "Near Mint": "NM", "Lightly Played": "LP", "Moderately Played": "MP", "Heavily Played": "HP", Damaged: "DMG" }[item.condition] : "";
   const parts = ["Pokemon", baseName(item.name), cardNumber(item.number), cleanSet(item.setName),
     /reverse/i.test(item.printing || "") ? "Reverse Holo" : /holo/i.test(item.printing || "") ? "Holo" : "", grade];
   let t = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
@@ -251,7 +252,7 @@ export function suggestTitle(item) {
 export function suggestDescription(item) {
   const lines = [
     `${baseName(item.name)}${item.number ? ` #${cardNumber(item.number)}` : ""}${item.setName ? ` from ${cleanSet(item.setName)}` : ""}.`,
-    item.kind === "graded" ? `Graded ${item.grader} ${item.grade}${item.certNumber ? `, certification #${item.certNumber}` : ""}.`
+    item.kind === "graded" ? `Graded ${gradeName(item.grader, item.grade)}${item.certNumber ? `, certification #${item.certNumber}` : ""}.`
       : item.condition ? `Raw (ungraded) card in ${item.condition} condition.` : "",
     item.printing ? `Printing: ${item.printing}.` : "",
     "The card pictured is the exact card you will receive.",

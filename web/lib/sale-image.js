@@ -2,7 +2,7 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
-import { money } from "@/lib/collection";
+import { gradeName, money } from "@/lib/collection";
 
 // A sale as a 1080x1080 share image (the /sales page's "Share image", and what Admin -> Sales posts to X): our
 // background (public/share/sales-bg.jpg), the card in a slab drawn in its grader's colours with the grade, then the
@@ -137,7 +137,7 @@ export async function saleImage(x) {
   const [{ bg, bold, medium }, img] = await Promise.all([load(), picture(x.image)]);
   const kicker = x.kind === "high" ? "NEW HIGH" : x.kind === "deal" ? `SOLD ${x.off}% UNDER MARKET` : "BIG SALE";
   const sub = x.kind === "high" ? `Previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `Market ${money(x.market, 0)}` : "Sold on eBay";
-  const label = [x.grader ? `${x.grader} ${x.grade}` : x.condition, x.name].filter(Boolean).join(" · ");
+  const label = [x.grader ? gradeName(x.grader, x.grade) : x.condition, x.name].filter(Boolean).join(" · ");
   return new ImageResponse(
     (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: S, height: S, fontFamily: "Grotesk", color: "#f4f5ef",

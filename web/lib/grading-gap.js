@@ -2,7 +2,8 @@ import "server-only";
 import { eq, inArray, sql } from "drizzle-orm";
 import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
-import { GRADING_COMPANIES, flipScore, gapStateOn, gapTrail, gradingMath } from "@/lib/grading";
+import { gradeKey } from "@/lib/collection";
+import { GRADE_TARGETS, GRADING_COMPANIES, flipScore, gapStateOn, gapTrail, gradingMath } from "@/lib/grading";
 
 // Grade & Flip (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
 // under what the same card sells for graded. Built only from price-service answers we already saved (catalog_cache:
@@ -15,9 +16,11 @@ const WATERMARK = "grading_gap_watermark"; // fetched_at of the last saved answe
 const BATCH = 500;
 export const NEW_DAYS = 7; // "New to your list": passes the filters now but didn't this many days ago
 const NEW_SHOWN = 12;
-const keyOf = (grader, grade) => `${grader.toLowerCase()}${grade.replace(".", "_")}`;
-// The grades the finder uses (each grader's top grade and the one below): the only ones copied out.
-const GRADE_KEYS = Object.entries(GRADING_COMPANIES).flatMap(([g, co]) => [keyOf(g, co.top), keyOf(g, co.next)]);
+// The grades the finder uses: the only ones copied out. The price service reports one 10 per grader, so CGC Pristine and
+// BGS Black Label come from our own tracked sales instead (mergeSalesGrades).
+const targets = Object.values(GRADE_TARGETS);
+const SALES_KEYS = [...new Set(targets.filter((t) => t.sales).map((t) => gradeKey(t.grader, t.top)))];
+const GRADE_KEYS = [...new Set(targets.flatMap((t) => [gradeKey(t.grader, t.top), gradeKey(t.grader, t.next)]))].filter((k) => !SALES_KEYS.includes(k));
 const GRADE_LIST = sql.raw(`any(array[${GRADE_KEYS.map((k) => `'${k}'`).join(",")}])`); // fixed keys, not request data
 
 /**
@@ -67,7 +70,10 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       const today = new Date().toISOString().slice(0, 10);
       const values = fresh.map((v) => {
         const old = known.get(`${v.productId}:${v.language}`);
-        return { ...v, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, v, today) : [] }; // firstSeen is only written on a first insert
+        // Grades from our own sales aren't in the price service's answer: keep them (mergeSalesGrades updates them).
+        const kept = Object.fromEntries(SALES_KEYS.filter((k) => old?.graded?.[k]).map((k) => [k, old.graded[k]]));
+        const next = { ...v, graded: { ...v.graded, ...kept } };
+        return { ...next, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, next, today) : [] }; // firstSeen is only written on a first insert
       });
       await db.insert(gradingGap).values(values).onConflictDoUpdate({
         target: [gradingGap.productId, gradingGap.language],
@@ -81,7 +87,29 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       .onConflictDoUpdate({ target: appSettings.key, set: { value: { at: after.toISOString() }, updatedAt: new Date() } });
     if (rows.length < BATCH) break;
   }
+  await mergeSalesGrades();
   return { seen, copied };
+}
+
+/**
+ * CGC Pristine and BGS Black Label from our own tracked sales in the last 90 days: the median, trusted from 2 sales up
+ * (one sale can be a fluke, and the Flip Score already holds anything under 5 sales back from Excellent).
+ */
+async function mergeSalesGrades() {
+  await db.execute(sql`
+    with s as (
+      select product_id, language, price, case when grader = 'CGC' then 'cgc10_pristine' else 'bgs10_black' end as key from sale
+      where kind = 'graded' and sold_at > now() - interval '90 days'
+        and ((grader = 'CGC' and grade ~* 'pristine|black') or (grader = 'BGS' and grade ~* 'black'))
+    ), a as (
+      select product_id, language, key, percentile_cont(0.5) within group (order by price) as p, count(*)::int as n from s group by 1, 2, 3
+    ), j as (
+      select product_id, language, jsonb_object_agg(key, jsonb_build_object('p', round(p::numeric, 2), 'n', n, 'r', n >= 2)) as g from a group by 1, 2
+    )
+    update grading_gap x set graded = (x.graded - 'cgc10_pristine' - 'bgs10_black') || coalesce(j.g, '{}'::jsonb)
+    from grading_gap y left join j on j.product_id = y.product_id and j.language = y.language
+    where x.product_id = y.product_id and x.language = y.language
+      and (j.g is not null or y.graded->'cgc10_pristine' is not null or y.graded->'bgs10_black' is not null)`);
 }
 
 /** One saved answer -> a grading_gap row, or null when it has no Near Mint price or no graded sales. */
@@ -111,9 +139,9 @@ function toRow({ key, fetched_at: fetchedAt, card: c }) {
 /** A grading_gap row in the shape Worth Grading's maths takes (lib/grading.js gradingCandidates). */
 function candidate(r) {
   const grades = {};
-  for (const [g, co] of Object.entries(GRADING_COMPANIES)) {
-    const top = r.graded[keyOf(g, co.top)], next = r.graded[keyOf(g, co.next)];
-    grades[g] = { top: top?.r ? top.p : null, next: next?.r ? next.p : null, topSales: top?.r ? top.n : null };
+  for (const [id, t] of Object.entries(GRADE_TARGETS)) {
+    const top = r.graded[gradeKey(t.grader, t.top)], next = r.graded[gradeKey(t.grader, t.next)];
+    grades[id] = { top: top?.r ? top.p : null, next: next?.r ? next.p : null, topSales: top?.r ? top.n : null };
   }
   return { productId: r.productId, language: r.language, name: r.name, setName: r.setName, number: r.number, image: r.image,
     printing: r.printing, copies: 1, raw: r.raw, grades };
@@ -151,17 +179,19 @@ const TOP_X_NEXT = 8, TOP_X_RAW = 40, NEXT_X_RAW = 6;
 const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.top <= TOP_X_NEXT * c.next && c.next <= NEXT_X_RAW * c.raw));
 
 /**
- * Cards worth grading at a grader and service level, best first. opts: grader, tier (service level index), own (own
+ * Cards worth grading at a target grade (GRADE_TARGETS) and service level, best first. opts: target, tier (service level index), own (own
  * fee instead), shipping, minRaw / maxRaw (what the raw copy costs), minProfit, safeOnly (the grade below the top still
  * pays), language ("english" / "japanese" / "all"), era (ERAS key, "modern" by default), sort ("score" / "profit" / "return"), limit.
  * Returns { cards, fresh, total, remaining }: fresh is "New to your list", cards that pass these filters now but didn't
  * NEW_DAYS ago (best first, not repeated in cards); total is how many qualify; remaining how many are past the limit.
  */
 export async function findGradingGaps(opts = {}) {
-  const { grader = "PSA", tier = 0, own = null, shipping = 5, minRaw = 0, maxRaw = null, minProfit = 25, safeOnly = false,
+  const { target = "PSA", tier = 0, own = null, shipping = 5, minRaw = 0, maxRaw = null, minProfit = 25, safeOnly = false,
     language = "english", era = "modern", sort = "score", limit = 60 } = opts;
+  const t = GRADE_TARGETS[target];
+  const { grader } = t;
   const co = GRADING_COMPANIES[grader];
-  const tk = keyOf(grader, co.top), nk = keyOf(grader, co.next);
+  const tk = gradeKey(grader, t.top), nk = gradeKey(grader, t.next);
   // The cheapest this grading can cost (a pricier card may need a higher level): rules out most cards in the database.
   const floor = (own ?? co.tiers[Math.min(tier, co.tiers.length - 1)].fee) + shipping;
   let rows;
@@ -196,9 +226,9 @@ export async function findGradingGaps(opts = {}) {
   /** A row worked out for these filters, or null when it doesn't pass them. */
   const judge = (r) => {
     const c = candidate(r);
-    const m = gradingMath(c, grader, tier, { own, shipping });
+    const m = gradingMath(c, target, tier, { own, shipping });
     if (!m) return null;
-    const card = { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[grader].topSales) };
+    const card = { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[target].topSales) };
     return plausible(card) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
       && card.raw >= minRaw && (maxRaw === null || card.raw <= maxRaw) ? card : null;
   };
@@ -209,11 +239,13 @@ export async function findGradingGaps(opts = {}) {
     if (r.firstSeen && new Date(r.firstSeen).toISOString().slice(0, 10) >= since) return "Just added";
     const then = gapStateOn(r, since);
     if (!then || judge(then)) return null;
-    const was = candidate(then).grades[grader];
+    const was = candidate(then).grades[target];
+    // No price for this grade back then isn't news for the second 10s: their sales are thin, and BGS 10 only began being copied here in Nov 2026.
+    if (!was.top && (t.sales || t.next === "9.5")) return null;
     if (then.raw > card.raw) return `Raw down from ${whole(then.raw)}`;
-    if (!was.top) return `New ${grader} ${co.top} sales`;
-    if (card.top > was.top) return `${grader} ${co.top} up from ${whole(was.top)}`;
-    if (card.next !== null && was.next !== null && card.next > was.next) return `${grader} ${co.next} up from ${whole(was.next)}`;
+    if (!was.top) return `New ${card.topName} sales`;
+    if (card.top > was.top) return `${card.topName} up from ${whole(was.top)}`;
+    if (card.next !== null && was.next !== null && card.next > was.next) return `${card.nextName} up from ${whole(was.next)}`;
     return "Now qualifies";
   };
   const cards = rows.map((r) => {

@@ -5,6 +5,7 @@ import { useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { guessColumns, importRows, matchRows } from "@/app/app/collection/import/actions";
 import { FIELDS, readCollectionCsv, rowsFrom } from "@/lib/import-csv";
+import { gradeName } from "@/lib/collection";
 
 const money = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const FIELD_NAMES = { name: "Name", set: "Set", number: "Number", quantity: "Quantity", condition: "Condition", grade: "Grade", grader: "Grader", paid: "Price paid", productId: "TCGplayer ID", printing: "Printing", language: "Language", list: "List" };
@@ -162,7 +163,7 @@ export default function ImportCollection() {
                         <b>{x.product ? x.product.name : r.name}</b>
                         <span className="small muted">
                           {x.product ? `${x.product.setName}${x.product.number ? ` · ${x.product.number}` : ""}` : `${r.set || "no set"}${r.number ? ` · ${r.number}` : ""} · not found`}
-                          {" · "}{r.graded ? `${r.grader} ${r.grade}` : r.condition || "Sealed"}{r.quantity > 1 ? ` · ×${r.quantity}` : ""}{r.list === "wishlist" ? " · wishlist" : ""}
+                          {" · "}{r.graded ? gradeName(r.grader, r.grade) : r.condition || "Sealed"}{r.quantity > 1 ? ` · ×${r.quantity}` : ""}{r.list === "wishlist" ? " · wishlist" : ""}
                         </span>
                       </span>
                       <b className="photo-value">{x.value ? money(x.value) : "—"}</b>

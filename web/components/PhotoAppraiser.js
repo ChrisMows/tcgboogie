@@ -9,6 +9,7 @@ import CardRequest from "@/components/CardRequest";
 import PackLoader from "@/components/PackLoader";
 import { shrinkImage as shrink } from "@/lib/shrink-image";
 import { addAppraised, appraise } from "@/app/app/collection/photo/actions";
+import { gradeName } from "@/lib/collection";
 
 /** The version in a product name, "Jolteon (Master Ball Pattern)" -> "Master Ball Pattern"; the plain card is "Regular". */
 const versionOf = (name) => /\(([^)]+)\)\s*$/.exec(String(name || ""))?.[1] || "Regular";
@@ -145,7 +146,7 @@ export default function PhotoAppraiser({ allowed, quota = null }) {
                         <b>{p ? p.name : c.read.name || "Unreadable card"}</b>
                         <span className="small muted">
                           {p ? `${p.setName} · ${p.number}` : `Read as ${c.read.number || "no number"} · no match found`}
-                          {c.graded ? ` · ${c.grader} ${c.grade}` : " · raw, priced as Near Mint"}
+                          {c.graded ? ` · ${gradeName(c.grader, c.grade)}` : " · raw, priced as Near Mint"}
                           {p?.language === "japanese" ? " · Japanese" : ""}
                         </span>
                         {c.read.confidence === "low" && <span className="badge warn">Hard to read: check it</span>}

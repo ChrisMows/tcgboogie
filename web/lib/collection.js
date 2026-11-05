@@ -29,9 +29,25 @@ export function fitGrade(grader, grade) {
 export const gradeOption = (grader, g) => (g === "10" && grader === "CGC" ? "10 Gem Mint" : g === "10" && grader === "BGS" ? "10 Pristine" : g);
 export const SORTS = { value: "Value (high to low)", gain: "Gain (best first)", change: "7-day change", name: "Name", added: "Recently added" };
 
+/**
+ * One grade however it was written ("10 PRISTINE" from the bot, "10 Pristine" from a member): CGC's two 10s are "10" (Gem
+ * Mint) and "10 Pristine", BGS's are "10" (Pristine, the label its plain 10 always carries) and "10 Black Label". CGC's
+ * Pristine slab is black, so a listing saying "black label" there means Pristine.
+ */
+export function normGrade(grader, grade) {
+  const s = String(grade ?? "").trim();
+  if (/black\s*label/i.test(s)) return grader === "CGC" ? PRISTINE : BLACK_LABEL;
+  if (/pristine/i.test(s)) return grader === "BGS" ? "10" : PRISTINE;
+  return s;
+}
+/** How a grade reads everywhere: says which 10 it is, "10 Gem Mint" for CGC, "10 Pristine" for BGS. */
+export const gradeLabel = (grader, grade) => gradeOption(grader, normGrade(grader, grade));
+/** "CGC 10 Gem Mint", "BGS 10 Black Label", "PSA 10". */
+export const gradeName = (grader, grade) => `${grader} ${gradeLabel(grader, grade)}`;
+
 /** ('PSA', '9.5') -> 'psa9_5', the key slab prices are stored under (same as the bot's grade_key). */
 export const gradeKey = (grader, grade) => (grader && grade
-  ? `${grader.toLowerCase()}${String(grade).replace(" Pristine", "_pristine").replace(" Black Label", "_black").replace(".", "_")}` : null);
+  ? `${grader.toLowerCase()}${normGrade(grader, grade).replace(" Pristine", "_pristine").replace(" Black Label", "_black").replace(".", "_")}` : null);
 
 export const money = (v, digits = 2) =>
   v === null || v === undefined || !Number.isFinite(Number(v))
@@ -41,7 +57,7 @@ export const pct = (v) => (v === null || v === undefined || !Number.isFinite(v) 
 
 /** "Holofoil · NM", "PSA 10", "Sealed" */
 export function itemLabel(item) {
-  if (item.kind === "graded") return `${item.grader} ${item.grade}`;
+  if (item.kind === "graded") return gradeName(item.grader, item.grade);
   if (item.kind === "sealed") return "Sealed";
   return [item.printing, COND_SHORT[item.condition] || item.condition].filter(Boolean).join(" · ");
 }

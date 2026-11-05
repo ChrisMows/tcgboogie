@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { DEFAULT_SHIPPING, FLIP_POINTS, GRADING_COMPANIES, gradingMath } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, gradingMath, targetName } from "@/lib/grading";
+import { gradeLabel } from "@/lib/collection";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const FREE_ROWS = 3;
-const GRADERS = Object.keys(GRADING_COMPANIES);
+const TARGETS = Object.keys(GRADE_TARGETS);
 
 const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 const run = (candidates, grader, tier, opts) => candidates.map((c) => {
@@ -37,8 +38,7 @@ function FlipScore({ c, top, next }) {
 
 /** One card's grading numbers (also used by Grade & Flip, app/app/grade-and-flip/page.js). */
 export function GradingTile({ c, dim }) {
-  const co = GRADING_COMPANIES[c.grader];
-  const top = `${c.grader} ${co.top}`, next = `${c.grader} ${co.next}`;
+  const top = c.topName, next = c.nextName;
   return (
     <Link href={`/app/cards/${encodeURIComponent(c.productId)}${c.language === "japanese" ? "?lang=japanese" : ""}`} className={`gr-tile ${dim ? "dim" : ""}`}>
       <div className="gr-art"><CardThumb item={c} width={92} />{c.copies > 1 && <span className="qty-badge">×{c.copies}</span>}</div>
@@ -57,7 +57,7 @@ export function GradingTile({ c, dim }) {
         <span className="small muted gr-cost-note">{c.tier ? `${c.tier.name} ${fee(c.tier.fee)}` : "Your price"} + shipping{c.bumped ? ` · its value needs ${c.tier.name}` : ""}</span>
         {c.flip ? <FlipScore c={c} top={top} next={next} /> : <>
         {c.verdict === "safe" && <span className="badge good" title={`Even a ${next} covers the cost`}>✓ Safe bet</span>}
-        {c.verdict === "needs10" && <span className="badge warn" title={`Only pays off if it gets a ${top}`}>Needs a {co.top}</span>}
+        {c.verdict === "needs10" && <span className="badge warn" title={`Only pays off if it gets a ${top}`}>Needs a {c.topShort}</span>}
         {c.verdict === "skip" && <span className="badge">Not worth it</span>}
         </>}
       </div>
@@ -77,16 +77,19 @@ function AddPrompt({ children }) {
 
 /** "Worth grading?": which raw Near Mint cards you own would pay off graded, at the grader and cost you pick. */
 export default function GradingCheck({ candidates, rawCards, ownedCards, full }) {
-  const [grader, setGrader] = useState("PSA");
+  const [target, setTarget] = useState("PSA"); // the grade to aim for (GRADE_TARGETS)
+  const t = GRADE_TARGETS[target];
   const [tier, setTier] = useState(0); // the cheapest service level
   const [own, setOwn] = useState(null); // the member's own fee per card, instead of a service level
   const [shipping, setShipping] = useState(DEFAULT_SHIPPING);
   const [showSkip, setShowSkip] = useState(false);
-  const co = GRADING_COMPANIES[grader];
-  const all = useMemo(() => run(candidates, grader, tier, { own, shipping }), [candidates, grader, tier, own, shipping]);
-  // How many cards each grader would be worth it for (other graders at their cheapest level), shown on the picker.
-  const counts = useMemo(() => Object.fromEntries(GRADERS.map((g) => [g,
-    run(candidates, g, g === grader ? tier : 0, g === grader ? { own, shipping } : { shipping }).filter((c) => c.verdict !== "skip").length])), [candidates, grader, tier, own, shipping]);
+  const co = GRADING_COMPANIES[t.grader];
+  const name = targetName(target);
+  const topShort = gradeLabel(t.grader, t.top), nextShort = gradeLabel(t.grader, t.next);
+  const all = useMemo(() => run(candidates, target, tier, { own, shipping }), [candidates, target, tier, own, shipping]);
+  // How many cards each grade would be worth it for (others at their cheapest level), shown on the picker.
+  const counts = useMemo(() => Object.fromEntries(TARGETS.map((g) => [g,
+    run(candidates, g, g === target ? tier : 0, g === target ? { own, shipping } : { shipping }).filter((c) => c.verdict !== "skip").length])), [candidates, target, tier, own, shipping]);
   const worth = all.filter((c) => c.verdict !== "skip");
   const skip = all.filter((c) => c.verdict === "skip");
   const shown = full ? worth : worth.slice(0, FREE_ROWS);
@@ -94,8 +97,8 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
   const level = own !== null ? null : co.tiers[tier];
   const costLabel = own !== null ? fee(own) : fee(level.fee);
   const unchecked = rawCards - all.length;
-  const elsewhere = GRADERS.filter((g) => g !== grader && counts[g] > 0);
-  const pick = (g) => { setGrader(g); setTier(0); setOwn(null); setShowSkip(false); };
+  const elsewhere = TARGETS.filter((g) => g !== target && counts[g] > 0);
+  const pick = (g) => { setTarget(g); setTier(0); setOwn(null); setShowSkip(false); };
 
   if (rawCards === 0) {
     return (
@@ -116,34 +119,32 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
           {worth.length ? (
             <>
               <div className="gr-hero-num">{worth.length} {worth.length === 1 ? "card" : "cards"}</div>
-              <div className="muted">worth grading with {grader} · up to <b className="up">{money(best)}</b> profit if they all get a {co.top}</div>
+              <div className="muted">worth grading with {t.grader} · up to <b className="up">{money(best)}</b> profit if they all get a {name}</div>
             </>
           ) : (
             <>
               <div className="gr-hero-num">None yet</div>
               <div className="muted">
-                {all.length ? `We checked ${all.length} of your raw ${all.length === 1 ? "card" : "cards"}: none would pay off with ${grader} at ${costLabel} a card plus shipping.`
-                  : `None of your raw Near Mint cards have enough recent ${grader} sales to check yet.`}
-                {elsewhere.length > 0 && <> Try {elsewhere.map((g, i) => <span key={g}>{i ? " or " : ""}<button type="button" className="link-btn" onClick={() => pick(g)}>{g}</button></span>)}.</>}
+                {all.length ? `We checked ${all.length} of your raw ${all.length === 1 ? "card" : "cards"}: none would pay off as a ${name} at ${costLabel} a card plus shipping.`
+                  : `None of your raw Near Mint cards have enough recent ${name} sales to check yet.`}
+                {elsewhere.length > 0 && <> Try {elsewhere.map((g, i) => <span key={g}>{i ? " or " : ""}<button type="button" className="link-btn" onClick={() => pick(g)}>{targetName(g)}</button></span>)}.</>}
               </div>
             </>
           )}
         </div>
         <div className="gr-pickers">
           <div className="gr-cost">
-            <div className="small muted">Grading company</div>
-            <div className="seg gr-graders" role="group" aria-label="Grading company">
-              {GRADERS.map((g) => (
-                <button key={g} type="button" className={grader === g ? "on" : ""} onClick={() => pick(g)} aria-pressed={grader === g}>
-                  {g}{counts[g] > 0 && <span className="gr-count">{counts[g]}</span>}
-                </button>
-              ))}
-            </div>
+            <label className="gr-field">
+              <span className="small muted">Grading company and grade</span>
+              <select value={target} onChange={(e) => pick(e.target.value)}>
+                {TARGETS.map((g) => <option key={g} value={g}>{targetName(g)}{counts[g] > 0 ? ` (${counts[g]})` : ""}</option>)}
+              </select>
+            </label>
           </div>
           <div className="gr-cost">
             <div className="gr-cost-row">
               <label className="gr-field">
-                <span className="small muted">{grader} service level</span>
+                <span className="small muted">{t.grader} service level</span>
                 <select value={own !== null ? "own" : String(tier)} onChange={(e) => {
                   if (e.target.value === "own") setOwn(level ? level.fee : 0);
                   else { setOwn(null); setTier(Number(e.target.value)); }
@@ -171,9 +172,9 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       {all.length > 0 && (
         <div className="gr-legend small muted" aria-hidden="true">
-          <span className="gr-eq"><b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{costLabel} grading + shipping</b> = <b className="up">profit</b></span>
-          <span><span className="badge good">✓ Safe bet</span> a {co.next} still pays</span>
-          <span><span className="badge warn">Needs a {co.top}</span> riskier</span>
+          <span className="gr-eq"><b>{name} price</b> − <b>raw price</b> − <b>{costLabel} grading + shipping</b> = <b className="up">profit</b></span>
+          <span><span className="badge good">✓ Safe bet</span> a {nextShort} still pays</span>
+          <span><span className="badge warn">Needs a {topShort}</span> riskier</span>
         </div>
       )}
 
@@ -193,7 +194,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
       {skip.length > 0 && (
         <div className="gr-skip">
           <button type="button" className="link-btn small" onClick={() => setShowSkip(!showSkip)} aria-expanded={showSkip}>
-            {showSkip ? "Hide" : "Show"} {skip.length} {skip.length === 1 ? "card" : "cards"} not worth grading with {grader}
+            {showSkip ? "Hide" : "Show"} {skip.length} {skip.length === 1 ? "card" : "cards"} not worth grading as a {name}
           </button>
           {showSkip && <div className="gr-grid">{skip.map((c) => <GradingTile key={`${c.productId}:${c.printing}`} c={c} dim />)}</div>}
         </div>
@@ -207,7 +208,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
       )}
 
       <p className="hint">
-        {unchecked > 0 && <>{unchecked} of your raw cards {unchecked === 1 ? "has" : "have"} too few recent {grader} sales to check. </>}
+        {unchecked > 0 && <>{unchecked} of your raw cards {unchecked === 1 ? "has" : "have"} too few recent {name} sales to check. </>}
         Grading prices are the graders&apos; published prices as of October 2026; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
       </p>
     </>

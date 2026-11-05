@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { gradeName } from "@/lib/collection";
 
 /**
  * Shown when a member arrives from a deal alert: the deal at a glance and one button that opens the listing AND the
@@ -25,7 +26,7 @@ export default function DealQuickCheck({ deal: d, listingHref, soldHref, affilia
   if (!open) return null;
 
   const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : `${d.grader} ${d.grade}`;
+  const grade = d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw ${d.condition}` : gradeName(d.grader, d.grade);
   const both = () => {
     window.open(listingHref, "_blank", "noopener");
     window.location.href = soldHref;

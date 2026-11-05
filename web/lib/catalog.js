@@ -7,6 +7,7 @@ import { getMemberCard, isMemberId } from "@/lib/member-cards";
 import { isToppsId, toppsCard } from "@/lib/topps";
 import { FAMILIES } from "@/lib/pokemon-families";
 import { nameWords, setsInSearch, wordMatches, withWords } from "@/lib/search-words";
+import { gradeKey } from "@/lib/collection";
 
 // TCGplayer card and sealed product prices (plus eBay graded sales), via the PokemonPriceTracker API.
 // Prices update about once a day. Responses are cached and shared by every member (in the database when there is one),
@@ -321,8 +322,6 @@ export async function recordSealedPrices(max = 500) {
 
 // ---------- graded values: the price service's sales + real eBay sales we verified ourselves (see `sale`) ----------
 const DAY_MS = 24 * HOUR;
-const gradeKeyOf = (grader, grade) => `${String(grader || "").toLowerCase()}${String(grade || "").replace(" Pristine", "_pristine").replace(" Black Label", "_black").replace(".", "_")}`;
-
 /** Median where each sale counts by weight (newer sales and days with several sales count more). */
 function weightedMedian(points) {
   const pts = points.filter((p) => p.price > 0 && p.w > 0).sort((a, b) => a.price - b.price);
@@ -358,7 +357,7 @@ async function withOurSales(p, prefetched) {
   const graded = { ...p.graded };
   const recent = [...(p.recentSales || [])];
   const ours = {};
-  for (const r of rows) (ours[gradeKeyOf(r.grader, r.grade)] ||= []).push(r);
+  for (const r of rows) (ours[gradeKey(r.grader, r.grade)] ||= []).push(r); // every spelling of a grade lands on one key
   const keys = new Set([...recent.map((d) => d.grade), ...Object.keys(ours)]);
   const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS)); // a month old counts half
   for (const key of keys) {

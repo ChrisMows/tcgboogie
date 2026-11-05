@@ -212,6 +212,7 @@ function FacetControl({ k, f, set, toggle, plan, errors, allSets, ready }) {
           <label>From <select value={f.minGrade} onChange={(e) => set("minGrade", Number(e.target.value))}>{GRADE_STEPS.map((g) => <option key={g} value={g}>{g}</option>)}</select></label>
           <label>to <select value={f.maxGrade} onChange={(e) => set("maxGrade", Number(e.target.value))}>{GRADE_STEPS.map((g) => <option key={g} value={g}>{g}</option>)}</select></label>
         </div>
+        <p className="hint" style={{ margin: "6px 0 0" }}>A 10 here is CGC 10 Gem Mint or BGS 10 Pristine. CGC 10 Pristine and BGS 10 Black Label listings aren&apos;t priced for deals yet.</p>
         <Err msg={errors.minGrade} />
       </>);
     case "condition":

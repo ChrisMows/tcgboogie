@@ -1,11 +1,12 @@
 import CardThumb from "@/components/CardThumb";
+import { gradeName } from "@/lib/collection";
 
 // A deal as a picture tile (like a store product grid). Plain component: works on server and client pages.
 // mode: "live" (auction still open), "missed" (Free: after it ended, with the sale price)
 const money = (v) => `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 export function gradeLabel(d) {
-  return d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw · ${d.condition}` : `${d.grader} ${d.grade}`;
+  return d.kind === "sealed" ? "Sealed" : d.kind === "raw" ? `Raw · ${d.condition}` : gradeName(d.grader, d.grade);
 }
 
 export default function DealTile({ deal: d, mode = "live", href, affiliate = false, sample = false, cardHref = null }) {

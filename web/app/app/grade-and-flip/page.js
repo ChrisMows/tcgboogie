@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { GradingTile } from "@/components/GradingCheck";
-import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
+import { gradeLabel } from "@/lib/collection";
+import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
 import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
 
 export const metadata = { title: "Grade & Flip" };
 
-const GRADERS = Object.keys(GRADING_COMPANIES);
 const num = (v, d, lo, hi) => { const n = Number(v); return v === undefined || v === "" || !Number.isFinite(n) ? d : Math.min(hi, Math.max(lo, n)); };
 const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 const money = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
@@ -37,11 +37,15 @@ export default async function GradingFinderPage({ searchParams }) {
   const user = await requireUser("/app/grade-and-flip");
   if (!user.plan.gradingFinder) return <UltraOnly />;
   const sp = await searchParams;
-  const grader = GRADERS.includes(sp?.grader) ? sp.grader : "PSA";
+  const target = targetId(sp?.grader);
+  const t = GRADE_TARGETS[target];
+  const { grader } = t;
   const co = GRADING_COMPANIES[grader];
+  const name = targetName(target);
+  const topShort = gradeLabel(grader, t.top), nextShort = gradeLabel(grader, t.next);
   const tier = num(sp?.tier, 0, 0, co.tiers.length - 1);
   const opts = {
-    grader, tier,
+    target, tier,
     shipping: num(sp?.ship, DEFAULT_SHIPPING, 0, 999),
     minRaw: num(sp?.min, 0, 0, 100000),
     maxRaw: sp?.max ? num(sp.max, null, 0, 100000) : null,
@@ -58,12 +62,12 @@ export default async function GradingFinderPage({ searchParams }) {
   moreParams.set("show", String(opts.limit + PAGE));
   // What the folded filters are set to, shown on their bar so the cards come first without hiding the search.
   const chosen = [
-    grader, co.tiers[tier].name,
+    name, co.tiers[tier].name,
     { english: "English", japanese: "Japanese", all: "English and Japanese" }[opts.language],
     ERAS[opts.era].label.split(/[:,]/)[0],
     opts.minRaw || opts.maxRaw !== null ? `Raw ${money(opts.minRaw)}${opts.maxRaw !== null ? ` to ${money(opts.maxRaw)}` : " and up"}` : null,
     `${money(opts.minProfit)}+ profit`,
-    opts.safeOnly ? null : `Includes cards that need a ${co.top}`,
+    opts.safeOnly ? null : `Includes cards that need a ${topShort}`,
     { score: "Best Flip Score", profit: "Most profit", return: "Best return" }[opts.sort],
   ].filter(Boolean).join(" · ");
 
@@ -83,8 +87,8 @@ export default async function GradingFinderPage({ searchParams }) {
         </summary>
       <form className="gf-filters" method="get">
         <label className="gr-field">
-          <span className="small muted">Grading company</span>
-          <select name="grader" defaultValue={grader}>{GRADERS.map((g) => <option key={g} value={g}>{g} (top grade {GRADING_COMPANIES[g].top})</option>)}</select>
+          <span className="small muted">Grading company and grade</span>
+          <select name="grader" defaultValue={target}>{Object.keys(GRADE_TARGETS).map((g) => <option key={g} value={g}>{targetName(g)}</option>)}</select>
         </label>
         <label className="gr-field">
           <span className="small muted">{grader} service level</span>
@@ -129,7 +133,7 @@ export default async function GradingFinderPage({ searchParams }) {
         <label className="gr-field">
           <span className="small muted">Risk</span>
           <select name="safe" defaultValue={opts.safeOnly ? "1" : "0"}>
-            <option value="1">Only cards where a {co.next} still pays</option><option value="0">Include cards that need a {co.top}</option>
+            <option value="1">Only cards where a {nextShort} still pays</option><option value="0">Include cards that need a {topShort}</option>
           </select>
         </label>
         <button type="submit" className="btn primary">Find cards</button>
@@ -138,12 +142,12 @@ export default async function GradingFinderPage({ searchParams }) {
 
       <div className="gr-legend small muted">
         <span className="gr-eq">
-          {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{grader} {co.top} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
+          {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{name} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
         </span>
       </div>
       <details className="gr-score-key small muted">
         <summary><span className="more-grades-icon" aria-hidden="true" />What&apos;s a Flip Score?</summary>
-        <span>A score from 1 to 10: profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {co.next} would still pay ({FLIP_POINTS.safety}) and how often the {co.top} sells ({FLIP_POINTS.demand}).</span>
+        <span>A score from 1 to 10: profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {nextShort} would still pay ({FLIP_POINTS.safety}) and how often the {topShort} sells ({FLIP_POINTS.demand}).</span>
         <span className="gr-score-tiers">
           {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}</span>)}
         </span>
@@ -165,7 +169,8 @@ export default async function GradingFinderPage({ searchParams }) {
           <div className="gr-empty-icon" aria-hidden="true">🔎</div>
           <div className="gr-empty-text">
             <b>Nothing matches yet</b>
-            <span className="muted">Try a lower profit, a higher raw price limit, including cards that need a {co.top}, or another grading company.</span>
+            <span className="muted">Try a lower profit, a higher raw price limit, including cards that need a {topShort}, or another grading company or grade.</span>
+            {t.sales && <span className="muted small">{name} prices come from our own tracked eBay sales (2 or more in the last 90 days), so this list is short by nature.</span>}
           </div>
         </div>
       )}

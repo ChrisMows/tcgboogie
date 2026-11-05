@@ -15,6 +15,7 @@ import { effectivePlans, planGroups, trialDays, ULTRA_PERKS } from "@/lib/plan-c
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { saleLine } from "@/lib/deal-outcome";
 import "./home.css";
+import { gradeName } from "@/lib/collection";
 
 // Shown until the deal bot has caught enough real deals (see homeShowcase), clearly labeled as examples.
 const EXAMPLES = [
@@ -63,7 +64,7 @@ const daysAgo = (iso) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   return d < 1 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
 };
-const dealTag = (d) => (d.kind === "sealed" ? "SEALED" : d.kind === "raw" ? `RAW · ${String(d.condition || "NM").toUpperCase()}` : `GRADED · ${d.grader} ${d.grade}`);
+const dealTag = (d) => (d.kind === "sealed" ? "SEALED" : d.kind === "raw" ? `RAW · ${String(d.condition || "NM").toUpperCase()}` : `GRADED · ${gradeName(d.grader, d.grade)}`);
 
 /** The homepage Trade Analyzer, in miniature: a static example. */
 function TradeDemo() {
