@@ -2,7 +2,7 @@ import Link from "next/link";
 import GradeFlipFilters from "@/components/GradeFlipFilters";
 import { GradingTile } from "@/components/GradingCheck";
 import { gradeLabel } from "@/lib/collection";
-import { DEFAULT_SHIPPING, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_POINTS, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
 import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
@@ -49,7 +49,7 @@ export default async function GradingFinderPage({ searchParams }) {
   const { grader } = t;
   const co = GRADING_COMPANIES[grader];
   const name = targetName(target);
-  const topShort = gradeLabel(grader, t.top), nextShort = gradeLabel(grader, t.next);
+  const topShort = gradeLabel(grader, t.top);
   const tier = num(sp?.tier, 0, 0, co.tiers.length - 1);
   const opts = {
     target, tier,
@@ -106,14 +106,10 @@ export default async function GradingFinderPage({ searchParams }) {
         <span className="gr-eq">
           {total ? <><b>{total.toLocaleString("en-US")} {total === 1 ? "card" : "cards"}</b> found</> : "No cards found"} · profit = <b>{name} price</b> − <b>raw price</b> − <b>{fee(co.tiers[tier].fee)} grading + {money(opts.shipping)} shipping</b>
         </span>
-      </div>
-      <details className="gr-score-key small muted">
-        <summary><span className="more-grades-icon" aria-hidden="true" />What&apos;s a Flip Score?</summary>
-        <span>A score from 1 to 10: profit (up to {FLIP_POINTS.profit} points), return on what you spend ({FLIP_POINTS.return}), what a {nextShort} would still pay ({FLIP_POINTS.safety}) and how often the {topShort} sells ({FLIP_POINTS.demand}).</span>
-        <span className="gr-score-tiers">
-          {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`}><i aria-hidden="true" />{t.label} {i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}</span>)}
+        <span className="gr-score-tiers" aria-label="Flip Score colors">
+          {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`} title={`Flip Score ${i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}`}><i aria-hidden="true" />{t.label}</span>)}
         </span>
-      </details>
+      </div>
 
       {fresh.length > 0 && (
         <section className="gf-new">

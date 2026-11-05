@@ -1442,14 +1442,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-score-label .muted { font-size: 11px; }
 .gr-score-bar { display: block; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
 .gr-score-bar i { display: block; height: 100%; border-radius: 3px; background: var(--tier); }
-.gr-score-key { margin: 0 2px 14px; }
-.gr-score-key > span { display: block; margin-top: 8px; }
-.gr-score-key summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
-.gr-score-key summary::-webkit-details-marker { display: none; }
-.gr-score-key summary:hover { color: var(--accent); }
-.gr-score-key .more-grades-icon::before { width: 18px; height: 18px; font-size: 13px; }
-.gr-score-key[open] .more-grades-icon::before { content: "−"; }
-.gr-score-key > .gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-left: auto; }
+@media (max-width: 900px) { .gr-score-tiers { margin-left: 0; } }
 .gr-score-chip { display: inline-flex; align-items: center; gap: 6px; }
 .gr-score-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); }
 @media (max-width: 600px) { .gf-filters .gr-field:not(.gr-small) { flex: 1 1 100%; } .gf-filters .gr-field select { width: 100%; } }
