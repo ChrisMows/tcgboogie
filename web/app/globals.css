@@ -1421,7 +1421,10 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gf-filter-box[open] .more-grades-icon::before { content: "−"; }
 .gf-filter-box summary:hover .more-grades-icon::before { color: var(--accent); border-color: var(--accent); }
 .gf-filter-sum { display: grid; gap: 2px; min-width: 0; }
-.gf-filters .btn { margin-left: auto; }
+.gf-quick { margin-top: 0; }
+@media (min-width: 900px) { .gf-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; } }
+.gf-details { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.gf-details[hidden] { display: none; }
 /* Grade & Flip's Flip Score */
 .gr-score, .gr-score-chip { --tier: var(--muted); }
 .gr-score.excellent, .gr-score-chip.excellent { --tier: var(--accent); }
@@ -1449,7 +1452,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gr-score-key > .gr-score-tiers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .gr-score-chip { display: inline-flex; align-items: center; gap: 6px; }
 .gr-score-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); }
-@media (max-width: 600px) { .gf-filters .gr-field:not(.gr-small) { flex: 1 1 100%; } .gf-filters .gr-field select { width: 100%; } .gf-filters .btn { width: 100%; } }
+@media (max-width: 600px) { .gf-filters .gr-field:not(.gr-small) { flex: 1 1 100%; } .gf-filters .gr-field select { width: 100%; } }
 .gr-skip { margin-top: 16px; display: grid; gap: 12px; justify-items: start; }
 .gr-skip .gr-grid { width: 100%; }
 @media (max-width: 600px) {
