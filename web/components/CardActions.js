@@ -2,7 +2,7 @@
 
 import { revealCard } from "@/lib/reveal";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
@@ -41,15 +41,38 @@ export function CardAlertIcons({ watch, deals = false, dealFilter = false, wishe
   );
 }
 
+/** While `open`: a click outside `keep` (a CSS selector) or Esc calls onClose. For the pop-ups in the collection box. */
+function useCloseOutside(open, keep, onClose) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const down = (e) => { if (!e.target.closest?.(keep)) onClose(); };
+    const key = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", down);
+    document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", down); document.removeEventListener("keydown", key); };
+  }, [open, keep, onClose]);
+}
+
+/** Fits a pop-up on screen without moving the page: below its button if there's room, else above, scrolling inside itself. */
+const showPop = (el) => {
+  if (!el) return;
+  const at = el.parentElement.getBoundingClientRect();
+  const below = window.innerHeight - at.bottom - (window.innerWidth <= 860 ? 96 : 22); // phones: clear of the bottom tabs
+  const above = at.top - 90; // clear of the site header
+  const up = below < 420 && above > below;
+  el.classList.toggle("up", up);
+  el.style.maxHeight = `${Math.max(280, Math.min(620, up ? above : below))}px`;
+};
+
 const Err = ({ msg }) => (msg ? <div className="err">{msg}</div> : null);
 
 /** A copy's name in the box: "PSA 10", "Raw · Near Mint", "Sealed". */
 const copyName = (it) => (it.kind === "graded" ? gradeName(it.grader, it.grade) : it.kind === "sealed" ? "Sealed" : `Raw · ${it.condition || "Near Mint"}`);
 
 /**
- * The chosen copy's details under the table, with Delete and Save changes. A copy with no market price takes the member's
- * own value, so its details start open; a market price always takes over from it (lib/collection.js). Quantity isn't here:
- * the steppers in the table save as they're tapped.
+ * The chosen copy's details, in a pop-up over the page, with Delete and Save changes. A copy with no market price takes the
+ * member's own value, set here too; a market price always takes over from it (lib/collection.js). Quantity isn't here: the
+ * steppers in the table save as they're tapped.
  */
 function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, open, onToggle }) {
   const isCard = product.type === "card";
@@ -66,13 +89,21 @@ function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, 
   const sameCopy = ["kind", "printing", "condition", "grader", "grade"].every((k) => start[k] === d[k]);
   const market = sameCopy ? it.unitValue ?? null : marketValue(product, d);
   const gradedKeys = Object.keys(product.graded || {});
+  useCloseOutside(open, ".own-more, .own-edit, .tour-pop, .tour-center", () => onToggle(false)); // the guided tour points into this pop-up
   return (
     <form className="own-copy" onSubmit={(e) => { e.preventDefault(); onSave({ ...d, quantity: it.quantity }); }}>
-      <details className="own-more" open={open || market === null} onToggle={(e) => onToggle(e.currentTarget.open)}>
-        <summary data-tour="item-edit">
+      <div className="own-more">
+        <button type="button" className="own-more-btn" data-tour="item-edit" aria-expanded={open} onClick={() => onToggle(!open)}>
           {isCard ? "Purchase details & notes" : "Details & notes"}
           <span className="own-more-arrow" aria-hidden="true" />
-        </summary>
+        </button>
+        {market === null && !open && <p className="own-note">No market price yet. Set your own value here.</p>}
+        {open && (
+        <div className="own-pop" role="dialog" aria-label={`Details for ${copyName(it)}`} ref={showPop}>
+        <div className="own-pop-head">
+          <b>{copyName(it)}</b>
+          <button type="button" className="own-pop-close" aria-label="Close" onClick={() => onToggle(false)}>✕</button>
+        </div>
         {market === null && <p className="own-note">No market price yet. Set your own value below.</p>}
         <div className="form-grid own-more-body">
           {market === null && (
@@ -154,8 +185,14 @@ function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, 
             <input id={`own-notes-${it.id}`} type="text" maxLength={300} value={d.notes} onChange={set("notes")} placeholder="e.g. pulled from a booster box, centering 55/45" />
           </div>
         </div>
-      </details>
-      <Err msg={errors._} />
+        <div className="own-pop-foot">
+          <Err msg={errors._} />
+          <button className="btn primary" disabled={pending || !dirty}>{pending ? "Saving..." : "Save changes"}</button>
+        </div>
+        </div>
+        )}
+      </div>
+      {!open && <Err msg={errors._} />}
       <Err msg={errors.quantity} />
       <div className="own-actions">
         <button type="button" className="btn own-remove" disabled={pending} onClick={onDelete}>Delete</button>
@@ -169,7 +206,6 @@ function CopyDetails({ it, product, binders, pending, errors, onSave, onDelete, 
 export default function CardActions({ product, mine, binders, watch, plan, price = null, dealFilter = false, filterHref = "/app/deals" }) {
   const router = useRouter();
   const [panel, setPanel] = useState(null); // "add" | null
-  const panelRef = useRef(null);
   const alertRef = useRef(null); // the price alert pop-up (a native <dialog>)
   const [alertError, setAlertError] = useState(null);
   const openAlert = () => { setAlertError(null); alertRef.current?.showModal(); };
@@ -177,7 +213,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
   const [dealError, setDealError] = useState(null);
   const openDeal = () => { setDealError(null); dealRef.current?.showModal(); };
   useEffect(() => {
-    const open = () => { setPanel("add"); setTimeout(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
+    const open = () => setPanel("add");
     window.addEventListener("tcgb:add-card", open);
     window.addEventListener("tcgb:price-alert", openAlert);
     window.addEventListener("tcgb:deal-alert", openDeal);
@@ -191,6 +227,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
   const confirmRef = useRef(null);
   useEffect(() => { if (confirm) confirmRef.current?.showModal(); }, [confirm]);
   const [errors, setErrors] = useState({});
+  useCloseOutside(panel === "add", ".own-add-wrap", useCallback(() => setPanel(null), []));
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const owned = mine.filter((it) => it.list === "owned");
@@ -213,7 +250,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
     return () => window.removeEventListener("tcgb:wishlist", toggle);
   });
 
-  const run = (fn, msg, action) => start(async () => {
+  const run = (fn, msg, action, done) => start(async () => {
     const r = await fn();
     if (r?.ok === false) {
       if (r.errors) return setErrors(r.errors);
@@ -222,21 +259,32 @@ export default function CardActions({ product, mine, binders, watch, plan, price
     setErrors({});
     if (r?.reveal) revealCard(r.reveal);
     if (msg) show(typeof msg === "function" ? msg(r) : msg, action);
+    done?.();
     router.refresh();
   });
 
   const closeConfirm = () => { confirmRef.current?.close(); setConfirm(null); };
-  const addForm = panel === "add" && (
-    <div className="action-panel" ref={panelRef}>
-      <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
-        <b style={{ flex: "none" }}>Add to your collection</b>
-        <button type="button" className="link-btn small" style={{ flex: "none" }} disabled={pending}
-          onClick={() => run(() => quickAdd(product.id), product.type === "card" ? "Added a Near Mint copy." : "Added.")}>
-          Just add one {product.type === "card" ? "Near Mint " : ""}copy →
-        </button>
-      </div>
-      <ItemForm product={product} binders={binders} pending={pending} errors={errors}
-        onSubmit={(input) => run(() => addItem(product.id, input), input.list === "wishlist" ? "Added to your wishlist." : (r) => `Added${r.value ? ` · worth ${money(r.value * (input.quantity || 1))}` : ""}`)} />
+  const closeAdd = () => setPanel(null);
+  // "+ Add a copy" or "+ Add to collection", with its form in a pop-up over the page.
+  const addButton = (label) => (
+    <div className="own-add-wrap">
+      <button type="button" className="btn primary own-add" aria-expanded={panel === "add"} onClick={() => setPanel(panel === "add" ? null : "add")}>{label}</button>
+      {panel === "add" && (
+        <div className="own-pop" role="dialog" aria-label="Add to your collection" ref={showPop}>
+          <div className="own-pop-head">
+            <b>Add to your collection</b>
+            <button type="button" className="own-pop-close" aria-label="Close" onClick={closeAdd}>✕</button>
+          </div>
+          <div className="own-more-body">
+            <button type="button" className="link-btn small own-pop-quick" disabled={pending}
+              onClick={() => run(() => quickAdd(product.id), product.type === "card" ? "Added a Near Mint copy." : "Added.", null, closeAdd)}>
+              Just add one {product.type === "card" ? "Near Mint " : ""}copy →
+            </button>
+            <ItemForm product={product} binders={binders} pending={pending} errors={errors}
+              onSubmit={(input) => run(() => addItem(product.id, input), input.list === "wishlist" ? "Added to your wishlist." : (r) => `Added${r.value ? ` · worth ${money(r.value * (input.quantity || 1))}` : ""}`, null, closeAdd)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -280,12 +328,11 @@ export default function CardActions({ product, mine, binders, watch, plan, price
                 );
               })}
             </div>
-            <button type="button" className="btn primary own-add" aria-expanded={panel === "add"} onClick={() => setPanel(panel === "add" ? null : "add")}>+ Add a copy</button>
-            {addForm}
+            {addButton("+ Add a copy")}
             {owned.length > 1 && active && <p className="own-note own-editing">Details below are for <b>{copyName(active)}</b>. Tap a pencil to switch.</p>}
             {active && (
               <CopyDetails key={active.id} it={active} product={product} binders={binders} pending={pending} errors={errors} open={detailsOpen} onToggle={setDetailsOpen}
-                onSave={(input) => run(() => editItem(active.id, input), "Saved.")} onDelete={() => setConfirm({ id: active.id, name: copyName(active), quantity: active.quantity })} />
+                onSave={(input) => run(() => editItem(active.id, input), "Saved.", null, () => setDetailsOpen(false))} onDelete={() => setConfirm({ id: active.id, name: copyName(active), quantity: active.quantity })} />
             )}
           </>
         ) : wish ? (
@@ -296,8 +343,7 @@ export default function CardActions({ product, mine, binders, watch, plan, price
         ) : (
           <>
             <p className="own-note">Not in your collection yet.</p>
-            <button type="button" className="btn primary own-add" aria-expanded={panel === "add"} onClick={() => setPanel(panel === "add" ? null : "add")}>+ Add to collection</button>
-            {addForm}
+            {addButton("+ Add to collection")}
           </>
         )}
       </div>
