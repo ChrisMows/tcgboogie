@@ -1,8 +1,8 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
-import { GRADING_COMPANIES, flipScore, gradingMath } from "@/lib/grading";
+import { GRADING_COMPANIES, flipScore, gapStateOn, gapTrail, gradingMath } from "@/lib/grading";
 
 // Grade & Flip (Premium): cards anywhere in the catalog, not just the member's own, whose raw Near Mint price is far
 // under what the same card sells for graded. Built only from price-service answers we already saved (catalog_cache:
@@ -13,6 +13,8 @@ import { GRADING_COMPANIES, flipScore, gradingMath } from "@/lib/grading";
 const { gradingGap, catalogCache, appSettings } = schema;
 const WATERMARK = "grading_gap_watermark"; // fetched_at of the last saved answer copied in
 const BATCH = 500;
+export const NEW_DAYS = 7; // "New to your list": passes the filters now but didn't this many days ago
+const NEW_SHOWN = 12;
 const keyOf = (grader, grade) => `${grader.toLowerCase()}${grade.replace(".", "_")}`;
 // The grades the finder uses (each grader's top grade and the one below): the only ones copied out.
 const GRADE_KEYS = Object.entries(GRADING_COMPANIES).flatMap(([g, co]) => [keyOf(g, co.top), keyOf(g, co.next)]);
@@ -56,12 +58,21 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       order by ${catalogCache.fetchedAt} limit ${BATCH}`);
     if (!rows.length) break;
     seen += rows.length;
-    const values = rows.map(toRow).filter(Boolean);
-    if (values.length) {
+    const fresh = rows.map(toRow).filter(Boolean);
+    if (fresh.length) {
+      // What each card looked like before this update, for its trail ("New to your list"). A card not here yet is new.
+      const before = await db.select({ productId: gradingGap.productId, language: gradingGap.language, raw: gradingGap.raw, graded: gradingGap.graded, trail: gradingGap.trail, sourceAt: gradingGap.sourceAt })
+        .from(gradingGap).where(inArray(gradingGap.productId, [...new Set(fresh.map((v) => v.productId))]));
+      const known = new Map(before.map((o) => [`${o.productId}:${o.language}`, o]));
+      const today = new Date().toISOString().slice(0, 10);
+      const values = fresh.map((v) => {
+        const old = known.get(`${v.productId}:${v.language}`);
+        return { ...v, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, v, today) : [] }; // firstSeen is only written on a first insert
+      });
       await db.insert(gradingGap).values(values).onConflictDoUpdate({
         target: [gradingGap.productId, gradingGap.language],
         set: { name: sql`excluded.name`, setName: sql`excluded.set_name`, number: sql`excluded.number`, image: sql`excluded.image`,
-          printing: sql`excluded.printing`, raw: sql`excluded.raw`, graded: sql`excluded.graded`, sourceAt: sql`excluded.source_at`, updatedAt: new Date() },
+          printing: sql`excluded.printing`, raw: sql`excluded.raw`, graded: sql`excluded.graded`, sourceAt: sql`excluded.source_at`, trail: sql`excluded.trail`, updatedAt: new Date() },
       });
       copied += values.length;
     }
@@ -110,11 +121,14 @@ function candidate(r) {
 
 // Demo mode (no database): the sample catalog, so the page can be tried locally.
 function demoRows() {
-  return allSampleCards().map((p) => {
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return allSampleCards().map((p, i) => {
     const printing = Object.keys(p.prices)[0];
     const raw = p.prices[printing]?.["Near Mint"]?.market;
     const graded = Object.fromEntries(Object.entries(p.graded || {}).map(([k, g]) => [k, { p: g.price, n: g.sales, r: g.reliable !== false }]));
-    return raw && { productId: p.id, language: "english", name: p.name, setName: p.setName, number: p.number, image: p.image, printing, raw, graded };
+    // A few sample cards "got cheaper yesterday" or "just joined", so the New to your list section can be seen.
+    const trail = raw && i % 4 === 1 ? [{ d: yesterday, raw: raw * 20, g: graded }] : [];
+    return raw && { productId: p.id, language: "english", name: p.name, setName: p.setName, number: p.number, image: p.image, printing, raw, graded, trail, firstSeen: i % 4 === 2 ? new Date() : null };
   }).filter(Boolean);
 }
 
@@ -140,7 +154,8 @@ const plausible = (c) => c.top <= TOP_X_RAW * c.raw && (c.next === null || (c.to
  * Cards worth grading at a grader and service level, best first. opts: grader, tier (service level index), own (own
  * fee instead), shipping, minRaw / maxRaw (what the raw copy costs), minProfit, safeOnly (the grade below the top still
  * pays), language ("english" / "japanese" / "all"), era (ERAS key, "modern" by default), sort ("score" / "profit" / "return"), limit.
- * Returns { cards, total } (total: how many qualify before the limit).
+ * Returns { cards, fresh, total, remaining }: fresh is "New to your list", cards that pass these filters now but didn't
+ * NEW_DAYS ago (best first, not repeated in cards); total is how many qualify; remaining how many are past the limit.
  */
 export async function findGradingGaps(opts = {}) {
   const { grader = "PSA", tier = 0, own = null, shipping = 5, minRaw = 0, maxRaw = null, minProfit = 25, safeOnly = false,
@@ -178,14 +193,38 @@ export async function findGradingGaps(opts = {}) {
     rows = await db.select().from(gradingGap).where(sql.join(where, sql` and `))
       .orderBy(sql`${top} - ${gradingGap.raw} desc`).limit(600);
   }
-  const cards = rows.map(candidate).map((c) => {
+  /** A row worked out for these filters, or null when it doesn't pass them. */
+  const judge = (r) => {
+    const c = candidate(r);
     const m = gradingMath(c, grader, tier, { own, shipping });
-    return m && { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[grader].topSales) };
-  }).filter((c) => c && plausible(c) && c.verdict !== "skip" && c.profit10 >= minProfit && (!safeOnly || c.verdict === "safe")
-    && c.raw >= minRaw && (maxRaw === null || c.raw <= maxRaw));
+    if (!m) return null;
+    const card = { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[grader].topSales) };
+    return plausible(card) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
+      && card.raw >= minRaw && (maxRaw === null || card.raw <= maxRaw) ? card : null;
+  };
+  const since = new Date(Date.now() - NEW_DAYS * 86400000).toISOString().slice(0, 10);
+  const whole = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
+  /** Why this card is new to the list, or null when it would have passed the same filters NEW_DAYS ago too. */
+  const newBecause = (r, card) => {
+    if (r.firstSeen && new Date(r.firstSeen).toISOString().slice(0, 10) >= since) return "Just added";
+    const then = gapStateOn(r, since);
+    if (!then || judge(then)) return null;
+    const was = candidate(then).grades[grader];
+    if (then.raw > card.raw) return `Raw down from ${whole(then.raw)}`;
+    if (!was.top) return `New ${grader} ${co.top} sales`;
+    if (card.top > was.top) return `${grader} ${co.top} up from ${whole(was.top)}`;
+    if (card.next !== null && was.next !== null && card.next > was.next) return `${grader} ${co.next} up from ${whole(was.next)}`;
+    return "Now qualifies";
+  };
+  const cards = rows.map((r) => {
+    const card = judge(r);
+    return card && { ...card, fresh: newBecause(r, card) };
+  }).filter(Boolean);
   cards.sort(sort === "return" ? (a, b) => b.roi - a.roi : sort === "profit" ? (a, b) => b.profit10 - a.profit10
     : (a, b) => b.flip.score - a.flip.score || b.profit10 - a.profit10);
-  return { cards: cards.slice(0, limit), total: cards.length, capped: rows.length === 600 };
+  const fresh = cards.filter((c) => c.fresh).slice(0, NEW_SHOWN);
+  const rest = cards.filter((c) => !fresh.includes(c));
+  return { cards: rest.slice(0, limit), fresh, total: cards.length, remaining: Math.max(0, rest.length - limit), capped: rows.length === 600 };
 }
 
 /** How many cards the finder can check (Admin and the page footnote). */

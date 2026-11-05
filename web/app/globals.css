@@ -294,6 +294,12 @@ details.faq p { color: #c9d1dd; margin: 10px 0 0; }
 .chg-day { font-size: 12px; font-weight: 600; color: var(--muted); }
 .chg-day.up { color: var(--accent); }
 .chg-day.down { color: var(--bad); }
+.gf-new { margin-top: 14px; }
+.gf-new h2 { margin: 0; font-size: 18px; }
+.gf-new .gr-grid { margin-top: 10px; }
+.gf-new .gf-all-head { margin: 20px 0 10px; }
+.gr-fresh { align-self: flex-start; margin: 3px 0; }
+.gf-more { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin: 16px 0; }
 .movers-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
 .movers-tools select { width: auto; }
 .movers-total { margin-left: auto; font-weight: 600; }

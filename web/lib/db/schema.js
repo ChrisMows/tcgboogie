@@ -501,4 +501,6 @@ export const gradingGap = pgTable("grading_gap", {
   graded: jsonb("graded").notNull(), // { psa10: { p: price, n: recent sales, r: reliable }, ... }
   sourceAt: timestamp("source_at", { mode: "date" }).notNull(), // when the saved price-service answer was fetched
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  firstSeen: timestamp("first_seen", { mode: "date" }), // when this card joined the table (null: before this was tracked)
+  trail: jsonb("trail"), // its recent real price changes, oldest first, for "New to your list" (lib/grading.js gapTrail)
 }, (t) => [primaryKey({ columns: [t.productId, t.language] }), index("grading_gap_source_at").on(t.sourceAt)]);

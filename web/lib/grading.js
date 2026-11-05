@@ -80,6 +80,31 @@ export function flipScore({ raw, cost, profit10, profit9 }, topSales) {
   return { score, tier: FLIP_TIERS.find((t) => score >= t.min), parts };
 }
 
+// A card's recent price changes in grading_gap, so Grade & Flip can tell what it looked like a week ago. Everyday wiggle
+// isn't recorded (a raw move under 5%, a graded move under 2%), which keeps rows small and stops cards flickering in and
+// out of "new" over a few cents. Each entry is the card's state as last seen on day d.
+export const TRAIL_DAYS = 8;
+const barelyMoved = (a, b, share) => Math.abs((a || 0) - (b || 0)) < share * Math.max(a || 0, b || 0);
+const gradedMoved = (a, b) => [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])]
+  .some((k) => Boolean(a?.[k]?.r) !== Boolean(b?.[k]?.r) || !barelyMoved(a?.[k]?.p, b?.[k]?.p, 0.02));
+
+/** The trail to save when a card goes from `old` ({ raw, graded, trail, sourceAt }) to `next` ({ raw, graded }). today: "YYYY-MM-DD". */
+export function gapTrail(old, next, today) {
+  const cutoff = new Date(`${today}T12:00:00Z`).getTime() - TRAIL_DAYS * 86400000;
+  const trail = (Array.isArray(old.trail) ? old.trail : []).filter((e) => new Date(`${e.d}T12:00:00Z`).getTime() >= cutoff);
+  if (barelyMoved(old.raw, next.raw, 0.05) && !gradedMoved(old.graded, next.graded)) return trail;
+  const d = new Date(old.sourceAt).toISOString().slice(0, 10);
+  if (trail[trail.length - 1]?.d === d) return trail; // two changes in a day: the earlier state is the one to keep
+  const g = Object.fromEntries(Object.entries(old.graded || {}).map(([k, v]) => [k, { p: v.p, r: v.r }]));
+  return [...trail, { d, raw: old.raw, g }];
+}
+
+/** A grading_gap row as it stood on `day`, or null when it hasn't really changed since. */
+export function gapStateOn(row, day) {
+  const e = (Array.isArray(row.trail) ? row.trail : []).find((x) => x.d >= day);
+  return e ? { ...row, raw: e.raw, graded: e.g } : null;
+}
+
 const keyOf = (grader, grade) => `${grader.toLowerCase()}${grade.replace(".", "_")}`;
 const reliable = (g) => (g && g.reliable !== false && g.price ? g.price : null);
 

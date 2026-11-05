@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GradingTile } from "@/components/GradingCheck";
 import { DEFAULT_SHIPPING, FLIP_POINTS, FLIP_TIERS, GRADING_COMPANIES, MIN_PROFIT } from "@/lib/grading";
-import { ERAS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
+import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
 
@@ -11,6 +11,7 @@ const GRADERS = Object.keys(GRADING_COMPANIES);
 const num = (v, d, lo, hi) => { const n = Number(v); return v === undefined || v === "" || !Number.isFinite(n) ? d : Math.min(hi, Math.max(lo, n)); };
 const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 const money = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
+const PAGE = 60; // cards shown at first, and how many Load more adds
 
 /** What members on other plans see: no cards, just what Ultra is. */
 function UltraOnly() {
@@ -49,9 +50,12 @@ export default async function GradingFinderPage({ searchParams }) {
     language: ["english", "japanese", "all"].includes(sp?.lang) ? sp.lang : "english",
     era: ERAS[sp?.era] ? sp.era : "modern", // vintage rarely grades a 10, so modern comes first
     sort: ["profit", "return"].includes(sp?.sort) ? sp.sort : "score",
-    limit: 60,
+    limit: Math.round(num(sp?.show, PAGE, PAGE, 600)),
   };
-  const [{ cards, total }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
+  const [{ cards, fresh, total, remaining }, checked] = await Promise.all([findGradingGaps(opts), gradingGapCount()]);
+  // Load more: the same search with room for another page of cards.
+  const moreParams = new URLSearchParams(Object.entries(sp || {}).filter(([k, v]) => k !== "show" && typeof v === "string"));
+  moreParams.set("show", String(opts.limit + PAGE));
   // What the folded filters are set to, shown on their bar so the cards come first without hiding the search.
   const chosen = [
     grader, co.tiers[tier].name,
@@ -145,9 +149,18 @@ export default async function GradingFinderPage({ searchParams }) {
         </span>
       </details>
 
+      {fresh.length > 0 && (
+        <section className="gf-new">
+          <h2>✨ New to your list</h2>
+          <p className="small muted">Cards that pass your filters now but didn&apos;t {NEW_DAYS} days ago.</p>
+          <div className="gr-grid">{fresh.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
+          {cards.length > 0 && <h2 className="gf-all-head">All matches</h2>}
+        </section>
+      )}
+
       {cards.length > 0 ? (
         <div className="gr-grid">{cards.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
-      ) : (
+      ) : fresh.length > 0 ? null : (
         <div className="panel gr-empty">
           <div className="gr-empty-icon" aria-hidden="true">🔎</div>
           <div className="gr-empty-text">
@@ -156,10 +169,15 @@ export default async function GradingFinderPage({ searchParams }) {
           </div>
         </div>
       )}
-      {total > cards.length && <p className="hint">Showing the top {cards.length}. Narrow the raw price or raise the profit to see others.</p>}
+      {remaining > 0 && opts.limit < 600 && (
+        <div className="gf-more">
+          <Link href={`?${moreParams}`} scroll={false} prefetch={false} className="btn">Load {Math.min(PAGE, remaining)} more</Link>
+          <span className="small muted">{remaining.toLocaleString("en-US")} more {remaining === 1 ? "card matches" : "cards match"}</span>
+        </div>
+      )}
 
       <p className="hint">
-        We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated daily.
+        We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated regularly.
         Graded prices are recent sales with enough data to trust; raw prices are TCGplayer Near Mint market. Grading fees are
         the graders&apos; published prices as of October 2026, and a card worth more than a level allows is priced at the level it
         needs. Older cards rarely come back a 10 (decades of handling, older printing), which is why we start on modern. No grade is guaranteed: check centering, corners, edges and surface before you buy, and raw copies sold as

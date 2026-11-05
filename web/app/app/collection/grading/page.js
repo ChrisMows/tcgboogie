@@ -20,7 +20,8 @@ export default async function GradingPage() {
   const candidates = gradingCandidates(c.owned, c.products);
   const rawCards = new Set(c.owned.filter((it) => it.kind === "raw" && it.productType === "card" && it.condition === "Near Mint").map((it) => `${it.productId}:${it.printing || ""}`)).size;
   const ultra = Boolean(user.plan.gradingFinder);
-  const best = finder.cards[0];
+  // New cards are listed apart from the rest, so the best one may be in either list.
+  const best = [...(finder.fresh || []), ...finder.cards].sort((a, b) => b.flip.score - a.flip.score || b.profit10 - a.profit10)[0];
   return (
     <>
       <div className="crumbs"><Link href="/app/collection">Collection</Link> / Worth grading?</div>

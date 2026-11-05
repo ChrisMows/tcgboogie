@@ -45,6 +45,7 @@ export function GradingTile({ c, dim }) {
       <div className="gr-body">
         <b className="gr-name" title={c.name}>{c.name.replace(/\s*\(.*\)$/, "")}</b>
         <span className="small muted gr-set">{c.setName}{c.number ? ` · ${c.number.split("/")[0]}` : ""}{c.language === "japanese" ? " · Japanese" : ""}</span>
+        {c.fresh && <span className="badge accent gr-fresh">{c.fresh}</span>}
         <div className={`gr-profit ${c.profit10 >= 0 ? "up" : "down"}`}>{plus(c.profit10)}</div>
         <span className="small muted">profit as a {top}</span>
         <div className="gr-flow" aria-label={`Raw ${money(c.raw)}, ${top} ${money(c.top)}${c.next !== null ? `, ${next} ${money(c.next)}` : ""}`}>
