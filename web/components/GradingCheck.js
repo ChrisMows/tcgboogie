@@ -36,11 +36,11 @@ function FlipScore({ c, top, next }) {
   );
 }
 
-/** One card's grading numbers (also used by Grade & Flip, app/app/grade-and-flip/page.js). */
-export function GradingTile({ c, dim }) {
+/** One card's grading numbers (also used by Grade & Flip, app/app/grade-and-flip/page.js). href: where it opens, the card page by default. */
+export function GradingTile({ c, dim, href }) {
   const top = c.topName, next = c.nextName;
   return (
-    <Link href={`/app/cards/${encodeURIComponent(c.productId)}${c.language === "japanese" ? "?lang=japanese" : ""}`} className={`gr-tile ${dim ? "dim" : ""}`}>
+    <Link href={href || `/app/cards/${encodeURIComponent(c.productId)}${c.language === "japanese" ? "?lang=japanese" : ""}`} className={`gr-tile ${dim ? "dim" : ""}`}>
       <div className="gr-art"><CardThumb item={c} width={92} />{c.copies > 1 && <span className="qty-badge">×{c.copies}</span>}</div>
       <div className="gr-body">
         <b className="gr-name" title={c.name}>{c.name.replace(/\s*\(.*\)$/, "")}</b>

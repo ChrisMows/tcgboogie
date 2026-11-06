@@ -70,6 +70,10 @@ export default async function GradingFinderPage({ searchParams }) {
   // + New filter starts from the search on screen.
   const newParams = new URLSearchParams(FLIP_FILTER_FIELDS.filter((k) => typeof sp?.[k] === "string" && sp[k]).map((k) => [k, sp[k]]));
   newParams.set("new", "1");
+  // A card opens its own page, starting from this search's choices and able to come back to it.
+  const backTo = new URLSearchParams(Object.entries(query || {}).filter(([, v]) => typeof v === "string"));
+  const flipLink = (c) => `/app/grade-and-flip/${encodeURIComponent(c.productId)}?${new URLSearchParams({
+    t: target, tier: String(tier), ship: String(opts.shipping), ...(c.language === "japanese" ? { jp: "1" } : {}), from: backTo.toString() })}`;
   // What the filters are set to, including anything folded under More options.
   const chosen = [
     name, co.tiers[tier].name,
@@ -115,13 +119,13 @@ export default async function GradingFinderPage({ searchParams }) {
         <section className="gf-new">
           <h2>✨ New to your list</h2>
           <p className="small muted">Cards that pass your filters now but didn&apos;t {NEW_DAYS} days ago.</p>
-          <div className="gr-grid">{fresh.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
+          <div className="gr-grid">{fresh.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} href={flipLink(c)} />)}</div>
           {cards.length > 0 && <h2 className="gf-all-head">All matches</h2>}
         </section>
       )}
 
       {cards.length > 0 ? (
-        <div className="gr-grid">{cards.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} />)}</div>
+        <div className="gr-grid">{cards.map((c) => <GradingTile key={`${c.productId}:${c.language}`} c={c} href={flipLink(c)} />)}</div>
       ) : fresh.length > 0 ? null : (
         <div className="panel gr-empty">
           <div className="gr-empty-icon" aria-hidden="true">🔎</div>

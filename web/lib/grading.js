@@ -75,7 +75,7 @@ export const FLIP_TIERS = [
   { key: "fair", label: "Fair", min: 3.5 },
   { key: "long", label: "Long shot", min: 0 },
 ];
-const THIN_SALES = 5; // fewer top-grade sales than this in 90 days can't score Excellent: the price rests on too little
+export const THIN_SALES = 5; // fewer top-grade sales than this in 90 days can't score Excellent: the price rests on too little
 const tenth = (v) => Math.round(v * 10) / 10;
 const scale = (v, lo, hi) => Math.max(0, Math.min(1, Math.log(Math.max(v, 1e-9) / lo) / Math.log(hi / lo))); // on a log scale, so $100 to $200 counts as much as $1,000 to $2,000
 

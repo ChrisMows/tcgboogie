@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { allSampleCards, fromCard, gradedReliable, listSets } from "@/lib/catalog";
 import { db, schema } from "@/lib/db";
 import { gradeKey, splitTen } from "@/lib/collection";
@@ -123,7 +123,7 @@ function candidate(r) {
   const grades = {};
   for (const [id, t] of Object.entries(GRADE_TARGETS)) {
     const top = r.graded[gradeKey(t.grader, t.top)], next = r.graded[gradeKey(t.grader, t.next)];
-    grades[id] = { top: top?.r ? top.p : null, next: next?.r ? next.p : null, topSales: top?.r ? top.n : null };
+    grades[id] = { top: top?.r ? top.p : null, next: next?.r ? next.p : null, topSales: top?.r ? top.n : null, nextSales: next?.r ? next.n : null };
   }
   return { productId: r.productId, language: r.language, name: r.name, setName: r.setName, number: r.number, image: r.image,
     printing: r.printing, copies: 1, raw: r.raw, grades };
@@ -239,6 +239,21 @@ export async function findGradingGaps(opts = {}) {
   const fresh = cards.filter((c) => c.fresh).slice(0, NEW_SHOWN);
   const rest = cards.filter((c) => !fresh.includes(c));
   return { cards: rest.slice(0, limit), fresh, total: cards.length, remaining: Math.max(0, rest.length - limit), capped: rows.length === 600 };
+}
+
+/** One card for its Grade & Flip page, every grade included (junk prices left out, like the finder), or null when we have no numbers for it. */
+export async function gradingGapCard(productId, language = "english") {
+  const id = String(productId);
+  const [row] = db
+    ? await db.select().from(gradingGap).where(and(eq(gradingGap.productId, id), eq(gradingGap.language, language))).limit(1)
+    : demoRows().filter((r) => String(r.productId) === id && r.language === language);
+  if (!row) return null;
+  const card = candidate(row);
+  for (const [target, t] of Object.entries(GRADE_TARGETS)) {
+    const g = card.grades[target];
+    if (g.top && !plausible({ top: g.top, next: g.next, raw: card.raw }, t.rare)) card.grades[target] = { top: null, next: null, topSales: null, nextSales: null };
+  }
+  return card;
 }
 
 /** How many cards the finder can check (Admin and the page footnote). */
