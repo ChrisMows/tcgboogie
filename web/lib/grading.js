@@ -6,6 +6,8 @@ import { gradeKey, gradeLabel, gradeName } from "@/lib/collection";
 export const MIN_PROFIT = 25; // below this a top grade isn't worth the wait and the risk
 export const FLIP_FILTER_LIMIT = 5; // saved filters (tabs) a member can keep on Grade & Flip
 export const FLIP_FILTER_FIELDS = ["grader", "tier", "min", "max", "profit", "ship", "lang", "era", "sort", "safe"]; // its form's fields
+// Shown on Grade & Flip's list and on each card's page.
+export const FLIP_CHECK = "These numbers come from recent sales and the graders' published prices. They're usually right, but they can be wrong or out of date, so you're responsible for confirming the card, its condition, sale prices and grading fees before you buy. No grade or profit is guaranteed.";
 export const DEFAULT_SHIPPING = 5; // rough per-card share of insured shipping both ways and supplies
 
 // Each grader's top everyday grade and the one below it (BGS's usual top is a 9.5 Gem Mint; its 10s are rare), and

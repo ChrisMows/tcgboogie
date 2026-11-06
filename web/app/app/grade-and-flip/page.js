@@ -2,7 +2,7 @@ import Link from "next/link";
 import GradeFlipFilters from "@/components/GradeFlipFilters";
 import { GradingTile } from "@/components/GradingCheck";
 import { gradeLabel } from "@/lib/collection";
-import { DEFAULT_SHIPPING, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_CHECK, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
 import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
@@ -114,6 +114,8 @@ export default async function GradingFinderPage({ searchParams }) {
           {FLIP_TIERS.map((t, i) => <span key={t.key} className={`gr-score-chip ${t.key}`} title={`Flip Score ${i === 0 ? `${t.min}+` : i === FLIP_TIERS.length - 1 ? `under ${FLIP_TIERS[i - 1].min}` : `${t.min}–${(FLIP_TIERS[i - 1].min - 0.1).toFixed(1)}`}`}><i aria-hidden="true" />{t.label}</span>)}
         </span>
       </div>
+
+      <div className="notice small fd-check"><b>Double-check before you buy.</b> {FLIP_CHECK}</div>
 
       {fresh.length > 0 && (
         <section className="gf-new">

@@ -1497,6 +1497,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .fd-even-num { margin-left: 10px; font: 600 24px var(--font-head), var(--font-body), sans-serif; color: var(--accent); }
 .fd-even.warn .fd-even-num { color: var(--warn); }
 .fd-even-text { flex: 1 1 280px; padding-left: 16px; border-left: 1px solid var(--border-strong); color: var(--muted); }
+.notice.fd-check { margin: 0 0 14px; }
+.notice.fd-check-in { margin: 14px 0 0; }
 .fd-why { font-size: 24px !important; font-weight: 600; }
 .fd-parts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .fd-part { display: grid; gap: 6px; margin: 0; padding: 0 24px; border-left: 1px solid var(--border); align-content: start; }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { gradeLabel } from "@/lib/collection";
-import { FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
+import { FLIP_CHECK, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -214,6 +214,7 @@ export default function FlipDetail({ card, start, links }) {
               </div>
             </div>
             <BreakEven m={m} />
+            <div className="notice small fd-check fd-check-in"><b>Double-check before you buy.</b> {FLIP_CHECK}</div>
           </>
         )}
       </section>
