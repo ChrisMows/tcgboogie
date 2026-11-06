@@ -38,11 +38,35 @@ export function mailer() {
   const port = Number((s ? process.env.ALERT_SMTP_PORT : process.env.SMTP_PORT) || 465);
   transport = nodemailer.createTransport({
     pool: true, maxConnections: 3, maxMessages: 100,
+    connectionTimeout: 20000, // the library's default is 2 minutes, a long hold-up for a deal alert when the sender is unreachable
     host: s ? process.env.ALERT_SMTP_HOST : process.env.SMTP_HOST,
     port, secure: port === 465,
     auth: s ? { user: process.env.ALERT_SMTP_USER, pass: process.env.ALERT_SMTP_PASS } : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
   return transport;
+}
+
+/**
+ * Did this send fail before the sender got any of the email, so that trying again can't deliver it twice? Only failures
+ * to connect: no connection in time, no greeting, connection refused, or the sender's name not found. The error's
+ * command isn't enough: a connection dropped after the email went over also says "CONN" (and may have been delivered).
+ */
+export function neverSent(e) {
+  if (e?.code === "EDNS") return true;
+  if (e?.code === "ETIMEDOUT") return /^(Connection timeout|Greeting never received)$/.test(e.message);
+  return e?.code === "ESOCKET" && /^connect /.test(e.message);
+}
+
+const RETRY_WAITS = [2000, 5000];
+
+/** Runs a send, trying again after a short wait when the sender couldn't be reached (see neverSent). */
+export async function retryUnsent(send, waits = RETRY_WAITS) {
+  for (let tried = 0; ; tried++) {
+    try { return await send(); } catch (e) {
+      if (tried >= waits.length || !neverSent(e)) throw e;
+      await new Promise((resolve) => { setTimeout(resolve, waits[tried]); });
+    }
+  }
 }
 
 // Emails sent today (UTC): kept in memory as they go out (alerts go out in parallel, faster than the database count
@@ -130,7 +154,7 @@ TCG Boogie · ${site.replace(/^https?:\/\//, "")} · support@tcgboogie.com`;
 
 export async function sendLoginEmail(to, url) {
   // A failed send shows the member "Sign-in didn't work"; the sender's reason goes to Admin -> Logs.
-  await mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, ...loginEmail(to, url) }).catch(async (e) => {
+  await retryUnsent(() => mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, ...loginEmail(to, url) })).catch(async (e) => {
     const { log } = await import("@/lib/log");
     await log("signin", "error", `Couldn't email a sign-in link through ${emailSender()}: ${e?.message || e}`, { to, code: e?.responseCode || e?.code || null });
     throw e;

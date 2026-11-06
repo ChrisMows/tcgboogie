@@ -1,6 +1,6 @@
 import "server-only";
 import { BRAND, emailButton, emailLayout, emailRows, emailStat, emailSubhead, emailText, esc } from "@/lib/email-layout";
-import { countEmail, emailConfigured, emailFrom, mailer, memberEmailAllowed } from "@/lib/mail";
+import { countEmail, emailConfigured, emailFrom, mailer, memberEmailAllowed, retryUnsent } from "@/lib/mail";
 import { KINDS, unsubscribeUrl } from "@/lib/unsubscribe";
 
 // Sending alerts. Each channel switches on when its settings exist (Hostinger environment variables):
@@ -65,7 +65,7 @@ export async function sendEmail(to, email, unsub = null) {
   const offLabel = unsub ? `Unsubscribe from ${KINDS[unsub.kind]}` : "Turn off email alerts";
   const { text, html } = renderEmail(email, { site, off, offLabel, verify: Boolean(unsub) });
   const headers = unsub ? { "List-Unsubscribe": `<${off}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : { "List-Unsubscribe": `<${off}>` };
-  await mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, subject: email.subject, text, html, headers });
+  await retryUnsent(() => mailer().sendMail({ from: `TCG Boogie <${emailFrom()}>`, to, subject: email.subject, text, html, headers }));
   void countEmail();
 }
 
