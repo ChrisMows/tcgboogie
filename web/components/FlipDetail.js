@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { gradeLabel } from "@/lib/collection";
-import { FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
+import { FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-const fee = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
+const fee = (v) => `$${v.toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 })}`;
 const pct = (v) => `${v < 0 ? "−" : ""}${Math.abs(Math.round(v * 100)).toLocaleString("en-US")}%`;
 const sales = (n) => (n === null || n === undefined ? "Recent sales" : `${n} ${n === 1 ? "sale" : "sales"} in 90 days`);
 const tone = (v) => (v >= 0 ? "up" : "down");
@@ -16,34 +17,73 @@ const TARGETS = Object.keys(GRADE_TARGETS);
 /** The score for gradingMath's numbers at a target grade. */
 const scoreOf = (c, id, m) => flipScore({ raw: c.raw, ...m }, c.grades[id].topSales);
 
+/** The card's name without its brackets or a number already in it ("Lugia V - 138/195", the Prize Pack names). */
+function cardTitle({ name, number }) {
+  const base = name.replace(/\s*\(.*\)$/, "");
+  const bare = number && base.endsWith(` - ${number}`) ? base.slice(0, -` - ${number}`.length) : base;
+  return number ? `${bare} · ${number}` : bare;
+}
+
+/** A dollar box: shows cents until it's being typed in. */
+function MoneyInput({ value, onChange, max, label }) {
+  const [typing, setTyping] = useState(null);
+  return (
+    <span className="gr-money">
+      <span className="muted">$</span>
+      <input type="number" inputMode="decimal" min="0" max={max} step="any" aria-label={label} value={typing !== null && Number(typing) === value ? typing : value.toFixed(2)}
+        onFocus={() => setTyping(String(value))} onBlur={() => setTyping(null)}
+        onChange={(e) => { setTyping(e.target.value); onChange(Math.min(max, Math.max(0, Number(e.target.value) || 0))); }} />
+    </span>
+  );
+}
+
+function Info() {
+  return <svg className="fd-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>;
+}
+
+function Trend({ down }) {
+  return <svg className="fd-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{down ? <path d="M3 7l6 6 4-4 8 8M21 11v6h-6" /> : <path d="M3 17l6-6 4 4 8-8M21 13V7h-6" />}</svg>;
+}
+
 /** One way the card could come back: what it sells for, and what that leaves. */
-function Outcome({ title, price, profit, spend, count }) {
+function Outcome({ grade, price, profit, spend, count, main }) {
   if (price === null) {
     return (
       <div className="fd-outcome">
-        <span className="small muted">If it comes back {title}</span>
+        <span className="fd-outcome-title">If graded <b>{grade}</b></span>
         <b className="fd-outcome-num">Unknown</b>
-        <span className="small muted">Not enough recent sales to price it</span>
+        <span className="muted">Not enough recent sales to price it</span>
       </div>
     );
   }
   return (
-    <div className="fd-outcome">
-      <span className="small muted">If it comes back {title}</span>
+    <div className={`fd-outcome ${main && profit >= 0 ? "main" : ""}`}>
+      <span className="fd-outcome-title">If graded <b>{grade}</b></span>
       <b className={`fd-outcome-num ${tone(profit)}`}>{plus(profit)}</b>
-      <span className="small">Sells for about {money(price)} · {pct(profit / spend)} return</span>
+      <span className="muted">Projected {profit >= 0 ? "profit" : "loss"}</span>
+      <span className="fd-outcome-line"><span>Sale value <b>{money(price)}</b></span><span><b>{pct(profit / spend)}</b> return</span></span>
       <span className="small muted">{sales(count)}</span>
     </div>
   );
 }
 
-/** The odds a member would need for the flip to be worth it, in a sentence. */
-function oddsLine(m) {
-  if (m.profit10 <= 0) return `At this cost it loses money even as a ${m.topName}.`;
-  if (m.profit9 === null) return `Only the ${m.topName} has recent sales, so we can't say what a lower grade would leave.`;
-  if (m.profit9 >= 0) return `It still makes money as a ${m.nextName}, so missing the ${m.topName} doesn't lose money unless it grades lower than that.`;
-  const need = -m.profit9 / (m.profit10 - m.profit9);
-  return `To break even, about ${Math.ceil(need * 100)}% of copies you send in would need to come back ${m.topName}, with the rest coming back ${m.nextName}.`;
+/** What the grade below the top means for this flip: the price to stay under, and what happens at the price entered. */
+function BreakEven({ m }) {
+  const line = m.next === null ? null : m.next - m.cost;
+  const say = (ok, head, value, text) => (
+    <div className={`fd-even ${ok ? "ok" : "warn"}`}>
+      <Trend down={!ok} />
+      <b className="fd-even-head">{head}{value && <span className="fd-even-num"> {value}</span>}</b>
+      <span className="fd-even-text">{text}</span>
+    </div>
+  );
+  if (line === null) return say(false, `No recent ${m.nextName} sales`, null, `Only the ${m.topName} has recent sales, so we can't say what a lower grade would leave.`);
+  if (line <= 0) return say(false, `A ${m.nextName} can't break even`, null, "It sells for less than the grading cost, whatever you pay raw.");
+  const head = `${m.nextName} break-even purchase price`;
+  if (m.profit9 >= 0) return say(true, head, money(line), `${m.nextName} remains profitable at your purchase price.`);
+  if (m.profit10 <= 0) return say(false, head, money(line), `At your purchase price it loses money even as a ${m.topName}.`);
+  const need = Math.ceil((-m.profit9 / (m.profit10 - m.profit9)) * 100);
+  return say(false, head, money(line), `${m.nextName} loses money at your purchase price. About ${need}% of copies would need to come back ${m.topName} to break even.`);
 }
 
 /** Grade & Flip's page for one card: change the grader, level, shipping and buy price, and see what each outcome leaves. */
@@ -63,6 +103,8 @@ export default function FlipDetail({ card, start, links }) {
   const grades = c.grades[target] || {};
   const topShort = gradeLabel(t.grader, t.top);
   const sold = links.sold[target];
+  // The level the numbers use, which a card's value can push above the one picked.
+  const level = m?.tier ? co.tiers.indexOf(m.tier) : tier;
 
   // Every grader at its cheapest level that takes this card, best Flip Score first; no data last.
   const rows = useMemo(() => TARGETS.map((id) => {
@@ -74,115 +116,115 @@ export default function FlipDetail({ card, start, links }) {
     if (GRADE_TARGETS[id].grader !== t.grader) { setTier(0); setOwn(null); } // another company's levels: start at its cheapest
     setTarget(id);
   };
-  const number = (set) => (e) => set(Math.max(0, Number(e.target.value) || 0));
 
   const parts = flip && [
     { key: "profit", label: "Profit", say: `${money(m.profit10)} as a ${m.topName}` },
     { key: "return", label: "Return", say: `${pct(m.profit10 / spend)} on the ${money(spend)} you put in` },
-    { key: "safety", label: "If it grades lower", say: m.profit9 === null ? `No recent ${m.nextName} sales` : `${plus(m.profit9)} as a ${m.nextName}` },
+    { key: "safety", label: "Grade downside", say: m.profit9 === null ? `No recent ${m.nextName} sales` : `${plus(m.profit9)} as a ${m.nextName}` },
     { key: "demand", label: "Demand", say: `${grades.topSales ?? 0} ${m.topName} ${grades.topSales === 1 ? "sale" : "sales"} in 90 days${(grades.topSales ?? 0) < THIN_SALES ? `: under ${THIN_SALES} can't score Excellent` : ""}` },
   ];
 
   return (
     <>
       <section className="panel fd-head">
-        <CardThumb item={card} width={150} />
+        <CardThumb item={card} width={140} />
         <div className="fd-head-main">
-          <h1 className="fd-name">{card.name.replace(/\s*\(.*\)$/, "")}</h1>
-          <span className="muted">{card.setName}{card.number ? ` · ${card.number}` : ""}{card.language === "japanese" ? " · Japanese" : ""}</span>
-          {m ? (
-            <div className="fd-sum">
-              <span className={`gr-score ${flip.tier.key}`} aria-label={`Flip Score ${flip.score.toFixed(1)} out of 10, ${flip.tier.label}`}>
-                <b className="gr-score-num">{flip.score.toFixed(1)}</b>
-                <span className="gr-score-body">
-                  <span className="gr-score-label"><b>{flip.tier.label}</b><span className="muted">Flip Score</span></span>
-                  <span className="gr-score-bar"><i style={{ width: `${flip.score * 10}%` }} /></span>
+          <div className="fd-head-top">
+            <div className="fd-title">
+              <h1 className="fd-name">{cardTitle(card)}</h1>
+              <span className="fd-set">{card.setName}{card.language === "japanese" ? " · Japanese" : ""}</span>
+              {flip && (
+                <span className={`gr-score ${flip.tier.key} fd-pill`} aria-label={`Flip Score ${flip.score.toFixed(1)} out of 10, ${flip.tier.label}`}>
+                  <b>{flip.score.toFixed(1)} / 10</b>
+                  <span>{flip.tier.key === "long" ? flip.tier.label : `${flip.tier.label} flip`}</span>
                 </span>
-              </span>
-              <div className="fd-sum-profit">
-                <div className={`gr-profit ${tone(m.profit10)}`}>{plus(m.profit10)}</div>
-                <span className="small muted">profit as a {m.topName}</span>
-              </div>
+              )}
             </div>
-          ) : <p className="muted">No reliable {targetName(target)} sales for this card yet. Pick another grade below.</p>}
-          <div className="fd-links small">
-            <a className="btn sm" href={links.raw.href} target="_blank" rel={`noopener noreferrer${links.raw.affiliate ? " sponsored" : ""}`}>Find raw copies on eBay ↗</a>
-            {sold && <a className="btn sm" href={sold.href} target="_blank" rel={`noopener noreferrer${sold.affiliate ? " sponsored" : ""}`}>See sold {targetName(target)} copies ↗</a>}
-            {links.raw.affiliate && <span className="muted">Ad</span>}
-            <a className="btn sm ghost" href={links.card}>Full card page</a>
+            {m && (
+              <div className="fd-head-profit">
+                <div className={`fd-big ${tone(m.profit10)}`}>{plus(m.profit10)}</div>
+                <span className="muted">{m.profit10 >= 0 ? "profit" : "loss"} as a {m.topName}</span>
+              </div>
+            )}
+          </div>
+          {!m && <p className="muted fd-none">No reliable {targetName(target)} sales for this card yet. Pick another grade below.</p>}
+          <div className="fd-links">
+            <a className="btn" href={links.raw.href} target="_blank" rel={`noopener noreferrer${links.raw.affiliate ? " sponsored" : ""}`}>Find raw copies on eBay ↗</a>
+            {sold && <a className="btn" href={sold.href} target="_blank" rel={`noopener noreferrer${sold.affiliate ? " sponsored" : ""}`}>See sold {targetName(target)} copies ↗</a>}
+            {links.raw.affiliate && <span className="small muted">Ad</span>}
+            <Link className="fd-card-link" href={links.card} prefetch={false}>Full card page →</Link>
           </div>
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel fd-flip">
         <h2>Your flip</h2>
+        <p className="muted fd-flip-sub">Estimate your grading outcome</p>
         <div className="fd-controls">
           <label className="gr-field">
-            <span className="small muted">Grading company and grade</span>
+            <span className="small muted">Grade</span>
             <select value={target} onChange={(e) => pick(e.target.value)}>
               {TARGETS.map((id) => <option key={id} value={id}>{targetName(id)}</option>)}
             </select>
           </label>
           <label className="gr-field">
-            <span className="small muted">{t.grader} service level</span>
-            <select value={own !== null ? "own" : String(tier)} onChange={(e) => {
-              if (e.target.value === "own") setOwn(co.tiers[tier].fee);
+            <span className="small muted">Service level</span>
+            <select value={own !== null ? "own" : String(level)} onChange={(e) => {
+              if (e.target.value === "own") setOwn(co.tiers[level].fee);
               else { setOwn(null); setTier(Number(e.target.value)); }
             }}>
-              {co.tiers.map((x, i) => <option key={x.name} value={i}>{x.name} · {fee(x.fee)}{x.days ? ` · ~${x.days} days` : ""}{x.max ? ` · cards up to $${x.max.toLocaleString("en-US")}` : ""}{x.min ? ` · ${x.min}-card minimum` : ""}</option>)}
+              {co.tiers.map((x, i) => <option key={x.name} value={i}>{x.name} · {fee(x.fee)}{x.days ? ` · ~${x.days} days` : ""}{x.max && m && m.top > x.max ? ` · cards up to $${x.max.toLocaleString("en-US")}` : ""}</option>)}
               <option value="own">My own price…</option>
             </select>
           </label>
           {own !== null && (
-            <label className="gr-field gr-small">
+            <div className="gr-field">
               <span className="small muted">Fee per card</span>
-              <span className="gr-money"><span className="muted">$</span><input type="number" min="0" max="9999" step="1" value={own} onChange={number(setOwn)} /></span>
-            </label>
+              <MoneyInput value={own} onChange={setOwn} max={9999} label="Fee per card" />
+            </div>
           )}
-          <label className="gr-field gr-small">
-            <span className="small muted">Raw price you&apos;d pay</span>
-            <span className="gr-money"><span className="muted">$</span><input type="number" min="0" max="100000" step="any" value={raw} onChange={number(setRaw)} /></span>
-          </label>
-          <label className="gr-field gr-small">
+          <div className="gr-field">
+            <span className="small muted">Raw purchase price</span>
+            <MoneyInput value={raw} onChange={setRaw} max={100000} label="Raw purchase price" />
+            <span className="small muted">
+              {raw === card.raw ? <>Near Mint market: {money(card.raw)}</> : <button type="button" className="link-btn" onClick={() => setRaw(card.raw)}>Use Near Mint market: {money(card.raw)}</button>}
+            </span>
+          </div>
+          <div className="gr-field">
             <span className="small muted">Shipping per card</span>
-            <span className="gr-money"><span className="muted">$</span><input type="number" min="0" max="999" step="1" value={shipping} onChange={number(setShipping)} /></span>
-          </label>
+            <MoneyInput value={shipping} onChange={setShipping} max={999} label="Shipping per card" />
+          </div>
         </div>
-        <p className="small muted fd-raw-note">
-          TCGplayer Near Mint market is {money(card.raw)}.{raw !== card.raw && <> <button type="button" className="link-btn" onClick={() => setRaw(card.raw)}>Use that price</button></>}
-        </p>
 
         {m && (
           <>
+            {m.bumped && <div className="notice warn fd-note"><Info />{m.tier.name} required: projected value exceeds the {co.tiers[tier].name} limit.</div>}
+            {m.tier?.max && m.top > m.tier.max && <div className="notice warn fd-note"><Info />A {money(m.top)} card is over the ${m.tier.max.toLocaleString("en-US")} limit {t.grader} publishes for {m.tier.name}, its highest level. Check with {t.grader} what a card like this costs.</div>}
+            {m.tier?.min > 1 && <div className="notice warn fd-note"><Info />{t.grader} {m.tier.name} needs at least {m.tier.min} cards in one submission.</div>}
             <div className="fd-outcomes">
-              <Outcome title={`a ${m.topName}`} price={m.top} profit={m.profit10} spend={spend} count={grades.topSales} />
-              <Outcome title={`a ${m.nextName}`} price={m.next} profit={m.profit9} spend={spend} count={grades.nextSales} />
-              <div className="fd-outcome">
-                <span className="small muted">You put in</span>
-                <b className="fd-outcome-num">{money(spend)}</b>
-                <span className="small">{money(raw)} raw + {m.tier ? `${m.tier.name} ${fee(m.tier.fee)}` : `${fee(own)} grading`} + {fee(shipping)} shipping</span>
-                <span className="small muted">{m.tier ? (m.tier.days ? `About ${m.tier.days} business days at ${t.grader}` : `${t.grader} doesn't publish this level's turnaround`) : "Your own grading price"}</span>
+              <Outcome main grade={m.topName} price={m.top} profit={m.profit10} spend={spend} count={grades.topSales} />
+              <Outcome grade={m.nextName} price={m.next} profit={m.profit9} spend={spend} count={grades.nextSales} />
+            </div>
+            <div className="fd-total">
+              <div className="fd-total-sum"><span>Total investment</span><b>{money(spend)}</b></div>
+              <div className="fd-total-sum-line">Card {fee(raw)} + Grading {fee(m.tier ? m.tier.fee : own)} + Shipping {fee(shipping)}</div>
+              <div className="fd-total-time">
+                <span className="muted">Estimated turnaround</span>
+                <b>{m.tier ? (m.tier.days ? `${m.tier.days} business days` : `Not published by ${t.grader}`) : "Depends on your grader"}</b>
               </div>
             </div>
-            {m.bumped && <div className="notice fd-note">This card&apos;s {money(m.top)} value is over the limit for the level you picked, so it&apos;s priced at {m.tier.name}.</div>}
-            {m.tier?.max && m.top > m.tier.max && <div className="notice warn fd-note">A {money(m.top)} card is over the ${m.tier.max.toLocaleString("en-US")} limit {t.grader} publishes for {m.tier.name} too, its highest level, so check with {t.grader} what a card like this costs.</div>}
-            {m.tier?.min > 1 && <div className="notice fd-note">{t.grader} {m.tier.name} needs at least {m.tier.min} cards in one submission.</div>}
-            <ul className="fd-reads">
-              <li>{oddsLine(m)}</li>
-              <li>To make at least {money(MIN_PROFIT)} as a {m.topName}, pay no more than <b>{money(Math.max(0, m.top - m.cost - MIN_PROFIT))}</b> raw.</li>
-              {m.next !== null && <li>{m.next - m.cost > 0 ? <>To break even as a {m.nextName}, pay no more than <b>{money(m.next - m.cost)}</b> raw.</> : <>A {m.nextName} can&apos;t cover the grading cost at this level, whatever you pay raw.</>}</li>}
-            </ul>
+            <BreakEven m={m} />
           </>
         )}
       </section>
 
       {parts && (
         <section className="panel">
-          <h2>Why it scores {flip.score.toFixed(1)}</h2>
+          <h2 className="fd-why">Why it scores {flip.score.toFixed(1)}</h2>
           <div className="fd-parts">
             {parts.map((p) => (
               <div key={p.key} className={`fd-part gr-score ${flip.tier.key}`}>
-                <span className="fd-part-head"><b>{p.label}</b><span className="small muted">{flip.parts[p.key]} of {FLIP_POINTS[p.key]}</span></span>
+                <span className="fd-part-head"><b>{p.label}</b><span className="muted">{flip.parts[p.key]} / {FLIP_POINTS[p.key]}</span></span>
                 <span className="gr-score-bar"><i style={{ width: `${(flip.parts[p.key] / FLIP_POINTS[p.key]) * 100}%` }} /></span>
                 <span className="small muted">{p.say}</span>
               </div>
