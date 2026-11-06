@@ -1,6 +1,6 @@
 import "server-only";
 import os from "node:os";
-import { and, count, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, max, ne, or, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { compActive, effectiveTier, signupOpen } from "@/lib/access";
 import { catalogLive, pingPriceService, priceServiceStatus } from "@/lib/catalog";
@@ -50,6 +50,26 @@ const timed = async (fn) => {
   try { const r = await fn(); return { ...r, ms: r?.ms ?? Date.now() - t }; } catch (e) { return { ok: false, detail: String(e.message).slice(0, 160), ms: Date.now() - t }; }
 };
 
+/**
+ * The "Alerts sent (24 h)" check. sent: [{ channel, ok, member, n, last }] with last the newest send in that row.
+ * passed: [{ channel, at }] the newest passing admin test per channel. A passing test settles a channel's earlier
+ * failures: they stay listed but no longer turn the check amber. A failure after the test still does.
+ */
+function alertsSentCheck(sent, passed) {
+  const passedAt = new Map(passed.map((t) => [t.channel, new Date(t.at)]));
+  const settled = (x) => passedAt.has(x.channel) && passedAt.get(x.channel) > new Date(x.last);
+  const open = sent.some((x) => !x.ok && !x.member && !settled(x));
+  const line = (x) => {
+    if (x.ok) return `${x.channel}: ${x.n}`;
+    if (x.member) return `${x.channel} not reachable (member's Discord settings, they've been told): ${x.n}`;
+    return `${x.channel} failed: ${x.n}${settled(x) ? ` (test passed since, ${ago(passedAt.get(x.channel))})` : ""}`;
+  };
+  return {
+    state: open ? "warn" : "ok",
+    detail: sent.length ? `${sent.map(line).join(" · ")}${open ? " · send yourself a test alert to recheck" : ""}` : "None in the last 24 hours",
+  };
+}
+
 /** Health of every service the site depends on. Nothing here sends a message or costs money (the price ping is 1 credit, on request). */
 export async function systemStatus({ pingPrices = false } = {}) {
   const ready = channelsReady();
@@ -89,11 +109,12 @@ export async function systemStatus({ pingPrices = false } = {}) {
     // A Discord DM that bounced because the member isn't in our server or has DMs off is their setup, not a fault
     // (they're told how to fix it, lib/discord-reach.js): listed, but it doesn't turn the check amber.
     const memberSide = sql`(${alertLog.error} ilike '%Discord unreachable%' or ${alertLog.error} ilike '%Discord DM failed (403)%' or ${alertLog.error} ilike '%couldn''t open a DM%')`;
-    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, member: sql`coalesce(${memberSide}, false)`.mapWith(Boolean), n: count() }).from(alertLog)
+    const sent = await db.select({ channel: alertLog.channel, ok: alertLog.ok, member: sql`coalesce(${memberSide}, false)`.mapWith(Boolean), n: count(), last: max(alertLog.sentAt) }).from(alertLog)
       .where(and(gte(alertLog.sentAt, since), ne(alertLog.kind, "release"))).groupBy(alertLog.channel, alertLog.ok, sql`3`);
-    const failed = sent.filter((x) => !x.ok && !x.member).reduce((s, x) => s + Number(x.n), 0);
-    add("Alerts", "Alerts sent (24 h)", failed ? "warn" : "ok",
-      sent.length ? sent.map((x) => `${x.channel}${x.ok ? "" : x.member ? " not reachable (member's Discord settings, they've been told)" : " failed"}: ${x.n}`).join(" · ") : "None in the last 24 hours");
+    const passed = await db.select({ channel: alertLog.channel, at: max(alertLog.sentAt) }).from(alertLog)
+      .where(and(gte(alertLog.sentAt, since), eq(alertLog.kind, "test"), eq(alertLog.ok, true))).groupBy(alertLog.channel);
+    const check = alertsSentCheck(sent, passed);
+    add("Alerts", "Alerts sent (24 h)", check.state, check.detail);
   }
 
   if (!ready.email) add("Alerts", "Email (SMTP)", "off", "SMTP settings not added yet");

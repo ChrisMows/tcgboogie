@@ -139,7 +139,7 @@ async function Status({ ping, test, why, stripe, recap, backup }) {
       )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
         <span className="small muted" style={{ flex: "1 1 260px" }}>Checked just now. Nothing here sends messages or charges anything, except these buttons.</span>
-        <form action={testAlert} style={{ flex: "none" }}><button className="btn sm primary" title="Sends a sample alert to you on every channel that's set up">Send me a test alert</button></form>
+        <form action={testAlert} style={{ flex: "none" }}><button className="btn sm primary" title="Sends a sample alert to you on every channel that's set up. A channel that passes stops showing its earlier failures as a problem.">Send me a test alert</button></form>
         <form action={testRecap} style={{ flex: "none" }}><button className="btn sm" title="Emails you a preview of your recap">Email me a recap preview</button></form>
         <Link href="/app/admin?ping=1" className="btn sm" style={{ flex: "none" }} title="Makes one tiny price-service request (1 credit)">Test price service now</Link>
         {process.env.STRIPE_SECRET_KEY ? <form action={connectStripe} style={{ flex: "none" }}><button className="btn sm" title="Creates the Premium price and the payment webhook in Stripe. Safe to press again.">Set up Stripe</button></form> : null}
