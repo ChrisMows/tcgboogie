@@ -32,6 +32,18 @@ const snapshotFields = (p) => ({
   productId: p.id, productType: p.type, name: p.name, setName: p.setName, number: p.number, image: p.image, tcgplayerUrl: p.tcgplayerUrl,
 });
 
+// The price service allows about 60 lookups a minute, shared with the deal bot. When it says "slow down", saving a card
+// uses the last copy we saved, however old (its value catches up on the next refresh), instead of failing the page.
+const BUSY = "Prices are busy for a moment. Please try again in a minute.";
+async function productToSave(id) {
+  try {
+    return { product: await getProduct(id) };
+  } catch {
+    const saved = await getProduct(id, { cachedOnly: true, anyAge: true }).catch(() => null);
+    return saved ? { product: saved } : { busy: true };
+  }
+}
+
 /** Search by name, card number, or a pasted TCGplayer link. */
 export async function searchCatalog(query) {
   const user = await requireUser();
@@ -141,7 +153,8 @@ export async function productDetails(productId, language) {
 /** Add a card or sealed product with full details (condition or grade, quantity, what you paid...). */
 export async function addItem(productId, input) {
   const user = await requireUser();
-  const product = await getProduct(productId);
+  const { product, busy } = await productToSave(productId);
+  if (busy) return { ok: false, errors: { _: BUSY } };
   if (!product) return { ok: false, errors: { _: "That product is no longer available." } };
   const { item, errors } = validateItem(input || {}, product);
   if (Object.keys(errors).length) return { ok: false, errors };
@@ -168,7 +181,8 @@ export async function addItem(productId, input) {
 /** One tap: add a copy as raw Near Mint (or sealed), the most common case. Used by set grids and card pages. */
 export async function quickAdd(productId, list = "owned") {
   await requireUser(); // before any price lookup, so signed-out callers can't spend credits
-  const product = await getProduct(productId);
+  const { product, busy } = await productToSave(productId);
+  if (busy) return { ok: false, error: BUSY };
   if (!product) return { ok: false, error: "That product is no longer available." };
   const res = await addItem(productId, { list, kind: product.type === "sealed" ? "sealed" : "raw", condition: "Near Mint", quantity: 1 });
   return res.ok ? res : { ok: false, error: Object.values(res.errors || {})[0] };
@@ -190,7 +204,8 @@ export async function editItem(id, input) {
   const user = await requireUser();
   const existing = await store.getItem(user.id, id);
   if (!existing) return { ok: false, errors: { _: "That card is no longer in your collection." } };
-  const product = await getProduct(existing.productId);
+  const { product, busy } = await productToSave(existing.productId);
+  if (busy) return { ok: false, errors: { _: BUSY } };
   if (!product) return { ok: false, errors: { _: "That product is no longer available." } };
   const { item, errors } = validateItem({ ...existing, ...input }, product);
   if (Object.keys(errors).length) return { ok: false, errors };
@@ -248,7 +263,8 @@ export async function watchProduct(productId, input = {}) {
   if (atWatchLimit(user.plan, watches.length)) {
     return { ok: false, limit: true, error: `You're using your ${alertsWord(user.plan.maxPriceWatches)} on ${user.plan.label}. Remove one, or get unlimited with Premium.` };
   }
-  const product = await getProduct(productId);
+  const { product, busy } = await productToSave(productId);
+  if (busy) return { ok: false, error: BUSY };
   if (!product) return { ok: false, error: "That product is no longer available." };
   const now = product.type === "sealed" ? product.prices?.market : nmPrice(product);
   const record = input.mode === "high" || input.mode === "low";
@@ -309,7 +325,8 @@ export async function hideSetup() {
  */
 export async function dealAlertForCard(productId, input = {}) {
   const user = await requireUser();
-  const product = await getProduct(productId);
+  const { product, busy } = await productToSave(productId);
+  if (busy) return { ok: false, error: BUSY };
   if (!product || product.type !== "card") return { ok: false, error: "Deal alerts cover single cards." };
   const profiles = await store.listProfiles(user.id);
   const mine = profiles.find((p) => (p.filters?.cards || []).some((c) => String(c.productId) === String(product.id)));
