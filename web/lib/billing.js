@@ -5,6 +5,7 @@ import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { sendEmail } from "@/lib/notify";
 import { PLANS, planFor } from "@/lib/plans";
+import { appReturnPath } from "@/lib/app-shell";
 import { TERMS_VERSION } from "@/lib/terms";
 
 // Billing (Stripe Checkout + Customer Portal), called over Stripe's REST API.
@@ -292,7 +293,7 @@ async function customerFor(user) {
 }
 
 /** Start Checkout for Premium or Ultra. Returns the Stripe-hosted page to send the member to. */
-export async function checkoutUrl(user, plan = "premium") {
+export async function checkoutUrl(user, plan = "premium", { app = false } = {}) {
   const ultra = plan === "ultra";
   const [customer, price, tax] = await Promise.all([customerFor(user), ultra ? ultraPrice() : premiumPrice(), taxActive()]);
   let trial = trialDaysFor(user);
@@ -320,18 +321,20 @@ export async function checkoutUrl(user, plan = "premium") {
     managed_payments: { enabled: "false" },
     // Sales tax from the member's billing address (Stripe Tax), on the first payment and every renewal.
     ...(tax ? { automatic_tax: { enabled: "true" }, billing_address_collection: "required" } : {}),
-    success_url: `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
-    cancel_url: `${SITE}/app/${ultra ? "ultra" : "premium"}?billing=cancelled#enroll`,
+    // From the Android app these pages open in a browser tab, so they come back through a page that reopens the app.
+    success_url: app ? `${SITE}/app-return?to=${encodeURIComponent("/app/account?billing=success&session_id=")}{CHECKOUT_SESSION_ID}${encodeURIComponent("#plan")}`
+      : `${SITE}/app/account?billing=success&session_id={CHECKOUT_SESSION_ID}#plan`,
+    cancel_url: `${SITE}${app ? appReturnPath(`/app/${ultra ? "ultra" : "premium"}?billing=cancelled#enroll`) : `/app/${ultra ? "ultra" : "premium"}?billing=cancelled#enroll`}`,
   });
   await log("payments", "info", trial ? `Checkout opened (${trial}-day free trial)` : "Checkout opened", { session: s.id, salesTax: tax, plan: ultra ? "ultra" : "premium" }, user.id);
   return s.url;
 }
 
 /** Stripe's own billing page: update card, see invoices, cancel. Returns the URL. */
-export async function portalUrl(user) {
+export async function portalUrl(user, { app = false } = {}) {
   if (!user.stripeCustomerId) throw new Error("No billing account yet.");
   const portal = await getSetting(`stripe_portal_${billingMode()}`).catch(() => null);
-  const s = await stripe("POST", "billing_portal/sessions", { customer: user.stripeCustomerId, return_url: `${SITE}/app/account#plan`, ...(portal?.id ? { configuration: portal.id } : {}) });
+  const s = await stripe("POST", "billing_portal/sessions", { customer: user.stripeCustomerId, return_url: `${SITE}${app ? appReturnPath("/app/account#plan") : "/app/account#plan"}`, ...(portal?.id ? { configuration: portal.id } : {}) });
   return s.url;
 }
 

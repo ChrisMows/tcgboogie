@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { enablePush, pushSupported, standalone } from "@/lib/push-client";
+import { enablePush, pushPermission, pushSupported, standalone, syncAppPush } from "@/lib/push-client";
 
 // In the home-screen app, a member who hasn't been asked about notifications yet gets one prompt to turn push on.
 // That's the last step after "Add to home screen" on iPhone (lib/push-client.js), where the home-screen app is the
@@ -16,7 +16,8 @@ export default function PushPrompt({ canPush }) {
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    if (!canPush || !standalone() || !pushSupported() || Notification.permission !== "default") return;
+    if (canPush) syncAppPush().catch(() => {});
+    if (!canPush || !standalone() || !pushSupported() || pushPermission() !== "default") return;
     try { if (localStorage.getItem(DISMISS)) return; } catch { /* storage blocked: ask anyway */ }
     const t = setTimeout(() => setShow(true), 1500);
     return () => clearTimeout(t);

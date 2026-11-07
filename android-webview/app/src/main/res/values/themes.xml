@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="shortcut_background">#F5F5F5</color>
+    <color name="boogie_bg">#0B0E12</color>
+    <color name="boogie_text">#F4F5EF</color>
+    <color name="boogie_muted">#929BA7</color>
+    <color name="boogie_accent">#D3FF66</color>
+    <color name="boogie_accent_ink">#15200C</color>
+
+    <style name="Theme.Boogie" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/boogie_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.Boogie.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/boogie_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Boogie</item>
+    </style>
+</resources>

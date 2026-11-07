@@ -35,6 +35,7 @@ export default function Privacy() {
       <ul>
         <li><b>Stripe</b> (payments), <b>Hostinger</b> (our servers, database and email) and <b>Resend</b> (sending our emails).</li>
         <li><b>Discord</b> and <b>Twilio</b> to deliver your Discord and text alerts, if you turn them on.</li>
+        <li><b>Google Firebase</b> to deliver push alerts to our Android app, if you turn them on there. It gets an ID for that install of the app and the text of each alert.</li>
         <li><b>eBay</b>, when you connect it and list a card, and to look up a listing you link when reporting a sale or requesting a card.</li>
         <li><b>Anthropic</b> (Claude), our AI provider. It checks public eBay listing photos against card images so we don&apos;t alert you about the wrong card; identifies the cards in photos you upload (search by picture and the photo appraiser); reads the page or listing at a link you send in a card request; works out the columns of an import file we don&apos;t recognise, from its first few rows; answers the questions you ask Boogie Bot, our site helper; and, when an admin asks, sorts the ideas you send us into themes. It never gets your name, email or other account details, and under its business terms it doesn&apos;t train its models on what we send.</li>
         <li><b>PokemonPriceTracker</b>, our price service: the card searches and card lookups that show prices. It doesn&apos;t get your account details.</li>

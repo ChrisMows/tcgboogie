@@ -3,7 +3,7 @@ const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, ""
 
 export default function robots() {
   return {
-    rules: [{ userAgent: "*", allow: "/", disallow: ["/app/", "/api/", "/login", "/unsubscribe", "/p/"] }],
+    rules: [{ userAgent: "*", allow: "/", disallow: ["/app/", "/api/", "/login", "/app-login/", "/app-return", "/unsubscribe", "/p/"] }],
     sitemap: `${SITE}/sitemap.xml`,
     host: SITE,
   };

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { install as startInstall, useInstall } from "@/components/InstallApp";
-import { enablePush, needsInstall, pushSupported } from "@/lib/push-client";
+import { enablePush, needsInstall, pushPermission, pushSupported } from "@/lib/push-client";
 
 // Home: the one thing this member most needs next, in order: turn on push alerts (Premium), add TCG Boogie to the
 // home screen (phones), go Premium. ✕ hides that card on this device and the next one in line shows.
@@ -19,7 +19,7 @@ export default function HomePromo({ canPush, pushOn, premium }) {
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    const pushable = canPush && !pushOn && (pushSupported() ? Notification.permission !== "denied" : needsInstall());
+    const pushable = canPush && !pushOn && (pushSupported() ? pushPermission() !== "denied" : needsInstall());
     const order = [pushable && "push", install && window.innerWidth <= 860 && "install", !premium && "premium"].filter(Boolean);
     setKind(order.find((k) => !hidden(k)) || null);
   }, [canPush, pushOn, premium, install]);

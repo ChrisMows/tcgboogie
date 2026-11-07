@@ -132,6 +132,10 @@ X uses it for its own ad targeting, so those rows are marked Shared.
 | App info and performance -> **Crash logs / Diagnostics** (error logs, 60 days) | Yes | No | Required | App functionality, Analytics |
 | Device or other IDs (X pixel cookie) | Yes | **Yes** (X) | Required | Advertising or marketing |
 
+**If the WebView build (android-webview/) ships:** "Device or other IDs" also covers the Firebase ID for that install, used
+for App functionality (push alerts). Firebase is a service provider, so it isn't "shared", and it's only made when a member
+switches push on.
+
 For "Photos": mark **"Data is processed ephemerally"** (sent to identify the card, then discarded).
 Not collected: location, contacts, messages, audio, files, calendar, health, web browsing outside the app, payment card
 numbers (Stripe handles them on its own page).

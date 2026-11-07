@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="deals" android:enabled="true" android:icon="@drawable/shortcut_0"
+        android:shortcutShortLabel="@string/shortcut_deals" android:shortcutLongLabel="@string/shortcut_deals">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.tcgboogie.app"
+            android:targetClass="com.tcgboogie.app.MainActivity" android:data="https://tcgboogie.com/app/deals" />
+    </shortcut>
+    <shortcut android:shortcutId="scanner" android:enabled="true" android:icon="@drawable/shortcut_1"
+        android:shortcutShortLabel="@string/shortcut_scanner" android:shortcutLongLabel="@string/shortcut_scanner">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.tcgboogie.app"
+            android:targetClass="com.tcgboogie.app.MainActivity" android:data="https://tcgboogie.com/app/collection/photo" />
+    </shortcut>
+    <shortcut android:shortcutId="alerts" android:enabled="true" android:icon="@drawable/shortcut_2"
+        android:shortcutShortLabel="@string/shortcut_alerts" android:shortcutLongLabel="@string/shortcut_alerts">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.tcgboogie.app"
+            android:targetClass="com.tcgboogie.app.MainActivity" android:data="https://tcgboogie.com/app/watches" />
+    </shortcut>
+</shortcuts>

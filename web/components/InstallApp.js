@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { inAppShell } from "@/lib/app-shell";
 
 // "Add TCG Boogie to your home screen" (app/manifest.js makes the site installable).
 //   Android / Chrome: the browser's own install prompt, kept from beforeinstallprompt and shown on tap.
@@ -12,7 +13,7 @@ if (typeof window !== "undefined") {
 }
 
 const standalone = () => typeof window !== "undefined"
-  && (window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
+  && (inAppShell() || window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
 const isIOS = () => typeof navigator !== "undefined"
   && (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 

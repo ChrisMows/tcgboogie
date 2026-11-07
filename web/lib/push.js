@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import webpush from "web-push";
 import { db, schema } from "@/lib/db";
+import { FCM_PREFIX, sendFcm } from "@/lib/fcm";
 import { open, seal } from "@/lib/secret-box";
 
 // Push alerts to phones and browsers (Web Push): free, instant, and they work on Android and on iPhone once TCG
@@ -45,7 +46,9 @@ export function deviceName(ua) {
 export async function saveSubscription(userId, sub, device) {
   const endpoint = String(sub?.endpoint || "");
   const { p256dh, auth } = sub?.keys || {};
-  if (!/^https:\/\//.test(endpoint) || !p256dh || !auth) throw new Error("That isn't a push subscription");
+  // The Android app's Firebase token (lib/fcm.js) has no web push keys, so those two columns just say "fcm".
+  const app = endpoint.startsWith(FCM_PREFIX) && /^fcm:[\w:.-]{20,512}$/.test(endpoint);
+  if ((!app && !/^https:\/\//.test(endpoint)) || !p256dh || !auth) throw new Error("That isn't a push subscription");
   await db.insert(pushSubscriptions).values({ userId, endpoint, p256dh, auth, device })
     .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { userId, p256dh, auth, device } });
 }
@@ -65,17 +68,18 @@ export async function listSubscriptions(userId) {
  * it; throws when none did (so the alert log shows a failure). Devices the push service says are gone are removed.
  */
 export async function sendPush(userId, { title, body, url, tag }) {
-  const k = await keys();
-  if (!k) throw new Error("Push isn't available");
   const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
   if (!subs.length) throw new Error("No devices switched on for push");
-  const payload = JSON.stringify({ title, body, url: url?.startsWith("/") ? `${SITE}${url}` : url || `${SITE}/app/deals`, tag });
-  const options = { vapidDetails: { subject: "mailto:support@tcgboogie.com", publicKey: k.publicKey, privateKey: k.privateKey }, TTL: 3600, urgency: "high" };
+  const message = { title, body, url: url?.startsWith("/") ? `${SITE}${url}` : url || `${SITE}/app/deals`, tag };
+  const payload = JSON.stringify(message);
+  const k = subs.some((s) => !s.endpoint.startsWith(FCM_PREFIX)) ? await keys() : null;
+  const options = k && { vapidDetails: { subject: "mailto:support@tcgboogie.com", publicKey: k.publicKey, privateKey: k.privateKey }, TTL: 3600, urgency: "high" };
   let sent = 0;
   let lastError = null;
   for (const s of subs) {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, options);
+      if (s.endpoint.startsWith(FCM_PREFIX)) await sendFcm(s.endpoint, message);
+      else await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, options);
       sent++;
       await db.update(pushSubscriptions).set({ lastSentAt: new Date() }).where(eq(pushSubscriptions.id, s.id));
     } catch (e) {

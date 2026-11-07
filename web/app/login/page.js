@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authEnabled, enabledProviders } from "@/auth";
+import { fromApp } from "@/lib/app-login";
 import { demoMode, getCurrentUser, safeNext } from "@/lib/session";
 import { signInWith, signInWithEmail } from "./actions";
 
@@ -35,6 +36,9 @@ export default async function Login({ searchParams }) {
   const signup = params?.mode === "signup";
   const open = demoMode || authEnabled;
   const has = (p) => demoMode || enabledProviders.includes(p);
+  // In the Android app these open a browser tab (Google refuses a WebView): the app catches this link and adds its secret.
+  const app = await fromApp();
+  const appStart = (provider) => `/app-login/start?${new URLSearchParams({ provider, next })}`;
 
   return (
     <div className="wrap">
@@ -54,14 +58,18 @@ export default async function Login({ searchParams }) {
           <>
             <div style={{ display: "grid", gap: 10 }}>
               {has("google") && (
+                app ? <a className="btn block" href={appStart("google")}><GoogleIcon /> Continue with Google</a> : (
                 <form action={signInWith.bind(null, "google", next)}>
                   <button className="btn block"><GoogleIcon /> Continue with Google</button>
                 </form>
+                )
               )}
               {has("discord") && (
+                app ? <a className="btn block" href={appStart("discord")}><DiscordIcon /> Continue with Discord</a> : (
                 <form action={signInWith.bind(null, "discord", next)}>
                   <button className="btn block"><DiscordIcon /> Continue with Discord</button>
                 </form>
+                )
               )}
             </div>
             {has("email") && (

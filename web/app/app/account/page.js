@@ -1,3 +1,4 @@
+import { fromApp } from "@/lib/app-login";
 import Link from "next/link";
 import { XCheckout } from "@/components/XEvents";
 import { DISCORD_INVITE } from "@/lib/social";
@@ -58,6 +59,7 @@ const BILLING_NOTES = {
 };
 
 export default async function Account({ searchParams }) {
+  const inApp = await fromApp(); // Google refuses sign-in inside the Android app's WebView, so these two stay on the website
   const user = await requireUser();
   const premiumPerks = planHighlights(await effectivePlans()).premium; // what Premium adds, as Admin → Features set it
   const params = await searchParams;
@@ -350,6 +352,8 @@ export default async function Account({ searchParams }) {
                       <form action={disconnectProvider.bind(null, p)}><button className="btn sm ghost">Disconnect</button></form>
                     )}
                   </>
+                ) : available && p === "google" && inApp ? (
+                  <span className="hint">Connect Google at tcgboogie.com in your browser</span>
                 ) : available ? (
                   <form action={connectProvider.bind(null, p)}><button className="btn sm primary">Connect {PROVIDER_LABELS[p]}</button></form>
                 ) : (
@@ -429,7 +433,7 @@ export default async function Account({ searchParams }) {
           <button className="btn sm primary" style={{ marginTop: 14 }}>Use this picture</button>
         </form>
         <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap", justifyContent: "flex-start" }}>
-          {user.providers.includes("google") && (
+          {user.providers.includes("google") && !inApp && (
             <form action={refreshPicture.bind(null, "google")} style={{ flex: "none" }}><button className="btn sm">↻ Refresh from Google</button></form>
           )}
           {user.providers.includes("discord") && (

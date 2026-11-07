@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { fromApp } from "@/lib/app-login";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { enabledProviders, signIn, signOut } from "@/auth";
@@ -176,7 +177,7 @@ export async function startCheckout(formData) {
   if (hasLiveSubscription(user)) billingError("already"); // never sell a second subscription (changePlanAction moves between plans)
   let url;
   await log("payments", "info", `Agreed to the Terms of Service (version ${TERMS_VERSION}) and started checkout`, { terms: TERMS_VERSION }, user.id);
-  try { url = await checkoutUrl(user, plan); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
+  try { url = await checkoutUrl(user, plan, { app: await fromApp() }); } catch (e) { await logError("payments", "Checkout couldn't start", e, {}, user.id); billingError("error"); }
   redirect(url);
 }
 
@@ -201,7 +202,7 @@ export async function openBillingPortal() {
   if (user.demo || !billingLive() || !user.stripeCustomerId) billingError("off");
   if (!await allow("billing", user.id)) billingError("slow");
   let url;
-  try { url = await portalUrl(user); } catch (e) { await logError("payments", "Billing page couldn't open", e, {}, user.id); billingError("error"); }
+  try { url = await portalUrl(user, { app: await fromApp() }); } catch (e) { await logError("payments", "Billing page couldn't open", e, {}, user.id); billingError("error"); }
   redirect(url);
 }
 

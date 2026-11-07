@@ -1,0 +1,62 @@
+plugins {
+    id "com.android.application"
+}
+
+// Firebase's settings file comes from the Firebase console and stays out of the repo. Without it the app still builds
+// and runs, with push alerts unavailable.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
+android {
+    namespace "com.tcgboogie.app"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.tcgboogie.app" // Permanent: the same app on Google Play as android-app/
+        minSdk 24
+        targetSdk 36
+        versionCode 3 // Must always go up. The TWA in android-app/ used 2.
+        versionName "1.1.0"
+    }
+
+    // The upload key stays outside the repo. Passwords come from the environment, so they're never saved in a file.
+    def keyPath = System.getenv("TCG_KEY_PATH") ?: "C:/Users/Chris/.tcgboogie/android-upload.jks"
+    signingConfigs {
+        release {
+            if (System.getenv("TCG_KEY_PASSWORD")) {
+                storeFile file(keyPath)
+                storePassword System.getenv("TCG_STORE_PASSWORD") ?: System.getenv("TCG_KEY_PASSWORD")
+                keyAlias "upload"
+                keyPassword System.getenv("TCG_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
+            if (System.getenv("TCG_KEY_PASSWORD")) signingConfig signingConfigs.release
+        }
+    }
+
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core:1.15.0"
+    implementation "androidx.activity:activity:1.10.1"
+    implementation "androidx.fragment:fragment:1.8.6" // Firebase brings an old one, and result launchers need 1.3 or newer
+    implementation "androidx.webkit:webkit:1.13.0"
+    implementation "androidx.browser:browser:1.8.0"
+    implementation "androidx.core:core-splashscreen:1.0.1"
+    implementation platform("com.google.firebase:firebase-bom:33.13.0")
+    implementation "com.google.firebase:firebase-messaging"
+    testImplementation "junit:junit:4.13.2"
+}

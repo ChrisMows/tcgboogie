@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { removePush, testPush, toggleAlertChannel } from "@/app/app/actions";
-import { currentSubscription, enablePush, needsInstall, pushSupported } from "@/lib/push-client";
+import { currentSubscription, enablePush, needsInstall, pushPermission, pushSupported } from "@/lib/push-client";
 
 // Push alerts on this phone or computer (lib/push.js sends them, public/sw.js shows them), as the first switch in
 // Settings → How we reach you. Ticking it asks the browser's permission right there; on an iPhone in Safari it shows
@@ -21,7 +21,7 @@ export default function PushSetup({ canPush, devices = [], alertOn = true }) {
   useEffect(() => {
     (async () => {
       if (!pushSupported()) return setState(needsInstall() ? "ios-install" : "unsupported");
-      if (Notification.permission === "denied") return setState("blocked");
+      if (pushPermission() === "denied") return setState("blocked");
       const sub = await currentSubscription().catch(() => null);
       const mine = sub && devices.some((d) => d.endpoint === sub.endpoint);
       setEndpoint(mine ? sub.endpoint : null);

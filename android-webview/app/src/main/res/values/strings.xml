@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TCG Boogie</string>
+    <string name="offline_title">Can\'t reach TCG Boogie</string>
+    <string name="offline_body">Check your connection, then try again.</string>
+    <string name="offline_retry">Try again</string>
+    <string name="alerts_channel">Deals and price alerts</string>
+    <string name="shortcut_deals">Deals</string>
+    <string name="shortcut_scanner">Card scanner</string>
+    <string name="shortcut_alerts">Price alerts</string>
+    <string name="no_browser">No browser on this phone could open that.</string>
+    <string name="download_started">Saving to your Downloads folder</string>
+    <string name="download_failed">That couldn\'t be saved. Please try again.</string>
+    <string name="download_allow">Allow storage, then tap Export again.</string>
+    <string name="photo_source">Add a photo</string>
+</resources>
