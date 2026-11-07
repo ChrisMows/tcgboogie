@@ -35,9 +35,10 @@ Remove-Item Env:NoDefaultCurrentDirectoryInExePath -ErrorAction SilentlyContinue
 
 - **To try on a phone:** `app/build/outputs/apk/debug/app-debug.apk`. It's signed with a debug key, so it can't install
   over a Play copy of the app: uninstall that first. Sign-ins and push work against the live site, so its changes have to be deployed.
-- **To upload to Play:** set `TCG_KEY_PASSWORD` (and `TCG_STORE_PASSWORD` if it differs) in that window, raise
-  `versionCode` in `app/build.gradle`, then run `.\gradlew.bat :app:bundleRelease`. The file is
-  `app/build/outputs/bundle/release/app-release.aab`.
+- **To upload to Play:** raise `versionCode` in `app/build.gradle` if this version was already uploaded, then run
+  `powershell -ExecutionPolicy Bypass -File .uild-release.ps1`. It asks for the upload key's password and checks the
+  signature. The key is `%USERPROFILE%\.tcgboogie\android-upload-2.jks`, made on 2026-11-07 by `new-upload-key.ps1` for an
+  upload key reset, because the first key's password was lost. Keep the file and its password in a password manager.
 
 ## Firebase (needed for push alerts)
 

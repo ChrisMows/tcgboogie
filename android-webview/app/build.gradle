@@ -21,7 +21,7 @@ android {
     }
 
     // The upload key stays outside the repo. Passwords come from the environment, so they're never saved in a file.
-    def keyPath = System.getenv("TCG_KEY_PATH") ?: "C:/Users/Chris/.tcgboogie/android-upload.jks"
+    def keyPath = System.getenv("TCG_KEY_PATH") ?: "C:/Users/Chris/.tcgboogie/android-upload-2.jks"
     signingConfigs {
         release {
             if (System.getenv("TCG_KEY_PASSWORD")) {
