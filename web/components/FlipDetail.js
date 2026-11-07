@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { gradeLabel } from "@/lib/collection";
-import { FLIP_CHECK, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
+import { EBAY_FEE, EBAY_FEE_NOTE, FLIP_CHECK, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -24,15 +24,16 @@ function cardTitle({ name, number }) {
   return number ? `${bare} · ${number}` : bare;
 }
 
-/** A dollar box: shows cents until it's being typed in. */
-function MoneyInput({ value, onChange, max, label }) {
+/** A dollar box (or percent box): shows two decimals until it's being typed in. */
+function MoneyInput({ value, onChange, max, label, percent }) {
   const [typing, setTyping] = useState(null);
   return (
     <span className="gr-money">
-      <span className="muted">$</span>
+      {!percent && <span className="muted">$</span>}
       <input type="number" inputMode="decimal" min="0" max={max} step="any" aria-label={label} value={typing !== null && Number(typing) === value ? typing : value.toFixed(2)}
         onFocus={() => setTyping(String(value))} onBlur={() => setTyping(null)}
         onChange={(e) => { setTyping(e.target.value); onChange(Math.min(max, Math.max(0, Number(e.target.value) || 0))); }} />
+      {percent && <span className="muted">%</span>}
     </span>
   );
 }
@@ -46,7 +47,7 @@ function Trend({ down }) {
 }
 
 /** One way the card could come back: what it sells for, and what that leaves. */
-function Outcome({ grade, price, profit, spend, count, main }) {
+function Outcome({ grade, price, fee, profit, spend, count, main }) {
   if (price === null) {
     return (
       <div className="fd-outcome">
@@ -61,7 +62,7 @@ function Outcome({ grade, price, profit, spend, count, main }) {
       <span className="fd-outcome-title">If graded <b>{grade}</b></span>
       <b className={`fd-outcome-num ${tone(profit)}`}>{plus(profit)}</b>
       <span className="muted">Projected {profit >= 0 ? "profit" : "loss"}</span>
-      <span className="fd-outcome-line"><span>Sale value <b>{money(price)}</b></span><span><b>{pct(profit / spend)}</b> return</span></span>
+      <span className="fd-outcome-line"><span>Sale value <b>{money(price)}</b></span>{fee > 0 && <span>eBay fee <b>−{money(fee)}</b></span>}<span><b>{pct(profit / spend)}</b> return</span></span>
       <span className="small muted">{sales(count)}</span>
     </div>
   );
@@ -69,7 +70,7 @@ function Outcome({ grade, price, profit, spend, count, main }) {
 
 /** What the grade below the top means for this flip: the price to stay under, and what happens at the price entered. */
 function BreakEven({ m }) {
-  const line = m.next === null ? null : m.next - m.cost;
+  const line = m.next === null ? null : m.next - m.feeNext - m.cost;
   const say = (ok, head, value, text) => (
     <div className={`fd-even ${ok ? "ok" : "warn"}`}>
       <Trend down={!ok} />
@@ -78,7 +79,7 @@ function BreakEven({ m }) {
     </div>
   );
   if (line === null) return say(false, `No recent ${m.nextName} sales`, null, `Only the ${m.topName} has recent sales, so we can't say what a lower grade would leave.`);
-  if (line <= 0) return say(false, `A ${m.nextName} can't break even`, null, "It sells for less than the grading cost, whatever you pay raw.");
+  if (line <= 0) return say(false, `A ${m.nextName} can't break even`, null, "After eBay's fee, it sells for less than the grading cost, whatever you pay raw.");
   const head = `${m.nextName} break-even purchase price`;
   if (m.profit9 >= 0) return say(true, head, money(line), `${m.nextName} remains profitable at your purchase price.`);
   if (m.profit10 <= 0) return say(false, head, money(line), `At your purchase price it loses money even as a ${m.topName}.`);
@@ -93,11 +94,13 @@ export default function FlipDetail({ card, start, links }) {
   const [own, setOwn] = useState(null); // the member's own fee per card, instead of a service level
   const [shipping, setShipping] = useState(start.shipping);
   const [raw, setRaw] = useState(card.raw); // what they'd pay: starts at TCGplayer's Near Mint market price
+  const [feePercent, setFeePercent] = useState(Math.round(EBAY_FEE.rate * 10000) / 100); // eBay's rate, or the member's own
+  const feeRate = feePercent / 100;
 
   const t = GRADE_TARGETS[target];
   const co = GRADING_COMPANIES[t.grader];
   const c = useMemo(() => ({ ...card, raw }), [card, raw]);
-  const m = gradingMath(c, target, tier, { own, shipping });
+  const m = gradingMath(c, target, tier, { own, shipping, feeRate });
   const flip = m && scoreOf(c, target, m);
   const spend = m && raw + m.cost;
   const grades = c.grades[target] || {};
@@ -108,9 +111,9 @@ export default function FlipDetail({ card, start, links }) {
 
   // Every grader at its cheapest level that takes this card, best Flip Score first; no data last.
   const rows = useMemo(() => TARGETS.map((id) => {
-    const r = gradingMath(c, id, 0, { shipping });
+    const r = gradingMath(c, id, 0, { shipping, feeRate });
     return { id, m: r, flip: r && scoreOf(c, id, r) };
-  }).sort((a, b) => (b.flip?.score ?? -1) - (a.flip?.score ?? -1) || (b.m?.profit10 ?? 0) - (a.m?.profit10 ?? 0)), [c, shipping]);
+  }).sort((a, b) => (b.flip?.score ?? -1) - (a.flip?.score ?? -1) || (b.m?.profit10 ?? 0) - (a.m?.profit10 ?? 0)), [c, shipping, feeRate]);
 
   const pick = (id) => {
     if (GRADE_TARGETS[id].grader !== t.grader) { setTier(0); setOwn(null); } // another company's levels: start at its cheapest
@@ -194,6 +197,11 @@ export default function FlipDetail({ card, start, links }) {
             <span className="small muted">Shipping per card</span>
             <MoneyInput value={shipping} onChange={setShipping} max={999} label="Shipping per card" />
           </div>
+          <div className="gr-field">
+            <span className="small muted">eBay selling fee</span>
+            <MoneyInput percent value={feePercent} onChange={setFeePercent} max={50} label="eBay selling fee percent" />
+            <span className="small muted">Set it to 0 if you sell elsewhere</span>
+          </div>
         </div>
 
         {m && (
@@ -202,8 +210,8 @@ export default function FlipDetail({ card, start, links }) {
             {m.tier?.max && m.top > m.tier.max && <div className="notice warn fd-note"><Info />A {money(m.top)} card is over the ${m.tier.max.toLocaleString("en-US")} limit {t.grader} publishes for {m.tier.name}, its highest level. Check with {t.grader} what a card like this costs.</div>}
             {m.tier?.min > 1 && <div className="notice warn fd-note"><Info />{t.grader} {m.tier.name} needs at least {m.tier.min} cards in one submission.</div>}
             <div className="fd-outcomes">
-              <Outcome main grade={m.topName} price={m.top} profit={m.profit10} spend={spend} count={grades.topSales} />
-              <Outcome grade={m.nextName} price={m.next} profit={m.profit9} spend={spend} count={grades.nextSales} />
+              <Outcome main grade={m.topName} price={m.top} fee={m.feeTop} profit={m.profit10} spend={spend} count={grades.topSales} />
+              <Outcome grade={m.nextName} price={m.next} fee={m.feeNext} profit={m.profit9} spend={spend} count={grades.nextSales} />
             </div>
             <div className="fd-total">
               <div className="fd-total-sum"><span>Total investment</span><b>{money(spend)}</b></div>
@@ -261,7 +269,7 @@ export default function FlipDetail({ card, start, links }) {
 
       <p className="hint">
         Graded prices are recent sales with enough data to trust; {topShort === "10" ? "a 10" : `a ${topShort}`} isn&apos;t guaranteed, and a card can come back lower than the grades shown here.
-        Profit is before selling fees, such as eBay&apos;s. Grading fees are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; pick &quot;My own price&quot; if yours differ.
+        {EBAY_FEE_NOTE} Grading fees are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; pick &quot;My own price&quot; if yours differ.
         Check centering, corners, edges and surface before you buy: raw copies sold as &quot;Near Mint&quot; aren&apos;t always.
       </p>
     </>

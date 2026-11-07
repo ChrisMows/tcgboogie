@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { DEFAULT_SHIPPING, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, gradingMath, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, EBAY_FEE_NOTE, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, gradingMath, targetName } from "@/lib/grading";
 import { gradeLabel } from "@/lib/collection";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -54,7 +54,7 @@ export function GradingTile({ c, dim, href }) {
           <span><i>{top}</i>{money(c.top)}</span>
           {c.next !== null && <span className="gr-nine"><i>{next}</i>{money(c.next)}</span>}
         </div>
-        <span className="small muted gr-cost-note">{c.tier ? `${c.tier.name} ${fee(c.tier.fee)}` : "Your price"} + shipping{c.bumped ? ` · its value needs ${c.tier.name}` : ""}</span>
+        <span className="small muted gr-cost-note">{c.tier ? `${c.tier.name} ${fee(c.tier.fee)}` : "Your price"} + shipping + eBay fee{c.bumped ? ` · its value needs ${c.tier.name}` : ""}</span>
         {c.flip ? <FlipScore c={c} top={top} next={next} /> : <>
         {c.verdict === "safe" && <span className="badge good" title={`Even a ${next} covers the cost`}>✓ Safe bet</span>}
         {c.verdict === "needs10" && <span className="badge warn" title={`Only pays off if it gets a ${top}`}>Needs a {c.topShort}</span>}
@@ -172,7 +172,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       {all.length > 0 && (
         <div className="gr-legend small muted" aria-hidden="true">
-          <span className="gr-eq"><b>{name} price</b> − <b>raw price</b> − <b>{costLabel} grading + shipping</b> = <b className="up">profit</b></span>
+          <span className="gr-eq"><b>{name} price</b> − <b>eBay fee</b> − <b>raw price</b> − <b>{costLabel} grading + shipping</b> = <b className="up">profit</b></span>
           <span><span className="badge good">✓ Safe bet</span> a {nextShort} still pays</span>
           <span><span className="badge warn">Needs a {topShort}</span> riskier</span>
         </div>
@@ -209,7 +209,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       <p className="hint">
         {unchecked > 0 && <>{unchecked} of your raw cards {unchecked === 1 ? "has" : "have"} too few recent {name} sales to check. </>}
-        Grading prices are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
+        {EBAY_FEE_NOTE} Grading prices are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
       </p>
     </>
   );

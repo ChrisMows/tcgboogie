@@ -7,7 +7,17 @@ export const MIN_PROFIT = 25; // below this a top grade isn't worth the wait and
 export const FLIP_FILTER_LIMIT = 5; // saved filters (tabs) a member can keep on Grade & Flip
 export const FLIP_FILTER_FIELDS = ["grader", "tier", "min", "max", "profit", "ship", "lang", "era", "sort", "safe"]; // its form's fields
 // Shown on Grade & Flip's list and on each card's page.
-export const FLIP_CHECK = "These numbers come from recent sales and the graders' published prices. They're usually right, but they can be wrong or out of date, so you're responsible for confirming the card, its condition, sale prices and grading fees before you buy. No grade or profit is guaranteed.";
+export const FLIP_CHECK = "These numbers come from recent sales and the graders' published prices. They're usually right, but they can be wrong or out of date, so you're responsible for confirming the card, its condition, sale prices, grading fees and selling fees before you buy. No grade or profit is guaranteed.";
+// eBay's selling fee for collectible card games, as published on ebay.com (checked November 2026; the monthly price check
+// covers it too): a share of the sale up to a limit, a small share above it, and a fixed amount per order.
+export const EBAY_FEE = { rate: 0.1325, limit: 7500, above: 0.0235, order: 0.4, smallOrder: 0.3, smallUpTo: 10 };
+export const EBAY_FEE_NOTE = "Profit takes off eBay's selling fee: 13.25% up to $7,500, 2.35% above that, and $0.40 per order ($0.30 on orders of $10 or less). eBay also charges it on the shipping and tax a buyer pays, so the real fee can be a little higher, and your account's rate may differ.";
+/** eBay's fee on a sale. rate: the member's own rate for the first part; 0 means they aren't selling on eBay. */
+export function sellingFee(price, rate = EBAY_FEE.rate) {
+  if (!rate || !(price > 0)) return 0;
+  return rate * Math.min(price, EBAY_FEE.limit) + EBAY_FEE.above * Math.max(price - EBAY_FEE.limit, 0)
+    + (price <= EBAY_FEE.smallUpTo ? EBAY_FEE.smallOrder : EBAY_FEE.order);
+}
 export const DEFAULT_SHIPPING = 5; // rough per-card share of insured shipping both ways and supplies
 
 // The day GRADING_COMPANIES was last compared with the graders' own pricing pages. Change it whenever that's done (even if
@@ -171,16 +181,19 @@ export function gradingCandidates(owned, products) {
 
 /**
  * The numbers for one card at a target grade (GRADE_TARGETS) and service level, or null when that grade has no reliable
- * sales for it. verdict: "safe" (the next grade down still pays), "needs10" (only the top grade pays), or "skip".
+ * sales for it. Profits are after eBay's selling fee (opts.feeRate: the member's own rate, 0 for none). verdict: "safe" (the next grade down still pays), "needs10" (only the top grade pays), or "skip".
  */
 export function gradingMath(c, target = "PSA", tierIndex = 0, opts = {}) {
   const t = GRADE_TARGETS[target] || GRADE_TARGETS[targetId(target)];
   const g = c.grades?.[target];
   if (!g?.top) return null;
   const { cost, tier, bumped } = gradingCost(t.grader, tierIndex, g.top, opts);
-  const profit10 = g.top - c.raw - cost;
-  const profit9 = g.next !== null && g.next !== undefined ? g.next - c.raw - cost : null;
+  const hasNext = g.next !== null && g.next !== undefined;
+  const feeTop = sellingFee(g.top, opts.feeRate);
+  const feeNext = hasNext ? sellingFee(g.next, opts.feeRate) : null;
+  const profit10 = g.top - feeTop - c.raw - cost;
+  const profit9 = hasNext ? g.next - feeNext - c.raw - cost : null;
   const verdict = profit10 < MIN_PROFIT ? "skip" : profit9 !== null && profit9 >= 0 ? "safe" : "needs10";
-  return { grader: t.grader, top: g.top, next: g.next ?? null, cost, tier, bumped, profit10, profit9, verdict,
+  return { grader: t.grader, top: g.top, next: g.next ?? null, feeTop, feeNext, cost, tier, bumped, profit10, profit9, verdict,
     topName: gradeName(t.grader, t.top), nextName: gradeName(t.grader, t.next), topShort: gradeLabel(t.grader, t.top) };
 }

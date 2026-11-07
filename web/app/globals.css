@@ -1526,6 +1526,7 @@ details.era > .set-grid { margin-bottom: 14px; }
   .fd-outcomes { grid-template-columns: minmax(0, 1fr); }
   .fd-outcome { padding: 14px 18px; }
   .fd-outcome-num { font-size: 40px; }
+  .fd-outcome-line > span + span { padding-left: 0; border-left: 0; }
   .fd-total { flex-direction: column; align-items: flex-start; }
   .fd-total-sum-line, .fd-total-time { flex: none; padding-left: 0; border-left: 0; }
   .fd-even { padding: 10px 14px; }

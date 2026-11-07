@@ -329,7 +329,7 @@ export default async function CardPage({ params, searchParams }) {
             plan={user.plan} price={now} dealFilter={dealFilter} filterHref={filterHref} />
           {gradeIdea && gradeIdea.verdict !== "skip" && (
             <Link href="/app/collection/grading" className="grade-idea">
-              💎 Worth grading? A {gradeIdea.topName} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after {money(gradeIdea.cost, 0)} grading and shipping.
+              💎 Worth grading? A {gradeIdea.topName} sells for about {money(gradeIdea.top, 0)}: roughly {money(gradeIdea.profit10, 0)} profit on your raw copy after eBay&apos;s fee and {money(gradeIdea.cost, 0)} grading and shipping.
               {gradeIdea.verdict === "safe" ? " Even a grade lower would cover it." : ` Only pays if it gets a ${gradeIdea.topShort}.`} →
             </Link>
           )}
