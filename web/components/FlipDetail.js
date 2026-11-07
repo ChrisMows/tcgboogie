@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
 import { gradeLabel } from "@/lib/collection";
-import { FLIP_CHECK, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
+import { FLIP_CHECK, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, THIN_SALES, flipScore, gradingMath, targetName } from "@/lib/grading";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 const plus = (v) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -261,7 +261,7 @@ export default function FlipDetail({ card, start, links }) {
 
       <p className="hint">
         Graded prices are recent sales with enough data to trust; {topShort === "10" ? "a 10" : `a ${topShort}`} isn&apos;t guaranteed, and a card can come back lower than the grades shown here.
-        Profit is before selling fees, such as eBay&apos;s. Grading fees are the graders&apos; published prices as of October 2026; pick &quot;My own price&quot; if yours differ.
+        Profit is before selling fees, such as eBay&apos;s. Grading fees are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; pick &quot;My own price&quot; if yours differ.
         Check centering, corners, edges and surface before you buy: raw copies sold as &quot;Near Mint&quot; aren&apos;t always.
       </p>
     </>

@@ -8,6 +8,7 @@ import { db, schema } from "@/lib/db";
 import { billingLive, billingStatus } from "@/lib/billing";
 import { epnLive } from "@/lib/ebay-link";
 import { botStatus } from "@/lib/deals";
+import { GRADING_PRICES_CHECKED, GRADING_PRICES_STALE_DAYS } from "@/lib/grading";
 import { log } from "@/lib/log";
 import { channelsReady } from "@/lib/notify";
 import { emailCap, emailSender, mailer } from "@/lib/mail";
@@ -97,6 +98,12 @@ export async function systemStatus({ pingPrices = false } = {}) {
         : r ? `Test: ${r.ok ? "OK" : `failed (${r.code ?? r.detail})`} in ${r.ms} ms` : s.at ? `Last call ${ago(s.at)} (${s.code})` : "Key set · no calls since the last restart (use Test to check)",
         credits !== null ? `${credits.toLocaleString()} credits left today` : null].filter(Boolean).join(" · "));
   }
+
+  // Typed in by hand from the graders' sites, and members decide on them (lib/grading.js).
+  const pricesChecked = `${GRADING_PRICES_CHECKED}T12:00:00Z`;
+  const pricesDue = (Date.now() - new Date(pricesChecked).getTime()) / 86400000 > GRADING_PRICES_STALE_DAYS;
+  add("Data", "Grading prices", pricesDue ? "warn" : "ok",
+    `Last compared with the graders' pricing pages ${ago(pricesChecked)}${pricesDue ? ": check them, then update GRADING_PRICES_CHECKED in lib/grading.js" : ""}`);
 
   if (db) {
     const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "price_alerts_last_run")).limit(1);

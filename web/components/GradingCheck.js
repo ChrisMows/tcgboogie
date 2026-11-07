@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CardThumb from "@/components/CardThumb";
-import { DEFAULT_SHIPPING, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, gradingMath, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_POINTS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, gradingMath, targetName } from "@/lib/grading";
 import { gradeLabel } from "@/lib/collection";
 
 const money = (v) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -209,7 +209,7 @@ export default function GradingCheck({ candidates, rawCards, ownedCards, full })
 
       <p className="hint">
         {unchecked > 0 && <>{unchecked} of your raw cards {unchecked === 1 ? "has" : "have"} too few recent {name} sales to check. </>}
-        Grading prices are the graders&apos; published prices as of October 2026; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
+        Grading prices are the graders&apos; published prices as of {GRADING_PRICES_MONTH}; they change often, so pick “My own price” if yours differ. A card worth more than a level allows is priced at the level it needs. Sale prices are recent graded sales. No grade is guaranteed: look at centering, corners, edges and surface first.
       </p>
     </>
   );

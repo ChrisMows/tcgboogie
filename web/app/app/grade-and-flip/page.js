@@ -2,7 +2,7 @@ import Link from "next/link";
 import GradeFlipFilters from "@/components/GradeFlipFilters";
 import { GradingTile } from "@/components/GradingCheck";
 import { gradeLabel } from "@/lib/collection";
-import { DEFAULT_SHIPPING, FLIP_CHECK, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
+import { DEFAULT_SHIPPING, FLIP_CHECK, FLIP_FILTER_FIELDS, FLIP_FILTER_LIMIT, FLIP_TIERS, GRADE_TARGETS, GRADING_COMPANIES, GRADING_PRICES_MONTH, MIN_PROFIT, targetId, targetName } from "@/lib/grading";
 import { ERAS, NEW_DAYS, findGradingGaps, gradingGapCount } from "@/lib/grading-gap";
 import { PLANS } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
@@ -147,7 +147,7 @@ export default async function GradingFinderPage({ searchParams }) {
       <p className="hint">
         We check {checked.toLocaleString("en-US")} cards: every card members own, watch or have opened, with prices updated regularly.
         Graded prices are recent sales with enough data to trust; raw prices are TCGplayer Near Mint market. Grading fees are
-        the graders&apos; published prices as of October 2026, and a card worth more than a level allows is priced at the level it
+        the graders&apos; published prices as of {GRADING_PRICES_MONTH}, and a card worth more than a level allows is priced at the level it
         needs. Older cards rarely come back a 10 (decades of handling, older printing), which is why we start on modern. No grade is guaranteed: check centering, corners, edges and surface before you buy, and raw copies sold as
         &quot;Near Mint&quot; aren&apos;t always.
       </p>

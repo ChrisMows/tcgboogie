@@ -10,11 +10,16 @@ export const FLIP_FILTER_FIELDS = ["grader", "tier", "min", "max", "profit", "sh
 export const FLIP_CHECK = "These numbers come from recent sales and the graders' published prices. They're usually right, but they can be wrong or out of date, so you're responsible for confirming the card, its condition, sale prices and grading fees before you buy. No grade or profit is guaranteed.";
 export const DEFAULT_SHIPPING = 5; // rough per-card share of insured shipping both ways and supplies
 
+// The day GRADING_COMPANIES was last compared with the graders' own pricing pages. Change it whenever that's done (even if
+// nothing changed): members see its month, and Admin -> Status turns amber GRADING_PRICES_STALE_DAYS after it.
+export const GRADING_PRICES_CHECKED = "2026-10-22";
+export const GRADING_PRICES_STALE_DAYS = 45;
+export const GRADING_PRICES_MONTH = new Date(`${GRADING_PRICES_CHECKED}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+
 // Each grader's top everyday grade and the one below it (BGS's usual top is a 9.5 Gem Mint; its 10s are rare), and
 // its open service levels for trading cards, cheapest first: fee per card, rough turnaround (business days), the
 // highest card value the level accepts (null = no cap or not published; TAG's fee doesn't depend on value) and any
-// minimum card count. Prices as published in October
-// 2026; graders change them often (PSA's Value levels and SGC's old $15 level are paused or gone), so members can
+// minimum card count. Graders change them often (PSA's Value levels and SGC's old $15 level are paused or gone), so members can
 // also type their own price.
 export const GRADING_COMPANIES = {
   PSA: { top: "10", next: "9", tiers: [
