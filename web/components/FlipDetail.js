@@ -47,7 +47,7 @@ function Trend({ down }) {
 }
 
 /** One way the card could come back: what it sells for, and what that leaves. */
-function Outcome({ grade, price, fee, profit, spend, count, main }) {
+function Outcome({ grade, price, fee, profit, spend, count, main, note }) {
   if (price === null) {
     return (
       <div className="fd-outcome">
@@ -63,14 +63,14 @@ function Outcome({ grade, price, fee, profit, spend, count, main }) {
       <b className={`fd-outcome-num ${tone(profit)}`}>{plus(profit)}</b>
       <span className="muted">Projected {profit >= 0 ? "profit" : "loss"}</span>
       <span className="fd-outcome-line"><span>Sale value <b>{money(price)}</b></span>{fee > 0 && <span>eBay fee <b>−{money(fee)}</b></span>}<span><b>{pct(profit / spend)}</b> return</span></span>
-      <span className="small muted">{sales(count)}</span>
+      <span className="small muted">{sales(count)}{note ? ` · ${note}` : ""}</span>
     </div>
   );
 }
 
 /** What the grade below the top means for this flip: the price to stay under, and what happens at the price entered. */
 function BreakEven({ m }) {
-  const line = m.next === null ? null : m.next - m.feeNext - m.cost;
+  const line = m.next === null ? null : m.next - m.feeNext - m.costNext;
   const say = (ok, head, value, text) => (
     <div className={`fd-even ${ok ? "ok" : "warn"}`}>
       <Trend down={!ok} />
@@ -211,7 +211,8 @@ export default function FlipDetail({ card, start, links }) {
             {m.tier?.min > 1 && <div className="notice warn fd-note"><Info />{t.grader} {m.tier.name} needs at least {m.tier.min} cards in one submission.</div>}
             <div className="fd-outcomes">
               <Outcome main grade={m.topName} price={m.top} fee={m.feeTop} profit={m.profit10} spend={spend} count={grades.topSales} />
-              <Outcome grade={m.nextName} price={m.next} fee={m.feeNext} profit={m.profit9} spend={spend} count={grades.nextSales} />
+              <Outcome grade={m.nextName} price={m.next} fee={m.feeNext} profit={m.profit9} spend={m.next === null ? spend : raw + m.costNext} count={grades.nextSales}
+                note={m.next !== null && m.costNext !== m.cost ? `Costs ${money(m.costNext)} to grade and ship at this value` : null} />
             </div>
             <div className="fd-total">
               <div className="fd-total-sum"><span>Total investment</span><b>{money(spend)}</b></div>

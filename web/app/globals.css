@@ -1423,7 +1423,8 @@ details.era > .set-grid { margin-bottom: 14px; }
 .gf-name input { width: 100%; }
 .gf-details .gf-name { flex: 1 1 100%; margin-bottom: 0; }
 .gf-quick { margin-top: 0; }
-@media (min-width: 900px) { .gf-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; } }
+@media (min-width: 900px) { .gf-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; } }
+@media (min-width: 1500px) { .gf-quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .gf-details { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .gf-details[hidden] { display: none; }
 /* Grade & Flip's Flip Score */

@@ -13,6 +13,7 @@ const COMPANIES = [...new Set(TARGET_IDS.map((id) => GRADE_TARGETS[id].grader))]
 const firstTarget = (grader) => TARGET_IDS.find((id) => GRADE_TARGETS[id].grader === grader); // its everyday top grade
 const BUDGETS = ["", "50", "100", "250"]; // "" = any price
 const PROFITS = ["25", "50", "100"];
+const RISKS = ["0", "1"]; // "1": only cards that still pay at the next grade down
 
 function Quick({ label, options, value, set, fmt = (o) => o }) {
   return (
@@ -26,7 +27,7 @@ function Quick({ label, options, value, set, fmt = (o) => o }) {
 }
 
 /**
- * Grade & Flip's filters, a plain GET form: three quick choices (like the lightning on a card page), with the rest folded
+ * Grade & Flip's filters, a plain GET form: four quick choices (like the lightning on a card page), with the rest folded
  * under More options. Those stay in the form while folded, so a search always sends them. eras: { key: label }
  * (lib/grading-gap.js is server only). filter: the saved filter this tab shows, if any. creating: the + New filter tab.
  */
@@ -37,6 +38,7 @@ export default function GradeFlipFilters({ opts, eras, filter = null, creating =
   const [tier, setTier] = useState(opts.tier);
   const [max, setMax] = useState(opts.maxRaw === null ? "" : String(opts.maxRaw));
   const [profit, setProfit] = useState(String(opts.minProfit));
+  const [safe, setSafe] = useState(opts.safeOnly ? "1" : "0");
   const [more, setMore] = useState(false);
   const [name, setName] = useState(filter?.name || "");
   const [error, setError] = useState(null);
@@ -76,6 +78,7 @@ export default function GradeFlipFilters({ opts, eras, filter = null, creating =
         <Quick label="Grading company" options={COMPANIES} value={t.grader} set={(g) => { if (g !== t.grader) pick(firstTarget(g)); }} />
         <Quick label="Raw card costs up to" options={BUDGETS} value={max} set={setMax} fmt={(o) => (o ? `$${o}` : "Any")} />
         <Quick label="Profit at least" options={PROFITS} value={profit} set={setProfit} fmt={(o) => `$${o}`} />
+        <Quick label={`If it comes back a ${gradeLabel(t.grader, t.next)}`} options={RISKS} value={safe} set={setSafe} fmt={(o) => (o === "1" ? "Must still pay" : "Show all")} />
       </div>
       <div className="gf-filters gf-details" hidden={!more}>
         {filter && nameField}
@@ -127,8 +130,8 @@ export default function GradeFlipFilters({ opts, eras, filter = null, creating =
         </label>
         <label className="gr-field">
           <span className="small muted">Risk</span>
-          <select name="safe" defaultValue={opts.safeOnly ? "1" : "0"}>
-            <option value="1">Only cards where a {gradeLabel(t.grader, t.next)} still pays</option><option value="0">Include cards that need a {gradeLabel(t.grader, t.top)}</option>
+          <select name="safe" value={safe} onChange={(e) => setSafe(e.target.value)}>
+            <option value="0">Include cards that need a {gradeLabel(t.grader, t.top)}</option><option value="1">Only cards where a {gradeLabel(t.grader, t.next)} still pays</option>
           </select>
         </label>
       </div>

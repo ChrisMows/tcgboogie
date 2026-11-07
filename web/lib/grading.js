@@ -192,8 +192,10 @@ export function gradingMath(c, target = "PSA", tierIndex = 0, opts = {}) {
   const feeTop = sellingFee(g.top, opts.feeRate);
   const feeNext = hasNext ? sellingFee(g.next, opts.feeRate) : null;
   const profit10 = g.top - feeTop - c.raw - cost;
-  const profit9 = hasNext ? g.next - feeNext - c.raw - cost : null;
+  // Graders charge by the card's value after grading (PSA's FAQ, Nov 2026), so the grade below can cost less than the top.
+  const costNext = hasNext ? gradingCost(t.grader, tierIndex, g.next, opts).cost : null;
+  const profit9 = hasNext ? g.next - feeNext - c.raw - costNext : null;
   const verdict = profit10 < MIN_PROFIT ? "skip" : profit9 !== null && profit9 >= 0 ? "safe" : "needs10";
-  return { grader: t.grader, top: g.top, next: g.next ?? null, feeTop, feeNext, cost, tier, bumped, profit10, profit9, verdict,
+  return { grader: t.grader, top: g.top, next: g.next ?? null, feeTop, feeNext, cost, costNext, tier, bumped, profit10, profit9, verdict,
     topName: gradeName(t.grader, t.top), nextName: gradeName(t.grader, t.next), topShort: gradeLabel(t.grader, t.top) };
 }

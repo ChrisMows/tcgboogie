@@ -14,7 +14,7 @@ export default async function GradingPage() {
   const user = await requireUser("/app/collection/grading");
   const [c, finder] = await Promise.all([
     loadCollection(user),
-    // Grade & Flip's default search (PSA, cheapest level, safe bets, modern), for the prompt below: what's out there now.
+    // Grade & Flip's PSA search, safe bets only (cheapest level, modern), for the prompt below: what's out there now.
     findGradingGaps({ safeOnly: true, limit: 1 }).catch(() => ({ cards: [], total: 0 })),
   ]);
   const candidates = gradingCandidates(c.owned, c.products);
@@ -34,7 +34,7 @@ export default async function GradingPage() {
       <GradingCheck candidates={candidates} rawCards={rawCards} ownedCards={c.owned.length} full={Boolean(user.plan.gradingCheck)} />
 
       {finder.total > 0 && (ultra ? (
-        <Link href="/app/grade-and-flip" className="panel gf-promo gf-promo-link">
+        <Link href="/app/grade-and-flip?safe=1" className="panel gf-promo gf-promo-link">
           <span className="gf-promo-icon" aria-hidden="true">💎</span>
           <span><b>Find cards worth buying to grade</b><span className="muted small"> · Grade & Flip has {finder.total.toLocaleString("en-US")} modern cards where a PSA 9 still pays right now, beyond your own cards.</span></span>
           <span className="gf-promo-go" aria-hidden="true">→</span>

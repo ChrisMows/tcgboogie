@@ -57,7 +57,7 @@ export default async function GradingFinderPage({ searchParams }) {
     minRaw: num(sp?.min, 0, 0, 100000),
     maxRaw: sp?.max ? num(sp.max, null, 0, 100000) : null,
     minProfit: num(sp?.profit, MIN_PROFIT, 0, 100000),
-    safeOnly: sp?.safe !== "0", // on unless switched off: a card that only pays at a 10 is a gamble
+    safeOnly: sp?.safe === "1", // off unless chosen: the Flip Score and each tile already show what a lower grade would do
     language: ["english", "japanese", "all"].includes(sp?.lang) ? sp.lang : "english",
     era: ERAS[sp?.era] ? sp.era : "modern", // vintage rarely grades a 10, so modern comes first
     sort: ["profit", "return"].includes(sp?.sort) ? sp.sort : "score",
@@ -81,7 +81,7 @@ export default async function GradingFinderPage({ searchParams }) {
     ERAS[opts.era].label.split(/[:,]/)[0],
     opts.minRaw || opts.maxRaw !== null ? `Raw ${money(opts.minRaw)}${opts.maxRaw !== null ? ` to ${money(opts.maxRaw)}` : " and up"}` : null,
     `${money(opts.minProfit)}+ profit`,
-    opts.safeOnly ? null : `Includes cards that need a ${topShort}`,
+    opts.safeOnly ? `Only cards where a ${gradeLabel(grader, t.next)} still pays` : null,
     { score: "Best Flip Score", profit: "Most profit", return: "Best return" }[opts.sort],
   ].filter(Boolean).join(" · ");
 
@@ -133,7 +133,7 @@ export default async function GradingFinderPage({ searchParams }) {
           <div className="gr-empty-icon" aria-hidden="true">🔎</div>
           <div className="gr-empty-text">
             <b>Nothing matches yet</b>
-            <span className="muted">Try a lower profit, a higher raw price limit, including cards that need a {topShort}, or another grading company or grade.</span>
+            <span className="muted">Try a lower profit, a higher raw price limit, {opts.safeOnly ? <>including cards that need a {topShort}, </> : null}or another grading company or grade.</span>
           </div>
         </div>
       )}

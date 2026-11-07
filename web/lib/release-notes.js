@@ -8,7 +8,7 @@ export const RELEASES = [
     title: "Ultra, Grade & Flip and a new card page",
     items: [
       { tag: "New", title: "Grade & Flip", href: "/app/grade-and-flip",
-        text: "A new page in the menu (and a button on your collection) that looks beyond your own cards: we rank thousands of cards, English and Japanese, where the graded price is far above the raw price, after the grading fee, shipping and eBay's selling fee. Pick the grading company and service level, what you'd pay for the raw copy, the least profit you want, the era (modern cards first, since vintage rarely grades a 10), and whether a card must still pay off one grade below the top (on by default, so you're not betting on a perfect 10). Part of Ultra." },
+        text: "A new page in the menu (and a button on your collection) that looks beyond your own cards: we rank thousands of cards, English and Japanese, where the graded price is far above the raw price, after the grading fee, shipping and eBay's selling fee. Pick the grading company and service level, what you'd pay for the raw copy, the least profit you want, the era (modern cards first, since vintage rarely grades a 10), and whether a card must still pay off one grade below the top. Part of Ultra." },
       { tag: "New", title: "The Ultra plan", href: "/app/ultra",
         text: "A new plan for people who flip cards: $14.99 a month plus tax, with everything in Premium plus Grade & Flip, and more tools coming soon. New subscribers get a 7-day free trial. Already on Premium? Upgrade any time and pay just the difference for the rest of your billing month." },
       { tag: "New", title: "Flip Score", href: "/app/grade-and-flip",
@@ -18,7 +18,7 @@ export const RELEASES = [
       { tag: "New", title: "Profit after eBay's fee", href: "/app/grade-and-flip",
         text: "Grade & Flip and Worth Grading now take eBay's selling fee off every profit: 13.25% up to $7,500, 2.35% above that, and a small per-order fee. Scores and rankings use the new numbers, so some cards score lower or drop off your list. On a card's flip page you can change the rate, or set it to 0 if you sell elsewhere." },
       { tag: "New", title: "Save your Grade & Flip filters", href: "/app/grade-and-flip",
-        text: "Grade & Flip now opens with three simple choices (grading company, what the raw card costs and your minimum profit), with everything else under More options. Save up to 5 searches and each gets its own tab." },
+        text: "Grade & Flip now opens with four simple choices (grading company, what the raw card costs, your minimum profit and whether a lower grade must still pay), with everything else under More options. Save up to 5 searches and each gets its own tab." },
       { tag: "New", title: "New to your list", href: "/app/grade-and-flip",
         text: "Grade & Flip shows cards that pass your filters now but didn't a week ago, and says why, like a lower raw price. Load more goes past the first 60 cards." },
       { tag: "New", title: "Paste a link to add a card", href: "/app/collection?add=1",

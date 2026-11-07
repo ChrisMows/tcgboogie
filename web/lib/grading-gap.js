@@ -13,6 +13,9 @@ import { GRADE_TARGETS, GRADING_COMPANIES, flipScore, gapStateOn, gapTrail, grad
 
 const { gradingGap, catalogCache, appSettings } = schema;
 const WATERMARK = "grading_gap_watermark"; // fetched_at of the last saved answer copied in
+// Raise this when toRow's rules change: every saved answer is copied in again. Those copies don't count as price changes,
+// so cards don't all turn up as "New to your list" (quietUntil below).
+const GAP_RULES = 2;
 const BATCH = 500;
 export const NEW_DAYS = 7; // "New to your list": passes the filters now but didn't this many days ago
 const NEW_SHOWN = 12;
@@ -26,13 +29,15 @@ const GRADE_LIST = sql.raw(`any(array[${GRADE_KEYS.map((k) => `'${k}'`).join(","
  * Copy newly saved card answers into grading_gap. Run by the cron job: a few batches a run, oldest first, so the first
  * run fills the table over a couple of runs and later runs only touch the cards the bot refreshed since.
  * Only the parts we use leave the database (a few KB a card): the prices, and for each grader's top two grades the sale
- * price, all-time count, last sale and how many sales the last 90 days had (the card page's reliability rule, lib/catalog.js gradedReliable).
+ * price, all-time count, last sale and how many sales the last 90 days had (reliability: lib/catalog.js gradedReliable, on all-time sales for every grader).
  */
 export async function refreshGradingGaps({ batches = 8 } = {}) {
   if (!db) return { copied: 0 };
   await listSets().catch(() => null); // the era filter reads the saved set list: keep it from expiring (a lookup a week)
   const [mark] = await db.select().from(appSettings).where(eq(appSettings.key, WATERMARK)).limit(1);
-  let after = mark?.value?.at ? new Date(mark.value.at) : new Date(0);
+  const current = mark?.value?.rules === GAP_RULES;
+  let after = current && mark.value.at ? new Date(mark.value.at) : new Date(0);
+  const quietUntil = current ? mark.value.quietUntil || null : new Date().toISOString();
   let copied = 0, seen = 0;
   for (let b = 0; b < batches; b++) {
     const since = sql`to_char(now() - interval '90 days', 'YYYY-MM-DD')`;
@@ -69,7 +74,8 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       const today = new Date().toISOString().slice(0, 10);
       const values = fresh.map((v) => {
         const old = known.get(`${v.productId}:${v.language}`);
-        return { ...v, firstSeen: old ? null : new Date(), trail: old ? gapTrail(old, v, today) : [] }; // firstSeen is only written on a first insert
+        const rulesOnly = old && quietUntil && v.sourceAt <= new Date(quietUntil); // copied again because the rules changed
+        return { ...v, firstSeen: old ? null : new Date(), trail: rulesOnly ? old.trail : old ? gapTrail(old, v, today) : [] }; // firstSeen is only written on a first insert
       });
       await db.insert(gradingGap).values(values).onConflictDoUpdate({
         target: [gradingGap.productId, gradingGap.language],
@@ -79,8 +85,9 @@ export async function refreshGradingGaps({ batches = 8 } = {}) {
       copied += values.length;
     }
     after = new Date(rows[rows.length - 1].fetched_at);
-    await db.insert(appSettings).values({ key: WATERMARK, value: { at: after.toISOString() } })
-      .onConflictDoUpdate({ target: appSettings.key, set: { value: { at: after.toISOString() }, updatedAt: new Date() } });
+    const value = { at: after.toISOString(), rules: GAP_RULES, quietUntil };
+    await db.insert(appSettings).values({ key: WATERMARK, value })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
     if (rows.length < BATCH) break;
   }
   return { seen, copied };
@@ -99,7 +106,8 @@ function toRow({ key, fetched_at: fetchedAt, card: c }) {
     if (c.outliers?.[g]) continue; // flagged as unreliable by the service
     const price = s?.smartMarketPrice?.price ?? s?.averagePrice ?? s?.medianPrice ?? null;
     if (!price) continue;
-    const sales = c.recent?.[g] !== undefined ? c.recent[g] : s?.count ?? s?.totalSales ?? null;
+    const allSales = s?.count ?? s?.totalSales ?? null;
+    const sales = c.recent?.[g] !== undefined ? c.recent[g] : allSales;
     const lastSale = s?.lastSaleDate ? String(s.lastSaleDate).slice(0, 10) : null;
     // CGC and BGS 10s: a price per slab label (the card page's rule).
     const split = splitTen(g, s, sales);
@@ -109,7 +117,8 @@ function toRow({ key, fetched_at: fetchedAt, card: c }) {
       }
       continue;
     }
-    graded[g] = { p: Math.round(price * 100) / 100, n: sales, r: gradedReliable({ sales, lastSale, confidence: s?.smartMarketPrice?.confidence || null }) };
+    // All-time sales, the same count CGC's and BGS's labelled 10s are judged on above, so every grader gets one rule. n stays recent.
+    graded[g] = { p: Math.round(price * 100) / 100, n: sales, r: gradedReliable({ sales: allSales, lastSale, confidence: s?.smartMarketPrice?.confidence || null }) };
   }
   if (!Object.keys(graded).length) return null;
   return {
@@ -160,7 +169,11 @@ const inEra = (era, r, released) => !ERAS[era]?.since || (r.language === "japane
 const TOP_X_NEXT = 8, TOP_X_RAW = 40, NEXT_X_RAW = 6;
 // A real Black Label can sell for far more (Mega Charizard X ex: $27,950 against $2,051 as a BGS 10 Pristine, Nov 2026).
 const RARE_X_NEXT = 40, RARE_X_RAW = 150;
-const plausible = (c, rare) => c.top <= (rare ? RARE_X_RAW : TOP_X_RAW) * c.raw && (c.next === null || (c.top <= (rare ? RARE_X_NEXT : TOP_X_NEXT) * c.next && c.next <= (rare ? RARE_X_NEXT : NEXT_X_RAW) * c.raw));
+// Those limits are for thin data. With this many recent top-grade sales the price is real, however far above the grade below
+// it is: a Magikarp 203/193 sold 119 PSA 10s at about 10 times its PSA 9 (checked on the live data, Nov 2026).
+const SOLID_SALES = 10;
+const plausible = (c, rare, topSales) => (topSales ?? 0) >= SOLID_SALES
+  || (c.top <= (rare ? RARE_X_RAW : TOP_X_RAW) * c.raw && (c.next === null || (c.top <= (rare ? RARE_X_NEXT : TOP_X_NEXT) * c.next && c.next <= (rare ? RARE_X_NEXT : NEXT_X_RAW) * c.raw)));
 
 /**
  * Cards worth grading at a target grade (GRADE_TARGETS) and service level, best first. opts: target, tier (service level index), own (own
@@ -202,8 +215,8 @@ export async function findGradingGaps(opts = {}) {
     }
     if (safeOnly) where.push(sql`${g(nk, "r")}::boolean and ${next} - ${gradingGap.raw} - ${floor}::float >= 0`);
     // Believable prices only (see plausible below).
-    where.push(sql`${top} <= ${sql.raw(String(t.rare ? RARE_X_RAW : TOP_X_RAW))} * ${gradingGap.raw}`);
-    where.push(sql`(coalesce(${g(nk, "r")}::boolean, false) = false or (${top} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : TOP_X_NEXT))} * ${next} and ${next} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : NEXT_X_RAW))} * ${gradingGap.raw}))`);
+    where.push(sql`(coalesce(${g(tk, "n")}::float, 0) >= ${sql.raw(String(SOLID_SALES))} or (${top} <= ${sql.raw(String(t.rare ? RARE_X_RAW : TOP_X_RAW))} * ${gradingGap.raw}
+      and (coalesce(${g(nk, "r")}::boolean, false) = false or (${top} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : TOP_X_NEXT))} * ${next} and ${next} <= ${sql.raw(String(t.rare ? RARE_X_NEXT : NEXT_X_RAW))} * ${gradingGap.raw}))))`);
     rows = await db.select().from(gradingGap).where(sql.join(where, sql` and `))
       .orderBy(sql`${top} - ${gradingGap.raw} desc`).limit(600);
   }
@@ -213,7 +226,7 @@ export async function findGradingGaps(opts = {}) {
     const m = gradingMath(c, target, tier, { own, shipping });
     if (!m) return null;
     const card = { ...c, ...m, roi: m.profit10 / (c.raw + m.cost), flip: flipScore({ raw: c.raw, ...m }, c.grades[target].topSales) };
-    return plausible(card, t.rare) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
+    return plausible(card, t.rare, c.grades[target].topSales) && card.verdict !== "skip" && card.profit10 >= minProfit && (!safeOnly || card.verdict === "safe")
       && card.raw >= minRaw && (maxRaw === null || card.raw <= maxRaw) ? card : null;
   };
   const since = new Date(Date.now() - NEW_DAYS * 86400000).toISOString().slice(0, 10);
@@ -251,7 +264,7 @@ export async function gradingGapCard(productId, language = "english") {
   const card = candidate(row);
   for (const [target, t] of Object.entries(GRADE_TARGETS)) {
     const g = card.grades[target];
-    if (g.top && !plausible({ top: g.top, next: g.next, raw: card.raw }, t.rare)) card.grades[target] = { top: null, next: null, topSales: null, nextSales: null };
+    if (g.top && !plausible({ top: g.top, next: g.next, raw: card.raw }, t.rare, g.topSales)) card.grades[target] = { top: null, next: null, topSales: null, nextSales: null };
   }
   return card;
 }
