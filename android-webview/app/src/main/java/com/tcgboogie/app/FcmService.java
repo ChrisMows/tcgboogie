@@ -41,7 +41,7 @@ public class FcmService extends FirebaseMessagingService {
         int id = tag != null && !tag.isEmpty() ? tag.hashCode() : (int) System.currentTimeMillis();
         PendingIntent tap = PendingIntent.getActivity(this, id, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder notification = new NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setSmallIcon(R.drawable.ic_stat_boogie)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(new NotificationCompat.BigTextStyle().bigText(body))

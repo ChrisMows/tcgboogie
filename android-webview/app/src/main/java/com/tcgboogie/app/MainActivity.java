@@ -272,6 +272,9 @@ public class MainActivity extends ComponentActivity {
 
         @Override public void onPageFinished(WebView view, String url) {
             if (!loadFailed) offline.setVisibility(View.GONE);
+            // Save cookies now, not only when the app goes to the background: a phone that closes the app straight
+            // after signing in would otherwise lose the login (found on the emulator, 2026-11-10).
+            CookieManager.getInstance().flush();
         }
 
         @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {

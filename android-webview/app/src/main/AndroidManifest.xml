@@ -6,6 +6,10 @@
     <!-- Only needed to save the collection export on Android 9 and older. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
+    <!-- The app opens in portrait, but landscape-only devices (some tablets, TVs, car screens) can still install it.
+         Without this, the portrait setting below makes Play hide the app from them. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <queries>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
         <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
@@ -73,6 +77,6 @@
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification_icon" />
+            android:resource="@drawable/ic_stat_boogie" />
     </application>
 </manifest>

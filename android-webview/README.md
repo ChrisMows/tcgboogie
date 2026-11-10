@@ -36,7 +36,7 @@ Remove-Item Env:NoDefaultCurrentDirectoryInExePath -ErrorAction SilentlyContinue
 - **To try on a phone:** `app/build/outputs/apk/debug/app-debug.apk`. It's signed with a debug key, so it can't install
   over a Play copy of the app: uninstall that first. Sign-ins and push work against the live site, so its changes have to be deployed.
 - **To upload to Play:** raise `versionCode` in `app/build.gradle` if this version was already uploaded, then run
-  `powershell -ExecutionPolicy Bypass -File .uild-release.ps1`. It asks for the upload key's password and checks the
+  `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`. It asks for the upload key's password and checks the
   signature. The key is `%USERPROFILE%\.tcgboogie\android-upload-2.jks`, made on 2026-11-07 by `new-upload-key.ps1` for an
   upload key reset, because the first key's password was lost. Keep the file and its password in a password manager.
 
@@ -48,6 +48,16 @@ Without these the app still works, and switching push on says it couldn't.
 2. Download `google-services.json` into `app/`. It stays out of git.
 3. Project settings → Service accounts → Generate new private key. Put that JSON file's contents, as they are or in
    base64, in Hostinger's environment variable `FCM_SERVICE_ACCOUNT`, then download a fresh settings backup from Admin → Status.
+
+## Test phone on this PC
+
+An Android 15 emulator with the Play Store (`TCGBoogie_Test`), made with Google's command-line tools in Bubblewrap's
+Android folder. Start it with `powershell -ExecutionPolicy Bypass -File .\start-emulator.ps1`, then install the debug build
+with `adb install -r app\build\outputs\apk\debug\app-debug.apk` (adb is in `%USERPROFILE%\.bubblewrap\android_sdk\platform-tools`).
+The debug build isn't signed with the key `assetlinks.json` lists, so turn on its links once:
+`adb shell pm set-app-links-user-selection --user cur --package com.tcgboogie.app true tcgboogie.com`.
+Its camera is simulated (a cartoon room), so the scanner can only show that a photo gets through. On 2026-11-10 it caught
+a login lost on a quick close and a notification icon drawn as a square; both are fixed.
 
 ## Test on a real phone before uploading
 

@@ -16,7 +16,7 @@ android {
         applicationId "com.tcgboogie.app" // Permanent: the same app on Google Play as android-app/
         minSdk 24
         targetSdk 36
-        versionCode 3 // Must always go up. The TWA in android-app/ used 2.
+        versionCode 5 // Must always go up. The TWA in android-app/ used 2; 3 and 4 went to Play but were never released.
         versionName "1.1.0"
     }
 
