@@ -7,8 +7,8 @@ import { log } from "@/lib/log";
 
 // "Report a sale": a member pastes an eBay listing we missed. We read it through eBay's official Browse API (which
 // still returns a listing for a while after it ends), check it really sold and is this card at a readable grade,
-// then save it to our own sales history. Graded sales count toward the card's graded value. Raw sales only list on the card
-// page: a raw card's value stays TCGplayer's, since one eBay sale can be any condition.
+// then save it to our own sales history. Graded sales count toward the card's graded value. Raw sales with a readable
+// condition count toward that condition's raw value, alongside TCGplayer's sales; ones without only list on the card page.
 const GRADERS = { psa: "PSA", cgc: "CGC", bgs: "BGS", beckett: "BGS", sgc: "SGC", tag: "TAG" };
 const norm = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9/]+/g, " ").trim();
 
@@ -189,7 +189,7 @@ export async function reportSale(user, product, input, soldOn = null) {
   }).onConflictDoNothing();
   await log("prices", "info", `Sale reported: ${g ? `${g.grader} ${g.grade}` : `raw${raw.condition ? ` ${raw.condition}` : ""}`} ${product.name} $${price}`, { item: id, product: product.id }, user.id);
   const when = soldAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  if (!g) return { ok: true, message: `Added: raw${raw.condition ? ` (${raw.condition})` : ""} sold for $${price.toLocaleString("en-US")} on ${when}. It now shows in this card's recent sales. The raw value still comes from TCGplayer.` };
+  if (!g) return { ok: true, message: `Added: raw${raw.condition ? ` (${raw.condition})` : ""} sold for $${price.toLocaleString("en-US")} on ${when}. It now shows in this card's recent sales${raw.condition ? ` and counts toward its ${raw.condition} value, alongside TCGplayer's sales` : `. eBay didn't say its condition, so it doesn't change the raw value`}.` };
   // CGC and BGS 10s take their value from the service's price for that label; the sale shows in this card's recent sales.
   const labelled = (g.grader === "CGC" || g.grader === "BGS") && String(g.grade).startsWith("10");
   return { ok: true, message: `Added: ${gradeName(g.grader, g.grade)} sold for $${price.toLocaleString("en-US")} on ${when}. ${labelled ? "It now shows in this card's recent sales." : "It now counts toward this card's value."}` };

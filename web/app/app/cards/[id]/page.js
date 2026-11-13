@@ -246,7 +246,7 @@ export default async function CardPage({ params, searchParams }) {
     key: `${s.grade}-${s.date}-${s.price}`, date: s.date, grade: GRADE_LABEL(s.grade), price: s.price, count: s.count,
     href: s.source === "ebay" && s.url ? ebayLink(s.url, "card-page-sale").href : null,
   }));
-  // Raw sales members reported list too. They don't change the raw value, which is TCGplayer's.
+  // Raw sales we verified list too. Those with a readable condition also count toward that condition's raw value.
   if (p.type === "card") {
     for (const s of await rawSales(p.id, p.language || "english")) {
       saleRows.push({ key: `raw-${s.itemId}`, date: s.soldAt.toISOString().slice(0, 10), grade: s.condition ? `Raw · ${s.condition}` : "Raw", price: s.price, count: 1,
@@ -356,8 +356,8 @@ export default async function CardPage({ params, searchParams }) {
                   <div className="cond-grid">
                     {Object.entries(byCond).sort(([a], [b]) => condRank(a) - condRank(b)).map(([cond, v]) => (
                       <a key={cond} className="cond-cell cond-link" href={tcgListings(printing, cond)} target="_blank" rel="noopener noreferrer"
-                        title={`See ${cond} listings on ${p.topps ? "eBay" : "TCGplayer"}`}>
-                        <span className="small muted">{COND_SHORT[cond] || cond}</span><b>{cardMoney(v.market)}</b>
+                        title={`${v.ebaySales ? `TCGplayer's sales from the last 30 days plus ${v.ebaySales} eBay sale${v.ebaySales === 1 ? "" : "s"} we verified. ` : v.corrected ? `TCGplayer's latest reading ($${v.tcgplayer}) was far below any copy listed, so this is its last good price. ` : ""}See ${cond} listings on ${p.topps ? "eBay" : "TCGplayer"}`}>
+                        <span className="small muted">{COND_SHORT[cond] || cond}{v.ebaySales ? " · with eBay" : ""}</span><b>{cardMoney(v.market)}</b>
                       </a>
                     ))}
                   </div>
@@ -410,7 +410,7 @@ export default async function CardPage({ params, searchParams }) {
               Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.{commission}
             </p>
           ) : <p className="hint">
-            Raw prices from TCGplayer. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more. CGC and BGS 10s are valued per slab label, from that label&apos;s own sales.{" "}
+            Raw prices are TCGplayer&apos;s sales from the last 30 days, plus eBay sales we verify ourselves in the same condition. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more. CGC and BGS 10s are valued per slab label, from that label&apos;s own sales.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
           </p>}
         </div>

@@ -55,7 +55,7 @@ export default function ReportSale({ productId, language }) {
         </label>
       )}
       {result && <div className={`small ${result.ok ? "good" : "muted"}`} style={{ marginTop: 6 }}>{result.message}</div>}
-      <div className="hint" style={{ margin: "4px 0 0" }}>eBay links only. We check it with eBay directly: it has to have sold and ended, and be this card. Raw sales show in the list; the raw value comes from TCGplayer.</div>
+      <div className="hint" style={{ margin: "4px 0 0" }}>eBay links only. We check it with eBay directly: it has to have sold and ended, and be this card. Raw sales count toward the raw value for their condition, alongside TCGplayer&apos;s sales.</div>
     </form>
   );
 }

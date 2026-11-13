@@ -36,7 +36,7 @@ export const faqGroups = ({ free, premium, sms, lists, trial }) => {
     ]],
     ["prices", "Prices and values", [
       ["How do you know what a card is worth?",
-        "In your collection and on card pages: raw cards and sealed product use TCGplayer's market price, updated daily, and graded cards use sales of that exact card and grade over the last 90 days (eBay and Fanatics Collect sales, auctions our deal finder watched end, and sales members report), newer sales counting more. Deal alerts compare a listing with what that exact card sold for on eBay in the last 30 days, so a deal reflects today's market. Cards our price service doesn't cover say \"No pricing data available\" instead of guessing."],
+        "In your collection and on card pages: raw cards use TCGplayer's sales from the last 30 days plus eBay sales we verify in the same condition (sealed product uses TCGplayer's market price), and graded cards use sales of that exact card and grade over the last 90 days (eBay and Fanatics Collect sales, auctions our deal finder watched end, and sales members report), newer sales counting more. Deal alerts compare a listing with what that exact card sold for on eBay in the last 30 days, so a deal reflects today's market. Cards our price service doesn't cover say \"No pricing data available\" instead of guessing."],
       ["Why does a graded price say \"Few sales\" or \"No sales in the last 90 days\"?",
         "Some grades barely sell. With three or more recent sales we use the typical price; with one or two we still show a value but mark it \"Few sales\" so you know it's thin. If nothing sold in 90 days we say so instead of guessing."],
       ["Why does a card say \"No pricing data available\"?",

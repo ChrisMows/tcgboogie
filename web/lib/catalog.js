@@ -227,6 +227,23 @@ function conditionName(raw) {
     || ({ nm: "Near Mint", lp: "Lightly Played", mp: "Moderately Played", hp: "Heavily Played", dmg: "Damaged" })[s] || null;
 }
 
+// A day's TCGplayer reading that can't be right: the service's own unadjusted figure is over twice it, or (in the last
+// week) it's under half the cheapest copy listed now. Seen Nov 11, 2026: a card selling for ~$306 read $61 from 285
+// "sales" in one day while nothing was listed under $285.
+function badReading(h, low) {
+  const m = Number(h?.market);
+  if (!(m > 0)) return true;
+  if (Number(h.marketRaw) > 2 * m) return true;
+  return Number(low) > 0 && m < low / 2 && Date.now() - new Date(h.date).getTime() < 7 * 24 * HOUR;
+}
+const badLogged = globalThis.__tcgBadPrice ?? (globalThis.__tcgBadPrice = new Set());
+/** A printing's TCGplayer history for one condition (oldest first). */
+function conditionDays(c, printing, cond) {
+  const by = c.priceHistory?.variants?.[printing] || {};
+  const k = Object.keys(by).find((x) => conditionName(x) === cond);
+  return [...((k && by[k]?.history) || [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
 export function fromCard(c) {
   const prices = {};
   for (const [printing, byCond] of Object.entries(c.prices?.variants || {})) {
@@ -255,6 +272,32 @@ export function fromCard(c) {
     const { [lead]: first, ...rest } = prices;
     for (const k of Object.keys(prices)) delete prices[k];
     Object.assign(prices, { [lead]: first }, rest);
+  }
+  // A bad Near Mint reading (see badReading) gives way to the last good day's price.
+  const first = Object.keys(prices)[0];
+  const nm = first && prices[first]["Near Mint"];
+  if (nm && nm.low > 0 && nm.market < nm.low / 2) {
+    const good = conditionDays(c, first, "Near Mint").filter((h) => !badReading(h, nm.low)).pop();
+    if (good) {
+      const was = nm.market;
+      prices[first]["Near Mint"] = { ...nm, market: r2(good.market), tcgplayer: was, corrected: true };
+      const tag = `${c.tcgPlayerId}:${new Date().toISOString().slice(0, 10)}`;
+      if (!badLogged.has(tag)) {
+        badLogged.add(tag);
+        if (badLogged.size > 5000) badLogged.clear();
+        void log("prices", "warn", `Bad TCGplayer reading skipped: ${c.name} (${c.tcgPlayerId}) Near Mint $${was} with the cheapest listed at $${nm.low}; using $${r2(good.market)} from ${String(good.date).slice(0, 10)}`, { product: String(c.tcgPlayerId) });
+      }
+    }
+  }
+  // Each condition's good TCGplayer days from the last 30, for blending with eBay sales we verified (withOurSales).
+  const rawDays = {};
+  if (first) {
+    for (const cond of CONDITIONS) {
+      const days = conditionDays(c, first, cond)
+        .filter((h) => !badReading(h, prices[first]["Near Mint"]?.low) && Date.now() - new Date(h.date).getTime() < 30 * 24 * HOUR)
+        .map((h) => ({ date: String(h.date).slice(0, 10), price: Number(h.market), count: Number(h.volume) > 0 ? Number(h.volume) : 1 }));
+      if (days.length) rawDays[cond] = days;
+    }
   }
   const graded = {};
   // Graded sales by day (last 90 days): { psa10: { "2026-08-31": { average, count } } }. salesByGrade.count is all-time,
@@ -286,13 +329,14 @@ export function fromCard(c) {
   const primary = c.prices?.primaryPrinting || Object.keys(prices)[0];
   const byCond = c.priceHistory?.variants?.[primary] || {};
   const nmKey = Object.keys(byCond).find((k) => conditionName(k) === "Near Mint");
-  const hist = (nmKey && byCond[nmKey]?.history) || [];
+  const nmLow = prices[primary]?.["Near Mint"]?.low;
+  const hist = ((nmKey && byCond[nmKey]?.history) || []).filter((h) => !badReading(h, nmLow));
   return {
     id: String(c.tcgPlayerId), type: "card", name: c.name, setName: c.setName, setId: c.setId ? String(c.setId) : null,
     number: c.cardNumber, rarity: c.rarity || null,
     image: c.imageCdnUrl400 || c.imageCdnUrl200 || c.imageCdnUrl || null,
     tcgplayerUrl: c.tcgPlayerUrl || `https://www.tcgplayer.com/product/${c.tcgPlayerId}`,
-    prices, graded, recentSales: recentSales.sort((a, b) => b.date.localeCompare(a.date)), // trimmed in withOurSales
+    prices, rawDays, graded, recentSales: recentSales.sort((a, b) => b.date.localeCompare(a.date)), // trimmed in withOurSales
     history: cleanHistory(hist.map((h) => ({ date: String(h.date).slice(0, 10), price: h.market }))),
   };
 }
@@ -330,7 +374,7 @@ export async function recordSealedPrices(max = 500) {
   return { products: n };
 }
 
-// ---------- graded values: the price service's sales + real eBay sales we verified ourselves (see `sale`) ----------
+// ---------- graded and raw values: the price service's sales + real eBay sales we verified ourselves (see `sale`) ----------
 const DAY_MS = 24 * HOUR;
 /** Median where each sale counts by weight (newer sales and days with several sales count more). */
 function weightedMedian(points) {
@@ -360,10 +404,12 @@ async function withOurSales(p, prefetched) {
   if (prefetched) rows = prefetched.get(p.id) || [];
   else if (db) {
     try {
-      rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), eq(schema.sales.kind, "graded"),
+      rows = await db.select().from(schema.sales).where(and(eq(schema.sales.productId, p.id), inArray(schema.sales.kind, ["graded", "raw"]),
         gte(schema.sales.soldAt, new Date(Date.now() - 90 * DAY_MS))));
     } catch { rows = []; }
   }
+  const prices = withRawSales(p, rows.filter((r) => r.kind === "raw"));
+  rows = rows.filter((r) => r.kind !== "raw");
   const graded = { ...p.graded };
   const recent = [...(p.recentSales || [])];
   const ours = {};
@@ -401,7 +447,35 @@ async function withOurSales(p, prefetched) {
     };
     recent.push(...mine);
   }
-  return trim({ ...p, graded, recentSales: recent.sort((a, b) => b.date.localeCompare(a.date)) });
+  return trim({ ...p, prices, graded, recentSales: recent.sort((a, b) => b.date.localeCompare(a.date)) });
+}
+
+/**
+ * Raw values: TCGplayer's sales by day from the last 30 days plus raw eBay sales we verified (members' reports and
+ * auctions the deal finder saw end) in the same condition, each sale counted once and newer sales counting more, the
+ * same way as graded values. Sales whose condition we couldn't read only list on the card page. They count toward the
+ * main printing, the one an eBay listing almost always is. Conditions with no eBay sales keep TCGplayer's price.
+ */
+function withRawSales(p, rows) {
+  const first = Object.keys(p.prices || {})[0];
+  const lang = p.language || "english";
+  const mine = rows.filter((r) => r.condition && (r.language || "english") === lang && Date.now() - r.soldAt.getTime() < 30 * DAY_MS);
+  if (!first || !mine.length) return p.prices;
+  const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS));
+  const byCond = { ...p.prices[first] };
+  for (const cond of new Set(mine.map((r) => r.condition))) {
+    const base = byCond[cond];
+    const ebay = mine.filter((r) => r.condition === cond).map((r) => ({ date: r.soldAt.toISOString().slice(0, 10), price: r.price, count: 1 }));
+    const tcg = p.rawDays?.[cond]?.length ? p.rawDays[cond]
+      : base?.market > 0 ? [{ date: new Date().toISOString().slice(0, 10), price: base.market, count: 1 }] : [];
+    const all = [...tcg, ...ebay];
+    const pts = all.map((d) => ({ price: d.price, w: d.count * ageW(d) }));
+    const sales = all.reduce((n, d) => n + d.count, 0);
+    const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
+    if (!value) continue;
+    byCond[cond] = { low: null, ...base, market: r2(value), tcgplayer: base?.tcgplayer ?? base?.market ?? null, ebaySales: ebay.length, sales };
+  }
+  return { ...p.prices, [first]: byCond };
 }
 
 function fromSealed(s) {
@@ -464,7 +538,7 @@ export async function prefetchProducts(ids, { light = false } = {}) {
         : light ? db.select({ key: schema.catalogCache.key, fetchedAt: schema.catalogCache.fetchedAt, data: LIGHT_DATA, light: sql`true` })
           .from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys))
           : db.select().from(schema.catalogCache).where(inArray(schema.catalogCache.key, keys)),
-      db.select().from(schema.sales).where(and(inArray(schema.sales.productId, [...new Set(ids.map(String))]), eq(schema.sales.kind, "graded"),
+      db.select().from(schema.sales).where(and(inArray(schema.sales.productId, [...new Set(ids.map(String))]), inArray(schema.sales.kind, ["graded", "raw"]),
         gte(schema.sales.soldAt, new Date(now - 90 * DAY_MS)))),
     ]);
     const found = new Map(rows.map((r) => [r.key, r]));
