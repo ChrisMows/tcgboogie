@@ -75,7 +75,7 @@ export default async function Login({ searchParams }) {
             {has("email") && (
               <>
                 <div className="divider">or use your email</div>
-                <form action={signInWithEmail}>
+                <form action={signInWithEmail} noValidate>
                   <input type="hidden" name="next" value={next} />
                   <label className="field" htmlFor="email">Email address</label>
                   <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />

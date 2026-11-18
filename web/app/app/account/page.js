@@ -408,6 +408,7 @@ export default async function Account({ searchParams }) {
           </div>
                   <button className="btn sm primary">Save name</button>
           {params?.saved === "profile" && <span className="small good" style={{ marginLeft: 10 }}>Saved.</span>}
+          {params?.saved === "noname" && <span className="small" style={{ marginLeft: 10, color: "var(--bad)" }}>Enter a name. Your old one is kept.</span>}
         </form>
         <h3 id="picture" style={{ marginTop: 22 }}>Profile picture</h3>
         <form action={setAvatar}>

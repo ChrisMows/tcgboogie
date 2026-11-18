@@ -214,7 +214,7 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         <div className="picked">
           <div className="picked-head">
             <CardThumb item={picked} width={72} />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="picked-info">
               <b>{picked.name}</b>
               <div className="small muted">{picked.setName}{picked.number ? ` · ${picked.number}` : ""}{picked.language === "japanese" ? " · Japanese" : ""}</div>
               <Link href={`/app/cards/${picked.id}`} className="small">Open card page →</Link>

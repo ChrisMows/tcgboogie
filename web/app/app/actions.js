@@ -136,6 +136,8 @@ export async function testPush() {
 
 export async function saveName(formData) {
   const user = await requireUser();
+  // An empty name would wipe it: keep the old one and ask for a name (QA report M-01, Nov 2026).
+  if (!String(formData.get("name") || "").trim()) redirect("/app/account?saved=noname#profile");
   await store.updateName(user.id, formData.get("name"));
   revalidatePath("/app", "layout");
   redirect("/app/account?saved=profile#profile");

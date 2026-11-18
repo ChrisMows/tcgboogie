@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 // The whole member area: Home first, then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const PHOTO = "/app/collection/photo";
@@ -34,8 +35,32 @@ const TABS = [
   { href: "/app/profile", label: "Profile", icon: "👤", isOn: (p) => p.startsWith("/app/profile") },
 ];
 
-export default function SideNav({ planLabel, premium, isAdmin }) {
+/**
+ * A new page opens at its top. Next scrolls the new page into view, which left its title under the sticky header when
+ * the last page was scrolled down (QA report M-02, Nov 2026). Back and forward keep the browser's own scroll position,
+ * and links to a section (#...) still jump there.
+ */
+function useTopOnNewPage(path) {
+  const first = useRef(true);
+  const back = useRef(false);
+  useEffect(() => {
+    const onPop = () => { back.current = true; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    if (back.current) { back.current = false; return; }
+    if (location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [path]);
+}
+
+/** tabsOnly: just the phone tab bar, for member pages outside the member area (Market Movers). */
+export default function SideNav({ planLabel, premium, isAdmin, tabsOnly = false }) {
   const path = usePathname();
+  useTopOnNewPage(path);
+  if (tabsOnly) return <aside className="side tabs-only"><TabBar path={path} isAdmin={isAdmin} /></aside>;
   return (
     <aside className="side">
       <nav aria-label="Member">
@@ -59,17 +84,23 @@ export default function SideNav({ planLabel, premium, isAdmin }) {
         {premium && <div className="plan-chip"><span className="badge accent">{planLabel} plan</span></div>}
       </nav>
       {/* Phones: the same places as a tab bar fixed to the bottom of the screen, always in reach. */}
-      <nav className="tabbar" aria-label="Member (mobile)">
-        {TABS.filter((t) => isAdmin || !t.adminOnly).map((t) => {
-          const on = t.isOn(path);
-          return (
-            <Link key={t.href} href={t.href} className={on ? "on" : ""} aria-current={on ? "page" : undefined}>
-              <span className="tabbar-icon" aria-hidden="true">{t.icon}</span>
-              <span className="tabbar-label">{t.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <TabBar path={path} isAdmin={isAdmin} />
     </aside>
+  );
+}
+
+function TabBar({ path, isAdmin }) {
+  return (
+    <nav className="tabbar" aria-label="Member (mobile)">
+      {TABS.filter((t) => isAdmin || !t.adminOnly).map((t) => {
+        const on = t.isOn(path);
+        return (
+          <Link key={t.href} href={t.href} className={on ? "on" : ""} aria-current={on ? "page" : undefined}>
+            <span className="tabbar-icon" aria-hidden="true">{t.icon}</span>
+            <span className="tabbar-label">{t.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

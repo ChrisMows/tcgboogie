@@ -2,6 +2,7 @@ import Link from "next/link";
 import XFollow from "@/components/XFollow";
 import { X_HANDLE } from "@/lib/social";
 import CardThumb from "@/components/CardThumb";
+import SideNav from "@/components/SideNav";
 import { gradeName, money } from "@/lib/collection";
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { marketFeed } from "@/lib/market";
@@ -63,6 +64,8 @@ export default async function Sales() {
   const [f, user] = await Promise.all([marketFeed(), getCurrentUser()]);
   return (
     <div className="wrap sales-page">
+      {/* Signed in: the member tab bar on phones, so the way back is one tap (QA report S-03, Nov 2026). */}
+      {user && <SideNav tabsOnly isAdmin={Boolean(user.isAdmin)} />}
       <div className="page-head">
         <div>
           <div className="eyebrow">POKÉMON CARD MARKET</div>

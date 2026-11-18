@@ -18,6 +18,8 @@ const ITEMS = [
 export default function UserMenu({ name, email, avatarUrl, initials, planLabel, isAdmin, onLogOut }) {
   const [open, setOpen] = useState(false);
   const [broken, setBroken] = useState(false);
+  const [confirmOut, setConfirmOut] = useState(false);
+  useEffect(() => { if (!open) setConfirmOut(false); }, [open]);
   const box = useRef(null);
   const path = usePathname();
 
@@ -69,9 +71,16 @@ export default function UserMenu({ name, email, avatarUrl, initials, planLabel, 
             <Link key={href} href={href} role="menuitem" onClick={() => setOpen(false)}>{label}</Link>
           ))}
           <InstallButton className="ud-signout ud-install" onDone={() => setOpen(false)} />
-          <form action={onLogOut}>
-            <button type="submit" role="menuitem" className="ud-signout">Sign out</button>
-          </form>
+          {/* Asks first: signing back in from the app means a trip through the browser (QA report S-02, Nov 2026). */}
+          {confirmOut ? (
+            <form action={onLogOut} className="ud-confirm">
+              <span>Sign out of TCG Boogie?</span>
+              <button type="submit" role="menuitem" className="btn sm">Sign out</button>
+              <button type="button" className="btn ghost sm" onClick={(e) => { e.stopPropagation(); setConfirmOut(false); }}>Cancel</button>
+            </form>
+          ) : (
+            <button type="button" role="menuitem" className="ud-signout" onClick={(e) => { e.stopPropagation(); setConfirmOut(true); }}>Sign out</button>
+          )}
         </div>
       )}
     </div>
