@@ -75,7 +75,7 @@ export default function ValueDial({ low, value, high, ranged, copies, extra = nu
     const frame = (now) => {
       // Small fixed steps for the time that really passed, so a slow phone or a dropped frame never runs in slow motion.
       let left = Math.min(0.1, (now - last) / 1000); last = now;
-      const k = 210, c = 24; // stiffness, damping: quick and smooth, with a soft settle
+      const k = 150, c = 21; // stiffness, damping: smooth and unhurried, with a soft settle
       while (left > 0) {
         const dt = Math.min(1 / 240, left); left -= dt;
         s.v += (-k * (s.p - s.target) - c * s.v) * dt;
