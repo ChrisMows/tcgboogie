@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import CollectionAlerts from "@/components/CollectionAlerts";
 import HideValues from "@/components/HideValues";
+import ValueDial from "@/components/ValueDial";
 import ValueChart from "@/components/ValueChart";
 
 const money = (v, d = 2) => `$${Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
@@ -41,10 +42,16 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
     <>
       <section className="coll-hero">
         <div className="small muted">Collection value</div>
-        <div className="coll-hero-value-row">
-          <div className="coll-hero-value sensitive">{money(summary.value)}</div>
-          <HideValues className="icon-only" />
-        </div>
+        {/* Floor, Market and Top on a dial once some cards have a range from recent sales (lib/collection.js summarize). */}
+        {summary.ranged > 0 ? (
+          <ValueDial low={summary.low} value={summary.value} high={summary.high} ranged={summary.ranged} copies={summary.copies - summary.unpriced}
+            extra={<HideValues className="icon-only" />} />
+        ) : (
+          <div className="coll-hero-value-row">
+            <div className="coll-hero-value sensitive">{money(summary.value)}</div>
+            <HideValues className="icon-only" />
+          </div>
+        )}
         {/* Price moves only: cards you added don't count as gains (lib/collection.js marketChange). */}
         <div className="coll-hero-day">
           {day ? (

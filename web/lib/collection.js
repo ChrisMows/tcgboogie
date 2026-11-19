@@ -121,6 +121,19 @@ export function marketValue(product, item) {
 }
 
 /**
+ * One copy's range from its recent sales, { low, high, sales }, for the collection's Floor and Top values
+ * (lib/catalog.js rangeOf). null for sealed product and values with too few sales: those count the same in all three.
+ */
+export function valueRange(product, item) {
+  if (!product || item.kind === "sealed") return null;
+  if (item.kind === "graded") {
+    const g = product.graded?.[gradeKey(item.grader, item.grade)];
+    return g && g.reliable !== false ? g.range || null : null;
+  }
+  return product.prices?.[item.printing]?.[item.condition]?.range || null;
+}
+
+/**
  * What one copy counts for in totals: the market value whenever there is one; the member's own value only while
  * there's no market price for it (a card the price service doesn't cover, a graded copy without recent sales...).
  * Once a market price turns up it takes over; the member's figure stays saved underneath in case the price goes away.
@@ -176,15 +189,24 @@ export function recapMovers(owned, products, histories, days, now = new Date(), 
 /** Totals for a list of owned items. */
 export function summarize(items) {
   let value = 0, cost = 0, costed = 0, copies = 0, unpriced = 0;
+  // Floor and Top: each copy at the low or high end of its recent sales (valueRange). A value the member typed in, or
+  // one with too few sales for a range, counts the same in all three.
+  let low = 0, high = 0, ranged = 0;
   for (const it of items) {
     const q = it.quantity || 1;
     copies += q;
     const v = unitValue(it);
     if (v === null) unpriced += q; else value += v * q;
+    if (v !== null) {
+      const r = !isOwnValue(it) && it.range ? it.range : null;
+      low += (r ? Math.min(r.low, v) : v) * q;
+      high += (r ? Math.max(r.high, v) : v) * q;
+      if (r) ranged += q;
+    }
     if (it.purchasePrice !== null && it.purchasePrice !== undefined) { cost += it.purchasePrice * q; costed += v === null ? 0 : v * q; }
   }
   const gain = cost ? costed - cost : null;
-  return { value, cost, gain, gainPct: cost ? gain / cost : null, copies, lines: items.length, unpriced };
+  return { value, low, high, ranged, cost, gain, gainPct: cost ? gain / cost : null, copies, lines: items.length, unpriced };
 }
 
 /** Owned copies of each product, e.g. { "517045": 2 }. */

@@ -26,16 +26,18 @@ const series = (base, wobble, days = 90, seed = 1) => {
   const k = base / raw[days - 1];
   return raw.map((v, i) => ({ date: new Date(today.getTime() - (days - 1 - i) * 86400000).toISOString().slice(0, 10), price: r2(v * k) }));
 };
-const conds = (nm, low) => ({
+// Demo ranges: a believable spread of recent sales around each price (real ones come from rangeOf).
+const sampleRange = (v) => ({ low: r2(v * 0.86), high: r2(v * 1.17), sales: 12 });
+const conds = (nm, low) => Object.fromEntries(Object.entries({
   "Near Mint": { market: nm, low },
   "Lightly Played": { market: r2(nm * 0.88), low: r2(low * 0.88) },
   "Moderately Played": { market: r2(nm * 0.72), low: r2(low * 0.72) },
   "Heavily Played": { market: r2(nm * 0.55), low: r2(low * 0.55) },
-});
+}).map(([k, v]) => [k, { ...v, range: sampleRange(v.market) }]));
 // Sample slab values as multiples of the raw Near Mint price.
 const GRADE_MULT = { psa10: 3.4, psa9: 1.45, psa8: 1.08, psa7: 0.9, bgs10: 5, bgs9_5: 2.3, bgs9: 1.3, cgc10: 2.4, cgc9_5: 1.6, cgc9: 1.15, sgc10: 2.1, sgc9: 1.2, tag10: 2.2, tag9: 1.15 };
 const sampleGraded = (nm) =>
-  nm < 3 ? {} : Object.fromEntries(Object.entries(GRADE_MULT).map(([k, m]) => [k, { price: r2(Math.max(nm * m, 12)), sales: Math.round(4 + (nm % 17)) }]));
+  nm < 3 ? {} : Object.fromEntries(Object.entries(GRADE_MULT).map(([k, m]) => [k, { price: r2(Math.max(nm * m, 12)), sales: Math.round(4 + (nm % 17)), range: sampleRange(Math.max(nm * m, 12)) }]));
 
 // ---------- sample catalog (demo only) ----------
 const SAMPLE_SETS = [
@@ -227,14 +229,24 @@ function conditionName(raw) {
     || ({ nm: "Near Mint", lp: "Lightly Played", mp: "Moderately Played", hp: "Heavily Played", dmg: "Damaged" })[s] || null;
 }
 
-// A day's TCGplayer reading that can't be right: the service's own unadjusted figure is over twice it, or (in the last
-// week) it's under half the cheapest copy listed now. Seen Nov 11, 2026: a card selling for ~$306 read $61 from 285
-// "sales" in one day while nothing was listed under $285.
-function badReading(h, low) {
-  const m = Number(h?.market);
-  if (!(m > 0)) return true;
-  if (Number(h.marketRaw) > 2 * m) return true;
-  return Number(low) > 0 && m < low / 2 && Date.now() - new Date(h.date).getTime() < 7 * 24 * HOUR;
+/**
+ * A TCGplayer history without its readings that can't be right (oldest first). A day is dropped when the service's own
+ * unadjusted figure is over twice it, when it's under half the middle price of the days around it (a week either
+ * side, with 3+ of them), or, for the last 3 days, when it's under half the cheapest copy listed now. Seen Nov 11, 2026:
+ * a card selling for ~$306 read $61 from 285 "sales" in one day while nothing was listed under $285. Comparing with the
+ * days around it, not today's date, keeps that day out however old it gets.
+ */
+function goodDays(history, low) {
+  const days = [...(history || [])].map((h) => ({ ...h, t: new Date(h.date).getTime(), m: Number(h?.market) }))
+    .sort((a, b) => a.t - b.t);
+  const WEEK = 7 * 24 * HOUR;
+  return days.filter((h, i) => {
+    if (!(h.m > 0)) return false;
+    if (Number(h.marketRaw) > 2 * h.m) return false;
+    const near = days.filter((o, j) => j !== i && o.m > 0 && Math.abs(o.t - h.t) <= WEEK).map((o) => o.m).sort((a, b) => a - b);
+    if (near.length >= 3 && h.m < near[Math.floor(near.length / 2)] / 2) return false;
+    return !(i >= days.length - 3 && Number(low) > 0 && h.m < low / 2);
+  }).map(({ t, m, ...h }) => h);
 }
 const badLogged = globalThis.__tcgBadPrice ?? (globalThis.__tcgBadPrice = new Set());
 /** A printing's TCGplayer history for one condition (oldest first). */
@@ -273,11 +285,11 @@ export function fromCard(c) {
     for (const k of Object.keys(prices)) delete prices[k];
     Object.assign(prices, { [lead]: first }, rest);
   }
-  // A bad Near Mint reading (see badReading) gives way to the last good day's price.
+  // A bad Near Mint reading (see goodDays) gives way to the last good day's price.
   const first = Object.keys(prices)[0];
   const nm = first && prices[first]["Near Mint"];
   if (nm && nm.low > 0 && nm.market < nm.low / 2) {
-    const good = conditionDays(c, first, "Near Mint").filter((h) => !badReading(h, nm.low)).pop();
+    const good = goodDays(conditionDays(c, first, "Near Mint"), nm.low).pop();
     if (good) {
       const was = nm.market;
       prices[first]["Near Mint"] = { ...nm, market: r2(good.market), tcgplayer: was, corrected: true };
@@ -293,8 +305,8 @@ export function fromCard(c) {
   const rawDays = {};
   if (first) {
     for (const cond of CONDITIONS) {
-      const days = conditionDays(c, first, cond)
-        .filter((h) => !badReading(h, prices[first]["Near Mint"]?.low) && Date.now() - new Date(h.date).getTime() < 30 * 24 * HOUR)
+      const days = goodDays(conditionDays(c, first, cond), prices[first]["Near Mint"]?.low)
+        .filter((h) => Date.now() - new Date(h.date).getTime() < 30 * 24 * HOUR)
         .map((h) => ({ date: String(h.date).slice(0, 10), price: Number(h.market), count: Number(h.volume) > 0 ? Number(h.volume) : 1 }));
       if (days.length) rawDays[cond] = days;
     }
@@ -330,7 +342,7 @@ export function fromCard(c) {
   const byCond = c.priceHistory?.variants?.[primary] || {};
   const nmKey = Object.keys(byCond).find((k) => conditionName(k) === "Near Mint");
   const nmLow = prices[primary]?.["Near Mint"]?.low;
-  const hist = ((nmKey && byCond[nmKey]?.history) || []).filter((h) => !badReading(h, nmLow));
+  const hist = goodDays((nmKey && byCond[nmKey]?.history) || [], nmLow);
   return {
     id: String(c.tcgPlayerId), type: "card", name: c.name, setName: c.setName, setId: c.setId ? String(c.setId) : null,
     number: c.cardNumber, rarity: c.rarity || null,
@@ -383,6 +395,28 @@ function weightedMedian(points) {
   let run = 0;
   for (const p of pts) { run += p.w; if (run >= total / 2) return p.price; }
   return null;
+}
+
+/** The price `q` of the way up the sales (0.2 = a fifth of the weight is below it), weighted like weightedMedian. */
+function weightedQuantile(points, q) {
+  const pts = points.filter((p) => p.price > 0 && p.w > 0).sort((a, b) => a.price - b.price);
+  const total = pts.reduce((s, p) => s + p.w, 0);
+  let run = 0;
+  for (const p of pts) { run += p.w; if (run >= total * q) return p.price; }
+  return pts.at(-1)?.price ?? null;
+}
+
+/**
+ * A value's range from its recent sales, for the collection's Floor and Top values: the low end (a fifth of the
+ * weighted sales sold for less) and the high end (a fifth sold for more), never past the value itself. Only with 3+
+ * sales; otherwise null and the collection counts the value itself in all three.
+ */
+const RANGE_LOW = 0.2, RANGE_HIGH = 0.8;
+function rangeOf(points, value, sales) {
+  if (sales < 3 || !(value > 0)) return null;
+  const low = weightedQuantile(points, RANGE_LOW), high = weightedQuantile(points, RANGE_HIGH);
+  if (!low || !high) return null;
+  return { low: r2(Math.min(low, value)), high: r2(Math.max(high, value)), sales };
 }
 
 /**
@@ -444,6 +478,7 @@ async function withOurSales(p, prefetched) {
       price: r2(value), sales, lastSale: all.map((d) => d.date).sort().pop(),
       low: r2(Math.min(...all.map((d) => d.price))), high: r2(Math.max(...all.map((d) => d.price))),
       confidence: sales >= 5 ? "medium" : "low", reliable: true, few: sales < 3, ourSales: mine.length,
+      range: rangeOf(all.map((d) => ({ price: d.price, w: ageW(d) })), value, sales), // each day once, like raw
     };
     recent.push(...mine);
   }
@@ -458,24 +493,36 @@ async function withOurSales(p, prefetched) {
  */
 function withRawSales(p, rows) {
   const first = Object.keys(p.prices || {})[0];
+  if (!first) return p.prices;
   const lang = p.language || "english";
   const mine = rows.filter((r) => r.condition && (r.language || "english") === lang && Date.now() - r.soldAt.getTime() < 30 * DAY_MS);
-  if (!first || !mine.length) return p.prices;
   const ageW = (d) => 0.5 ** ((Date.now() - new Date(d.date).getTime()) / (30 * DAY_MS));
   const byCond = { ...p.prices[first] };
-  for (const cond of new Set(mine.map((r) => r.condition))) {
+  let changed = false;
+  for (const cond of new Set([...Object.keys(p.rawDays || {}), ...mine.map((r) => r.condition)])) {
     const base = byCond[cond];
     const ebay = mine.filter((r) => r.condition === cond).map((r) => ({ date: r.soldAt.toISOString().slice(0, 10), price: r.price, count: 1 }));
     const tcg = p.rawDays?.[cond]?.length ? p.rawDays[cond]
       : base?.market > 0 ? [{ date: new Date().toISOString().slice(0, 10), price: base.market, count: 1 }] : [];
     const all = [...tcg, ...ebay];
+    if (!all.length) continue;
     const pts = all.map((d) => ({ price: d.price, w: d.count * ageW(d) }));
     const sales = all.reduce((n, d) => n + d.count, 0);
-    const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
-    if (!value) continue;
-    byCond[cond] = { low: null, ...base, market: r2(value), tcgplayer: base?.tcgplayer ?? base?.market ?? null, ebaySales: ebay.length, sales };
+    const next = { low: null, ...base };
+    if (ebay.length) {
+      const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
+      if (!value) continue;
+      Object.assign(next, { market: r2(value), tcgplayer: base?.tcgplayer ?? base?.market ?? null, ebaySales: ebay.length, sales });
+    }
+    if (!(next.market > 0)) continue;
+    // The collection's Floor and Top: each day (TCGplayer's average) and each eBay sale counts once, so the range shows
+    // how far the price moved this month instead of the busiest day.
+    const range = rangeOf(all.map((d) => ({ price: d.price, w: ageW(d) })), next.market, sales);
+    if (range) next.range = range;
+    byCond[cond] = next;
+    changed = true;
   }
-  return { ...p.prices, [first]: byCond };
+  return changed ? { ...p.prices, [first]: byCond } : p.prices;
 }
 
 function fromSealed(s) {

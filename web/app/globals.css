@@ -1293,6 +1293,23 @@ details.era > .set-grid { margin-bottom: 14px; }
 .coll-hero-day { font-size: 17px; font-weight: 700; margin-top: 2px; }
 .coll-hero-day .muted { font-weight: 500; font-size: 14px; }
 .coll-hero .hint { max-width: 460px; margin: 6px auto 0; }
+/* Collection value dial (components/ValueDial.js): Floor, Market and Top */
+.dial { display: flex; flex-direction: column; align-items: center; }
+.dial-face { width: min(260px, 78vw); touch-action: pan-y; user-select: none; cursor: grab; border-radius: 16px; outline-offset: 4px; margin-top: 4px; }
+.dial-face.dragging { cursor: grabbing; }
+.dial-face:focus-visible { outline: 2px solid var(--accent); }
+.dial-face svg { display: block; width: 100%; height: auto; overflow: visible; }
+.dial-track { fill: none; stroke: var(--border); stroke-width: 10; stroke-linecap: round; }
+.dial-tick { stroke: var(--muted); stroke-width: 2.5; stroke-linecap: round; transition: stroke 0.2s; }
+.dial-tick.on { stroke: var(--accent); stroke-width: 3.5; }
+.dial-needle { stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; }
+.dial-needle { transform-box: view-box; transform-origin: 120px 112px; }
+.dial-face:not(.dragging) .dial-needle { transition: transform 0.4s cubic-bezier(.3, 1.4, .5, 1); }
+.dial-hub { fill: var(--accent); }
+.dial-labels { display: flex; justify-content: space-between; margin-top: -6px; padding: 0 2px; }
+.dial-labels button { background: none; border: 0; padding: 4px 8px; border-radius: 999px; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; }
+.dial-labels button.on { color: #0b0e12; background: var(--accent); }
+.dial-note { max-width: 400px; margin: 4px auto 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
 .hide-values-btn.icon-only { padding: 7px; border-radius: 50%; }
 .hide-values-btn.icon-only span { display: none; }
 .coll-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 22px; }

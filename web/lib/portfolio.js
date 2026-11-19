@@ -1,7 +1,7 @@
 import "server-only";
 import { loadPictures, pictureFor } from "@/lib/card-images";
 import { creditsLow, getProduct, prefetchProducts } from "@/lib/catalog";
-import { change, marketValue, summarize } from "@/lib/collection";
+import { change, marketValue, summarize, valueRange } from "@/lib/collection";
 import * as store from "@/lib/store";
 
 // Products looked up live (spending API credits) per page view: only cards never looked up before (saved prices of
@@ -85,6 +85,7 @@ export async function loadCollection(user) {
       image: pictureFor(it.productId) || it.image || p?.image || null,
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
       change7: it.kind === "graded" ? changes?.[7] ?? null : change(p, 7),
+      range: p ? valueRange(p, it) : null, // Floor and Top values (lib/collection.js summarize)
       changes,
       createdAt: String(it.createdAt),
       valueUpdatedAt: it.valueUpdatedAt ? String(it.valueUpdatedAt) : null,
