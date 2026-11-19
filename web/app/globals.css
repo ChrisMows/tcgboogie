@@ -1235,7 +1235,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .info-tip-pop { display: none; }
 .info-tip:hover .info-tip-pop, .info-tip.open .info-tip-pop, .info-tip-btn:focus-visible + .info-tip-pop { display: block; }
 @media (max-width: 600px) {
-  .info-tip-pop { position: fixed; left: 16px; right: 16px; bottom: 16px; top: auto; transform: none; width: auto; max-width: none; }
+  .info-tip-pop { position: fixed; left: 16px; right: 16px; bottom: 16px; top: auto; transform: none; width: auto; max-width: none; z-index: 90; } /* above Ask Boogie Bot (80) */
 }
 @media (max-width: 600px) {
   .card-title-actions { flex-wrap: wrap; }
@@ -1309,7 +1309,6 @@ details.era > .set-grid { margin-bottom: 14px; }
 .dial-labels { display: flex; justify-content: space-between; margin-top: -6px; padding: 0 2px; }
 .dial-labels button { background: none; border: 0; padding: 4px 8px; border-radius: 999px; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; }
 .dial-labels button.on { color: #0b0e12; background: var(--accent); }
-.dial-note { max-width: 400px; margin: 4px auto 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
 .hide-values-btn.icon-only { padding: 7px; border-radius: 50%; }
 .hide-values-btn.icon-only span { display: none; }
 .coll-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 22px; }

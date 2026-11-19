@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import InfoTip from "@/components/InfoTip";
 
 const money = (v, d = 2) => `$${Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 
@@ -79,15 +80,16 @@ export default function ValueDial({ low, value, high, ranged, copies, extra = nu
       </div>
       <div className="coll-hero-value-row">
         <div className="coll-hero-value sensitive" aria-live="polite">{money(values[live])}</div>
+        {/* What this reading means, and which cards count the same in all three: behind an ⓘ, not under the value. */}
+        <InfoTip label={`About the ${DIAL_STOPS[live].label} value`}>
+          {DIAL_STOPS[live].note}
+          {ranged < copies && (
+            <>{" "}{copies - ranged} of your {copies} cards {copies - ranged === 1 ? "has" : "have"} too few recent sales for a range (or your own
+              value), so {copies - ranged === 1 ? "it counts" : "they count"} the same in all three.</>
+          )}
+        </InfoTip>
         {extra}
       </div>
-      <p className="dial-note">{DIAL_STOPS[live].note}</p>
-      {ranged < copies && (
-        <p className="dial-note muted">
-          {copies - ranged} of your {copies} cards {copies - ranged === 1 ? "has" : "have"} too few recent sales for a range (or your own value), so
-          {copies - ranged === 1 ? " it counts" : " they count"} the same in all three.
-        </p>
-      )}
     </div>
   );
 }
