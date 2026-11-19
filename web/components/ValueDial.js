@@ -24,7 +24,8 @@ const VB_W = 1000, VB_H = 600;
 const RING = { cx: 500, cy: 180, rx: 450, ry: 140 }; // the ticks
 const TRACK = { cx: 500, cy: 245, rx: 335, ry: 212 }; // the readings' path: the front is at y 457, under the value
 const SPACING = 120; // degrees between readings on the track
-const TICK_STEP = 6, TOP_GAP = 16, END = 124, LIT_AT = 112; // degrees from the top of the ring
+// Degrees from the top of the ring. The ends run on past the glowing tick, curling down and in toward the value.
+const TICK_STEP = 8, TOP_GAP = 16, END = 138, LIT_AT = 114;
 const round = (v) => Math.round(v * 10) / 10; // the server and the browser can differ in sin/cos's last decimals
 const rad = (d) => (d * Math.PI) / 180;
 const pointOn = (e, deg) => [e.cx + e.rx * Math.sin(rad(deg)), e.cy - e.ry * Math.cos(rad(deg))];
