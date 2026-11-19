@@ -19,8 +19,10 @@ export const DIAL_STOPS = [
  * The ticks turn with it. `p` is the position, 0 (Floor) to 2 (Ceiling), and moves continuously.
  */
 const VB_W = 1000, VB_H = 600;
-const RING = { cx: 500, cy: 330, rx: 420, ry: 250 }; // the ticks
-const TRACK = { cx: 500, cy: 300, rx: 300, ry: 170 }; // the readings' path
+// Proportions from the design mockup: the ring fills the top half, its lower ends stop just above the value, and the
+// reading in front sits under the value.
+const RING = { cx: 500, cy: 180, rx: 450, ry: 140 }; // the ticks
+const TRACK = { cx: 500, cy: 245, rx: 335, ry: 212 }; // the readings' path: the front is at y 457, under the value
 const SPACING = 120; // degrees between readings on the track
 const TICK_STEP = 6, TOP_GAP = 16, END = 124, LIT_AT = 112; // degrees from the top of the ring
 const round = (v) => Math.round(v * 10) / 10; // the server and the browser can differ in sin/cos's last decimals
@@ -167,7 +169,7 @@ export default function ValueDial({ low, value, high, ranged, copies, extra = nu
             const [x, y] = pointOn(TRACK, deg);
             const depth = (1 - Math.cos(rad(deg))) / 2; // 1 in front, 0 at the back
             const scale = 0.58 + 0.42 * depth;
-            const tilt = -Math.sin(rad(deg)) * 22 * (1 - depth); // leans with the ring at the sides
+            const tilt = Math.sin(rad(deg)) * 15; // follows the ring: Floor rises to the right, Ceiling falls to the right
             const front = fromFront < 20;
             return (
               <g key={s.key} transform={`translate(${round(x)} ${round(y)}) rotate(${round(tilt)}) scale(${round(scale * 100) / 100})`}
@@ -176,8 +178,8 @@ export default function ValueDial({ low, value, high, ranged, copies, extra = nu
               </g>
             );
           })}
-          <rect x="250" y="538" width="500" height="4" rx="2" fill="url(#dial-line)" className="dial-line" />
-          <rect x="230" y="541" width="540" height="59" fill="url(#dial-glow)" />
+          <rect x="240" y="494" width="520" height="4" rx="2" fill="url(#dial-line)" className="dial-line" />
+          <rect x="220" y="497" width="560" height="103" fill="url(#dial-glow)" />
         </svg>
 
         <div className="dial-center">

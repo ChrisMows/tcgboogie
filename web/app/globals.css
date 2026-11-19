@@ -1306,7 +1306,7 @@ details.era > .set-grid { margin-bottom: 14px; }
 .dial-word text { font: italic 600 50px var(--font-head), var(--font-body), sans-serif; fill: #b9c0ca; }
 .dial-word.front text { fill: #e6e9ee; }
 .dial-line { filter: drop-shadow(0 0 8px rgba(211, 255, 102, 0.9)); }
-.dial-center { position: absolute; left: 13%; right: 13%; top: 64%; transform: translateY(-50%); display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.dial-center { position: absolute; left: 14%; right: 14%; top: 61%; transform: translateY(-50%); display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .dial-center > * { pointer-events: auto; }
 .dial-center .coll-hero-value { font-size: clamp(32px, 9.5vw, 64px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .dial-arrow { background: none; border: 0; padding: 8px; display: inline-flex; cursor: pointer; transition: opacity 0.2s, transform 0.15s; }
