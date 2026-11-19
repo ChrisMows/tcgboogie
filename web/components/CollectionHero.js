@@ -42,7 +42,7 @@ export default function CollectionHero({ summary, day, week, sinceVisit, changes
     <>
       <section className="coll-hero">
         <div className="small muted">Collection value</div>
-        {/* Floor, Market and Top on a dial once some cards have a range from recent sales (lib/collection.js summarize). */}
+        {/* Floor, Market and Ceiling on a dial once some cards have a range from recent sales (lib/collection.js summarize). */}
         {summary.ranged > 0 ? (
           <ValueDial low={summary.low} value={summary.value} high={summary.high} ranged={summary.ranged} copies={summary.copies - summary.unpriced}
             extra={<HideValues className="icon-only" />} />

@@ -121,7 +121,7 @@ export function marketValue(product, item) {
 }
 
 /**
- * One copy's range from its recent sales, { low, high, sales }, for the collection's Floor and Top values
+ * One copy's range from its recent sales, { low, high, sales }, for the collection's Floor and Ceiling values
  * (lib/catalog.js rangeOf). null for sealed product and values with too few sales: those count the same in all three.
  */
 export function valueRange(product, item) {
@@ -189,7 +189,7 @@ export function recapMovers(owned, products, histories, days, now = new Date(), 
 /** Totals for a list of owned items. */
 export function summarize(items) {
   let value = 0, cost = 0, costed = 0, copies = 0, unpriced = 0;
-  // Floor and Top: each copy at the low or high end of its recent sales (valueRange). A value the member typed in, or
+  // Floor and Ceiling: each copy at the low or high end of its recent sales (valueRange). A value the member typed in, or
   // one with too few sales for a range, counts the same in all three.
   let low = 0, high = 0, ranged = 0;
   for (const it of items) {

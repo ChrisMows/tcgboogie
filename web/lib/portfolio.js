@@ -85,7 +85,7 @@ export async function loadCollection(user) {
       image: pictureFor(it.productId) || it.image || p?.image || null,
       tcgplayerUrl: it.tcgplayerUrl || p?.tcgplayerUrl || null,
       change7: it.kind === "graded" ? changes?.[7] ?? null : change(p, 7),
-      range: p ? valueRange(p, it) : null, // Floor and Top values (lib/collection.js summarize)
+      range: p ? valueRange(p, it) : null, // Floor and Ceiling values (lib/collection.js summarize)
       changes,
       createdAt: String(it.createdAt),
       valueUpdatedAt: it.valueUpdatedAt ? String(it.valueUpdatedAt) : null,

@@ -407,7 +407,7 @@ function weightedQuantile(points, q) {
 }
 
 /**
- * A value's range from its recent sales, for the collection's Floor and Top values: the low end (a fifth of the
+ * A value's range from its recent sales, for the collection's Floor and Ceiling values: the low end (a fifth of the
  * weighted sales sold for less) and the high end (a fifth sold for more), never past the value itself. Only with 3+
  * sales; otherwise null and the collection counts the value itself in all three.
  */
@@ -515,7 +515,7 @@ function withRawSales(p, rows) {
       Object.assign(next, { market: r2(value), tcgplayer: base?.tcgplayer ?? base?.market ?? null, ebaySales: ebay.length, sales });
     }
     if (!(next.market > 0)) continue;
-    // The collection's Floor and Top: each day (TCGplayer's average) and each eBay sale counts once, so the range shows
+    // The collection's Floor and Ceiling: each day (TCGplayer's average) and each eBay sale counts once, so the range shows
     // how far the price moved this month instead of the busiest day.
     const range = rangeOf(all.map((d) => ({ price: d.price, w: ageW(d) })), next.market, sales);
     if (range) next.range = range;
