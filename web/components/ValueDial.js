@@ -5,143 +5,193 @@ import InfoTip from "@/components/InfoTip";
 
 const money = (v, d = 2) => `$${Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 
-// The three readings, left to right. Market is the value everywhere else on the site. `turn` slides the bezel's ticks
-// along the ring (degrees), so moving between readings looks like turning a watch bezel.
+// The three readings, in order. Market is the value everywhere else on the site.
 export const DIAL_STOPS = [
-  { key: "floor", label: "Floor", turn: -7, note: "The low end of recent sales. We're confident your cards are worth at least this." },
-  { key: "market", label: "Market", turn: 0, note: "What your cards typically sell for now, from recent sales." },
-  { key: "ceiling", label: "Ceiling", turn: 7, note: "The high end of recent sales: what your cards could fetch if every one sold well." },
+  { key: "floor", label: "Floor", note: "The low end of recent sales. We're confident your cards are worth at least this." },
+  { key: "market", label: "Market", note: "What your cards typically sell for now, from recent sales." },
+  { key: "ceiling", label: "Ceiling", note: "The high end of recent sales: what your cards could fetch if every one sold well." },
 ];
-const MAX_TURN = 12;
 
-// The bezel: a ring tilted away from the viewer (an ellipse), drawn in the design mockup's own coordinates (1536 wide).
-// Ticks run down each side from near the top, past the widest point, and curl under toward the value; the far ones are
-// small and faint, the near ones larger and brighter.
-const VB = { x: 150, y: 120, w: 1236, h: 420 }; // the ring with the empty sides cropped off
-const CX = 768, CY = 400, RX = 565, RY = 235;
-const FIRST = 14, LAST = 134, STEP = 4.5; // degrees around the ring, from straight up
-const BASE = Array.from({ length: Math.floor((LAST + 12 - FIRST) / STEP) + 1 }, (_, i) => FIRST - 6 + i * STEP);
-const LIT = BASE.reduce((best, a, i) => (Math.abs(a - 100) < Math.abs(BASE[best] - 100) ? i : best), 0); // the glowing tick
-// Rounded: the server and the browser can differ in the last decimals of sin/cos, which React reports as a mismatch.
-const round = (v) => Math.round(v * 10) / 10;
-
-// A point on the ring. Past the widest point (90 degrees) the ring curls under faster than an ellipse, as in the mockup.
-function ringPoint(side, deg) {
-  const rad = (deg * Math.PI) / 180;
-  const c = Math.cos(rad);
-  return [side * RX * Math.sin(rad), -RY * c * (c < 0 ? 0.5 : 1)];
-}
-
-function tick(side, deg) {
-  const t = Math.min(1, (deg - FIRST) / (100 - FIRST)); // 0 at the top, 1 from the glowing tick on
-  const [x, y] = ringPoint(side, deg);
-  // Outward normal: perpendicular to the ring's direction here, pointing away from the center.
-  const [ax, ay] = ringPoint(side, deg - 0.5), [bx, by] = ringPoint(side, deg + 0.5);
-  let nx = by - ay, ny = -(bx - ax);
-  const n = Math.hypot(nx, ny); nx /= n; ny /= n;
-  if (nx * x + ny * y < 0) { nx = -nx; ny = -ny; }
-  const len = 16 + 22 * t;
-  const fade = Math.min(1, (deg - FIRST) / 16, (LAST - deg) / 8);
-  return {
-    x1: round(CX + x - (nx * len) / 2), y1: round(CY + y - (ny * len) / 2),
-    x2: round(CX + x + (nx * len) / 2), y2: round(CY + y + (ny * len) / 2),
-    width: round(3.5 + 3 * t), opacity: Math.max(0, round(fade * (0.3 + 0.6 * t) * 100) / 100),
-  };
-}
-
-function Side({ side, turn, active, market }) {
-  return BASE.map((a, i) => {
-    const deg = a + side * turn;
-    if (deg < FIRST || deg > LAST) return null;
-    const k = tick(side, deg);
-    // The glowing tick: one each side at Market; on the side you've turned to, it and its neighbours glow.
-    const lit = i === LIT || (active && Math.abs(i - LIT) <= 2);
-    const dim = !active && !market && i === LIT;
-    return <line key={i} x1={k.x1} y1={k.y1} x2={k.x2} y2={k.y2} className={`dial-tick ${lit ? (dim ? "dim" : "on") : ""}`}
-      style={{ strokeWidth: lit ? k.width + 2.5 : k.width, opacity: lit ? (dim ? 0.45 : 1) : k.opacity }} />;
-  });
-}
-
-/**
- * The collection's value on a dial: Floor, Market (where it starts) and Ceiling. Swipe or drag across it, tap an
- * arrow or a word, or use the arrow keys. Values come from lib/collection.js summarize (low, value, high).
+/*
+ * A round bezel seen at a slight angle (so it draws as an ellipse), around the value. The three readings ride an inner
+ * track of the same ring like a carousel: the one in front, under the value, is the reading shown; the others sit up
+ * the ring to its left and right. Turning to Ceiling brings it round to the front and slides Market up to the left.
+ * The ticks turn with it. `p` is the position, 0 (Floor) to 2 (Ceiling), and moves continuously.
  */
+const VB_W = 1000, VB_H = 600;
+const RING = { cx: 500, cy: 330, rx: 420, ry: 250 }; // the ticks
+const TRACK = { cx: 500, cy: 300, rx: 300, ry: 170 }; // the readings' path
+const SPACING = 120; // degrees between readings on the track
+const TICK_STEP = 6, TOP_GAP = 16, END = 124, LIT_AT = 112; // degrees from the top of the ring
+const round = (v) => Math.round(v * 10) / 10; // the server and the browser can differ in sin/cos's last decimals
+const rad = (d) => (d * Math.PI) / 180;
+const pointOn = (e, deg) => [e.cx + e.rx * Math.sin(rad(deg)), e.cy - e.ry * Math.cos(rad(deg))];
+const wrap = (d) => ((d % 360) + 540) % 360 - 180; // -180..180, 0 at the top
+
+/** The ticks for the ring turned by `turn` degrees. */
+function ticks(turn) {
+  const out = [];
+  for (let base = 0; base < 360; base += TICK_STEP) {
+    const deg = wrap(base + turn);
+    const off = Math.abs(deg);
+    if (off < TOP_GAP - 6 || off > END + 6) continue;
+    const near = Math.min(1, Math.max(0, (off - TOP_GAP) / (90 - TOP_GAP))); // 0 at the back (top), 1 at the sides
+    const fade = Math.max(0, Math.min(1, (off - (TOP_GAP - 6)) / 10, (END + 6 - off) / 10));
+    const [x, y] = pointOn(RING, deg);
+    // Outward normal of the ellipse here.
+    let nx = (x - RING.cx) / (RING.rx * RING.rx), ny = (y - RING.cy) / (RING.ry * RING.ry);
+    const n = Math.hypot(nx, ny); nx /= n; ny /= n;
+    const len = 14 + 22 * near;
+    out.push({ key: base, deg, x1: round(x - nx * len / 2), y1: round(y - ny * len / 2), x2: round(x + nx * len / 2), y2: round(y + ny * len / 2),
+      width: round(3 + 2.6 * near), opacity: round(fade * (0.28 + 0.62 * near) * 100) / 100 });
+  }
+  // The glowing tick on each side: whichever tick is nearest LIT_AT right now, so the glow stays put as the ring turns.
+  for (const side of [-1, 1]) {
+    let best = null;
+    for (const t of out) if (Math.sign(t.deg) === side && (!best || Math.abs(Math.abs(t.deg) - LIT_AT) < Math.abs(Math.abs(best.deg) - LIT_AT))) best = t;
+    if (best) best.lit = true;
+  }
+  return out;
+}
+
 export default function ValueDial({ low, value, high, ranged, copies, extra = null }) {
-  const [pos, setPos] = useState(1);
-  const [drag, setDrag] = useState(null); // bezel turn while dragging
-  const [shown, setShown] = useState(0); // the bezel's turn on screen, eased toward the reading
-  const start = useRef(null);
-  const values = [low, value, high];
-  const live = drag === null ? pos : drag < -2.5 ? 0 : drag > 2.5 ? 2 : 1;
-  const stop = DIAL_STOPS[live];
-  const step = (d) => setPos((i) => Math.max(0, Math.min(2, i + d)));
+  const [p, setP] = useState(1); // continuous position: 0 Floor, 1 Market, 2 Ceiling
+  const phys = useRef({ p: 1, v: 0, target: 1, raf: 0, drag: null });
+  const box = useRef(null);
+  const settled = Math.round(p);
+  const stop = DIAL_STOPS[Math.max(0, Math.min(2, settled))];
 
-  // Ease the bezel to its new position with a small overshoot, like a detent.
-  useEffect(() => {
-    if (drag !== null) { setShown(drag); return; }
-    const from = shown, to = DIAL_STOPS[pos].turn;
-    if (from === to) return;
-    const t0 = performance.now(), dur = 420;
-    let raf;
-    const ease = (t) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2; // ease-out with overshoot
+  // The value between readings, so the number rolls as the ring turns.
+  const shownValue = p <= 1 ? low + (value - low) * Math.max(0, p) : value + (high - value) * Math.min(1, p - 1);
+
+  // A spring toward the target, with a little give past the ends.
+  const run = () => {
+    const s = phys.current;
+    cancelAnimationFrame(s.raf);
+    let last = performance.now();
     const frame = (now) => {
-      const t = Math.min(1, (now - t0) / dur);
-      setShown(from + (to - from) * ease(t));
-      if (t < 1) raf = requestAnimationFrame(frame);
+      // Small fixed steps for the time that really passed, so a slow phone or a dropped frame never runs in slow motion.
+      let left = Math.min(0.1, (now - last) / 1000); last = now;
+      const k = 210, c = 24; // stiffness, damping: quick and smooth, with a soft settle
+      while (left > 0) {
+        const dt = Math.min(1 / 240, left); left -= dt;
+        s.v += (-k * (s.p - s.target) - c * s.v) * dt;
+        s.p += s.v * dt;
+      }
+      if (Math.abs(s.p - s.target) < 0.0005 && Math.abs(s.v) < 0.002) { s.p = s.target; s.v = 0; setP(s.p); return; }
+      setP(s.p);
+      s.raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [pos, drag]); // eslint-disable-line react-hooks/exhaustive-deps
+    s.raf = requestAnimationFrame(frame);
+  };
+  const goTo = (i) => { const s = phys.current; s.target = Math.max(0, Math.min(2, i)); run(); };
+  useEffect(() => () => cancelAnimationFrame(phys.current.raf), []);
 
+  // Dragging: the ring follows the finger; letting go keeps some momentum, then settles on the nearest reading.
+  const stepPx = () => (box.current?.getBoundingClientRect().width || 600) * 0.3;
   const onDown = (e) => {
-    if (e.target.closest("button, .info-tip")) return;
-    start.current = { x: e.clientX, turn: DIAL_STOPS[pos].turn, moved: false };
+    if (e.target.closest("button, .info-tip, .hide-values-btn")) return;
+    const s = phys.current;
+    cancelAnimationFrame(s.raf);
+    s.drag = { x: e.clientX, p: s.p, t: performance.now(), lastX: e.clientX, lastT: performance.now(), vel: 0, moved: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
   const onMove = (e) => {
-    if (!start.current) return;
-    const dx = e.clientX - start.current.x;
-    if (Math.abs(dx) > 4) start.current.moved = true;
-    if (start.current.moved) setDrag(Math.max(-MAX_TURN, Math.min(MAX_TURN, start.current.turn + dx * 0.06)));
+    const s = phys.current, d = s.drag;
+    if (!d) return;
+    if (Math.abs(e.clientX - d.x) > 3) d.moved = true;
+    if (!d.moved) return;
+    const now = performance.now();
+    let next = d.p - (e.clientX - d.x) / stepPx();
+    if (next < 0) next = -Math.pow(-next, 0.7) * 0.35; // rubber band past Floor
+    if (next > 2) next = 2 + Math.pow(next - 2, 0.7) * 0.35; // and past Ceiling
+    const dt = Math.max(1, now - d.lastT);
+    d.vel = 0.8 * (-(e.clientX - d.lastX) / stepPx() / (dt / 1000)) + 0.2 * d.vel;
+    d.lastX = e.clientX; d.lastT = now;
+    s.p = next; setP(next);
   };
   const onUp = () => {
-    if (start.current?.moved && drag !== null) setPos(live);
-    start.current = null;
-    setDrag(null);
+    const s = phys.current, d = s.drag;
+    s.drag = null;
+    if (!d || !d.moved) return;
+    s.v = d.vel;
+    goTo(Math.round(s.p + d.vel * 0.18)); // a flick carries on to the next reading
+  };
+  const onWheel = (e) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 8) return; // sideways trackpad swipes only
+    const s = phys.current;
+    if (s.wheelAt && performance.now() - s.wheelAt < 350) return;
+    s.wheelAt = performance.now();
+    goTo(Math.round(s.target) + (e.deltaX > 0 ? 1 : -1));
   };
   const onKey = (e) => {
     const k = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
-    if (k) { e.preventDefault(); step(k); }
-    if (e.key === "Home") { e.preventDefault(); setPos(0); }
-    if (e.key === "End") { e.preventDefault(); setPos(2); }
+    if (k) { e.preventDefault(); goTo(Math.round(phys.current.target) + k); }
+    if (e.key === "Home") { e.preventDefault(); goTo(0); }
+    if (e.key === "End") { e.preventDefault(); goTo(2); }
   };
 
-  return (
-    <div
-      className={`dial ${drag !== null ? "dragging" : ""}`}
-      role="slider" tabIndex={0} aria-label="Collection value estimate"
-      aria-valuemin={0} aria-valuemax={2} aria-valuenow={pos} aria-valuetext={`${DIAL_STOPS[pos].label}: ${money(values[pos])}`}
-      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onKeyDown={onKey}
-    >
-      <svg className="dial-ring" viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} aria-hidden="true">
-        <Side side={-1} turn={shown} active={live === 0} market={live === 1} />
-        <Side side={1} turn={shown} active={live === 2} market={live === 1} />
-        <text className={`dial-word ${live === 0 ? "on" : ""}`} x="408" y="292" transform="rotate(-11 408 292)" textAnchor="middle" onClick={() => setPos(0)}>FLOOR</text>
-        <text className={`dial-word ${live === 2 ? "on" : ""}`} x="1128" y="292" transform="rotate(11 1128 292)" textAnchor="middle" onClick={() => setPos(2)}>CEILING</text>
-      </svg>
+  const turn = (p - 1) * SPACING; // the ring turns with the readings
+  const target = Math.round(phys.current.target);
 
-      <div className="dial-center">
-        <button type="button" className="dial-arrow" aria-label="Lower estimate" disabled={pos === 0} tabIndex={-1} onClick={() => step(-1)}>
-          <svg viewBox="0 0 24 40" aria-hidden="true"><polyline points="18,5 6,20 18,35" /></svg>
-        </button>
-        <div className="coll-hero-value sensitive" aria-live="polite">{money(values[live])}</div>
-        <button type="button" className="dial-arrow" aria-label="Higher estimate" disabled={pos === 2} tabIndex={-1} onClick={() => step(1)}>
-          <svg viewBox="0 0 24 40" aria-hidden="true"><polyline points="6,5 18,20 6,35" /></svg>
-        </button>
+  return (
+    <div className="dial-wrap">
+      <div ref={box} className="dial" role="slider" tabIndex={0} aria-label="Collection value estimate"
+        aria-valuemin={0} aria-valuemax={2} aria-valuenow={settled} aria-valuetext={`${stop.label}: ${money(shownValue)}`}
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel} onKeyDown={onKey}>
+        <svg className="dial-ring" viewBox={`0 0 ${VB_W} ${VB_H}`} aria-hidden="true">
+          <defs>
+            <linearGradient id="dial-line" x1="0" x2="1">
+              <stop offset="0" stopColor="#d3ff66" stopOpacity="0" />
+              <stop offset="0.25" stopColor="#d3ff66" />
+              <stop offset="0.5" stopColor="#f6ffe0" />
+              <stop offset="0.75" stopColor="#d3ff66" />
+              <stop offset="1" stopColor="#d3ff66" stopOpacity="0" />
+            </linearGradient>
+            <radialGradient id="dial-glow" cx="0.5" cy="0" r="0.5">
+              <stop offset="0" stopColor="#d3ff66" stopOpacity="0.38" />
+              <stop offset="0.5" stopColor="#d3ff66" stopOpacity="0.1" />
+              <stop offset="1" stopColor="#d3ff66" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {ticks(turn).map((t) => (
+            <line key={t.key} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} className={`dial-tick ${t.lit ? "on" : ""}`}
+              style={{ strokeWidth: t.lit ? t.width + 3 : t.width, opacity: t.lit ? 1 : t.opacity }} />
+          ))}
+          {DIAL_STOPS.map((s, i) => {
+            const deg = 180 - (i - p) * SPACING; // 180 = the front, under the value; Floor to the left, Ceiling to the right
+            const fromFront = Math.abs(wrap(deg - 180));
+            // Only the reading in front and its neighbours show: one two steps away fades out as it goes over the back.
+            const opacity = Math.max(0, Math.min(1, (1.6 - Math.abs(i - p)) / 0.6));
+            if (opacity <= 0) return null;
+            const [x, y] = pointOn(TRACK, deg);
+            const depth = (1 - Math.cos(rad(deg))) / 2; // 1 in front, 0 at the back
+            const scale = 0.58 + 0.42 * depth;
+            const tilt = -Math.sin(rad(deg)) * 22 * (1 - depth); // leans with the ring at the sides
+            const front = fromFront < 20;
+            return (
+              <g key={s.key} transform={`translate(${round(x)} ${round(y)}) rotate(${round(tilt)}) scale(${round(scale * 100) / 100})`}
+                opacity={round(opacity * 100) / 100} className={`dial-word ${front ? "front" : ""}`} onClick={() => goTo(i)}>
+                <text textAnchor="middle" dominantBaseline="middle" style={{ letterSpacing: `${round(0.08 + 0.34 * depth ** 3)}em` }}>{s.label.toUpperCase()}</text>
+              </g>
+            );
+          })}
+          <rect x="250" y="538" width="500" height="4" rx="2" fill="url(#dial-line)" className="dial-line" />
+          <rect x="230" y="541" width="540" height="59" fill="url(#dial-glow)" />
+        </svg>
+
+        <div className="dial-center">
+          <button type="button" className="dial-arrow" aria-label="Lower estimate" disabled={target === 0} tabIndex={-1} onClick={() => goTo(target - 1)}>
+            <svg viewBox="0 0 24 40" aria-hidden="true"><polyline points="18,5 6,20 18,35" /></svg>
+          </button>
+          <div className="coll-hero-value sensitive" aria-live="polite">{money(shownValue)}</div>
+          <button type="button" className="dial-arrow" aria-label="Higher estimate" disabled={target === 2} tabIndex={-1} onClick={() => goTo(target + 1)}>
+            <svg viewBox="0 0 24 40" aria-hidden="true"><polyline points="6,5 18,20 6,35" /></svg>
+          </button>
+        </div>
       </div>
-      <div className="dial-name">
-        <span>{stop.label.toUpperCase()}</span>
-        {/* What this reading means, and which cards count the same in all three: behind an ⓘ, not under the value. */}
+      {/* What this reading means, and which cards count the same in all three, plus hide values: their own row. */}
+      <div className="dial-tools">
         <InfoTip label={`About the ${stop.label} value`}>
           {stop.note}
           {ranged < copies && (
@@ -151,7 +201,6 @@ export default function ValueDial({ low, value, high, ranged, copies, extra = nu
         </InfoTip>
         {extra}
       </div>
-      <div className="dial-horizon" aria-hidden="true" />
     </div>
   );
 }
