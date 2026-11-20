@@ -108,6 +108,18 @@ export function itemLabel(item) {
 }
 
 /** Market value of one copy, from a product's price table. null when there's no reliable price. */
+/**
+ * The printing to price a copy or alert by. A copy saved with no printing (added before the card had prices, seen
+ * Nov 2026 on Inkay 113/103) or with one the card doesn't come in, when the card has only one, uses the card's main
+ * printing. A copy whose printing just has no price yet (a Reverse Holo, say) keeps it: it's never priced as another.
+ */
+export function printingFor(product, printing) {
+  const printings = Object.keys(product?.prices || {});
+  if (printing && printings.includes(printing)) return printing;
+  if (!printing || printings.length === 1) return printings[0] ?? printing;
+  return printing;
+}
+
 export function marketValue(product, item) {
   if (!product) return null;
   if (item.kind === "sealed") return product.prices?.market ?? product.prices?.low ?? null;
@@ -116,7 +128,7 @@ export function marketValue(product, item) {
     const g = product.graded?.[gradeKey(item.grader, item.grade)];
     return g && g.reliable !== false ? g.price : null;
   }
-  const byPrinting = product.prices?.[item.printing] || {};
+  const byPrinting = product.prices?.[printingFor(product, item.printing)] || {};
   return byPrinting[item.condition]?.market ?? null;
 }
 
@@ -130,7 +142,7 @@ export function valueRange(product, item) {
     const g = product.graded?.[gradeKey(item.grader, item.grade)];
     return g && g.reliable !== false ? g.range || null : null;
   }
-  return product.prices?.[item.printing]?.[item.condition]?.range || null;
+  return product.prices?.[printingFor(product, item.printing)]?.[item.condition]?.range || null;
 }
 
 /**

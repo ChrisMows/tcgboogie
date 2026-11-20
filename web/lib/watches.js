@@ -1,6 +1,8 @@
 // Price watches: a member picks a TCGplayer card or sealed product and a target price. We check its TCGplayer price
 // a few times a day (prices update about daily) and, for cards, also watch eBay live for listings at or under the target.
 
+import { printingFor } from "@/lib/collection";
+
 export const PRICE_TYPES = {
   market: { label: "Market price", hint: "TCGplayer's price based on recent sales. Best for tracking the trend." },
   low: { label: "Lowest listing", hint: "The cheapest copy listed on TCGplayer right now. Closest to what you'd pay." },
@@ -24,7 +26,7 @@ export const alertsWord = (n) => `${n} price alert${n === 1 ? "" : "s"}`;
 export function currentPrice(product, watch) {
   if (!product) return null;
   if (product.type === "sealed") return product.prices?.[watch.priceType] ?? null;
-  return product.prices?.[watch.printing]?.[watch.condition]?.[watch.priceType] ?? null;
+  return product.prices?.[printingFor(product, watch.printing)]?.[watch.condition]?.[watch.priceType] ?? null;
 }
 
 // Alert modes. Buying: "below" (at or below a price) / "drop" (falls by a percent).
