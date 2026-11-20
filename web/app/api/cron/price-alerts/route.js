@@ -11,6 +11,7 @@ import { continueReleaseEmails } from "@/lib/release-email";
 import { recordDailySnapshots } from "@/lib/snapshots";
 import { refreshGradingGaps } from "@/lib/grading-gap";
 import { linkPricedMemberCards } from "@/lib/member-links";
+import { checkStuckValues } from "@/lib/stuck-values";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -53,8 +54,17 @@ async function handle(req) {
     }
     // Grade & Flip: copy the card prices the bot refreshed since the last run (no lookups, lib/grading-gap.js).
     // Member-added cards the price service now has: copies move to the priced card (lib/member-links.js).
-    try { summary.memberLinks = await linkPricedMemberCards(); } catch (e) {
+    let severalMatches = [];
+    try {
+      const { severalMatches: several, ...links } = await linkPricedMemberCards();
+      summary.memberLinks = links;
+      severalMatches = several || [];
+    } catch (e) {
       await log("prices", "warn", `Member card check failed: ${e.message}`);
+    }
+    // Safety net: copies still on a member's own value while their card has a market price (lib/stuck-values.js).
+    try { summary.stuckValues = await checkStuckValues({ severalMatches }); } catch (e) {
+      await log("prices", "warn", `Stuck collection value check failed: ${e.message}`);
     }
     try { summary.gradingGaps = await refreshGradingGaps(); } catch (e) {
       await log("prices", "warn", `Grade & Flip refresh failed: ${e.message}`);

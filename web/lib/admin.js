@@ -106,6 +106,13 @@ export async function systemStatus({ pingPrices = false } = {}) {
     `Last compared with the graders' pricing pages ${ago(pricesChecked)}${pricesDue ? ": check them, then update GRADING_PRICES_CHECKED in lib/grading.js" : ""}`);
 
   if (db) {
+    // Copies stuck on a member's own value while their card has a market price (lib/stuck-values.js, run with the price-alert job).
+    const [stuckRow] = await db.select().from(appSettings).where(eq(appSettings.key, "stuck_values")).limit(1).catch(() => []);
+    const sv = stuckRow?.value;
+    add("Data", "Collection values", !sv ? "ok" : sv.stuckCount ? "warn" : "ok",
+      !sv ? "Checked with the price-alert job: no run yet"
+        : sv.stuckCount ? `${sv.stuckCount} ${sv.stuckCount === 1 ? "copy needs" : "copies need"} a look (checked ${ago(sv.at)}): ${sv.stuck.slice(0, 5).map((s) => `${s.card}: ${s.why}`).join(" · ")}${sv.stuckCount > 5 ? ` · and ${sv.stuckCount - 5} more` : ""}`
+          : `Checked ${ago(sv.at)}: every copy with a market price is using it${sv.fixed ? ` (${sv.fixed} fixed by itself)` : ""}`);
     const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "price_alerts_last_run")).limit(1);
     const v = row?.value;
     const age = v?.at ? Date.now() - new Date(v.at).getTime() : null;

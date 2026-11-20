@@ -61,18 +61,20 @@ export async function moveMemberCard(from, to) {
   return { copies: items.length, watches: watches.length, sales: sold.length };
 }
 
-/** The daily check. Returns { checked, moved, several }. */
+/** The daily check. Returns { checked, moved, several, severalMatches } (the last for lib/stuck-values.js). */
 export async function linkPricedMemberCards() {
-  if (!db) return { checked: 0, moved: 0, several: 0 };
+  if (!db) return { checked: 0, moved: 0, several: 0, severalMatches: [] };
   const cards = await db.select().from(memberCards).where(and(eq(memberCards.hidden, false), eq(memberCards.type, "card"),
     sql`${memberCards.productId} like 'm-%'`, sql`${memberCards.language} in ('english', 'japanese')`, sql`coalesce(${memberCards.number}, '') <> ''`));
   let moved = 0, several = 0;
+  const severalMatches = [];
   for (const card of cards) {
     try {
       const results = await searchProducts(`${card.name} ${card.number}${card.language === "japanese" ? " japanese" : " english"}`);
       const found = matchesFor(card, results);
       if (found.length > 1) {
         several++;
+        severalMatches.push({ productId: card.productId, name: card.name, number: card.number, matches: found.map((p) => `${p.name} (${p.id})`) });
         await log("prices", "info", `Member-added card ${card.name} #${card.number} (${card.productId}) matches ${found.length} priced cards; left as it is`,
           { from: card.productId, matches: found.map((p) => `${p.name} (${p.id})`) });
         continue;
@@ -86,5 +88,5 @@ export async function linkPricedMemberCards() {
       await log("prices", "warn", `Checking member-added card ${card.productId} failed: ${e.message}`);
     }
   }
-  return { checked: cards.length, moved, several };
+  return { checked: cards.length, moved, several, severalMatches };
 }
