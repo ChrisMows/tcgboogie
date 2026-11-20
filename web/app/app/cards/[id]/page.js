@@ -158,7 +158,12 @@ export default async function CardPage({ params, searchParams }) {
   // Special prints (Prize Pack, prerelease stamps...) add their words, so eBay doesn't show the regular card instead.
   const ebayQuery = p.topps ? p.topps.query : cardSearchQuery({ name: p.name, number: p.number, setName: p.setName, language });
   const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
-  const ebaySold = ebaySearch(ebayQuery, { sold: true, sealed: isSealed, source: "card-page-sold" });
+  // Recent sales: when the copies you own are all slabs, eBay's sold search looks for your slab's grade (your most
+  // valuable one), not the raw card.
+  const ownedSlab = isSealed || mine.some((it) => it.list === "owned" && it.kind === "raw") ? null
+    : mine.filter((it) => it.list === "owned" && it.kind === "graded").sort((a, b) => (b.unitValue ?? 0) - (a.unitValue ?? 0))[0];
+  const slabLabel = ownedSlab ? gradeName(ownedSlab.grader, ownedSlab.grade) : null;
+  const ebaySold = ebaySearch(slabLabel ? `${ebayQuery} ${slabLabel}` : ebayQuery, { sold: true, sealed: isSealed, source: slabLabel ? "card-page-sold-graded" : "card-page-sold" });
   // Sold searches per grade ("… PSA 10"), for the graded cells.
   const gradeSold = (key) => ebaySearch(`${ebayQuery} ${GRADE_LABEL(key)}`, { sold: true, source: "card-page-sold-graded" });
   // Arrived from a deal alert and the auction is still open: the quick-check pop-up (listing + recent sales).
@@ -207,8 +212,8 @@ export default async function CardPage({ params, searchParams }) {
         <Source name="ebay" className="src-sm" /> <span className="live-dot" aria-hidden="true" />Live listings ↗
       </a>}
       {ebaySold && <a href={ebaySold.href} target="_blank" rel={`noopener noreferrer${ebaySold.affiliate ? " sponsored" : ""}`} className="btn ebay-btn sold"
-        title="eBay sold and completed listings for this card, most recent first">
-        <Source name="ebay" className="src-sm" /> Recent sales ↗
+        title={slabLabel ? `eBay sold listings for this card in ${slabLabel}, most recent first` : "eBay sold and completed listings for this card, most recent first"}>
+        <Source name="ebay" className="src-sm" /> {slabLabel ? `Recent ${slabLabel} sales` : "Recent sales"} ↗
       </a>}
     </div>
   );
@@ -410,7 +415,7 @@ export default async function CardPage({ params, searchParams }) {
               Added by a member from <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">this page ↗</a>. Graded values appear once sales are reported.{commission}
             </p>
           ) : <p className="hint">
-            Raw prices are TCGplayer&apos;s sales from the last 30 days, plus eBay sales we verify ourselves in the same condition. Graded values are the median of the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more. CGC and BGS 10s are valued per slab label, from that label&apos;s own sales.{" "}
+            Raw prices are TCGplayer&apos;s sales from the last 30 days, plus eBay sales we verify ourselves in the same condition. Graded values come from the last 90 days of sales (eBay and Fanatics Collect, plus eBay sales we verify ourselves), newer sales counting more: the middle sale with 8 or more, the average with fewer, leaving out sales far from the rest. CGC and BGS 10s are valued per slab label, from that label&apos;s own sales.{" "}
             <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
           </p>}
         </div>

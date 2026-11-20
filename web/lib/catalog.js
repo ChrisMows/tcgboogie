@@ -397,6 +397,21 @@ function weightedMedian(points) {
   return null;
 }
 
+/**
+ * The typical price from a set of sales (each { price, w }), `sales` of them in all. With 8 or more, the weighted
+ * median: one odd sale can't move it. With fewer, the median lands on a single sale and jumps between them (Nov 2026:
+ * a PSA 10 that sold for $855, $1,050, $1,100 and $870, newest first, read $870), so it's the weighted average, after
+ * leaving out any sale far from the middle (under 60% or over 160% of the median). With 1-2, the weighted average.
+ */
+function typicalPrice(pts, sales) {
+  const avg = (list) => { const w = list.reduce((s, x) => s + x.w, 0); return w ? list.reduce((s, x) => s + x.price * x.w, 0) / w : null; };
+  if (sales >= 8) return weightedMedian(pts);
+  if (sales < 3) return avg(pts);
+  const mid = weightedMedian(pts);
+  const kept = pts.filter((x) => x.price >= mid * 0.6 && x.price <= mid * 1.6);
+  return avg(kept.length ? kept : pts);
+}
+
 /** The price `q` of the way up the sales (0.2 = a fifth of the weight is below it), weighted like weightedMedian. */
 function weightedQuantile(points, q) {
   const pts = points.filter((p) => p.price > 0 && p.w > 0).sort((a, b) => a.price - b.price);
@@ -472,7 +487,7 @@ async function withOurSales(p, prefetched) {
     if (!all.length) continue;
     const pts = all.map((d) => ({ price: d.price, w: (d.count || 1) * ageW(d) }));
     const sales = all.reduce((n, d) => n + (d.count || 1), 0);
-    const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
+    const value = typicalPrice(pts, sales);
     if (!value) continue;
     graded[key] = {
       price: r2(value), sales, lastSale: all.map((d) => d.date).sort().pop(),
@@ -510,7 +525,7 @@ function withRawSales(p, rows) {
     const sales = all.reduce((n, d) => n + d.count, 0);
     const next = { low: null, ...base };
     if (ebay.length) {
-      const value = sales >= 3 ? weightedMedian(pts) : pts.reduce((s, x) => s + x.price * x.w, 0) / pts.reduce((s, x) => s + x.w, 0);
+      const value = typicalPrice(pts, sales);
       if (!value) continue;
       Object.assign(next, { market: r2(value), tcgplayer: base?.tcgplayer ?? base?.market ?? null, ebaySales: ebay.length, sales });
     }
