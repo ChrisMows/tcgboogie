@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ERA_NAMES, eraOf, setLabel } from "@/lib/sets";
+import { useEffect, useMemo, useState } from "react";
+import { ERA_NAMES, eraOf, eraSlug, setLabel } from "@/lib/sets";
 
 const OPEN_ERAS = 2; // newest eras open by default; older ones one tap away
 
-export default function SetBrowser({ sets }) {
+/** Sets by era with a search. With `have` counts it also lists the sets you've started; `openEra` (from /sets?era=)
+ * opens that era and scrolls to it. */
+export default function SetBrowser({ sets, openEra = null }) {
   const [q, setQ] = useState("");
+  useEffect(() => {
+    if (openEra) document.getElementById(`era-${openEra}`)?.scrollIntoView({ block: "start" });
+  }, [openEra]);
   const shown = useMemo(() => {
     const w = q.toLowerCase().trim();
     return w ? sets.filter((s) => `${s.name} ${s.series || ""} ${eraOf(s)}`.toLowerCase().includes(w)) : sets;
@@ -58,7 +63,7 @@ export default function SetBrowser({ sets }) {
       )}
       {byEra.length === 0 && started.length === 0 && <p className="muted">No sets match.</p>}
       {byEra.map(([era, list], i) => (
-        <details key={`${era}-${q ? "q" : ""}`} className="era" open={Boolean(q) || i < OPEN_ERAS}>
+        <details key={`${era}-${q ? "q" : ""}`} id={`era-${eraSlug(era)}`} className="era" open={Boolean(q) || (openEra ? eraSlug(era) === openEra : i < OPEN_ERAS)}>
           <summary>
             <h2 className="section-label">{era}</h2>
             <span className="small muted">{list.length} set{list.length === 1 ? "" : "s"}</span>

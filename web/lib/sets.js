@@ -35,6 +35,18 @@ export function setLabel(full) {
   return { name: s, code: null };
 }
 
+/** "Scarlet & Violet" -> "scarlet-violet", for /sets?era= links and anchors. */
+export const eraSlug = (era) => String(era).toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Not main sets: left out of the header's "newest sets" (they're still under All sets).
+const SIDE_SET = /promo|jumbo|trainer kit|mcdonald|league|deck|box|tin|blister|black star|energ|topps/i;
+/** The newest released main sets, newest first, for the header's Sets menu. */
+export function newestSets(sets, n = 8) {
+  const today = new Date().toISOString().slice(0, 10);
+  return (sets || []).filter((s) => s.releaseDate && String(s.releaseDate).slice(0, 10) <= today && !SIDE_SET.test(s.name) && (s.total || s.printedTotal || 0) >= 30)
+    .sort((a, b) => String(b.releaseDate).localeCompare(String(a.releaseDate))).slice(0, n);
+}
+
 /** Which era a set belongs to: its series when that names an era, else its release date ("Other", "Promo"). */
 export function eraOf(set) {
   if (SERIES_ERA[set.series]) return SERIES_ERA[set.series];

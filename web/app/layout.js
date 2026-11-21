@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import Script from "next/script";
 import MobileMenu from "@/components/MobileMenu";
+import SetsMenu from "@/components/SetsMenu";
+import { listSets } from "@/lib/catalog";
+import { newestSets } from "@/lib/sets";
 import NavProgress from "@/components/NavProgress";
 import HelperChat from "@/components/HelperChat";
 import InstallApp from "@/components/InstallApp";
@@ -53,13 +56,13 @@ function Brand({ signedIn }) {
 
 export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
+  // Deals, Price alerts, Card scanner and Grade & Flip are on Home and the member tab bar, so the top bar stays short.
+  // Sets opens a menu of the newest sets on hover (components/SetsMenu.js); the set list is cached for a week.
+  const recentSets = await listSets().then((s) => newestSets(s).map((x) => ({ id: x.id, name: x.name, releaseDate: x.releaseDate, image: x.image }))).catch(() => []);
   const navLinks = [
     ...(user ? [{ href: "/app/home", label: "Home" }] : []),
     { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
-    { href: user ? "/app/deals" : "/#deals", label: "Deals" },
-    { href: user ? "/app/watches" : "/login?next=%2Fapp%2Fwatches", label: "Price alerts" },
-    { href: user ? "/app/collection/photo" : "/login?next=%2Fapp%2Fcollection%2Fphoto", label: "Card scanner" },
-    { href: user ? "/app/grade-and-flip" : "/login?next=%2Fapp%2Fgrade-and-flip", label: "Grade & Flip" },
+    { href: "/sets", label: "Sets", menu: "sets" },
     { href: "/sales", label: "Market Movers" },
     { href: "/#pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },
@@ -121,9 +124,9 @@ twq('config','ri3dv');}`}</Script>
           <div className="wrap">
             <Brand signedIn={Boolean(user)} />
             <nav className="main" aria-label="Main">
-              {/* Signed-in members get Home first. Signed-out visitors: Collection and Price alerts go to sign in, then straight to that page;
-                  Deals shows the deals we've caught on the homepage. How it works is in the footer. */}
-              {navLinks.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
+              {/* Signed-in members get Home first. Signed-out visitors: Collection goes to sign in, then straight to it.
+                  How it works is in the footer. */}
+              {navLinks.map((l) => (l.menu === "sets" ? <SetsMenu key={l.href} sets={recentSets} /> : <Link key={l.href} href={l.href}>{l.label}</Link>))}
             </nav>
             <div className="header-actions">
               <MobileMenu links={navLinks} signedIn={Boolean(user)} />
