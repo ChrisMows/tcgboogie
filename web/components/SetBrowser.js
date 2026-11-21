@@ -8,7 +8,7 @@ const OPEN_ERAS = 2; // newest eras open by default; older ones one tap away
 
 /** Sets by era with a search. With `have` counts it also lists the sets you've started; `openEra` (from /sets?era=)
  * opens that era and scrolls to it. */
-export default function SetBrowser({ sets, openEra = null }) {
+export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/collection/sets/" }) {
   const [q, setQ] = useState("");
   useEffect(() => {
     if (openEra) document.getElementById(`era-${openEra}`)?.scrollIntoView({ block: "start" });
@@ -30,7 +30,7 @@ export default function SetBrowser({ sets, openEra = null }) {
     const { name, code } = setLabel(s.name);
     const year = s.releaseDate ? new Date(`${s.releaseDate.slice(0, 10)}T12:00:00`).getFullYear() : null;
     return (
-      <Link key={s.id} href={`/app/collection/sets/${encodeURIComponent(s.name)}`} className="set-card" title={s.name}>
+      <Link key={s.id} href={`${hrefBase}${encodeURIComponent(s.name)}`} className="set-card" title={s.name}>
         {s.image
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={s.image} alt="" className="set-logo" loading="lazy" />

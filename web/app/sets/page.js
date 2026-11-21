@@ -30,7 +30,7 @@ export default async function AllSets({ searchParams }) {
       {sets === null ? (
         <div className="notice warn">The set list didn&apos;t load from the price service. Please try again in a minute.</div>
       ) : (
-        <SetBrowser openEra={era} sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null }))]} />
+        <SetBrowser openEra={era} hrefBase="/sets/" sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null }))]} />
       )}
     </div>
   );

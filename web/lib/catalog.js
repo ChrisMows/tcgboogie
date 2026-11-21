@@ -940,10 +940,15 @@ export async function listSets() {
   }));
 }
 
-/** Every card in a set, with prices (no history). Costs one credit per card, so it's cached for 3 days and shared. */
-export async function getSetCards(setName) {
+/**
+ * Every card in a set, with prices (no history). Costs one credit per card, so it's cached for 3 days and shared.
+ * savedOnly (the public set pages, which search engines crawl): the last saved copy however old, and undefined when the
+ * set has never been loaded, so a visitor or a crawler never spends credits.
+ */
+export async function getSetCards(setName, { savedOnly = false } = {}) {
   if (!catalogLive()) return SAMPLE.filter((p) => p.type === "card" && p.setName === setName);
-  const j = await ppt("/cards", { set: setName, fetchAllInSet: "true" }, 3 * 24 * HOUR);
+  const j = await ppt("/cards", { set: setName, fetchAllInSet: "true" }, savedOnly ? Infinity : 3 * 24 * HOUR, savedOnly);
+  if (j === MISS) return undefined;
   const cards = (j?.data || []).map(fromCard);
   void rememberCount(setName, cards.length);
   return cards;

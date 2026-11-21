@@ -42,7 +42,7 @@ export default function SetsMenu({ sets }) {
                 {sets.map((s) => {
                   const { name, code } = setLabel(s.name);
                   return (
-                    <Link key={s.id} role="menuitem" href={`/app/collection/sets/${encodeURIComponent(s.name)}`} className="sets-pop-set" onClick={() => setOpen(false)}>
+                    <Link key={s.id} role="menuitem" href={`/sets/${encodeURIComponent(s.name)}`} className="sets-pop-set" onClick={() => setOpen(false)}>
                       {s.image
                         // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={s.image} alt="" loading="lazy" />
