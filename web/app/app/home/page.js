@@ -216,7 +216,8 @@ export default async function HomePage({ searchParams }) {
                         <Link href={x.productId ? `/app/cards/${x.productId}` : `/sales#${x.kind === "deal" ? "deals" : x.kind === "high" ? "highs" : "big"}`}>
                           <CardThumb item={thumb} width={96} />
                           <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under` : "💰 Big sale"}</span>
-                          <b>{money(x.price, 0)}</b>
+                          {/* What it sold for, and for a deal what the card is worth, so $44 never reads as the card's value. */}
+                          <span className="sale-sold"><b>Sold {money(x.price, 0)}</b>{x.kind === "deal" && x.market ? <span className="sale-worth">Worth {money(x.market, 0)}</span> : null}</span>
                           <span className="small home-market-name">{[x.grader ? gradeName(x.grader, x.grade) : null, x.name].filter(Boolean).join(" · ")}</span>
                         </Link>
                       </li>

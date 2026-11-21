@@ -2049,6 +2049,9 @@ body:has(.install-hint) .helper-fab { display: none; }
 .sale-kicker.deal { background: var(--good-soft); color: var(--good); }
 .sale-kicker.big { background: var(--panel-3); color: var(--text); }
 .sale-price { font: 700 24px var(--font-head), sans-serif; }
+/* "Sold $44", and for a deal "Worth $125" under it (Home's Market today, Market Movers). */
+.sale-sold { display: flex; flex-direction: column; gap: 1px; }
+.sale-worth { color: var(--muted); font-size: 13px; font-weight: 500; }
 .sale-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sale-links { display: flex; gap: 12px; font-size: 13px; margin-top: 4px; }
 .sales-cta { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin-top: 10px; }

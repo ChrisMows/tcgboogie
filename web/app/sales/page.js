@@ -37,10 +37,11 @@ function Tile({ x }) {
     <li className="sale-tile">
       <div className="sale-art"><CardThumb item={thumb} width={170} /></div>
       <span className={`sale-kicker ${x.kind}`}>{x.kind === "high" ? "📈 New high" : x.kind === "deal" ? `⚡ ${x.off}% under market` : "💰 Big sale"}</span>
-      <b className="sale-price">{money(x.price, 0)}</b>
+      {/* What it sold for, and for a deal what the card is worth. */}
+      <span className="sale-sold"><b className="sale-price">Sold {money(x.price, 0)}</b>{x.kind === "deal" && x.market ? <span className="sale-worth">Worth {money(x.market, 0)}</span> : null}</span>
       <span className="sale-name">{[x.grader ? gradeName(x.grader, x.grade) : x.condition, x.name].filter(Boolean).join(" · ")}</span>
       <span className="small muted">
-        {[x.set, x.kind === "high" ? `previous best ${money(x.prevHigh, 0)}` : x.kind === "deal" ? `market ${money(x.market, 0)}` : null, x.soldAt ? day(x.soldAt) : null].filter(Boolean).join(" · ")}
+        {[x.set, x.kind === "high" ? `previous best ${money(x.prevHigh, 0)}` : null, x.soldAt ? day(x.soldAt) : null].filter(Boolean).join(" · ")}
       </span>
       <span className="sale-links">
         {link && <a href={link.href} target="_blank" rel={`noopener noreferrer${link.affiliate ? " sponsored" : ""}`}>eBay ↗</a>}
