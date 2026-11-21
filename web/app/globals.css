@@ -49,7 +49,11 @@ nav.main { display: flex; align-items: center; gap: clamp(14px, 2.2vw, 30px); }
 nav.main a { color: #a1a8b3; font-size: 12px; white-space: nowrap; }
 nav.main a:hover { color: var(--text); text-decoration: none; }
 /* Public set page (app/sets/[set]/page.js): every card with its Near Mint price */
-.pub-set-grid { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.pub-set-sort { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+.pub-set-sort .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); font-size: 13px; font-weight: 600; }
+.pub-set-sort .chip:hover { color: var(--text); text-decoration: none; }
+.pub-set-sort .chip.on { background: var(--accent); border-color: var(--accent); color: #0b0e12; }
+.pub-set-grid { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .pub-set-grid a { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); height: 100%; }
 .pub-set-grid a:hover { border-color: var(--accent); text-decoration: none; }
 .pub-set-grid a > :first-child { align-self: center; margin-bottom: 6px; }

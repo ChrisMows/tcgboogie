@@ -25,6 +25,16 @@ export async function generateMetadata({ params }) {
 
 // "4/102", "SV047", "TG05" -> sortable: numbers in order, letters after.
 const numberKey = (n) => { const m = String(n || "").match(/\d+/); return m ? Number(m[0]) : 1e9; };
+const byNumber = (a, b) => numberKey(a.number) - numberKey(b.number) || String(a.number).localeCompare(String(b.number));
+const shortName = (n) => String(n || "").replace(/\s+-\s+\S+$/, "");
+// Sort options (?sort=). Cards with no price yet go last in either price order.
+const SORTS = [
+  ["number", "Number", byNumber],
+  ["price-high", "Price: high to low", (a, b) => (nmPrice(b) ?? -1) - (nmPrice(a) ?? -1) || byNumber(a, b)],
+  ["price-low", "Price: low to high", (a, b) => (nmPrice(a) ?? Infinity) - (nmPrice(b) ?? Infinity) || byNumber(a, b)],
+  ["name", "Name", (a, b) => shortName(a.name).localeCompare(shortName(b.name)) || byNumber(a, b)],
+  ["rarity", "Rarity", (a, b) => String(a.rarity || "~").localeCompare(String(b.rarity || "~")) || byNumber(a, b)],
+];
 
 /**
  * A set's cards and prices for anyone, signed in or not (the header's Sets menu and /sets open here). Visitors and
@@ -32,8 +42,10 @@ const numberKey = (n) => { const m = String(n || "").match(/\d+/); return m ? Nu
  * opened yet asks them to sign in, and a member's visit loads it (rate-limited like the collection's set page).
  * Members get a button to the collection's set page, where they tap the cards they own.
  */
-export default async function PublicSet({ params }) {
+export default async function PublicSet({ params, searchParams }) {
   const name = await nameOf(params);
+  const sortKey = String((await searchParams)?.sort || "number");
+  const sort = SORTS.find(([k]) => k === sortKey) || SORTS[0];
   const topps = toppsSetByName(name);
   const sets = topps ? [] : await listSets().catch(() => []);
   const set = topps ? { name, series: "Topps", releaseDate: `${topps.year}-06-01` } : sets.find((s) => s.name === name);
@@ -47,8 +59,7 @@ export default async function PublicSet({ params }) {
   }
   if (cards) {
     const added = topps ? [] : await memberCardsInSet(name);
-    cards = [...cards, ...added.filter((m) => !cards.some((c) => c.id === m.id))]
-      .sort((a, b) => numberKey(a.number) - numberKey(b.number) || String(a.number).localeCompare(String(b.number)));
+    cards = [...cards, ...added.filter((m) => !cards.some((c) => c.id === m.id))].sort(sort[2]);
   }
   const { name: label, code } = setLabel(name);
   const released = set.releaseDate ? new Date(`${String(set.releaseDate).slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
@@ -84,6 +95,13 @@ export default async function PublicSet({ params }) {
                 <div className="stat"><b>{money(total)}</b><span>for one of every card in Near Mint</span></div>
                 {top[0] && <div className="stat"><b>{cardMoney(nmPrice(top[0]))}</b><span>top card: {top[0].name.replace(/\s+-\s+\S+$/, "")}</span></div>}
               </div>
+              <nav className="pub-set-sort" aria-label="Sort cards">
+                <span className="small muted">Sort by</span>
+                {SORTS.map(([k, label]) => (
+                  <Link key={k} href={k === "number" ? `/sets/${encodeURIComponent(name)}` : `/sets/${encodeURIComponent(name)}?sort=${k}`} scroll={false}
+                    className={`chip ${k === sort[0] ? "on" : ""}`} aria-current={k === sort[0] ? "true" : undefined}>{label}</Link>
+                ))}
+              </nav>
               <ul className="pub-set-grid">
                 {cards.map((c) => {
                   const price = nmPrice(c);
