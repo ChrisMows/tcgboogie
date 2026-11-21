@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import CardThumb from "@/components/CardThumb";
 import ItemForm from "@/components/ItemForm";
 import { useToast } from "@/components/Toast";
 import {
-  changeQuantity, editItem, moveToCollection, removeItem, watchProduct,
+  changeQuantity, editItem, moveItemsToCollection, moveToCollection, removeItem, removeItems, setItemsBinder, watchProduct,
 } from "@/app/app/collection/actions";
 import { KINDS, SORTS, isOwnValue, itemLabel, itemMove, money, pct, unitValue } from "@/lib/collection";
 import { rangeLabel, useChartRange } from "@/lib/chart-range";
@@ -122,6 +122,68 @@ export default function CollectionView({ items, binders, products, watched: watc
     });
   }
 
+  // ---------- select mode: press and hold any card (~0.5 s, finger or mouse) to pick several, then act on them all ----------
+  const [selecting, setSelecting] = useState(false);
+  const [sel, setSel] = useState(() => new Set());
+  const [panel, setPanel] = useState(null); // null | "binder" | "delete"
+  const [newBinder, setNewBinder] = useState("");
+  const press = useRef({ timer: null, x: 0, y: 0, fired: false });
+  const chosen = shown.filter((it) => sel.has(it.id)); // only what's on screen now (filters may hide some picked earlier)
+  const toggle = (id) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const enterSelect = (id) => {
+    setSelecting(true); setEditing(null); setPanel(null);
+    if (id !== undefined) setSel((s) => new Set(s).add(id));
+  };
+  const leaveSelect = () => { setSelecting(false); setSel(new Set()); setPanel(null); setNewBinder(""); };
+  useEffect(() => {
+    if (!selecting) return undefined;
+    document.body.classList.add("coll-selecting"); // the floating Boogie Bot button steps aside for the bar
+    const onKey = (e) => { if (e.key === "Escape") leaveSelect(); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); document.body.classList.remove("coll-selecting"); };
+  }, [selecting]);
+  useEffect(() => () => clearTimeout(press.current.timer), []);
+
+  const stopPress = () => { const p = press.current; if (p.timer) { clearTimeout(p.timer); p.timer = null; } };
+  const firePress = (id) => {
+    stopPress(); press.current.fired = true;
+    try { if (navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(15); } catch {} // a little buzz on phones
+    enterSelect(id);
+  };
+  /** Handlers for one card's wrapper: a long press starts select mode; in select mode a tap toggles instead of opening the card. */
+  const pressProps = (it) => ({
+    onPointerDown: (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      const p = press.current;
+      stopPress(); p.fired = false; p.x = e.clientX; p.y = e.clientY;
+      p.timer = setTimeout(() => firePress(it.id), 500);
+    },
+    onPointerMove: (e) => { const p = press.current; if (p.timer && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) stopPress(); },
+    onPointerUp: stopPress, onPointerCancel: stopPress, onPointerLeave: stopPress,
+    // The phone's own long-press menu (link preview, "open in new tab"): never while holding a card or picking cards.
+    onContextMenu: (e) => {
+      if (press.current.timer) { e.preventDefault(); firePress(it.id); } else if (press.current.fired || selecting) e.preventDefault();
+    },
+    onDragStart: (e) => e.preventDefault(),
+    onClickCapture: (e) => {
+      if (press.current.fired) { press.current.fired = false; e.preventDefault(); e.stopPropagation(); return; } // the click that ends a long press
+      if (selecting) { e.preventDefault(); e.stopPropagation(); toggle(it.id); }
+    },
+  });
+  const check = (it) => selecting && <span className={`sel-check ${sel.has(it.id) ? "on" : ""}`} aria-hidden="true">{sel.has(it.id) ? "✓" : ""}</span>;
+
+  const bulk = (fn, msg) => start(async () => {
+    const r = await fn();
+    if (r?.ok === false) return show(r.error || "That didn't work. Please try again.", null, "bad");
+    show(msg(r)); leaveSelect(); router.refresh();
+  });
+  const cards = (n) => `${n} card${n === 1 ? "" : "s"}`;
+  const ids = chosen.map((it) => it.id);
+  const doDelete = () => bulk(() => removeItems(ids), (r) => `Removed ${cards(r.count)}${wishlist ? " from your wishlist" : ""}.`);
+  const doBinder = (binderId) => bulk(() => setItemsBinder(ids, { binderId }), (r) => (r.name ? `Moved ${cards(r.count)} to ${r.name}.` : `Took ${cards(r.count)} out of their binder.`));
+  const doNewBinder = (e) => { e.preventDefault(); if (newBinder.trim()) bulk(() => setItemsBinder(ids, { newName: newBinder }), (r) => `Made ${r.name} and moved ${cards(r.count)} into it.`); };
+  const doGot = () => bulk(() => moveItemsToCollection(ids), (r) => `${cards(r.count)} moved to your collection 🎉`);
+
   const binderName = (id) => binders.find((b) => b.id === id)?.name;
 
   return (
@@ -149,6 +211,10 @@ export default function CollectionView({ items, binders, products, watched: watc
         <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
           {Object.entries(SORTS).filter(([k]) => !wishlist || k !== "gain").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        {shown.length > 0 && (
+          <button type="button" className={`btn sm sel-toggle ${selecting ? "on" : ""}`} onClick={() => (selecting ? leaveSelect() : enterSelect())}
+            title="Pick several cards (or press and hold any card)" aria-pressed={selecting}>☑ Select</button>
+        )}
         <div className="seg" role="group" aria-label="View">
           <button type="button" className={view === "grid" ? "on" : ""} onClick={() => pickView("grid")} aria-label="Grid view">▦</button>
           <button type="button" className={view === "list" ? "on" : ""} onClick={() => pickView("list")} aria-label="List view">☰</button>
@@ -168,7 +234,9 @@ export default function CollectionView({ items, binders, products, watched: watc
       ) : view === "grid" ? (
         <div className="tile-grid">
           {shown.map((it) => (
-            <div className="tile" key={it.id}>
+            <div className={`tile coll-press ${selecting ? "selecting" : ""} ${sel.has(it.id) ? "picked" : ""}`} key={it.id} {...pressProps(it)}
+              aria-selected={selecting ? sel.has(it.id) : undefined}>
+              {check(it)}
               <Link href={`/app/cards/${it.productId}`} className="tile-link">
                 <div className="tile-art">
                   <CardThumb item={it} width={150} />
@@ -186,7 +254,7 @@ export default function CollectionView({ items, binders, products, watched: watc
                 </div>
                 <DayChange it={it} quantity={wishlist ? 1 : it.quantity} />
               </Link>
-              {wishlist && (
+              {wishlist && !selecting && (
                 <div className="tile-actions">
                   <button type="button" className="btn sm primary" disabled={pending} onClick={() => act(() => moveToCollection(it.id), `${short(it.name)} moved to your collection 🎉`)}>Got it</button>
                   {watched.has(it.productId) ? <Link href="/app/watches" className="btn sm" title="Watching price">🔔</Link>
@@ -203,7 +271,9 @@ export default function CollectionView({ items, binders, products, watched: watc
             const paid = it.purchasePrice;
             const gain = v !== null && paid !== null && paid !== undefined ? (v - paid) * it.quantity : null;
             return (
-              <div className="item-row" key={it.id}>
+              <div className={`item-row coll-press ${selecting ? "selecting" : ""} ${sel.has(it.id) ? "picked" : ""}`} key={it.id} {...pressProps(it)}
+                aria-selected={selecting ? sel.has(it.id) : undefined}>
+                {check(it)}
                 <div className="item-main">
                   <Link href={`/app/cards/${it.productId}`}><CardThumb item={it} width={48} /></Link>
                   <div className="item-text">
@@ -251,6 +321,55 @@ export default function CollectionView({ items, binders, products, watched: watc
             );
           })}
         </div>
+      )}
+      {selecting && (
+        <>
+          <div className="sel-spacer" aria-hidden="true" />
+          <div className="sel-bar" role="toolbar" aria-label="Selected cards">
+            {panel === "delete" ? (
+              <div className="sel-row">
+                <span className="sel-ask">Remove {cards(chosen.length)} from your {wishlist ? "wishlist" : "collection"}? This can&apos;t be undone.</span>
+                <div className="sel-btns">
+                  <button type="button" className="btn sm danger" disabled={pending} onClick={doDelete}>Delete</button>
+                  <button type="button" className="btn sm" disabled={pending} onClick={() => setPanel(null)}>Keep</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="sel-row">
+                  <b className="sel-count">{chosen.length} selected</b>
+                  <div className="sel-btns">
+                    <button type="button" className="link-btn small" disabled={chosen.length === shown.length} onClick={() => setSel(new Set(shown.map((it) => it.id)))}>Select all</button>
+                    <button type="button" className="link-btn small" disabled={!chosen.length} onClick={() => { setSel(new Set()); setPanel(null); }}>Clear</button>
+                    <button type="button" className="btn sm" onClick={leaveSelect} aria-label="Cancel select mode">Cancel</button>
+                  </div>
+                </div>
+                <div className="sel-row sel-acts">
+                  {wishlist ? (
+                    <button type="button" className="btn sm primary" disabled={pending || !chosen.length} onClick={doGot}>Got {chosen.length === 1 ? "it" : "them"}</button>
+                  ) : (
+                    <button type="button" className={`btn sm ${panel === "binder" ? "on" : ""}`} disabled={pending || !chosen.length} onClick={() => setPanel(panel === "binder" ? null : "binder")} aria-expanded={panel === "binder"}>▤ Add to binder</button>
+                  )}
+                  <button type="button" className="btn sm danger" disabled={pending || !chosen.length} onClick={() => setPanel("delete")}>🗑 Delete</button>
+                </div>
+                {panel === "binder" && chosen.length > 0 && (
+                  <div className="sel-panel">
+                    {binders.length > 0 && (
+                      <div className="sel-binders">
+                        {binders.map((b) => <button key={b.id} type="button" className="btn sm" disabled={pending} onClick={() => doBinder(b.id)}>{b.name}</button>)}
+                        {chosen.some((it) => it.binderId) && <button type="button" className="btn sm" disabled={pending} onClick={() => doBinder(null)}>Not in a binder</button>}
+                      </div>
+                    )}
+                    <form className="sel-new" onSubmit={doNewBinder}>
+                      <input type="text" value={newBinder} onChange={(e) => setNewBinder(e.target.value)} maxLength={40} placeholder="New binder name" aria-label="New binder name" />
+                      <button type="submit" className="btn sm primary" disabled={pending || !newBinder.trim()}>Make binder</button>
+                    </form>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
       )}
       {isDemo && <p className="hint" style={{ marginTop: 14 }}>Demo collection with sample prices. Changes last until the preview server restarts.</p>}
       {toast}

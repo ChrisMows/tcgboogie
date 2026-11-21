@@ -233,6 +233,54 @@ export async function removeItem(id) {
   return { ok: true };
 }
 
+// ---------- select mode (long-press a card in the collection or wishlist): the same changes for many lines at once ----------
+/** The signed-in member's own lines among these ids (anything else is ignored), at most 2000. */
+async function ownLines(userId, ids) {
+  const want = new Set((Array.isArray(ids) ? ids : []).slice(0, 2000).map(Number).filter(Number.isInteger));
+  return (await store.listItems(userId)).filter((it) => want.has(it.id));
+}
+const refreshMany = (lines) => { refresh(); for (const p of new Set(lines.map((it) => it.productId))) revalidatePath(`/app/cards/${p}`); };
+
+/** Delete these lines, one scoped delete per line (user id and line id). */
+export async function removeItems(ids) {
+  const user = await requireUser();
+  const lines = await ownLines(user.id, ids);
+  for (const it of lines) await store.deleteItem(user.id, it.id);
+  refreshMany(lines);
+  return { ok: true, count: lines.length };
+}
+
+/** Put owned lines in a binder: an existing one (binderId), a new one (newName), or none (binderId null). */
+export async function setItemsBinder(ids, { binderId = null, newName = "" } = {}) {
+  const user = await requireUser();
+  let target = null;
+  let name = null;
+  if (newName) {
+    const clean = cleanName(newName);
+    if (!clean) return { ok: false, error: "Give the binder a name." };
+    const b = await store.createBinder(user.id, clean);
+    target = b.id; name = b.name;
+  } else if (binderId !== null && binderId !== "") {
+    const b = (await store.listBinders(user.id)).find((x) => x.id === Number(binderId));
+    if (!b) return { ok: false, error: "That binder is no longer there." };
+    target = b.id; name = b.name;
+  }
+  const lines = (await ownLines(user.id, ids)).filter((it) => it.list === "owned");
+  for (const it of lines) await store.updateItem(user.id, it.id, { binderId: target });
+  refreshMany(lines);
+  return { ok: true, count: lines.length, binderId: target, name };
+}
+
+/** Got them! Many wishlist lines -> collection (the single-card "Got it", without the pack reveal). */
+export async function moveItemsToCollection(ids) {
+  const user = await requireUser();
+  const lines = (await ownLines(user.id, ids)).filter((it) => it.list === "wishlist");
+  const today = new Date().toISOString().slice(0, 10);
+  for (const it of lines) await store.updateItem(user.id, it.id, { list: "owned", purchaseDate: today });
+  refreshMany(lines);
+  return { ok: true, count: lines.length };
+}
+
 /** Got it! Wishlist -> collection. */
 export async function moveToCollection(id) {
   const user = await requireUser();

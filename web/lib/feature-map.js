@@ -121,6 +121,9 @@ function features(free, premium, sms) {
       what: "Prices both sides of a trade and grades its fairness.", free: yes(free.tradeAnalyzer), premium: yes(premium.tradeAnalyzer) },
     { area: "Collection", name: "Export", link: "/app/collection", grows: "shared", vendors: [],
       what: "Download the collection as a CSV.", free: yes(free.collectionExport), premium: yes(premium.collectionExport) },
+    { area: "Collection", name: "Select several cards", link: "/app/collection", grows: "use", vendors: [],
+      what: "Press and hold any card on Collection or Wishlist (or tap ☑ Select) to pick several, then delete them, put them in a binder (or a new one), or move wishlist cards to the collection, all at once (components/CollectionView.js; batch actions removeItems, setItemsBinder, moveItemsToCollection in app/app/collection/actions.js, each line checked against the member and deleted one scoped row at a time). No price lookups.",
+      free: "✓", premium: "✓" },
 
     { area: "Cards", name: "Card pages", link: "/app/collection", grows: "card", vendors: ["ppt", "ebay", "epn"],
       what: "Prices by condition, graded sales and value history for any card. New lookups: 400 a day per member, 2,000 a day site-wide, saved prices when under 1,000 credits are left.", free: "✓", premium: "✓" },
