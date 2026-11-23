@@ -63,6 +63,9 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
   const [pending, start] = useTransition();
   const [toast, show] = useToast();
   const seq = useRef(0);
+  // Answers already fetched this visit (5 minutes): typing a search again, or backspacing to it, reuses them instead
+  // of asking the server, so adding many cards quickly doesn't run into the search limit.
+  const answers = useRef(new Map());
 
   useEffect(() => {
     const term = q.trim();
@@ -81,7 +84,13 @@ export default function AddCards({ binders, owned = {}, isDemo, autoFocus = fals
         if (res.product) pick(res.product);
         return;
       }
-      const res = await searchCatalog(term);
+      const key = term.toLowerCase();
+      const kept = answers.current.get(key);
+      const res = kept && Date.now() - kept.at < 5 * 60 * 1000 ? kept.res : await searchCatalog(term);
+      if (res.ok) {
+        answers.current.set(key, { res, at: Date.now() });
+        if (answers.current.size > 200) answers.current.delete(answers.current.keys().next().value);
+      }
       if (n !== seq.current) return; // a newer search is on its way
       setSearching(false);
       if (!res.ok) { setResults([]); setError(res.error); return; }

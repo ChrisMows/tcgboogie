@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { catalogLive, getProduct } from "@/lib/catalog";
 import { searchWithRequests } from "@/lib/card-requests";
-import { SLOW_DOWN, allow } from "@/lib/rate-limit";
+import { SLOW_DOWN, allow, allowSearch } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { alertsWord, atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
@@ -23,7 +23,7 @@ const notFound = (how) => (!catalogLive()
 /** Find a product from a pasted TCGplayer link/ID, or search by name. */
 export async function findProducts(query) {
   const user = await requireUser();
-  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allowSearch(user.id)) return { ok: false, error: SLOW_DOWN };
   const id = parseTcgplayerInput(query);
   try {
     if (id) {

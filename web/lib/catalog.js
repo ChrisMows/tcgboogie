@@ -194,9 +194,15 @@ const pptKey = (path, params) => `${PPT}${path}?${new URLSearchParams(params)}`;
 // refusal; pages use saved prices meanwhile, and the next view catches up.
 const pause = globalThis.__tcgPptPause ?? (globalThis.__tcgPptPause = { until: 0 });
 
+// How many live price lookups this server has made: a search that leaves it unchanged was answered from saved
+// prices, and its rate-limit use is handed back (lib/rate-limit.js refund).
+const lookups = globalThis.__tcgPptLookups ?? (globalThis.__tcgPptLookups = { n: 0 });
+export const liveLookupCount = () => lookups.n;
+
 async function ppt(path, params, maxAgeMs = 12 * HOUR, cachedOnly = false) {
   const url = pptKey(path, params);
   return cached(url, maxAgeMs, async () => {
+    lookups.n++;
     if (Date.now() < pause.until) throw new Error("Price service busy: pausing lookups for a minute");
     const r = await fetch(url, { headers: { Authorization: `Bearer ${process.env.PPT_API_KEY}` }, cache: "no-store" });
     if (r.status === 429) {

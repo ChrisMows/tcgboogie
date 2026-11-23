@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { appraisePhoto, appraiserReady } from "@/lib/appraise";
-import { catalogLive, getProduct } from "@/lib/catalog";
+import { catalogLive, getProduct, liveLookupCount } from "@/lib/catalog";
 import { importListingSale, searchWithRequests, submitRequest } from "@/lib/card-requests";
 import { marketValue, nmPrice, validateItem } from "@/lib/collection";
 import { discordAdmins } from "@/lib/admin-alerts";
 import { logError } from "@/lib/log";
 import { useQuota } from "@/lib/quota";
 import { slim } from "@/lib/portfolio";
-import { SLOW_DOWN, allow } from "@/lib/rate-limit";
+import { SLOW_DOWN, allow, allowSearch, refundSearch } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import * as store from "@/lib/store";
 import { alertsWord, atWatchLimit, currentPrice, isTriggered, parseTcgplayerInput, validateWatch } from "@/lib/watches";
@@ -47,8 +47,9 @@ async function productToSave(id) {
 /** Search by name, card number, or a pasted TCGplayer link. */
 export async function searchCatalog(query) {
   const user = await requireUser();
-  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allowSearch(user.id)) return { ok: false, error: SLOW_DOWN };
   const id = parseTcgplayerInput(query);
+  const before = liveLookupCount();
   try {
     if (id) {
       const p = await getProduct(id);
@@ -64,6 +65,9 @@ export async function searchCatalog(query) {
     };
   } catch {
     return { ok: false, error: "The price service didn't respond. Please try again in a minute." };
+  } finally {
+    // Answered from saved prices (no new lookup): free, so it doesn't count toward the search limits.
+    if (liveLookupCount() === before) await refundSearch(user.id);
   }
 }
 
@@ -104,7 +108,7 @@ export async function searchByPhoto(formData) {
 /** A card link pasted into the Add cards search: a TCGplayer product we carry opens straight away; any other goes through a request. */
 export async function cardFromLink(link) {
   const user = await requireUser();
-  if (!await allow("search", user.id)) return { status: "declined", message: SLOW_DOWN };
+  if (!await allowSearch(user.id)) return { status: "declined", message: SLOW_DOWN };
   const id = /tcgplayer\.com/i.test(link) ? parseTcgplayerInput(link) : null;
   if (id) {
     const p = await getProduct(id).catch(() => null);

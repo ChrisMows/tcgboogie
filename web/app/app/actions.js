@@ -9,7 +9,7 @@ import crypto from "node:crypto";
 import { billingLive, changePlan, checkoutUrl, endBillingForDeletion, hasLiveSubscription, portalUrl, setCancelAtPeriodEnd } from "@/lib/billing";
 import { log, logError } from "@/lib/log";
 import { TERMS_VERSION } from "@/lib/terms";
-import { SLOW_DOWN, allow } from "@/lib/rate-limit";
+import { SLOW_DOWN, allow, allowSearch } from "@/lib/rate-limit";
 import { channelsReady, normalizePhone, sendSms } from "@/lib/notify";
 import { deviceName, listSubscriptions, pushPublicKey, removeSubscription, saveSubscription, sendPush } from "@/lib/push";
 import { allSampleCards, catalogLive, getSetCards, listSets, searchProducts } from "@/lib/catalog";
@@ -230,7 +230,7 @@ export async function logOut() {
  */
 export async function cardOptions(query, sets = []) {
   const user = await requireUser();
-  if (!await allow("search", user.id)) return { ok: false, error: SLOW_DOWN };
+  if (!await allowSearch(user.id)) return { ok: false, error: SLOW_DOWN };
   const q = String(query || "").trim().toLowerCase().slice(0, 60);
   const known = new Set((await listSets().catch(() => [])).map((s) => s.name));
   const chosen = (Array.isArray(sets) ? sets : []).map(String).filter((s) => known.has(s)).slice(0, 5); // real sets only

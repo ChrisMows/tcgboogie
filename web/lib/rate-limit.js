@@ -1,6 +1,7 @@
 import "server-only";
 import { lt, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { log } from "@/lib/log";
 
 // Per-member limits. They stop one account from burning price-service and AI credits or texting strangers; normal
 // use never gets near them. Every limit is counted in memory (fast). The daily ones that cost money (`persist`) are
@@ -10,7 +11,11 @@ const { rateLimits } = schema;
 
 export const LIMITS = {
   pageView: { max: 300, windowMs: 10 * 60 * 1000 }, // visit counting beacons (Admin → Traffic)
-  search: { max: 120, windowMs: 10 * 60 * 1000 }, // card/product searches and link lookups
+  // Card/product searches and link lookups. Add cards searches at each pause in typing, so adding cards quickly takes
+  // 4-6 searches a card: 120 per 10 minutes stopped a member adding ~25 cards in a row (Nov 2026). The daily cap keeps
+  // one account from spending the price service's credits (searches are cached a week, so repeats are free).
+  search: { max: 240, windowMs: 10 * 60 * 1000 },
+  searchDay: { max: 1200, windowMs: 24 * 60 * 60 * 1000, persist: true },
   cardPage: { max: 300, windowMs: 60 * 60 * 1000 }, // card pages opened
   pushTest: { max: 10, windowMs: 60 * 60 * 1000 }, // "Send a test" push alerts
   setLoad: { max: 40, windowMs: 60 * 60 * 1000 }, // whole-set card lists (the expensive one)
@@ -54,12 +59,52 @@ function allowInMemory(bucket, key) {
 
 export const SLOW_DOWN = "You're going a little fast. Give it a minute and try again.";
 
+/** A search: the 10-minute limit and the daily cap (search, searchDay). */
+export async function allowSearch(key) {
+  return (await allow("search", key)) && (await allow("searchDay", key));
+}
+
+/**
+ * Hand back the use `allow` just counted: for a search answered entirely from saved prices, which costs nothing, so
+ * only searches that make a new price lookup count toward the limits (Nov 2026: a member adding cards quickly kept
+ * hitting the search limit though most of his searches were free).
+ */
+export async function refund(bucket, key) {
+  const id = `${bucket}:${key}`;
+  const list = hits.get(id);
+  if (list?.length) list.pop();
+  const { windowMs, persist } = LIMITS[bucket];
+  if (!persist || !db) return;
+  const start = Math.floor(Date.now() / windowMs) * windowMs;
+  try {
+    await db.update(rateLimits).set({ count: sql`greatest(${rateLimits.count} - 1, 0)` }).where(sql`${rateLimits.id} = ${`${id}:${start}`}`);
+  } catch { /* the memory count is enough */ }
+}
+export async function refundSearch(key) {
+  await refund("search", key);
+  await refund("searchDay", key);
+}
+
+// Every time a member is turned away, logged once an hour per limit and member: "it says I'm going too fast" then
+// shows in Logs with the limit's name instead of leaving no trace.
+const blockedLogged = globalThis.__tcgLimitBlocked ?? (globalThis.__tcgLimitBlocked = new Map());
+function noteBlocked(bucket, key) {
+  const id = `${bucket}:${key}`;
+  if (Date.now() - (blockedLogged.get(id) || 0) < 60 * 60 * 1000) return;
+  blockedLogged.set(id, Date.now());
+  if (blockedLogged.size > 5000) blockedLogged.clear();
+  const { max, windowMs } = LIMITS[bucket];
+  const span = windowMs >= 24 * 3600 * 1000 ? "a day" : windowMs >= 3600 * 1000 ? `per ${windowMs / 3600000} hour${windowMs === 3600000 ? "" : "s"}` : `per ${windowMs / 60000} minutes`;
+  const member = /^[0-9a-f-]{36}$/.test(String(key)) ? key : null;
+  void log("website", "warn", `Limit reached: ${bucket} (${max} ${span})`, { bucket, key: member ? undefined : String(key).slice(0, 60) }, member);
+}
+
 /**
  * Count one use of `bucket` by `key`. Resolves true if allowed, false if over the limit. Always `await` it.
  * Daily limits marked `persist` are also counted per day in the database (if it's down, the memory limit still holds).
  */
 export async function allow(bucket, key) {
-  if (!allowInMemory(bucket, key)) return false;
+  if (!allowInMemory(bucket, key)) { noteBlocked(bucket, key); return false; }
   const { max, windowMs, persist } = LIMITS[bucket];
   if (!persist || !db) return true;
   const start = Math.floor(Date.now() / windowMs) * windowMs;
@@ -68,7 +113,9 @@ export async function allow(bucket, key) {
       .onConflictDoUpdate({ target: rateLimits.id, set: { count: sql`${rateLimits.count} + 1` } })
       .returning({ count: rateLimits.count });
     if (Math.random() < 0.01) db.delete(rateLimits).where(lt(rateLimits.expiresAt, new Date())).catch(() => {}); // tidy old windows
-    return (row?.count ?? 1) <= max;
+    const ok = (row?.count ?? 1) <= max;
+    if (!ok) noteBlocked(bucket, key);
+    return ok;
   } catch {
     return true;
   }
