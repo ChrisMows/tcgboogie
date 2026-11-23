@@ -13,8 +13,9 @@ export const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "
 export function parseTcgplayerInput(text) {
   const s = String(text || "").trim();
   if (/^\d{3,9}$/.test(s)) return s;
-  const m = s.match(/tcgplayer\.com\/(?:[a-z-]+\/)?product\/(\d{3,9})/i);
-  return m ? m[1] : null;
+  const m = s.match(/tcgplayer\.com\/(?:[a-z-]+\/)?product\/(\d{3,9})(\/[^?#\s]*)?/i);
+  if (!m) return null;
+  return /star-wars-unlimited/i.test(m[2] || "") ? `swu-${m[1]}` : m[1]; // Star Wars: Unlimited cards (lib/swu.js)
 }
 
 export const watchLimit = (plan) => plan.maxPriceWatches; // null = unlimited

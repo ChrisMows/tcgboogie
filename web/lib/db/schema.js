@@ -236,6 +236,24 @@ export const toppsPrices = pgTable("topps_price", {
   checkedAt: timestamp("checked_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Star Wars: Unlimited cards and sealed product (lib/swu.js), copied once a day from TCGCSV's free TCGplayer price
+// files. One row per TCGplayer product: Hyperspace, Showcase and Prestige cards are their own products; Normal and
+// Foil are its printings. The set list is in app_setting "swu_sets".
+export const swuProducts = pgTable("swu_product", {
+  productId: text("product_id").primaryKey(), // "swu-565465" (TCGplayer product 565465)
+  groupId: integer("group_id").notNull(), // TCGplayer's set
+  type: text("type").notNull(), // card / sealed
+  name: text("name").notNull(),
+  number: text("number"),
+  rarity: text("rarity"),
+  image: text("image"),
+  url: text("url"),
+  facts: jsonb("facts"), // { aspect, cardType, cost, power, hp, arena, traits }
+  prices: jsonb("prices"), // { Normal: { market, low }, Foil: { market, low } }
+  history: jsonb("history"), // [{ date, normal, foil }] Near Mint market per day, newest last (about 400 days)
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("swu_product_group_idx").on(t.groupId)]);
+
 // A member's saved deal filters (see lib/filters.js for the shape of `filters`).
 export const profiles = pgTable("profile", {
   id: serial("id").primaryKey(),

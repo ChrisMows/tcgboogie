@@ -6,6 +6,7 @@ import { log } from "@/lib/log";
 import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason, searchMemberCards } from "@/lib/member-cards";
 import { linkIn, reportSale } from "@/lib/report-sale";
 import { asksForTopps, searchTopps } from "@/lib/topps";
+import { asksForSwu, searchSwu } from "@/lib/swu";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -166,18 +167,22 @@ export async function aliasMatches(query, limit = 3) {
 
 /**
  * The usual search, with products learned from requests first and member-added cards (no prices) after. Topps cards
- * (lib/topps.js) come first when the search asks for them ("topps charizard"), else after the rest when few matched.
+ * (lib/topps.js) and Star Wars: Unlimited cards (lib/swu.js) come first when the search asks for them ("topps charizard",
+ * "star wars vader"), else after the rest when few matched.
  */
 export async function searchWithRequests(q) {
   const wantTopps = asksForTopps(q);
-  const [learned, members, found, topps] = await Promise.all([
+  const wantSwu = asksForSwu(q);
+  const [learned, members, found, topps, swu] = await Promise.all([
     aliasMatches(q).then((rows) => Promise.all(rows.map((r) => getProduct(r.productId, { language: r.language }).catch(() => null)))),
     searchMemberCards(q, 5, { loose: true }),
-    wantTopps ? Promise.resolve([]) : searchProducts(q),
-    searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
+    wantTopps || wantSwu ? Promise.resolve([]) : searchProducts(q),
+    wantSwu ? Promise.resolve([]) : searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
+    searchSwu(q, wantSwu ? 24 : 8).catch(() => []),
   ]);
   const regular = [...learned.filter(Boolean), ...found, ...members];
-  const all = wantTopps ? [...topps, ...regular] : regular.length < 4 ? [...regular, ...topps] : regular;
+  // Star Wars: Unlimited cards (lib/swu.js) work like Topps: first when the search asks for them, else after few matches.
+  const all = wantSwu ? [...swu, ...regular] : wantTopps ? [...topps, ...regular] : regular.length < 4 ? [...regular, ...topps, ...swu] : regular;
   const seen = new Set();
   return all.filter((p) => {
     const k = `${p.id}:${p.language || "english"}`;

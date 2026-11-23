@@ -5,6 +5,7 @@ import { db, schema } from "@/lib/db";
 import { log } from "@/lib/log";
 import { getMemberCard, isMemberId } from "@/lib/member-cards";
 import { isToppsId, toppsCard } from "@/lib/topps";
+import { isSwuId, prefetchSwu, swuProduct } from "@/lib/swu";
 import { FAMILIES } from "@/lib/pokemon-families";
 import { nameWords, setsInSearch, wordMatches, withWords } from "@/lib/search-words";
 import { gradeKey, mixedKey, splitTen } from "@/lib/collection";
@@ -569,6 +570,7 @@ export async function getProduct(id, opts = {}) {
 
 async function findProduct(id, opts) {
   if (isToppsId(id)) return toppsCard(id);
+  if (isSwuId(id)) return swuProduct(id); // Star Wars: Unlimited (lib/swu.js), not the Pokémon price service
   if (isMemberId(id)) {
     const m = await getMemberCard(id);
     return m && withOurSales(m, opts.sales);
@@ -592,6 +594,7 @@ const LIGHT_DATA = sql`case when jsonb_typeof(${schema.catalogCache.data}->'data
   then ${schema.catalogCache.data} #- '{data,0,priceHistory}' else ${schema.catalogCache.data} #- '{data,priceHistory}' end`;
 export async function prefetchProducts(ids, { light = false } = {}) {
   const unique = [...new Set(ids.map(String))].filter((id) => !isMemberId(id) && !isToppsId(id));
+  await prefetchSwu(ids); // Star Wars price histories, in one read
   if (!db || !unique.length) return null;
   const now = Date.now();
   const keys = catalogLive() ? unique.flatMap((id) => [

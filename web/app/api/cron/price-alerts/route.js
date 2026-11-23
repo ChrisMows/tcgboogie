@@ -12,6 +12,7 @@ import { recordDailySnapshots } from "@/lib/snapshots";
 import { refreshGradingGaps } from "@/lib/grading-gap";
 import { linkPricedMemberCards } from "@/lib/member-links";
 import { checkStuckValues } from "@/lib/stuck-values";
+import { refreshSwu } from "@/lib/swu";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -36,7 +37,14 @@ async function handle(req) {
     .onConflictDoUpdate({ target: schema.appSettings.key, set: { value: { at: started.toISOString(), running: true }, updatedAt: started } });
 
   try {
+    // Star Wars: Unlimited prices (free, from TCGCSV): once a day after TCGCSV updates, before alerts check them.
+    let swu;
+    try { swu = await refreshSwu(); } catch (e) {
+      swu = { error: e.message };
+      await log("prices", "warn", `Star Wars: Unlimited price import failed: ${e.message}`);
+    }
     const summary = await runPriceAlerts();
+    summary.swu = swu;
     // Sealed price history (ours), before sell-high so today's moves count.
     try { summary.sealed = await recordSealedPrices(); } catch (e) {
       await log("prices", "warn", `Sealed price recording failed: ${e.message}`);

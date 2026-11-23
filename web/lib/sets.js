@@ -17,7 +17,7 @@ const ERAS = [ // newest first: name, first release date
   ["Neo", "2000-12-16"],
   ["Classic (Base to Gym)", "1999-01-01"],
 ];
-export const ERA_NAMES = [...ERAS.map(([n]) => n), "Promos & extras", "Topps"];
+export const ERA_NAMES = [...ERAS.map(([n]) => n), "Promos & extras", "Topps", "Star Wars: Unlimited"];
 
 // Series names the catalog uses, for sets without a release date.
 const SERIES_ERA = {
@@ -25,6 +25,7 @@ const SERIES_ERA = {
   XY: "XY", "Black & White": "Black & White", "HeartGold & SoulSilver": "HeartGold & SoulSilver", Platinum: "Platinum",
   "Diamond & Pearl": "Diamond & Pearl", EX: "EX", "E-Card": "e-Card", Neo: "Neo", "Base Set": "Classic (Base to Gym)",
   Topps: "Topps", // Topps Pokémon cards (lib/topps.js): not TCG cards, listed after everything else
+  "Star Wars: Unlimited": "Star Wars: Unlimited", // a different game (lib/swu.js), listed last
 };
 
 /** "SWSH09: Brilliant Stars" -> { name: "Brilliant Stars", code: "SWSH09" }; "XY - Fates Collide" -> { "Fates Collide", "XY" }. */

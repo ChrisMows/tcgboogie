@@ -6,6 +6,7 @@ import CardThumb from "@/components/CardThumb";
 import CardRequest from "@/components/CardRequest";
 import { memberCardsInSet } from "@/lib/member-cards";
 import { toppsSetByName, toppsSetCards } from "@/lib/topps";
+import { swuSetByName, swuSetCards } from "@/lib/swu";
 import { getSetCards, getSetSealed, listSets } from "@/lib/catalog";
 import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { money, nmPrice, ownedCounts, unitValue } from "@/lib/collection";
@@ -22,13 +23,14 @@ export default async function SetPage({ params, searchParams }) {
   const name = decodeURIComponent((await params).set).slice(0, 120);
   // Only real set names get looked up (a made-up name in the address must not reach the price service).
   const topps = toppsSetByName(name); // Topps sets come with the code (lib/topps.js), not from the price service
-  const sets = topps ? [] : await listSets().catch(() => []);
-  const set = topps ? { name, series: "Topps", releaseDate: `${topps.year}-06-01` } : sets.find((s) => s.name === name);
+  const swu = topps ? null : await swuSetByName(name); // Star Wars: Unlimited (lib/swu.js), free to load
+  const sets = topps || swu ? [] : await listSets().catch(() => []);
+  const set = topps ? { name, series: "Topps", releaseDate: `${topps.year}-06-01` } : swu || sets.find((s) => s.name === name);
   if (!set) notFound();
-  if (!await allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
+  if (!swu && !await allow("setLoad", user.id)) return <div className="notice warn">{SLOW_DOWN}</div>;
   const [serviceCards, items, watches, added] = await Promise.all([
-    topps ? toppsSetCards(name) : getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id),
-    topps ? [] : memberCardsInSet(name),
+    topps ? toppsSetCards(name) : swu ? swuSetCards(name) : getSetCards(name).catch(() => null), store.listItems(user.id), store.listWatches(user.id),
+    topps || swu ? [] : memberCardsInSet(name),
   ]);
   // Cards members added to this set that the price service doesn't list (no prices) come after the service's cards.
   const cards = serviceCards && [...serviceCards, ...added.filter((m) => !serviceCards.some((c) => c.id === m.id))];
@@ -42,7 +44,7 @@ export default async function SetPage({ params, searchParams }) {
   const have = (cards || []).length - missing.length;
   // Sealed products load on request (they cost credits the first time anyone opens them for this set).
   const showSealed = !topps && (await searchParams)?.sealed === "1";
-  const sealed = showSealed ? await getSetSealed(name).catch(() => null) : null;
+  const sealed = !showSealed ? null : swu ? await swuSetCards(name, { sealed: true }) : await getSetSealed(name).catch(() => null);
   const ownedSealed = new Set(items.filter((it) => it.list === "owned" && it.productType === "sealed").map((it) => it.productId));
 
   return (
@@ -51,7 +53,7 @@ export default async function SetPage({ params, searchParams }) {
         <div>
           <div className="crumbs"><Link href="/app/collection">Collection</Link> / <Link href="/app/collection/sets">Sets</Link> / {setLabel(name).name}</div>
           <h1>{setLabel(name).name}</h1>
-          <p>{topps ? `Topps Pokémon cards, ${topps.year} · not part of the Pokémon TCG` : [setLabel(name).code, eraOf(set) + " era", set?.releaseDate ? `Released ${new Date(`${set.releaseDate.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : null].filter(Boolean).join(" · ") || "Tap a card to add it to your collection."}</p>
+          <p>{topps ? `Topps Pokémon cards, ${topps.year} · not part of the Pokémon TCG` : swu ? [swu.code, "Star Wars: Unlimited", swu.releaseDate ? `Released ${new Date(`${swu.releaseDate}T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : null].filter(Boolean).join(" · ") : [setLabel(name).code, eraOf(set) + " era", set?.releaseDate ? `Released ${new Date(`${set.releaseDate.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : null].filter(Boolean).join(" · ") || "Tap a card to add it to your collection."}</p>
         </div>
       </div>
 
@@ -71,7 +73,9 @@ export default async function SetPage({ params, searchParams }) {
           <SetGrid cards={cards.map(slim)} owned={owned} wished={wished} watched={watches.map((w) => w.productId)} isDemo={user.demo} />
           {topps && <p className="hint">Topps cards aren&apos;t Pokémon TCG cards, so values here are the typical eBay asking price for a raw
             Near Mint copy, checked every few days. Asking prices, not sold prices: check sold listings before you buy or sell.</p>}
-          {!user.demo && !topps && <CardRequest query={setLabel(name).name} label="Missing a card from this set? Request it →" />}
+          {swu && <p className="hint">Near Mint prices from TCGplayer, updated once a day. Hyperspace, Showcase and Prestige cards are listed
+            as their own cards; Foil is a printing you pick when you add one.</p>}
+          {!user.demo && !topps && !swu && <CardRequest query={setLabel(name).name} label="Missing a card from this set? Request it →" />}
           {!topps && <div className="panel" id="sealed" style={{ marginTop: 18 }}>
             <h2 style={{ marginTop: 0 }}>Sealed products</h2>
             {!showSealed ? (
@@ -92,7 +96,7 @@ export default async function SetPage({ params, searchParams }) {
               </div>
             )}
             <p className="hint" style={{ marginBottom: 0 }}>Open a product to add it to your collection, wishlist it, or set a price alert.</p>
-            {showSealed && !user.demo && <CardRequest query={`${setLabel(name).name} sealed`} kind="sealed" label="Missing a sealed product from this set? Request it →" />}
+            {showSealed && !user.demo && !swu && <CardRequest query={`${setLabel(name).name} sealed`} kind="sealed" label="Missing a sealed product from this set? Request it →" />}
           </div>}
         </>
       )}

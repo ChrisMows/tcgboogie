@@ -3,10 +3,11 @@ import SetBrowser from "@/components/SetBrowser";
 import { listSets } from "@/lib/catalog";
 import { eraSlug, ERA_NAMES } from "@/lib/sets";
 import { toppsSets } from "@/lib/topps";
+import { swuSets } from "@/lib/swu";
 
 export const metadata = {
-  title: "All Pokémon card sets",
-  description: "Every Pokémon TCG set by era, from Base Set to Mega Evolution: open a set to see its cards and prices.",
+  title: "All card sets",
+  description: "Every Pokémon TCG set by era, from Base Set to Mega Evolution, plus every Star Wars: Unlimited set: open a set to see its cards and prices.",
   alternates: { canonical: "/sets" },
 };
 
@@ -23,14 +24,14 @@ export default async function AllSets({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>All sets</h1>
-          <p>Every Pokémon card set by era. Open one to see its cards and prices{" "}
+          <p>Every Pokémon card set by era, plus Star Wars: Unlimited. Open one to see its cards and prices{" "}
             <span className="muted">(your progress on each is in <Link href="/app/collection/sets">Collection → Sets</Link>)</span>.</p>
         </div>
       </div>
       {sets === null ? (
         <div className="notice warn">The set list didn&apos;t load from the price service. Please try again in a minute.</div>
       ) : (
-        <SetBrowser openEra={era} hrefBase="/sets/" sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null }))]} />
+        <SetBrowser openEra={era} hrefBase="/sets/" sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null })), ...(await swuSets().catch(() => []))]} />
       )}
     </div>
   );
