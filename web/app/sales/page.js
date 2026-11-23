@@ -3,6 +3,7 @@ import XFollow from "@/components/XFollow";
 import { X_HANDLE } from "@/lib/social";
 import CardThumb from "@/components/CardThumb";
 import SideNav from "@/components/SideNav";
+import { tabAccess } from "@/lib/tab-access";
 import { gradeName, money } from "@/lib/collection";
 import { dealSoldSearch } from "@/lib/ebay-link";
 import { marketFeed } from "@/lib/market";
@@ -66,7 +67,7 @@ export default async function Sales() {
   return (
     <div className="wrap sales-page">
       {/* Signed in: the member tab bar on phones, so the way back is one tap (QA report S-03, Nov 2026). */}
-      {user && <SideNav tabsOnly isAdmin={Boolean(user.isAdmin)} />}
+      {user && <SideNav tabsOnly isAdmin={Boolean(user.isAdmin)} access={tabAccess(user)} />}
       <div className="page-head">
         <div>
           <div className="eyebrow">POKÉMON CARD MARKET</div>

@@ -1336,14 +1336,31 @@ details.era > .set-grid { margin-bottom: 14px; }
   /* the bottom-of-screen info tip and filter popovers sit above the tab bar */
   .info-tip-pop, .fs-pop { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
 }
-@media (max-width: 600px) { .side .tabbar a, .side .tabbar a.on { background: none; padding: 4px 2px; } }
+@media (max-width: 600px) { .side .tabbar > a, .side .tabbar > a.on { background: none; padding: 4px 2px; } }
 /* Seven tabs (admins: Admin as well as Profile): slimmer labels and icon pills so "Collection" still fits. */
 @media (max-width: 420px) {
-  .side .tabbar:has(> a:nth-child(7)) { padding-left: 0; padding-right: 0; }
-  .tabbar:has(> a:nth-child(7)) a { font-size: 10px; letter-spacing: -0.02em; padding: 4px 0; }
-  .tabbar:has(> a:nth-child(7)) .tabbar-icon { padding: 4px 9px; }
-  .tabbar:has(> a:nth-child(8)) a { font-size: 9.5px; }
-  .tabbar:has(> a:nth-child(8)) .tabbar-icon { padding: 4px 6px; }
+  .side .tabbar:has(> :nth-child(7 of a, button)) { padding-left: 0; padding-right: 0; }
+  .tabbar:has(> :nth-child(7 of a, button)) > :is(a, button) { font-size: 10px; letter-spacing: -0.02em; padding: 4px 0; }
+  .tabbar:has(> :nth-child(7 of a, button)) .tabbar-icon { padding: 4px 9px; }
+}
+/* Phones: the Premium tab, a button that opens the paid features in a sheet above the bar (components/SideNav.js) */
+@media (max-width: 600px) {
+  .tabbar > button.tabbar-premium { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; min-width: 0;
+    background: none; border: 0; color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .tabbar > button.tabbar-premium.on, .tabbar > button.tabbar-premium.open { color: var(--accent); }
+  .tabbar > button.tabbar-premium.on .tabbar-icon, .tabbar > button.tabbar-premium.open .tabbar-icon { background: var(--accent-soft); }
+  .tabbar-sheet { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 8px); display: flex; flex-direction: column; gap: 2px;
+    background: var(--panel, #12161c); border: 1px solid var(--border); border-radius: 16px; padding: 8px; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.45);
+    animation: tabbar-sheet-up 0.16s ease-out; }
+  @keyframes tabbar-sheet-up { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .tabbar-sheet-head { font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 8px 6px; }
+  .tabbar .tabbar-sheet a:not(.btn) { flex-direction: row; align-items: center; gap: 12px; padding: 10px 8px; border-radius: 10px; color: var(--text); font-size: 14px; }
+  .tabbar .tabbar-sheet a:not(.btn).on { background: var(--accent-soft); color: var(--accent); }
+  .tabbar-sheet-icon { font-size: 20px; width: 28px; text-align: center; flex: none; }
+  .tabbar-sheet-text { display: flex; flex-direction: column; min-width: 0; flex: 1; white-space: normal; }
+  .tabbar-sheet-text span { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tabbar-sheet-lock { flex: none; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 8px; }
+  .tabbar .tabbar-sheet .tabbar-sheet-cta { margin: 6px 4px 2px; justify-content: center; }
 }
 
 /* Card page: filter the latest sales by grade */
@@ -2095,6 +2112,7 @@ body:has(.tour-ring, .tour-center, .tour-looking) .helper-fab { display: none; }
 .install-hint-text b { font-size: 14px; }
 .install-x { background: none; border: 0; color: var(--muted); font-size: 15px; width: 28px; height: 28px; cursor: pointer; flex: none; }
 body:has(.install-hint) .helper-fab { display: none; }
+body:has(.tabbar-sheet) .helper-fab { display: none; } /* the phone Premium menu covers its spot */
 .install-steps { width: min(420px, 100%); margin: 0; text-align: center; }
 .install-steps img { border-radius: 14px; }
 .install-steps h2 { margin: 10px 0 12px; font-size: 20px; }
