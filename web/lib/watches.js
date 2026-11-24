@@ -15,7 +15,9 @@ export function parseTcgplayerInput(text) {
   if (/^\d{3,9}$/.test(s)) return s;
   const m = s.match(/tcgplayer\.com\/(?:[a-z-]+\/)?product\/(\d{3,9})(\/[^?#\s]*)?/i);
   if (!m) return null;
-  return /star-wars-unlimited/i.test(m[2] || "") ? `swu-${m[1]}` : m[1]; // Star Wars: Unlimited cards (lib/swu.js)
+  if (/star-wars-unlimited/i.test(m[2] || "")) return `swu-${m[1]}`; // Star Wars: Unlimited cards (lib/swu.js)
+  if (/lorcana/i.test(m[2] || "")) return `lcr-${m[1]}`; // Disney Lorcana cards (lib/lorcana.js)
+  return m[1];
 }
 
 export const watchLimit = (plan) => plan.maxPriceWatches; // null = unlimited

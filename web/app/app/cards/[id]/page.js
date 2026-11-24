@@ -157,8 +157,10 @@ export default async function CardPage({ params, searchParams }) {
   const filterHref = `/app/deals?${new URLSearchParams({ pokemon: pokemonName(p.name), ...(p.setName ? { set: p.setName } : {}) })}`;
   // Special prints (Prize Pack, prerelease stamps...) add their words, so eBay doesn't show the regular card instead.
   // Star Wars: Unlimited cards: the game's name and set code too, so eBay doesn't show toys and other Star Wars cards.
+  // Lorcana cards: "Lorcana", the name and the set's number ("Lorcana Elsa Snow Queen Epic 210/204").
   const ebayQuery = p.topps ? p.topps.query
     : p.swu ? `Star Wars Unlimited ${p.name.replace(/\s*\(([^)]*)\)\s*$/, " $1")} ${p.swu.code || ""} ${p.number || ""}`.replace(/\s+/g, " ").trim()
+      : p.lorcana ? `Lorcana ${p.name.replace(/\s+-\s+/, " ").replace(/\s*\(([^)]*)\)\s*$/, " $1")} ${p.number || ""}`.replace(/\s+/g, " ").trim()
       : cardSearchQuery({ name: p.name, number: p.number, setName: p.setName, language });
   const ebay = ebaySearch(ebayQuery, { sealed: isSealed, source: "card-page" });
   // Recent sales: when the copies you own are all slabs, eBay's sold search looks for your slab's grade (your most
@@ -200,7 +202,7 @@ export default async function CardPage({ params, searchParams }) {
     return options[0] || null;
   })();
   // Sell on eBay (Premium, English cards you own): with the other eBay buttons on the prices panel, for your first copy.
-  const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" && !p.swu ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
+  const sellItem = user.plan.sellOnEbay && p.type === "card" && language !== "japanese" && !p.tcg ? mine.find((it) => it.list === "owned" && it.kind !== "sealed") : null;
 
   // Live listings and sold listings on eBay, under the sales.
   const ebayLinks = (
@@ -228,7 +230,8 @@ export default async function CardPage({ params, searchParams }) {
   const shownName = p.number ? p.name.split(` - ${p.number}`).join("") : p.name;
   const [, titleName, titleVariant] = shownName.match(/^(.*?)\s*\(([^()]*)\)\s*$/) || [null, shownName, null];
   const details = [p.rarity && p.rarity !== "None" ? p.rarity : null, isSealed ? "Sealed product" : null, LANGUAGE[p.language || language],
-    ...(p.swu ? ["Star Wars: Unlimited", p.swu.aspect, p.swu.cardType] : [])].filter(Boolean);
+    ...(p.swu ? ["Star Wars: Unlimited", p.swu.aspect, p.swu.cardType] : []),
+    ...(p.lorcana ? ["Disney Lorcana", p.lorcana.ink, p.lorcana.cardType, p.lorcana.cost ? `${p.lorcana.cost} ink` : null, p.lorcana.lore ? `${p.lorcana.lore} lore` : null] : [])].filter(Boolean);
 
   // Graded: PSA, CGC and BGS always show; the smaller grading companies stay folded behind a plus.
   const mainGradeRows = gradedRows.filter((r) => MAIN_GRADERS.includes(r.grader));
@@ -295,7 +298,7 @@ export default async function CardPage({ params, searchParams }) {
           <div className="card-hero-art"><CardThumb item={p} width={260} /></div>
           <div className="card-report-row">
             <MissingPicture productId={p.id} language={p.language || language} />
-            {!isSealed && !p.swu && (
+            {!isSealed && !p.tcg && (
               <span className="price-wrong">
                 <a href="#report-sale" className="btn price-wrong-btn" title="Seen it sell for more or less? Show us the sale.">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h13l-3 4.5L18 13H5" /></svg>
@@ -372,8 +375,8 @@ export default async function CardPage({ params, searchParams }) {
                   </div>
                 </div>
               ))}
-              {!p.swu && <h3 className="price-sub">Graded</h3>}
-              {p.swu ? null : graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
+              {!p.tcg && <h3 className="price-sub">Graded</h3>}
+              {p.tcg ? null : graded.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Not enough recent graded sales to price this card.</p> : (
                 <div className="grade-rows">
                   {mainGradeRows.map(gradeRow)}
                   {moreGradeRows.length > 0 && (
@@ -403,7 +406,7 @@ export default async function CardPage({ params, searchParams }) {
               {saleRows.length > 0 || saleLabels.length > 0 ? (
                 <RecentSales label={null} labels={saleLabels} sales={saleRows} />
               ) : <p className="small muted" style={{ margin: 0 }}>No individual sales to list yet.</p>}
-              {user.plan.reportSales && !p.swu && <ReportSale productId={p.id} language={language} />}
+              {user.plan.reportSales && !p.tcg && <ReportSale productId={p.id} language={language} />}
             </div>
           </>
         )}
@@ -418,6 +421,12 @@ export default async function CardPage({ params, searchParams }) {
             <p className="hint">
               A Star Wars: Unlimited card. Near Mint prices are TCGplayer&apos;s market prices, updated once a day; other conditions and graded copies
               keep the value you enter. Hyperspace, Showcase and Prestige versions are their own cards.{" "}
+              <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
+            </p>
+          ) : p.lorcana ? (
+            <p className="hint">
+              A Disney Lorcana card. Near Mint prices are TCGplayer&apos;s market prices, updated once a day; other conditions and graded copies
+              keep the value you enter. Enchanted, Epic and Iconic versions are their own cards.{" "}
               <a href={p.tcgplayerUrl} target="_blank" rel="noopener noreferrer sponsored">View on TCGplayer ↗</a>{commission}
             </p>
           ) : p.memberAdded ? (

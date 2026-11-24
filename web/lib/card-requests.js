@@ -7,6 +7,7 @@ import { addFromPage, addFromTcgplayer, existingFor, readCardPage, reviewReason,
 import { linkIn, reportSale } from "@/lib/report-sale";
 import { asksForTopps, searchTopps } from "@/lib/topps";
 import { asksForSwu, searchSwu } from "@/lib/swu";
+import { lorcana } from "@/lib/lorcana";
 import { parseTcgplayerInput } from "@/lib/watches";
 
 // "Can't find a card? Request it." Members send what they searched for and a link to the card.
@@ -167,22 +168,27 @@ export async function aliasMatches(query, limit = 3) {
 
 /**
  * The usual search, with products learned from requests first and member-added cards (no prices) after. Topps cards
- * (lib/topps.js) and Star Wars: Unlimited cards (lib/swu.js) come first when the search asks for them ("topps charizard",
+ * (lib/topps.js), Star Wars: Unlimited cards (lib/swu.js) and Lorcana cards (lib/lorcana.js) come first when the search asks for them ("topps charizard",
  * "star wars vader"), else after the rest when few matched.
  */
 export async function searchWithRequests(q) {
   const wantTopps = asksForTopps(q);
   const wantSwu = asksForSwu(q);
-  const [learned, members, found, topps, swu] = await Promise.all([
+  const wantLorcana = !wantSwu && lorcana.asks(q);
+  const wantOther = wantSwu || wantLorcana;
+  const [learned, members, found, topps, swu, lcr] = await Promise.all([
     aliasMatches(q).then((rows) => Promise.all(rows.map((r) => getProduct(r.productId, { language: r.language }).catch(() => null)))),
     searchMemberCards(q, 5, { loose: true }),
-    wantTopps || wantSwu ? Promise.resolve([]) : searchProducts(q),
-    wantSwu ? Promise.resolve([]) : searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
-    searchSwu(q, wantSwu ? 24 : 8).catch(() => []),
+    wantTopps || wantOther ? Promise.resolve([]) : searchProducts(q),
+    wantOther ? Promise.resolve([]) : searchTopps(q, wantTopps ? 24 : 6).catch(() => []),
+    wantLorcana ? Promise.resolve([]) : searchSwu(q, wantSwu ? 24 : 8).catch(() => []),
+    wantSwu ? Promise.resolve([]) : lorcana.search(q, wantLorcana ? 24 : 8).catch(() => []),
   ]);
   const regular = [...learned.filter(Boolean), ...found, ...members];
-  // Star Wars: Unlimited cards (lib/swu.js) work like Topps: first when the search asks for them, else after few matches.
-  const all = wantSwu ? [...swu, ...regular] : wantTopps ? [...topps, ...regular] : regular.length < 4 ? [...regular, ...topps, ...swu] : regular;
+  // Star Wars: Unlimited and Lorcana cards (lib/tcgcsv.js) work like Topps: first when the search asks for them, else
+  // after few matches.
+  const all = wantSwu ? [...swu, ...regular] : wantLorcana ? [...lcr, ...regular] : wantTopps ? [...topps, ...regular]
+    : regular.length < 4 ? [...regular, ...topps, ...swu, ...lcr] : regular;
   const seen = new Set();
   return all.filter((p) => {
     const k = `${p.id}:${p.language || "english"}`;

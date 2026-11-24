@@ -25,8 +25,10 @@ export function readSort(sort, dir) {
 const RARITY_ORDER = ["common", "uncommon", "special", "rare", "rare holo", "holo rare", "double rare", "legendary", "ultra rare",
   "illustration rare", "art rare", "shiny rare", "shiny ultra rare", "ace spec rare", "super rare", "secret rare", "special art rare",
   "special illustration rare", "shiny secret rare", "hyper rare"];
-const rarityRank = (r) => {
-  const i = RARITY_ORDER.indexOf(String(r || "").toLowerCase());
+// Disney Lorcana's own ladder (its Legendary sits above Super Rare, unlike Pokémon's).
+const LORCANA_ORDER = ["common", "uncommon", "rare", "super rare", "legendary", "epic", "enchanted", "iconic"];
+const rarityRank = (r, lorcana = false) => {
+  const i = (lorcana ? LORCANA_ORDER : RARITY_ORDER).indexOf(String(r || "").toLowerCase());
   return i >= 0 ? i : r ? 9.5 : -1; // no rarity: most common end
 };
 
@@ -51,7 +53,7 @@ export function sortSetCards(cards, field, dir) {
       return sign * (pa - pb) || byNumber(a, b);
     },
     name: (a, b) => sign * shortName(a.name).localeCompare(shortName(b.name)) || byNumber(a, b),
-    rarity: (a, b) => sign * (rarityRank(a.rarity) - rarityRank(b.rarity) || String(a.rarity || "").localeCompare(String(b.rarity || ""))) || byNumber(a, b),
+    rarity: (a, b) => sign * (rarityRank(a.rarity, Boolean(a.lorcana)) - rarityRank(b.rarity, Boolean(b.lorcana)) || String(a.rarity || "").localeCompare(String(b.rarity || ""))) || byNumber(a, b),
   }[field] || ((a, b) => byNumber(a, b));
   return [...cards].sort(cmp);
 }

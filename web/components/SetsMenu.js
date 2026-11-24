@@ -63,6 +63,7 @@ export default function SetsMenu({ sets, side = false, active = false, allHref =
             {ERAS.map((e) => <Link key={e} role="menuitem" href={`${allHref}?era=${eraSlug(e)}`} onClick={() => setOpen(false)}>{e}</Link>)}
             <div className="sets-pop-head" style={{ marginTop: 10 }}>Other games</div>
             <Link role="menuitem" href={`${allHref}?era=${eraSlug("Star Wars: Unlimited")}`} onClick={() => setOpen(false)}>Star Wars: Unlimited</Link>
+            <Link role="menuitem" href={`${allHref}?era=${eraSlug("Disney Lorcana")}`} onClick={() => setOpen(false)}>Disney Lorcana</Link>
             <Link role="menuitem" href={allHref} className="sets-pop-all" onClick={() => setOpen(false)}>All sets →</Link>
           </div>
         </div>

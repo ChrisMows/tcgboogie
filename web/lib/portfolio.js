@@ -16,7 +16,7 @@ export const slim = (p) => p && {
   ...(p.language && p.language !== "english" ? { language: p.language } : {}),
   ...(p.memberAdded ? { memberAdded: true, sourceUrl: p.sourceUrl } : {}),
   ...(p.topps ? { topps: p.topps } : {}),
-  ...(p.swu ? { swu: p.swu } : {}),
+  ...(p.tcg ? { tcg: p.tcg, [p.tcg.game]: p[p.tcg.game] } : {}), // Star Wars, Lorcana (lib/tcgcsv.js)
 };
 
 /** Fetch products for a list of IDs, at most `maxLive` of them from the API; the rest only if already cached. */

@@ -12,7 +12,7 @@ const publicProduct = (p) => p && {
   id: p.id, type: p.type, name: p.name, setName: p.setName, number: p.number, image: p.image,
   tcgplayerUrl: p.tcgplayerUrl, prices: p.prices, history: p.history, language: p.language || "english",
   ...(p.memberAdded ? { memberAdded: true } : {}),
-  ...(p.swu ? { swu: { code: p.swu.code } } : {}),
+  ...(p.tcg ? { tcg: p.tcg, [p.tcg.game]: { code: p[p.tcg.game]?.code } } : {}),
 };
 
 // Until the price service is connected, only the small preview catalog is searchable: say so plainly.

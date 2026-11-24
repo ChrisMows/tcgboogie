@@ -5,23 +5,33 @@ import { useEffect, useMemo, useState } from "react";
 import { ERA_NAMES, eraOf, eraSlug, setLabel } from "@/lib/sets";
 
 // Every set, one game and one era at a time (/sets and Collection → Sets):
-// - a game switch (Pokémon / Star Wars: Unlimited, remembered on this device) and a search across both games;
+// - a game switch (Pokémon / Star Wars: Unlimited / Disney Lorcana, remembered on this device) and a search across them;
 // - eras down a left sidebar with their set counts (older eras one tap away); on phones, a menu instead;
 // - the era's sets four to a row with their artwork, sortable;
 // - with progress (Collection → Sets), a "My sets" switch narrows any game to the sets you've started, by era or all.
 // openEra (from /sets?era=, the header's Sets menu) picks that era and its game.
 
-const GAMES = [["pokemon", "Pokémon"], ["swu", "Star Wars: Unlimited"]];
-const SWU = "Star Wars: Unlimited";
-const gameOf = (s) => (s.series === SWU ? "swu" : "pokemon");
-// Star Wars has no eras: its main sets, then promos and event cards.
-const SWU_GROUPS = ["Main sets", "Promos & events"];
+const GAMES = [["pokemon", "Pokémon"], ["swu", "Star Wars: Unlimited"], ["lorcana", "Disney Lorcana"]];
+// The other games (lib/tcgcsv.js): their series, the short name tiles show in search results, and the prefix their set
+// names carry so they never clash with a Pokémon set (the page already says which game).
+const OTHER = {
+  swu: { series: "Star Wars: Unlimited", short: "Star Wars", prefix: /^Star Wars:\s*/ },
+  lorcana: { series: "Disney Lorcana", short: "Lorcana", prefix: /^Lorcana:\s*/ },
+};
+const SERIES_GAME = Object.fromEntries(Object.entries(OTHER).map(([k, o]) => [o.series, k]));
+const gameOf = (s) => SERIES_GAME[s.series] || "pokemon";
+// Star Wars and Lorcana have no eras: their main sets, then promos and event cards (and Lorcana's Illumineer's Quests).
 const swuGroup = (s) => (/promo|exclusive|championship|gift box|convention/i.test(s.name) ? "Promos & events" : "Main sets");
-const groupOf = (s) => (gameOf(s) === "swu" ? swuGroup(s) : eraOf(s));
-const GROUPS = { pokemon: ERA_NAMES.filter((e) => e !== SWU), swu: SWU_GROUPS };
-// Star Wars set names carry "Star Wars: " so they never clash with a Pokémon set; the page already says which game.
-const shownName = (s) => (gameOf(s) === "swu" ? s.name.replace(/^Star Wars:\s*/, "") : setLabel(s.name).name);
-const codeOf = (s) => (gameOf(s) === "swu" ? s.code || null : setLabel(s.name).code);
+const lorcanaGroup = (s) => (/promo/i.test(s.name) ? "Promos" : /illumineer/i.test(s.name) ? "Illumineer's Quest" : "Main sets");
+const groupOf = (s) => ({ swu: swuGroup, lorcana: lorcanaGroup }[gameOf(s)] || eraOf)(s);
+const GROUPS = {
+  pokemon: ERA_NAMES.filter((e) => !SERIES_GAME[e]),
+  swu: ["Main sets", "Promos & events"],
+  lorcana: ["Main sets", "Illumineer's Quest", "Promos"],
+};
+const ERA_GAME = Object.fromEntries(Object.entries(OTHER).map(([k, o]) => [eraSlug(o.series), k])); // ?era=disney-lorcana
+const shownName = (s) => (OTHER[gameOf(s)] ? s.name.replace(OTHER[gameOf(s)].prefix, "") : setLabel(s.name).name);
+const codeOf = (s) => (OTHER[gameOf(s)] ? s.code || null : setLabel(s.name).code);
 const cardsIn = (s) => s.total || s.printedTotal || 0;
 const SORTS = {
   newest: ["Newest first", (a, b) => String(b.releaseDate || "").localeCompare(String(a.releaseDate || ""))],
@@ -33,9 +43,9 @@ const SHOWN_ERAS = 8; // the rest behind "Show older eras"
 const STORE = "tcgb-sets-game";
 
 export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/collection/sets/" }) {
-  const startGame = openEra === eraSlug(SWU) ? "swu" : openEra ? "pokemon" : null;
+  const startGame = ERA_GAME[openEra] || (openEra ? "pokemon" : null);
   const [game, setGame] = useState(startGame || "pokemon");
-  const [era, setEra] = useState(openEra && openEra !== eraSlug(SWU) ? openEra : null); // a slug, or null = the newest
+  const [era, setEra] = useState(openEra && !ERA_GAME[openEra] ? openEra : null); // a slug, or null = the newest
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("newest");
   const [older, setOlder] = useState(false);
@@ -85,7 +95,7 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
     const code = codeOf(s);
     return (
       <Link key={`${s.id}-${s.name}`} href={`${hrefBase}${encodeURIComponent(s.name)}`} className={`sb-set ${s.have > 0 ? "started" : ""}`} title={s.name}>
-        <span className={`sb-art ${gameOf(s) === "swu" ? "pack" : "cover"}`} style={s.image ? { "--art": `url("${s.image}")` } : undefined}>
+        <span className={`sb-art ${OTHER[gameOf(s)] ? "pack" : "cover"}`} style={s.image ? { "--art": `url("${s.image}")` } : undefined}>
           {s.image
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={s.image} alt="" loading="lazy" />
@@ -94,7 +104,7 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
         <span className="sb-body">
           <span className="sb-text">
             <b className="sb-name">{name}</b>
-            <span className="sb-meta">{[showGame ? (gameOf(s) === "swu" ? "Star Wars" : "Pokémon") : null, code, year, total ? `${total} ${total === 1 ? "card" : "cards"}` : null].filter(Boolean).join(" · ")}</span>
+            <span className="sb-meta">{[showGame ? (OTHER[gameOf(s)]?.short || "Pokémon") : null, code, year, total ? `${total} ${total === 1 ? "card" : "cards"}` : null].filter(Boolean).join(" · ")}</span>
             {s.have > 0 && (
               <span className="sb-progress" title={`${s.have}${total ? ` of ${total}` : ""} cards owned`}>
                 <span className="bar"><i style={{ width: `${Math.max(3, pct * 100)}%` }} /></span>
@@ -138,8 +148,8 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
 
       <div className="sb-layout">
         {!found && groups.length > 0 && (
-          <aside className="sb-side" aria-label={game === "swu" ? "Set groups" : "Eras"}>
-            <h2 className="sb-side-head">{mineOnly ? "My sets" : game === "swu" ? "Groups" : "Eras"}</h2>
+          <aside className="sb-side" aria-label={OTHER[game] ? "Set groups" : "Eras"}>
+            <h2 className="sb-side-head">{mineOnly ? "My sets" : OTHER[game] ? "Groups" : "Eras"}</h2>
             <ul>
               {sideEras.map(([g, l]) => (
                 <li key={g}>
@@ -154,7 +164,7 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
             )}
             {/* Phones: the eras as a menu */}
             <label className="sb-era-pick">
-              <span className="sr-only">{game === "swu" ? "Group" : "Era"}</span>
+              <span className="sr-only">{OTHER[game] ? "Group" : "Era"}</span>
               <select value={current ? eraSlug(current[0]) : ""} onChange={(e) => setEra(e.target.value)}>
                 {groups.map(([g, l]) => <option key={g} value={eraSlug(g)}>{g} ({l.length})</option>)}
               </select>

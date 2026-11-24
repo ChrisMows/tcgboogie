@@ -4,11 +4,11 @@ import { listSets } from "@/lib/catalog";
 import { getCurrentUser } from "@/lib/session";
 import { eraSlug, ERA_NAMES } from "@/lib/sets";
 import { toppsSets } from "@/lib/topps";
-import { swuSets } from "@/lib/swu";
+import { allTcgSets } from "@/lib/tcg-games";
 
 export const metadata = {
   title: "Browse card sets",
-  description: "Every Pokémon TCG set by era, from Base Set to Mega Evolution, plus every Star Wars: Unlimited set: open a set to see its cards and prices.",
+  description: "Every Pokémon TCG set by era, from Base Set to Mega Evolution, plus every Star Wars: Unlimited and Disney Lorcana set: open a set to see its cards and prices.",
   alternates: { canonical: "/sets" },
 };
 
@@ -29,7 +29,7 @@ export default async function AllSets({ searchParams }) {
       {sets === null ? (
         <div className="notice warn">The set list didn&apos;t load from the price service. Please try again in a minute.</div>
       ) : (
-        <SetBrowser key={era || "all"} openEra={era} hrefBase="/sets/" sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null })), ...(await swuSets().catch(() => []))]} />
+        <SetBrowser key={era || "all"} openEra={era} hrefBase="/sets/" sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null })), ...(await allTcgSets())]} />
       )}
     </div>
   );

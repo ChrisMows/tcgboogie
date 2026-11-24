@@ -13,6 +13,7 @@ import { refreshGradingGaps } from "@/lib/grading-gap";
 import { linkPricedMemberCards } from "@/lib/member-links";
 import { checkStuckValues } from "@/lib/stuck-values";
 import { refreshSwu } from "@/lib/swu";
+import { lorcana } from "@/lib/lorcana";
 
 // Called on a schedule (Hostinger cron job) to check every price alert and send the ones that hit.
 // Safe to call from anywhere: it runs at most once every 20 minutes, so nobody can burn price-service credits by
@@ -44,7 +45,15 @@ async function handle(req) {
       await log("prices", "warn", `Star Wars: Unlimited price import failed: ${e.message}`);
     }
     const summary = await runPriceAlerts();
+    // Disney Lorcana prices, the same way (lib/lorcana.js): on a run where Star Wars didn't just import, so one run
+    // never does both (each is ~15-25 s of TCGCSV requests); runs are 20+ minutes apart, so it's a run later at most.
+    let lcr = { skipped: "after Star Wars" };
+    if (!swu?.products) try { lcr = await lorcana.refresh(); } catch (e) {
+      lcr = { error: e.message };
+      await log("prices", "warn", `Disney Lorcana price import failed: ${e.message}`);
+    }
     summary.swu = swu;
+    summary.lorcana = lcr;
     // Sealed price history (ours), before sell-high so today's moves count.
     try { summary.sealed = await recordSealedPrices(); } catch (e) {
       await log("prices", "warn", `Sealed price recording failed: ${e.message}`);

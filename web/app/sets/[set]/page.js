@@ -8,7 +8,7 @@ import { SLOW_DOWN, allow } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/session";
 import { eraOf, setLabel } from "@/lib/sets";
 import { toppsSetByName, toppsSetCards } from "@/lib/topps";
-import { swuSetByName, swuSetCards } from "@/lib/swu";
+import { tcgGameOfSet, tcgSetByName } from "@/lib/tcg-games";
 import SortPicker from "@/components/SortPicker";
 import { readSort, shortName, sortSetCards } from "@/lib/set-sort";
 
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }) {
   const { name: label } = setLabel(name);
   return {
     title: `${label.slice(0, 70)}: card list and prices`,
-    description: name.startsWith("Star Wars: ") ? `Every card in ${label} (Star Wars: Unlimited) with its current Near Mint price from TCGplayer.`
+    description: tcgGameOfSet(name) ? `Every card in ${label} (${tcgGameOfSet(name).series}) with its current Near Mint price from TCGplayer.`
       : `Every card in Pokémon ${label} with its current Near Mint price, from recent sales.`,
     alternates: { canonical: `/sets/${encodeURIComponent(name)}` },
     openGraph: { url: `${SITE}/sets/${encodeURIComponent(name)}` },
@@ -38,24 +38,24 @@ export default async function PublicSet({ params, searchParams }) {
   const sp = await searchParams;
   const sort = readSort(sp?.sort, sp?.dir);
   const topps = toppsSetByName(name);
-  const swu = topps ? null : await swuSetByName(name); // Star Wars: Unlimited (lib/swu.js): our own saved prices, free to show
-  const sets = topps || swu ? [] : await listSets().catch(() => []);
-  const set = topps ? { name, series: "Topps", releaseDate: `${topps.year}-06-01` } : swu || sets.find((s) => s.name === name);
+  const tcg = topps ? null : await tcgSetByName(name); // Star Wars: Unlimited, Lorcana (lib/tcgcsv.js): our own saved prices, free to show
+  const sets = topps || tcg ? [] : await listSets().catch(() => []);
+  const set = topps ? { name, series: "Topps", releaseDate: `${topps.year}-06-01` } : tcg || sets.find((s) => s.name === name);
   if (!set) notFound(); // only real set names reach the price service
   const user = await getCurrentUser();
-  let cards = topps ? await toppsSetCards(name) : swu ? await swuSetCards(name) : await getSetCards(name, { savedOnly: true }).catch(() => null);
+  let cards = topps ? await toppsSetCards(name) : tcg ? await tcg.game.setCards(name) : await getSetCards(name, { savedOnly: true }).catch(() => null);
   let busy = false;
   if (cards === undefined && user && !user.demo) {
     if (await allow("setLoad", user.id)) cards = await getSetCards(name).catch(() => null);
     else busy = true;
   }
   if (cards) {
-    const added = topps || swu ? [] : await memberCardsInSet(name);
+    const added = topps || tcg ? [] : await memberCardsInSet(name);
     cards = [...cards, ...added.filter((m) => !cards.some((c) => c.id === m.id))];
     cards = sortSetCards(cards, sort.field, sort.dir);
   }
   const { name: label, code: pokemonCode } = setLabel(name);
-  const code = swu ? swu.code : pokemonCode;
+  const code = tcg ? tcg.code : pokemonCode;
   const released = set.releaseDate ? new Date(`${String(set.releaseDate).slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
   const total = (cards || []).reduce((s, c) => s + (nmPrice(c) ?? 0), 0);
   const cardHref = (id) => (user ? `/app/cards/${id}` : `/login?next=${encodeURIComponent(`/app/cards/${id}`)}`);
@@ -67,7 +67,7 @@ export default async function PublicSet({ params, searchParams }) {
         <div>
           <div className="crumbs"><Link href="/sets">All sets</Link> / {label}</div>
           <h1>{label}</h1>
-          <p>{topps ? `Topps Pokémon cards, ${topps.year} · not part of the Pokémon TCG` : [code, swu ? "Star Wars: Unlimited" : `${eraOf(set)} era`, released ? `Released ${released}` : null].filter(Boolean).join(" · ")}</p>
+          <p>{topps ? `Topps Pokémon cards, ${topps.year} · not part of the Pokémon TCG` : [code, tcg ? tcg.series : `${eraOf(set)} era`, released ? `Released ${released}` : null].filter(Boolean).join(" · ")}</p>
         </div>
         {user ? (
           <Link href={`/app/collection/sets/${encodeURIComponent(name)}`} className="btn primary">Track this set in your collection →</Link>
@@ -105,7 +105,7 @@ export default async function PublicSet({ params, searchParams }) {
                   );
                 })}
               </ul>
-              <p className="hint">{swu ? "Near Mint prices from TCGplayer, updated once a day." : "Near Mint prices from recent TCGplayer sales, plus eBay sales we verify ourselves."}{user || swu ? "" : " Sign in to open a card's graded values and sales."}</p>
+              <p className="hint">{tcg ? "Near Mint prices from TCGplayer, updated once a day." : "Near Mint prices from recent TCGplayer sales, plus eBay sales we verify ourselves."}{user || tcg ? "" : " Sign in to open a card's graded values and sales."}</p>
             </>
           )}
     </div>

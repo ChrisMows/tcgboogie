@@ -236,11 +236,12 @@ export const toppsPrices = pgTable("topps_price", {
   checkedAt: timestamp("checked_at", { mode: "date" }).notNull().defaultNow(),
 });
 
-// Star Wars: Unlimited cards and sealed product (lib/swu.js), copied once a day from TCGCSV's free TCGplayer price
-// files. One row per TCGplayer product: Hyperspace, Showcase and Prestige cards are their own products; Normal and
-// Foil are its printings. The set list is in app_setting "swu_sets".
+// Star Wars: Unlimited and Disney Lorcana cards and sealed product (lib/tcgcsv.js), copied once a day from TCGCSV's free
+// TCGplayer price files. Both games share the table, told apart by the ID prefix (swu-, lcr-). One row per TCGplayer
+// product: Hyperspace, Showcase, Prestige, Enchanted and Epic cards are their own products; Normal, Foil, Cold Foil and
+// Holofoil are its printings. The set lists are in app_setting "swu_sets" and "lorcana_sets".
 export const swuProducts = pgTable("swu_product", {
-  productId: text("product_id").primaryKey(), // "swu-565465" (TCGplayer product 565465)
+  productId: text("product_id").primaryKey(), // "swu-565465" / "lcr-649230" (TCGplayer product 565465)
   groupId: integer("group_id").notNull(), // TCGplayer's set
   type: text("type").notNull(), // card / sealed
   name: text("name").notNull(),
@@ -248,8 +249,8 @@ export const swuProducts = pgTable("swu_product", {
   rarity: text("rarity"),
   image: text("image"),
   url: text("url"),
-  facts: jsonb("facts"), // { aspect, cardType, cost, power, hp, arena, traits }
-  prices: jsonb("prices"), // { Normal: { market, low }, Foil: { market, low } }
+  facts: jsonb("facts"), // Star Wars { aspect, cardType, cost, power, hp, arena, traits }; Lorcana { ink, cardType, cost, lore, ... }
+  prices: jsonb("prices"), // { Normal: { market, low }, Foil (Lorcana: Cold Foil, Holofoil): { market, low } }
   history: jsonb("history"), // [{ date, normal, foil }] Near Mint market per day, newest last (about 400 days)
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("swu_product_group_idx").on(t.groupId)]);
