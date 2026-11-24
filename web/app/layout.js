@@ -58,11 +58,11 @@ export default async function RootLayout({ children }) {
   const user = await getCurrentUser();
   // Deals, Price alerts, Card scanner and Grade & Flip are on Home and the member tab bar, so the top bar stays short.
   // Sets opens a menu of the newest sets on hover (components/SetsMenu.js); the set list is cached for a week.
-  const recentSets = await listSets().then((s) => newestSets(s).map((x) => ({ id: x.id, name: x.name, releaseDate: x.releaseDate, image: x.image }))).catch(() => []);
+  const recentSets = user ? [] : await listSets().then((s) => newestSets(s).map((x) => ({ id: x.id, name: x.name, releaseDate: x.releaseDate, image: x.image }))).catch(() => []);
   const navLinks = [
-    ...(user ? [{ href: "/app/home", label: "Home" }] : []),
-    { href: user ? "/app/collection" : "/login?next=%2Fapp%2Fcollection", label: "Collection" },
-    { href: "/sets", label: "Sets", menu: "sets" },
+    // Members: Home here, Collection and Sets in the left menu (Sets opens their progress). Visitors: Sets opens the
+    // public set pages, no sign-in needed.
+    ...(user ? [{ href: "/app/home", label: "Home" }] : [{ href: "/sets", label: "Sets", menu: "sets" }]),
     { href: "/sales", label: "Market Movers" },
     { href: "/#pricing", label: "Pricing" },
     { href: "/faq", label: "FAQ" },
@@ -124,8 +124,7 @@ twq('config','ri3dv');}`}</Script>
           <div className="wrap">
             <Brand signedIn={Boolean(user)} />
             <nav className="main" aria-label="Main">
-              {/* Signed-in members get Home first. Signed-out visitors: Collection goes to sign in, then straight to it.
-                  How it works is in the footer. */}
+              {/* Signed-in members get Home first; signed-out visitors get Sets (the public set pages). How it works is in the footer. */}
               {navLinks.map((l) => (l.menu === "sets" ? <SetsMenu key={l.href} sets={recentSets} /> : <Link key={l.href} href={l.href}>{l.label}</Link>))}
             </nav>
             <div className="header-actions">

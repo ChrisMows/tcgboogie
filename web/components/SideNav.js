@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 // The whole member area: Home first, then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const PHOTO = "/app/collection/photo";
-const inCollection = (p) => (p.startsWith("/app/collection") && !p.startsWith(PHOTO)) || p.startsWith("/app/cards");
+const SETS_PAGE = "/app/collection/sets";
+const inCollection = (p) => (p.startsWith("/app/collection") && !p.startsWith(PHOTO) && !p.startsWith(SETS_PAGE)) || p.startsWith("/app/cards");
 const LINKS = [
   ["/app/home", "Home", "⌂", (p) => p.startsWith("/app/home")],
   [PHOTO, "Card scanner", "📷", (p) => p.startsWith(PHOTO)],
@@ -14,6 +15,7 @@ const LINKS = [
   ["/app/deals", "Deals", "⚡", (p) => p.startsWith("/app/deals")],
   ["/app/grade-and-flip", "Grade & Flip", "💎", (p) => p.startsWith("/app/grade-and-flip")],
   ["/app/watches", "Price alerts", "🔔", (p) => p.startsWith("/app/watches")],
+  [SETS_PAGE, "Sets", "🗂", (p) => p.startsWith(SETS_PAGE)], // members' Sets (not in the top bar once signed in)
 ];
 // Bottom section, also A–Z. Admin and Logs are for admins only.
 const BOTTOM = [
@@ -25,7 +27,7 @@ const BOTTOM = [
 
 // Phones: Profile last (Settings is in the profile-picture menu at the top, and in Profile). The paid features share one
 // Premium button that opens a menu (PREMIUM below), so Sets fits as its own tab and the bar stays at six (seven for admins).
-const SETS = "/app/collection/sets";
+const SETS = SETS_PAGE;
 const TABS = [
   { href: "/app/home", label: "Home", icon: "⌂", isOn: (p) => p.startsWith("/app/home") },
   { href: "/app/collection", label: "Collection", icon: "▦", isOn: (p) => inCollection(p) && !p.startsWith(SETS) },
