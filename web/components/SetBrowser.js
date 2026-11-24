@@ -95,10 +95,11 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
     const code = codeOf(s);
     return (
       <Link key={`${s.id}-${s.name}`} href={`${hrefBase}${encodeURIComponent(s.name)}`} className={`sb-set ${s.have > 0 ? "started" : ""}`} title={s.name}>
-        <span className={`sb-art ${OTHER[gameOf(s)] ? "pack" : "cover"}`} style={s.image ? { "--art": `url("${s.image}")` } : undefined}>
-          {s.image
+        {/* Pokémon: the set's artwork. Star Wars and Lorcana: the set's most valuable card as a cover, else its booster pack. */}
+        <span className={`sb-art ${!OTHER[gameOf(s)] ? "cover" : s.cover ? "cover card-art" : "pack"}`} style={(s.cover || s.image) ? { "--art": `url("${s.cover || s.image}")` } : undefined}>
+          {(OTHER[gameOf(s)] && s.cover) || s.image
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={s.image} alt="" loading="lazy" />
+            ? <img src={OTHER[gameOf(s)] && s.cover ? s.cover : s.image} alt="" loading="lazy" />
             : <span className="sb-ph">{code || name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3)}</span>}
         </span>
         <span className="sb-body">

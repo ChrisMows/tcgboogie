@@ -1235,6 +1235,10 @@ a.cond-link:hover { border-color: var(--accent); }
 .sb-art.cover { padding: 0; }
 .sb-art.cover img { width: 100%; height: 100%; max-width: none; object-fit: cover; filter: none; }
 .sb-art.cover::after { display: none; }
+/* Star Wars / Lorcana covers are a card's square TCGplayer picture: zoomed so the card fills the width (no white sides),
+   showing the illustration at the top of the card. */
+.sb-art.card-art img { width: 100%; height: auto; object-fit: initial; transform: scale(1.42); transform-origin: 50% 4%; position: absolute; top: 0; left: 0; }
+.sb-set:hover .sb-art.card-art img { transform: scale(1.48); }
 .sb-ph { font: 700 26px var(--font-head), sans-serif; color: var(--accent); letter-spacing: 0.02em; }
 .sb-body { display: flex; align-items: center; gap: 8px; padding: 12px 14px 14px 16px; flex: 1; }
 .sb-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }

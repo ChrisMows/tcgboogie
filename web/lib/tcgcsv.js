@@ -68,10 +68,14 @@ export function makeTcgcsvGame(cfg) {
     // The set's picture: its booster pack (else its booster box or any sealed product), as TCGplayer shows it.
     const sealed = products.filter((p) => p.type === "sealed" && p.image);
     const art = sealed.find((p) => /booster pack$/i.test(p.name)) || sealed.find((p) => /booster (display|box)$/i.test(p.name)) || sealed[0] || null;
+    // Its cover: the most valuable card's artwork (a Showcase leader, an Enchanted card...), shown edge to edge like the
+    // Pokémon sets' art. TCGCSV has no set artwork, and these pictures come from the same TCGplayer CDN.
+    const best = (p) => Math.max(0, ...Object.values(p.prices || {}).map((v) => Number(v?.market) || 0));
+    const cover = products.filter((p) => p.type === "card" && p.image).sort((a, b) => best(b) - best(a))[0] || null;
     return {
       id: String(grp.groupId), groupId: grp.groupId, name: `${cfg.setPrefix}${grp.name}`, code: grp.abbreviation || null, series: cfg.series,
       releaseDate: grp.publishedOn ? String(grp.publishedOn).slice(0, 10) : null, total: cards, printedTotal: cards,
-      sealed: products.length - cards, image: art?.image || null,
+      sealed: products.length - cards, image: art?.image || null, cover: cover?.image || null,
     };
   }
 
@@ -133,7 +137,9 @@ export function makeTcgcsvGame(cfg) {
     const last = row?.value?.at ? new Date(row.value.at).getTime() : 0;
     const now = new Date();
     const hours = (Date.now() - last) / 3600000;
-    if (!force && last && !(hours > 26 || (hours > 12 && now.getUTCHours() >= 21))) return { skipped: "imported recently" };
+    // 12+ hours since the last import: check TCGCSV's stamp (one small request) and import if it moved. The old rule
+    // (only after 21:00 UTC, else after 26 hours) skipped the 05:00 UTC run and left a day's prices out (Nov 2026).
+    if (!force && last && hours <= 12) return { skipped: "imported recently" };
     const stamp = await fetch("https://tcgcsv.com/last-updated.txt", { headers: { "User-Agent": UA }, cache: "no-store" })
       .then((r) => (r.ok ? r.text() : "")).then((t) => t.trim()).catch(() => "");
     if (!force && stamp && row?.value?.stamp === stamp) return { skipped: "no new prices yet" };
