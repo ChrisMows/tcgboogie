@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ERA_NAMES, eraOf, eraSlug, setLabel } from "@/lib/sets";
+import { ERA_COLORS, ERA_NAMES, eraOf, eraSlug, setCategory, setLabel } from "@/lib/sets";
 
 // Every set, one game and one era at a time (/sets and Collection → Sets):
 // - a game switch (Pokémon / Star Wars: Unlimited / Disney Lorcana, remembered on this device) and a search across them;
@@ -95,13 +95,23 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
     const code = codeOf(s);
     return (
       <Link key={`${s.id}-${s.name}`} href={`${hrefBase}${encodeURIComponent(s.name)}`} className={`sb-set ${s.have > 0 ? "started" : ""}`} title={s.name}>
-        {/* Pokémon: the set's artwork. Star Wars and Lorcana: the set's most valuable card as a cover, else its booster pack. */}
-        <span className={`sb-art ${!OTHER[gameOf(s)] ? "cover" : s.cover ? "cover card-art" : "pack"}`} style={(s.cover || s.image) ? { "--art": `url("${s.cover || s.image}")` } : undefined}>
+        {/* Pokémon: the set's artwork, except promos, energies and small collections, whose TCGplayer picture is only the
+            Pokémon logo: those get a drawn tile in the era's colours. Star Wars and Lorcana: the set's most valuable card as
+            a cover, else its booster pack. */}
+        {!OTHER[gameOf(s)] && setCategory(s.name) ? (() => {
+          const [a, b] = ERA_COLORS[eraOf(s)] || ["#2b9d8f", "#284b63"];
+          return (
+            <span className="sb-art drawn" style={{ "--c1": a, "--c2": b }}>
+              <span className="sb-drawn-code">{code || name.split(/\s+/).filter((w) => /^[A-Z0-9]/.test(w)).map((w) => w[0]).join("").slice(0, 4)}</span>
+              <span className="sb-drawn-label">{setCategory(s.name)}</span>
+            </span>
+          );
+        })() : <span className={`sb-art ${!OTHER[gameOf(s)] ? "cover" : s.cover ? "cover card-art" : "pack"}`} style={(s.cover || s.image) ? { "--art": `url("${s.cover || s.image}")` } : undefined}>
           {(OTHER[gameOf(s)] && s.cover) || s.image
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={OTHER[gameOf(s)] && s.cover ? s.cover : s.image} alt="" loading="lazy" />
             : <span className="sb-ph">{code || name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3)}</span>}
-        </span>
+        </span>}
         <span className="sb-body">
           <span className="sb-text">
             <b className="sb-name">{name}</b>

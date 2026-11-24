@@ -49,6 +49,27 @@ export function newestSets(sets, n = 8) {
     .sort((a, b) => String(b.releaseDate).localeCompare(String(a.releaseDate))).slice(0, n);
 }
 
+/**
+ * Pokémon sets whose TCGplayer picture is only the plain Pokémon logo (promos, energies, small collections): the set
+ * tiles draw their own instead, in the era's colours with the set code and this label. null for every other set.
+ */
+export function setCategory(name) {
+  const s = String(name || "");
+  if (/energ(y|ies)\b/i.test(s)) return "Energies";
+  if (/trainer kit/i.test(s)) return "Trainer kit";
+  if (/first partner|collection 20\d\d/i.test(s)) return "Collection";
+  if (/\bpromos?\b|placement|mcdonald|black star/i.test(s)) return "Promos";
+  return null;
+}
+
+// Each era's two colours, for drawn set tiles.
+export const ERA_COLORS = {
+  "Mega Evolution": ["#7b2ff7", "#f72f8a"], "Scarlet & Violet": ["#d7263d", "#7a2bd6"], "Sword & Shield": ["#2b6cd6", "#c0263d"],
+  "Sun & Moon": ["#f08a24", "#1f8fd6"], XY: ["#1b5fd6", "#d62b4b"], "Black & White": ["#3a3f4a", "#9aa3b2"],
+  "HeartGold & SoulSilver": ["#c9a227", "#9aa3b2"], Platinum: ["#7d8597", "#3a4150"], "Diamond & Pearl": ["#3a7bd5", "#e86fa6"],
+  EX: ["#d62b2b", "#2b7bd6"], "e-Card": ["#2b9d8f", "#284b63"], Neo: ["#e0a100", "#3a3a3a"], "Classic (Base to Gym)": ["#d62b2b", "#2b5fd6"],
+};
+
 /** Which era a set belongs to: its series when that names an era, else its release date ("Other", "Promo"). */
 export function eraOf(set) {
   if (SERIES_ERA[set.series]) return SERIES_ERA[set.series];
