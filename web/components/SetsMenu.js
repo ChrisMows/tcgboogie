@@ -12,7 +12,7 @@ const month = (d) => (d ? new Date(`${String(d).slice(0, 10)}T12:00:00`).toLocal
  * The header's Sets item, like TCGplayer's: hover (or tap) to see the newest sets and jump into one, pick an era, or
  * open every set (/sets). Clicking "Sets" itself opens /sets.
  */
-export default function SetsMenu({ sets }) {
+export default function SetsMenu({ sets, side = false, active = false, allHref = "/sets", setBase = "/sets/" }) {
   const [open, setOpen] = useState(false);
   const box = useRef(null);
   const closeTimer = useRef(null);
@@ -32,7 +32,11 @@ export default function SetsMenu({ sets }) {
 
   return (
     <span ref={box} className={`sets-menu ${open ? "open" : ""}`} onMouseEnter={show} onMouseLeave={hide} onFocus={show}>
-      <Link href="/sets" aria-haspopup="true" aria-expanded={open}>Sets <span className="sets-caret" aria-hidden="true">▾</span></Link>
+      {side ? (
+        <Link href={allHref} className={active ? "on" : ""} aria-current={active ? "page" : undefined} aria-haspopup="true" aria-expanded={open}>
+          <span className="side-icon" aria-hidden="true">🗂</span>Sets <span className="sets-caret" aria-hidden="true">▾</span>
+        </Link>
+      ) : <Link href={allHref} aria-haspopup="true" aria-expanded={open}>Sets <span className="sets-caret" aria-hidden="true">▾</span></Link>}
       {open && (
         <div className="sets-pop" role="menu">
           <div className="sets-pop-main">
@@ -42,7 +46,7 @@ export default function SetsMenu({ sets }) {
                 {sets.map((s) => {
                   const { name, code } = setLabel(s.name);
                   return (
-                    <Link key={s.id} role="menuitem" href={`/sets/${encodeURIComponent(s.name)}`} className="sets-pop-set" onClick={() => setOpen(false)}>
+                    <Link key={s.id} role="menuitem" href={`${setBase}${encodeURIComponent(s.name)}`} className="sets-pop-set" onClick={() => setOpen(false)}>
                       {s.image
                         // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={s.image} alt="" loading="lazy" />
@@ -56,10 +60,10 @@ export default function SetsMenu({ sets }) {
           </div>
           <div className="sets-pop-side">
             <div className="sets-pop-head">By era</div>
-            {ERAS.map((e) => <Link key={e} role="menuitem" href={`/sets?era=${eraSlug(e)}`} onClick={() => setOpen(false)}>{e}</Link>)}
+            {ERAS.map((e) => <Link key={e} role="menuitem" href={`${allHref}?era=${eraSlug(e)}`} onClick={() => setOpen(false)}>{e}</Link>)}
             <div className="sets-pop-head" style={{ marginTop: 10 }}>Other games</div>
-            <Link role="menuitem" href={`/sets?era=${eraSlug("Star Wars: Unlimited")}`} onClick={() => setOpen(false)}>Star Wars: Unlimited</Link>
-            <Link role="menuitem" href="/sets" className="sets-pop-all" onClick={() => setOpen(false)}>All sets →</Link>
+            <Link role="menuitem" href={`${allHref}?era=${eraSlug("Star Wars: Unlimited")}`} onClick={() => setOpen(false)}>Star Wars: Unlimited</Link>
+            <Link role="menuitem" href={allHref} className="sets-pop-all" onClick={() => setOpen(false)}>All sets →</Link>
           </div>
         </div>
       )}

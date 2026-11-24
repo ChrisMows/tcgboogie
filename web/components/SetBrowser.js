@@ -8,7 +8,7 @@ import { ERA_NAMES, eraOf, eraSlug, setLabel } from "@/lib/sets";
 // - a game switch (Pokémon / Star Wars: Unlimited, remembered on this device) and a search across both games;
 // - eras down a left sidebar with their set counts (older eras one tap away); on phones, a menu instead;
 // - the era's sets four to a row with their artwork, sortable;
-// - with progress (Collection → Sets), "Your sets" folds away above, and those sets stay listed under their era too.
+// - with progress (Collection → Sets), a "My sets" switch narrows any game to the sets you've started, by era or all.
 // openEra (from /sets?era=, the header's Sets menu) picks that era and its game.
 
 const GAMES = [["pokemon", "Pokémon"], ["swu", "Star Wars: Unlimited"]];
@@ -39,7 +39,8 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("newest");
   const [older, setOlder] = useState(false);
-  const [mineOpen, setMineOpen] = useState(true);
+  const [mineOnly, setMineOnly] = useState(false);
+  const hasProgress = sets.some((s) => s.have !== undefined); // Collection → Sets; the public pages don't know yours
 
   // The game picked last time on this device (unless the link asked for one).
   useEffect(() => {
@@ -53,14 +54,17 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
     try { localStorage.setItem(STORE, g); } catch { /* private mode */ }
   };
 
-  const counts = useMemo(() => Object.fromEntries(GAMES.map(([g]) => [g, sets.filter((s) => gameOf(s) === g).length])), [sets]);
-  const inGame = useMemo(() => sets.filter((s) => gameOf(s) === game), [sets, game]);
+  const pool = useMemo(() => (mineOnly ? sets.filter((s) => s.have > 0) : sets), [sets, mineOnly]);
+  const counts = useMemo(() => Object.fromEntries(GAMES.map(([g]) => [g, pool.filter((s) => gameOf(s) === g).length])), [pool]);
+  const mineCount = sets.filter((s) => s.have > 0).length;
+  const inGame = useMemo(() => pool.filter((s) => gameOf(s) === game), [pool, game]);
   const groups = useMemo(() => {
     const m = {};
     for (const s of inGame) (m[groupOf(s)] ||= []).push(s);
-    return GROUPS[game].filter((g) => m[g]?.length).map((g) => [g, m[g]]);
-  }, [inGame, game]);
-  const mine = inGame.filter((s) => s.have > 0).sort((a, b) => b.have / (b.total || 1) - a.have / (a.total || 1));
+    const list = GROUPS[game].filter((g) => m[g]?.length).map((g) => [g, m[g]]);
+    // My sets: every era's sets at once to start, then any one era.
+    return mineOnly && list.length ? [["All eras", inGame], ...list] : list;
+  }, [inGame, game, mineOnly]);
   const current = groups.find(([g]) => eraSlug(g) === era) || groups[0] || null;
   const currentIndex = current ? groups.indexOf(current) : -1;
   const showAll = older || currentIndex >= SHOWN_ERAS;
@@ -69,8 +73,8 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
   const found = useMemo(() => {
     const w = q.toLowerCase().trim();
     if (!w) return null;
-    return sets.filter((s) => `${s.name} ${codeOf(s) || ""} ${s.series || ""} ${groupOf(s)}`.toLowerCase().includes(w));
-  }, [sets, q]);
+    return pool.filter((s) => `${s.name} ${codeOf(s) || ""} ${s.series || ""} ${groupOf(s)}`.toLowerCase().includes(w));
+  }, [pool, q]);
   const list = [...(found || current?.[1] || [])].sort(SORTS[sort][1]);
 
   const tile = (s, showGame = false) => {
@@ -81,7 +85,7 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
     const code = codeOf(s);
     return (
       <Link key={`${s.id}-${s.name}`} href={`${hrefBase}${encodeURIComponent(s.name)}`} className={`sb-set ${s.have > 0 ? "started" : ""}`} title={s.name}>
-        <span className="sb-art">
+        <span className={`sb-art ${gameOf(s) === "swu" ? "pack" : "cover"}`} style={s.image ? { "--art": `url("${s.image}")` } : undefined}>
           {s.image
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={s.image} alt="" loading="lazy" />
@@ -120,6 +124,12 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
             </button>
           ))}
         </div>
+        {hasProgress && (
+          <button type="button" className={`sb-mine-toggle ${mineOnly ? "on" : ""}`} aria-pressed={mineOnly}
+            onClick={() => { setMineOnly((m) => !m); setEra(null); }} title="Show only the sets you've started">
+            <span className="sb-switch" aria-hidden="true"><i /></span> My sets <span className="sb-count">{mineCount}</span>
+          </button>
+        )}
         <div className="search-box sb-search">
           <span aria-hidden="true">⌕</span>
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by set name or code" aria-label="Search sets by name or code" />
@@ -129,7 +139,7 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
       <div className="sb-layout">
         {!found && groups.length > 0 && (
           <aside className="sb-side" aria-label={game === "swu" ? "Set groups" : "Eras"}>
-            <h2 className="sb-side-head">{game === "swu" ? "Groups" : "Eras"}</h2>
+            <h2 className="sb-side-head">{mineOnly ? "My sets" : game === "swu" ? "Groups" : "Eras"}</h2>
             <ul>
               {sideEras.map(([g, l]) => (
                 <li key={g}>
@@ -153,24 +163,15 @@ export default function SetBrowser({ sets, openEra = null, hrefBase = "/app/coll
         )}
 
         <div className="sb-main">
-          {!found && mine.length > 0 && (
-            <section className="sb-mine">
-              <button type="button" className="sb-fold" aria-expanded={mineOpen} onClick={() => setMineOpen((o) => !o)}>
-                <span className="sb-caret" aria-hidden="true">▸</span>
-                <h2>Your sets</h2>
-                <span className="sb-count">{mine.length} started</span>
-              </button>
-              {mineOpen && <div className="sb-grid">{mine.map((s) => tile(s))}</div>}
-            </section>
-          )}
-
           <div className="sb-head">
             <h2>{found ? `Results for “${q.trim()}”` : current?.[0] || "Sets"}</h2>
             <span className="sb-count">{list.length} {list.length === 1 ? "set" : "sets"}</span>
             {list.length > 1 && sortMenu}
           </div>
           {list.length ? <div className="sb-grid">{list.map((s) => tile(s, Boolean(found)))}</div>
-            : <p className="muted">{found ? "No sets match. Try fewer letters, or the set code." : "No sets yet. They appear after the next price update."}</p>}
+            : <p className="muted">{found ? "No sets match. Try fewer letters, or the set code."
+              : mineOnly ? `You haven't started any ${GAMES.find(([g]) => g === game)[1]} sets yet. Turn off My sets to browse them all, then open a set and tap the cards you own.`
+                : "No sets yet. They appear after the next price update."}</p>}
         </div>
       </div>
     </div>

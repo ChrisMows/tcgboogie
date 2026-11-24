@@ -4,12 +4,15 @@ import { listSets } from "@/lib/catalog";
 import { toppsSets } from "@/lib/topps";
 import { swuSets } from "@/lib/swu";
 import { requireUser } from "@/lib/session";
+import { ERA_NAMES, eraSlug } from "@/lib/sets";
 import * as store from "@/lib/store";
 
 export const metadata = { title: "Sets" };
 
-export default async function SetsPage() {
+export default async function SetsPage({ searchParams }) {
   const user = await requireUser();
+  const sp = await searchParams;
+  const era = ERA_NAMES.map(eraSlug).includes(String(sp?.era || "")) ? String(sp.era) : null; // from the side menu's Sets
   const [sets, items] = await Promise.all([listSets().catch(() => null), store.listItems(user.id)]);
   const have = {};
   for (const it of items) {
@@ -27,7 +30,7 @@ export default async function SetsPage() {
       {sets === null ? (
         <div className="notice warn">The set list didn&apos;t load from the price service. Please try again in a minute.</div>
       ) : (
-        <SetBrowser sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null })), ...(await swuSets().catch(() => []))]
+        <SetBrowser key={era || "all"} openEra={era} sets={[...sets, ...toppsSets().map((t) => ({ id: t.code, name: t.name, series: "Topps", releaseDate: `${t.year}-06-01`, total: t.cards, image: null })), ...(await swuSets().catch(() => []))]
           .map((s) => ({ ...s, have: have[s.name]?.size || 0 }))} />
       )}
     </>

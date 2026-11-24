@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import SetsMenu from "@/components/SetsMenu";
 
 // The whole member area: Home first, then the rest A–Z, plus Settings (account, plan, alerts). Sign out lives in the profile-picture menu.
 const PHOTO = "/app/collection/photo";
@@ -70,14 +71,17 @@ function useTopOnNewPage(path) {
 }
 
 /** tabsOnly: just the phone tab bar, for member pages outside the member area (Market Movers). */
-export default function SideNav({ planLabel, premium, isAdmin, access = {}, tabsOnly = false }) {
+export default function SideNav({ planLabel, premium, isAdmin, access = {}, tabsOnly = false, recentSets = [] }) {
   const path = usePathname();
   useTopOnNewPage(path);
   if (tabsOnly) return <aside className="side tabs-only"><TabBar path={path} isAdmin={isAdmin} access={access} /></aside>;
   return (
     <aside className="side">
       <nav aria-label="Member">
-        {LINKS.map(([href, label, icon, isOn]) => (
+        {LINKS.map(([href, label, icon, isOn]) => href === SETS_PAGE ? (
+          // Sets: hover for the newest sets, the eras and All sets, like the header's menu, opening their progress pages.
+          <SetsMenu key={href} side sets={recentSets} active={isOn(path)} allHref={SETS_PAGE} setBase={`${SETS_PAGE}/`} />
+        ) : (
           <Link key={href} href={href} className={isOn(path) ? "on" : ""} aria-current={isOn(path) ? "page" : undefined}>
             <span className="side-icon" aria-hidden="true">{icon}</span>{label}
           </Link>
