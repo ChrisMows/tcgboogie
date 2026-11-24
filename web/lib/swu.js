@@ -46,10 +46,13 @@ const factsOf = (p) => {
 /** One TCGCSV group as our set. */
 function toSet(g, products) {
   const cards = products.filter((p) => p.type === "card").length;
+  // The set's picture: its booster pack (else its booster box or any sealed product), as TCGplayer shows it.
+  const sealed = products.filter((p) => p.type === "sealed" && p.image);
+  const art = sealed.find((p) => /booster pack$/i.test(p.name)) || sealed.find((p) => /booster (display|box)$/i.test(p.name)) || sealed[0] || null;
   return {
     id: String(g.groupId), groupId: g.groupId, name: `${SET_PREFIX}${g.name}`, code: g.abbreviation || null, series: SWU_SERIES,
     releaseDate: g.publishedOn ? String(g.publishedOn).slice(0, 10) : null, total: cards, printedTotal: cards,
-    sealed: products.length - cards, image: null,
+    sealed: products.length - cards, image: art?.image || null,
   };
 }
 
