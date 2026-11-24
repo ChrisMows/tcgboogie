@@ -50,9 +50,12 @@ nav.main a { color: #a1a8b3; font-size: 12px; white-space: nowrap; }
 nav.main a:hover { color: var(--text); text-decoration: none; }
 /* Public set page (app/sets/[set]/page.js): every card with its Near Mint price */
 .pub-set-sort { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
-.pub-set-sort .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); font-size: 13px; font-weight: 600; }
-.pub-set-sort .chip:hover { color: var(--text); text-decoration: none; }
-.pub-set-sort .chip.on { background: var(--accent); border-color: var(--accent); color: #0b0e12; }
+/* Set sort (components/SortPicker.js): a menu of fields and a button that flips the direction */
+.sort-picker { display: inline-flex; align-items: stretch; gap: 6px; flex-wrap: nowrap; }
+.sort-picker select { width: auto; min-width: 0; padding: 8px 10px; font-size: 14px; }
+.sort-dir { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.sort-dir:hover { border-color: var(--accent); }
+@media (max-width: 600px) { .coll-toolbar .sort-picker { width: 100%; } .coll-toolbar .sort-picker select { flex: 1; } }
 .pub-set-grid { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .pub-set-grid a { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); height: 100%; }
 .pub-set-grid a:hover { border-color: var(--accent); text-decoration: none; }

@@ -8,14 +8,10 @@ import CardThumb from "@/components/CardThumb";
 import { useToast } from "@/components/Toast";
 import { quickAdd, removeFromWishlist, removeOneCopy, watchProduct } from "@/app/app/collection/actions";
 import { money, nmPrice } from "@/lib/collection";
+import SortPicker from "@/components/SortPicker";
+import { sortSetCards } from "@/lib/set-sort";
 
 const short = (name) => name.replace(/\s*\(.*\)$/, "");
-const numKey = (c) => {
-  const n = String(c.number || "").split("/")[0];
-  const d = parseInt(n.replace(/\D/g, ""), 10);
-  return [n.replace(/\d/g, ""), Number.isFinite(d) ? d : 9999];
-};
-
 /** Every card in a set. Tap a missing card to add a Near Mint copy; owned cards get a − / + stepper. */
 export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, watched: watchedInit, isDemo }) {
   const router = useRouter();
@@ -23,7 +19,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
   const [wished, setWished] = useState(new Set(wishedInit));
   const [watched, setWatched] = useState(new Set(watchedInit));
   const [show, setShow] = useState("all");
-  const [sort, setSort] = useState("number");
+  const [sort, setSort] = useState({ field: "number", dir: "asc" });
   const [q, setQ] = useState("");
   const [, start] = useTransition();
   const [toast, toastShow] = useToast();
@@ -32,9 +28,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
     const w = q.toLowerCase().trim();
     const out = cards.filter((c) => (show === "all" || (show === "owned" ? owned[c.id] : !owned[c.id]))
       && (!w || `${c.name} ${c.number}`.toLowerCase().includes(w)));
-    return out.sort(sort === "price"
-      ? (a, b) => (nmPrice(b) ?? 0) - (nmPrice(a) ?? 0)
-      : (a, b) => { const [pa, na] = numKey(a), [pb, nb] = numKey(b); return pa.localeCompare(pb) || na - nb; });
+    return sortSetCards(out, sort.field, sort.dir);
   }, [cards, owned, show, sort, q]);
 
   // Optimistic: the tile updates at once, the server catches up, and we roll back if it fails.
@@ -84,10 +78,7 @@ export default function SetGrid({ cards, owned: ownedInit, wished: wishedInit, w
           <span aria-hidden="true">⌕</span>
           <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a card or number" aria-label="Find a card in this set" />
         </div>
-        <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
-          <option value="number">By card number</option>
-          <option value="price">By price</option>
-        </select>
+        <SortPicker field={sort.field} dir={sort.dir} onChange={setSort} />
       </div>
       <p className="hint" style={{ marginTop: -6 }}>Tap a card to add a Near Mint copy. Graded or a different condition? Open the card with ↗.</p>
 

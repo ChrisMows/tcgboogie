@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/session";
 import { eraOf, setLabel } from "@/lib/sets";
 import { toppsSetByName, toppsSetCards } from "@/lib/topps";
 import { swuSetByName, swuSetCards } from "@/lib/swu";
+import SortPicker from "@/components/SortPicker";
+import { readSort, shortName, sortSetCards } from "@/lib/set-sort";
 
 const SITE = (process.env.AUTH_URL || "https://tcgboogie.com").replace(/\/$/, "");
 const nameOf = async (params) => decodeURIComponent((await params).set).slice(0, 120);
@@ -25,20 +27,6 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// "4/102", "SV047", "TG05" -> sortable: numbers in order, letters after.
-const numberKey = (n) => { const m = String(n || "").match(/\d+/); return m ? Number(m[0]) : 1e9; };
-const byNumber = (a, b) => numberKey(a.number) - numberKey(b.number) || String(a.number).localeCompare(String(b.number));
-// Pokémon names end in " - 025/165" (dropped); Star Wars names keep their subtitle ("Darth Vader - Commanding").
-const shortName = (n) => String(n || "").replace(/\s+-\s+\S*\d\S*$/, "");
-// Sort options (?sort=). Cards with no price yet go last in either price order.
-const SORTS = [
-  ["number", "Number", byNumber],
-  ["price-high", "Price: high to low", (a, b) => (nmPrice(b) ?? -1) - (nmPrice(a) ?? -1) || byNumber(a, b)],
-  ["price-low", "Price: low to high", (a, b) => (nmPrice(a) ?? Infinity) - (nmPrice(b) ?? Infinity) || byNumber(a, b)],
-  ["name", "Name", (a, b) => shortName(a.name).localeCompare(shortName(b.name)) || byNumber(a, b)],
-  ["rarity", "Rarity", (a, b) => String(a.rarity || "~").localeCompare(String(b.rarity || "~")) || byNumber(a, b)],
-];
-
 /**
  * A set's cards and prices for anyone, signed in or not (the header's Sets menu and /sets open here). Visitors and
  * search engines only ever see prices we've already saved: loading a set costs a credit per card, so a set nobody has
@@ -47,8 +35,8 @@ const SORTS = [
  */
 export default async function PublicSet({ params, searchParams }) {
   const name = await nameOf(params);
-  const sortKey = String((await searchParams)?.sort || "number");
-  const sort = SORTS.find(([k]) => k === sortKey) || SORTS[0];
+  const sp = await searchParams;
+  const sort = readSort(sp?.sort, sp?.dir);
   const topps = toppsSetByName(name);
   const swu = topps ? null : await swuSetByName(name); // Star Wars: Unlimited (lib/swu.js): our own saved prices, free to show
   const sets = topps || swu ? [] : await listSets().catch(() => []);
@@ -63,7 +51,8 @@ export default async function PublicSet({ params, searchParams }) {
   }
   if (cards) {
     const added = topps || swu ? [] : await memberCardsInSet(name);
-    cards = [...cards, ...added.filter((m) => !cards.some((c) => c.id === m.id))].sort(sort[2]);
+    cards = [...cards, ...added.filter((m) => !cards.some((c) => c.id === m.id))];
+    cards = sortSetCards(cards, sort.field, sort.dir);
   }
   const { name: label, code: pokemonCode } = setLabel(name);
   const code = swu ? swu.code : pokemonCode;
@@ -100,13 +89,7 @@ export default async function PublicSet({ params, searchParams }) {
                 <div className="stat"><b>{money(total)}</b><span>for one of every card in Near Mint</span></div>
                 {top[0] && <div className="stat"><b>{cardMoney(nmPrice(top[0]))}</b><span>top card: {shortName(top[0].name)}</span></div>}
               </div>
-              <nav className="pub-set-sort" aria-label="Sort cards">
-                <span className="small muted">Sort by</span>
-                {SORTS.map(([k, label]) => (
-                  <Link key={k} href={k === "number" ? `/sets/${encodeURIComponent(name)}` : `/sets/${encodeURIComponent(name)}?sort=${k}`} scroll={false}
-                    className={`chip ${k === sort[0] ? "on" : ""}`} aria-current={k === sort[0] ? "true" : undefined}>{label}</Link>
-                ))}
-              </nav>
+              <div className="pub-set-sort"><SortPicker url field={sort.field} dir={sort.dir} /></div>
               <ul className="pub-set-grid">
                 {cards.map((c) => {
                   const price = nmPrice(c);
