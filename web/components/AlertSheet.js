@@ -24,7 +24,7 @@ export default function AlertSheet({ product, plan, owned = false, printing = nu
   const up = now ? t > now : owned;
   const high = startingRecord(product, { ...base, mode: "high" }, now);
   const low = startingRecord(product, { ...base, mode: "low" }, now);
-  const ebay = isCard && product.language !== "japanese" && plan?.ebayListingAlerts !== false;
+  const ebay = isCard && product.language !== "japanese" && !product.tcg && plan?.ebayListingAlerts !== false; // the bot searches Pokémon cards only
 
   const submit = (e) => {
     e.preventDefault();

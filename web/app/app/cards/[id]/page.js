@@ -288,7 +288,7 @@ export default async function CardPage({ params, searchParams }) {
             {details.map((d) => <span key={d} className="muted">{d}</span>)}
           </div>
         </div>
-        <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card"} dealFilter={dealFilter} wished={wished}>
+        <CardAlertIcons watch={watch ? { mode: watch.mode, target: targetPrice(watch), status: watch.status } : null} deals={p.type === "card" && !p.tcg} dealFilter={dealFilter} wished={wished}>
           {sigCopy && <SignatureButton icon itemId={sigCopy.id} on={signatureIds.includes(sigCopy.id)} full={signatureIds.length >= store.SIGNATURE_MAX} />}
         </CardAlertIcons>
       </div>

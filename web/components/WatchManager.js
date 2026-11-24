@@ -37,7 +37,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
   const suggest = (up) => (now ? (up ? Math.ceil(now * 1.15) : Math.floor(now * 0.85)) : "");
   const [target, setTarget] = useState(initial?.targetPrice ?? suggest(isRising(initial || {})));
   const [dropPct, setDropPct] = useState(initial?.dropPct ?? 15);
-  const ebayOk = listingAlerts && product.type === "card" && product.language !== "japanese"; // listingAlerts: on this plan
+  const ebayOk = listingAlerts && product.type === "card" && product.language !== "japanese" && !product.tcg; // listingAlerts: on this plan; Pokémon only
   const [alsoEbay, setAlsoEbay] = useState(ebayOk ? initial?.alsoEbay ?? true : false);
   const fires = byPct ? (now ? now * (rising ? 1 + dropPct / 100 : 1 - dropPct / 100) : null) : Number(target) || null;
   const already = fires && now ? (rising ? now >= fires : now <= fires) : false;
@@ -115,7 +115,7 @@ function WatchForm({ product, initial, onSubmit, submitLabel, pending, errors, l
             Also alert me when this card is listed on eBay at or below this price
           </label>
           <div className="hint" style={{ marginLeft: 27 }}>
-            {ebayOk ? "Buy It Now listings of this exact card (raw), photo-checked, a few times an hour." : "eBay listing alerts cover English single cards for now."}
+            {ebayOk ? "Buy It Now listings of this exact card (raw), photo-checked, a few times an hour." : product.tcg ? "eBay listing alerts cover English Pokémon single cards for now." : "eBay listing alerts cover English single cards for now."}
           </div>
         </>
       )}

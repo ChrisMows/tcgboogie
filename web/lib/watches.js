@@ -88,6 +88,9 @@ export function validateWatch(input, product) {
     w.alsoEbay = false; // eBay matching covers single cards for now
   }
   if (isRising(w) || isRecord(w)) w.alsoEbay = false; // eBay listing alerts are for buying (listed at or under your price)
+  // Star Wars and Lorcana: the deal bot searches eBay's Pokémon cards only (its Game filter), so an eBay listing alert
+  // could never match and would only spend the bot's eBay calls. Their price alerts work from the daily prices.
+  if (product.tcg) w.alsoEbay = false;
   const base = currentPrice(product, w);
   w.basePrice = base;
   if (isRecord(w)) {

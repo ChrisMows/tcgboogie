@@ -112,5 +112,6 @@ export async function ebayWatchList() {
   return rows.filter(({ user }) => planFor(effectiveTier(user)).ebayListingAlerts)
     .map(({ w }) => ({ id: w.id, product_id: w.productId, name: w.name, set_name: w.setName || "", number: w.number || "",
       target: targetPrice(w), market: w.lastPrice ?? null }))
-    .filter((x) => x.target > 0);
+    .filter((x) => x.target > 0)
+    .filter((x) => !/^(swu|lcr)-/.test(String(x.product_id))); // Star Wars / Lorcana: the bot only searches Pokémon cards
 }
