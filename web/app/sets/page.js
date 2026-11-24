@@ -24,7 +24,7 @@ export default async function AllSets({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>All sets</h1>
-          <p>Every Pokémon card set by era, plus Star Wars: Unlimited. Open one to see its cards and prices{" "}
+          <p>Every Pokémon and Star Wars: Unlimited set. Pick a game and an era, or search, then open a set to see its cards and prices{" "}
             <span className="muted">(your progress on each is in <Link href="/app/collection/sets">Collection → Sets</Link>)</span>.</p>
         </div>
       </div>

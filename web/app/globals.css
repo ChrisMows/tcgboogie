@@ -1173,6 +1173,42 @@ a.cond-link:hover { border-color: var(--accent); }
 .chart-profit { margin-top: 2px; }
 
 /* Sets grouped by era */
+/* Set browser (components/SetBrowser.js): game switch, search, Your sets, era chips, compact set tiles */
+.sb-top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.sb-games { flex: none; }
+.sb-games button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sb-count { font-size: 12px; color: var(--muted); font-weight: 500; }
+.sb-games button.on .sb-count, .sb-eras .chip.on .sb-count { color: inherit; opacity: 0.75; }
+.sb-search { flex: 1 1 260px; }
+.sb-search input { flex: 1; }
+.sb-mine { margin-bottom: 6px; }
+.sb-fold { display: flex; align-items: baseline; gap: 10px; background: none; border: 0; padding: 4px 0; margin: 6px 0 10px; color: inherit; font: inherit; cursor: pointer; }
+.sb-fold .section-label { margin: 0; }
+.sb-caret { color: var(--muted); display: inline-block; transition: transform 0.15s; }
+.sb-fold[aria-expanded="true"] .sb-caret { transform: rotate(90deg); }
+.sb-eras { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; margin: 8px 0 6px; scrollbar-width: thin; }
+.sb-eras .chip { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.sb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.sb-set { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; color: inherit; min-width: 0; }
+.sb-set:hover { text-decoration: none; border-color: #65784c; }
+.sb-set.started { border-color: rgba(211, 255, 102, 0.35); }
+.sb-logo { height: 44px; display: flex; align-items: center; justify-content: flex-start; margin-bottom: 4px; }
+.sb-logo img { max-height: 44px; max-width: 100%; object-fit: contain; }
+.sb-ph { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 36px; padding: 0 8px; background: var(--panel-3); border-radius: 8px; font: 700 13px var(--font-head), sans-serif; color: var(--accent); }
+.sb-name { font-size: 14px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sb-meta { font-size: 12px; color: var(--muted); }
+.sb-progress { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; margin-top: 2px; }
+.sb-progress .bar { flex: 1; }
+@media (max-width: 600px) {
+  .sb-top { flex-direction: column; align-items: stretch; }
+  .sb-search { flex: none; }
+  .sb-games { display: flex; }
+  .sb-games button { flex: 1; justify-content: center; padding: 8px 10px; }
+  .sb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sb-set { padding: 8px 10px 10px; }
+  .sb-logo { height: 34px; }
+  .sb-logo img { max-height: 34px; }
+}
 details.era { margin-bottom: 8px; }
 details.era > summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; padding: 6px 0; }
 details.era > summary::-webkit-details-marker { display: none; }
